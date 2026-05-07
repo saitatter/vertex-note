@@ -11,6 +11,7 @@
 #include "vertexnote/geometry/GeometryObject.h"
 
 using vn::geom::EdgeKind;
+using vn::geom::ConstraintKind;
 using vn::geom::GeometryObject;
 using vn::geom::Vec2;
 
@@ -71,4 +72,25 @@ TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     auto a = object.addVertex(Vec2{1.0, 2.0});
 
     EXPECT_THROW(object.addLine(a, 999), std::invalid_argument);
+}
+
+TEST(VertexNoteGeometryObject, createsConstraints) {
+    GeometryObject object(42);
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+    auto b = object.addVertex(Vec2{5.0, 2.0});
+    auto edge = object.addLine(a, b);
+
+    auto constraint = object.addConstraint(ConstraintKind::Horizontal, {a, b}, {edge});
+
+    ASSERT_NE(object.constraint(constraint), nullptr);
+    EXPECT_EQ(object.constraint(constraint)->kind, ConstraintKind::Horizontal);
+    EXPECT_EQ(object.constraints().size(), 1U);
+}
+
+TEST(VertexNoteGeometryObject, rejectsConstraintsWithMissingReferences) {
+    GeometryObject object(42);
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+
+    EXPECT_THROW(object.addConstraint(ConstraintKind::Coincident, {a, 999}), std::invalid_argument);
+    EXPECT_THROW(object.addConstraint(ConstraintKind::OnEdge, {}, {999}), std::invalid_argument);
 }

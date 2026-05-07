@@ -189,6 +189,11 @@ struct Constraint {
 
 Solve constraints per connected component, not per document.
 
+Initial implementation status:
+
+- `GeometryObject` stores validated `Constraint` records with object-local IDs.
+- Constraint solving, edit handles, and undo actions are still deferred.
+
 ## Undo/Redo
 
 Geometry insertion can initially reuse `InsertUndoAction` if `GeometryElement` inherits `Element`.

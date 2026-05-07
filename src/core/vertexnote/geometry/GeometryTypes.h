@@ -74,6 +74,27 @@ struct Edge {
     std::vector<VertexId> controls;
 };
 
+enum class ConstraintKind {
+    Coincident,
+    Horizontal,
+    Vertical,
+    Parallel,
+    Perpendicular,
+    EqualLength,
+    FixedLength,
+    FixedAngle,
+    Radius,
+    OnEdge,
+};
+
+struct Constraint {
+    ConstraintId id = InvalidConstraintId;
+    ConstraintKind kind = ConstraintKind::Coincident;
+    std::vector<VertexId> vertices;
+    std::vector<EdgeId> edges;
+    double value = 0.0;
+};
+
 struct Bounds {
     double minX = 0.0;
     double minY = 0.0;

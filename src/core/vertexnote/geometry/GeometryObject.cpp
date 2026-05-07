@@ -48,6 +48,20 @@ auto GeometryObject::addEdge(EdgeKind kind, VertexId start, VertexId end, std::v
 
 auto GeometryObject::addLine(VertexId start, VertexId end) -> EdgeId { return addEdge(EdgeKind::Line, start, end); }
 
+auto GeometryObject::addConstraint(ConstraintKind kind, std::vector<VertexId> vertices, std::vector<EdgeId> edges,
+                                   double value) -> ConstraintId {
+    if (!std::ranges::all_of(vertices, [this](VertexId id) { return containsVertex(id); })) {
+        throw std::invalid_argument("GeometryObject::addConstraint requires existing vertices");
+    }
+    if (!std::ranges::all_of(edges, [this](EdgeId id) { return containsEdge(id); })) {
+        throw std::invalid_argument("GeometryObject::addConstraint requires existing edges");
+    }
+
+    const ConstraintId constraintId = nextConstraintId();
+    this->constraintList.push_back(Constraint{constraintId, kind, std::move(vertices), std::move(edges), value});
+    return constraintId;
+}
+
 auto GeometryObject::vertex(VertexId id) -> Vertex* {
     auto it = std::ranges::find(this->vertexList, id, &Vertex::id);
     return it == this->vertexList.end() ? nullptr : &*it;
@@ -63,9 +77,16 @@ auto GeometryObject::edge(EdgeId id) const -> const Edge* {
     return it == this->edgeList.end() ? nullptr : &*it;
 }
 
+auto GeometryObject::constraint(ConstraintId id) const -> const Constraint* {
+    auto it = std::ranges::find(this->constraintList, id, &Constraint::id);
+    return it == this->constraintList.end() ? nullptr : &*it;
+}
+
 auto GeometryObject::vertices() const -> std::span<const Vertex> { return this->vertexList; }
 
 auto GeometryObject::edges() const -> std::span<const Edge> { return this->edgeList; }
+
+auto GeometryObject::constraints() const -> std::span<const Constraint> { return this->constraintList; }
 
 auto GeometryObject::bounds() const -> std::optional<Bounds> {
     if (this->vertexList.empty()) {
@@ -163,8 +184,12 @@ void GeometryObject::rotate(double x0, double y0, double rotation) {
 
 auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(id) != nullptr; }
 
+auto GeometryObject::containsEdge(EdgeId id) const -> bool { return edge(id) != nullptr; }
+
 auto GeometryObject::nextVertexId() -> VertexId { return this->nextLocalVertexId++; }
 
 auto GeometryObject::nextEdgeId() -> EdgeId { return this->nextLocalEdgeId++; }
+
+auto GeometryObject::nextConstraintId() -> ConstraintId { return this->nextLocalConstraintId++; }
 
 }  // namespace vn::geom
