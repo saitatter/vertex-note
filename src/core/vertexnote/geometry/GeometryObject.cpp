@@ -7,6 +7,7 @@
 #include "GeometryObject.h"
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 
@@ -120,6 +121,44 @@ auto GeometryObject::makeStrokeFallback(double width, Color color) const -> std:
     }
     stroke->setPointVector(std::move(strokePoints));
     return stroke;
+}
+
+void GeometryObject::move(double dx, double dy) {
+    for (auto& vertex: this->vertexList) {
+        vertex.position.x += dx;
+        vertex.position.y += dy;
+    }
+}
+
+void GeometryObject::scale(double x0, double y0, double fx, double fy, double rotation) {
+    const double cosRotation = std::cos(rotation);
+    const double sinRotation = std::sin(rotation);
+
+    for (auto& vertex: this->vertexList) {
+        double x = vertex.position.x - x0;
+        double y = vertex.position.y - y0;
+
+        double rotatedX = cosRotation * x - sinRotation * y;
+        double rotatedY = sinRotation * x + cosRotation * y;
+
+        rotatedX *= fx;
+        rotatedY *= fy;
+
+        vertex.position.x = x0 + cosRotation * rotatedX + sinRotation * rotatedY;
+        vertex.position.y = y0 - sinRotation * rotatedX + cosRotation * rotatedY;
+    }
+}
+
+void GeometryObject::rotate(double x0, double y0, double rotation) {
+    const double cosRotation = std::cos(rotation);
+    const double sinRotation = std::sin(rotation);
+
+    for (auto& vertex: this->vertexList) {
+        const double x = vertex.position.x - x0;
+        const double y = vertex.position.y - y0;
+        vertex.position.x = x0 + cosRotation * x - sinRotation * y;
+        vertex.position.y = y0 + sinRotation * x + cosRotation * y;
+    }
 }
 
 auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(id) != nullptr; }

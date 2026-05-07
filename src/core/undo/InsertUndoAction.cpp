@@ -29,6 +29,8 @@ auto InsertUndoAction::getText() -> std::string {
             return _("Insert image");
         case ELEMENT_TEXIMAGE:
             return _("Insert latex");
+        case ELEMENT_GEOMETRY:
+            return _("Insert geometry");
         default:
             return "";
     }
