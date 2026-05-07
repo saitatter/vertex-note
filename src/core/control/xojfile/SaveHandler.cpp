@@ -39,6 +39,7 @@
 #include "util/PlaceholderString.h"            // for PlaceholderString
 #include "util/i18n.h"                         // for FS, _F
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "config.h"  // for FILE_FORMAT_VERSION
 #include "filesystem.h"
@@ -62,6 +63,7 @@ void SaveHandler::prepareSave(const Document* doc, const fs::path& target) {
     this->attachBgId = 1;
 
     root.reset(new XmlNode(TAG_NAMES[TagType::XOURNAL]));
+    root->setAttrib(vn::io::XoppNamespaceAttr, vn::io::XoppNamespaceUri);
 
     writeHeader();
 
@@ -227,6 +229,12 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             auto* stroke = new XmlPointNode(TAG_NAMES[TagType::STROKE]);
             layer->addChild(stroke);
             visitStroke(stroke, fallback.get());
+            const auto metadata = vn::io::serializeGeometryStrokeMetadata(geometry->geometry());
+            stroke->setAttrib(vn::io::GeometryFormatAttr, metadata.format);
+            stroke->setAttrib(vn::io::GeometryObjectIdAttr, metadata.objectId);
+            stroke->setAttrib(vn::io::GeometryVerticesAttr, metadata.vertices);
+            stroke->setAttrib(vn::io::GeometryEdgesAttr, metadata.edges);
+            stroke->setAttrib(vn::io::GeometryConstraintsAttr, metadata.constraints);
         }
     }
 }

@@ -347,6 +347,8 @@ void EditSelectionContents::deleteViewBuffer() {
     }
 }
 
+void EditSelectionContents::invalidateViewBuffer() { deleteViewBuffer(); }
+
 InsertionOrder EditSelectionContents::makeMoveEffective(const xoj::util::Rectangle<double>& bounds,
                                                         const xoj::util::Rectangle<double>& snappedBounds,
                                                         bool preserveAspectRatio) {

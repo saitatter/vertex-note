@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "util/Color.h"
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"
 
@@ -49,6 +50,7 @@ public:
     virtual void finalizeLayer() = 0;
     virtual void addStroke(StrokeTool tool, Color color, double width, int fill, StrokeCapStyle capStyle,
                            const LineStyle& lineStyle, fs::path filename, size_t timestamp) = 0;
+    virtual void setStrokeGeometryMetadata(std::optional<vn::io::GeometryStrokeMetadata> metadata) = 0;
     virtual void setStrokePoints(std::vector<Point> pointVector, bool hasPressure) = 0;
     virtual void finalizeStroke() = 0;
     virtual void addText(std::string font, double size, double x, double y, Color color, fs::path filename,

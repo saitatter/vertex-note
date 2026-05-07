@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "model/PageRef.h"
@@ -51,6 +52,7 @@ public:
     [[nodiscard]] auto hasPreview() const -> bool;
     [[nodiscard]] auto getPoints() const -> const std::vector<Point>&;
     [[nodiscard]] auto getCurrentPoint() const -> Point;
+    [[nodiscard]] auto getCurrentSnapKind() const -> std::optional<vn::snap::SnapKind>;
     [[nodiscard]] auto getStrokeWidth() const -> double;
     [[nodiscard]] auto getStrokeColor() const -> Color;
 
@@ -60,7 +62,7 @@ public:
 private:
     [[nodiscard]] auto previewRange() const -> Range;
     void updateCurrentPoint(const PositionInputData& pos, double zoom);
-    [[nodiscard]] auto snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point;
+    [[nodiscard]] auto snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point;
     void addCurrentPoint();
     void finalizePolyline();
     void cancel();
@@ -70,6 +72,7 @@ private:
     vn::snap::SnapEngine snapEngine;
     std::vector<Point> points;
     Point currentPoint;
+    std::optional<vn::snap::SnapKind> currentSnapKind;
     bool done = false;
     double strokeWidth = 1.0;
     Color strokeColor = Colors::black;

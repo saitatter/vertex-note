@@ -27,6 +27,7 @@ public:
     [[nodiscard]] auto getStrokeWidth() const -> double;
 
     [[nodiscard]] auto makeStrokeFallback() const -> std::unique_ptr<Stroke>;
+    [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
 
     void move(double dx, double dy) override;
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;

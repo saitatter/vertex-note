@@ -64,6 +64,17 @@ TEST(VertexNoteGeometryElement, movesGeometryAndCachedBounds) {
     EXPECT_DOUBLE_EQ(element.distanceTo(13.0, 1.0), 0.0);
 }
 
+TEST(VertexNoteGeometryElement, movesIndividualVertex) {
+    GeometryElement element = makeLineElement();
+    auto firstVertexId = element.geometry().vertices().front().id;
+
+    ASSERT_TRUE(element.setVertexPosition(firstVertexId, Vec2{9.0, 11.0}));
+
+    EXPECT_DOUBLE_EQ(element.geometry().vertex(firstVertexId)->position.x, 9.0);
+    EXPECT_DOUBLE_EQ(element.geometry().vertex(firstVertexId)->position.y, 11.0);
+    EXPECT_FALSE(element.setVertexPosition(999, Vec2{1.0, 1.0}));
+}
+
 TEST(VertexNoteGeometryElement, clonesGeometryState) {
     GeometryElement element = makeLineElement();
     auto clone = element.clone();

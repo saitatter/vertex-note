@@ -33,6 +33,16 @@ auto GeometryObject::addVertex(Vec2 position, VertexFlags flags) -> VertexId {
     return vertexId;
 }
 
+auto GeometryObject::addVertexWithId(VertexId id, Vec2 position, VertexFlags flags) -> VertexId {
+    if (id == InvalidVertexId || containsVertex(id)) {
+        throw std::invalid_argument("GeometryObject::addVertexWithId requires a unique valid vertex id");
+    }
+
+    this->vertexList.push_back(Vertex{id, position, this->id, flags});
+    this->nextLocalVertexId = std::max(this->nextLocalVertexId, id + 1U);
+    return id;
+}
+
 auto GeometryObject::addEdge(EdgeKind kind, VertexId start, VertexId end, std::vector<VertexId> controls) -> EdgeId {
     if (!containsVertex(start) || !containsVertex(end)) {
         throw std::invalid_argument("GeometryObject::addEdge requires existing endpoint vertices");
@@ -44,6 +54,23 @@ auto GeometryObject::addEdge(EdgeKind kind, VertexId start, VertexId end, std::v
     const EdgeId edgeId = nextEdgeId();
     this->edgeList.push_back(Edge{edgeId, kind, start, end, std::move(controls)});
     return edgeId;
+}
+
+auto GeometryObject::addEdgeWithId(EdgeId id, EdgeKind kind, VertexId start, VertexId end,
+                                   std::vector<VertexId> controls) -> EdgeId {
+    if (id == InvalidEdgeId || containsEdge(id)) {
+        throw std::invalid_argument("GeometryObject::addEdgeWithId requires a unique valid edge id");
+    }
+    if (!containsVertex(start) || !containsVertex(end)) {
+        throw std::invalid_argument("GeometryObject::addEdgeWithId requires existing endpoint vertices");
+    }
+    if (!std::ranges::all_of(controls, [this](VertexId vertexId) { return containsVertex(vertexId); })) {
+        throw std::invalid_argument("GeometryObject::addEdgeWithId requires existing control vertices");
+    }
+
+    this->edgeList.push_back(Edge{id, kind, start, end, std::move(controls)});
+    this->nextLocalEdgeId = std::max(this->nextLocalEdgeId, id + 1U);
+    return id;
 }
 
 auto GeometryObject::addLine(VertexId start, VertexId end) -> EdgeId { return addEdge(EdgeKind::Line, start, end); }
@@ -60,6 +87,23 @@ auto GeometryObject::addConstraint(ConstraintKind kind, std::vector<VertexId> ve
     const ConstraintId constraintId = nextConstraintId();
     this->constraintList.push_back(Constraint{constraintId, kind, std::move(vertices), std::move(edges), value});
     return constraintId;
+}
+
+auto GeometryObject::addConstraintWithId(ConstraintId id, ConstraintKind kind, std::vector<VertexId> vertices,
+                                         std::vector<EdgeId> edges, double value) -> ConstraintId {
+    if (id == InvalidConstraintId || constraint(id) != nullptr) {
+        throw std::invalid_argument("GeometryObject::addConstraintWithId requires a unique valid constraint id");
+    }
+    if (!std::ranges::all_of(vertices, [this](VertexId vertexId) { return containsVertex(vertexId); })) {
+        throw std::invalid_argument("GeometryObject::addConstraintWithId requires existing vertices");
+    }
+    if (!std::ranges::all_of(edges, [this](EdgeId edgeId) { return containsEdge(edgeId); })) {
+        throw std::invalid_argument("GeometryObject::addConstraintWithId requires existing edges");
+    }
+
+    this->constraintList.push_back(Constraint{id, kind, std::move(vertices), std::move(edges), value});
+    this->nextLocalConstraintId = std::max(this->nextLocalConstraintId, id + 1U);
+    return id;
 }
 
 auto GeometryObject::vertex(VertexId id) -> Vertex* {
@@ -142,6 +186,16 @@ auto GeometryObject::makeStrokeFallback(double width, Color color) const -> std:
     }
     stroke->setPointVector(std::move(strokePoints));
     return stroke;
+}
+
+auto GeometryObject::setVertexPosition(VertexId id, Vec2 position) -> bool {
+    auto* target = vertex(id);
+    if (!target) {
+        return false;
+    }
+
+    target->position = position;
+    return true;
 }
 
 void GeometryObject::move(double dx, double dy) {

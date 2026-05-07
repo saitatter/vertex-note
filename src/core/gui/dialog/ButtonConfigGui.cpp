@@ -136,11 +136,11 @@ ButtonConfigGui::ButtonConfigGui(GladeSearchpath* gladeSearchPath, GtkBox* box, 
     // DRAWING_TYPE_SPLINE
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Spline"));
     // DRAWING_TYPE_VERTEX_LINE
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Line"));
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Line by Clicks"));
     // DRAWING_TYPE_VERTEX_POLYLINE
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Polyline"));
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Polyline by Clicks"));
     // DRAWING_TYPE_VERTEX_RECTANGLE
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Rectangle"));
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Rectangle by Clicks"));
 
 
     // Values in glade GUI!

@@ -27,6 +27,7 @@
 #include "model/PageRef.h"                             // for PageRef
 #include "model/Stroke.h"                              // for Stroke, StrokeTool,...
 #include "util/Color.h"                                // for Color
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"  // for path
 
@@ -96,6 +97,7 @@ private:
     void finalizeLayer() override;
     void addStroke(StrokeTool tool, Color color, double width, int fill, StrokeCapStyle capStyle,
                    const LineStyle& lineStyle, fs::path filename, size_t timestamp) override;
+    void setStrokeGeometryMetadata(std::optional<vn::io::GeometryStrokeMetadata> metadata) override;
     void setStrokePoints(std::vector<Point> pointVector, bool hasPressure) override;
     void finalizeStroke() override;
     void addText(std::string font, double size, double x, double y, Color color, fs::path filename,
@@ -192,6 +194,7 @@ private:
     PageRef page;
     std::unique_ptr<Layer> layer;
     std::unique_ptr<Stroke> stroke;
+    std::optional<vn::io::GeometryStrokeMetadata> strokeGeometryMetadata;
     std::unique_ptr<Text> text;
     std::unique_ptr<Image> image;
     std::unique_ptr<TexImage> teximage;

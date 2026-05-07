@@ -12,6 +12,7 @@
 #include "util/Color.h"
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
+#include "view/overlays/SnapIndicatorViewHelper.h"
 
 using namespace xoj::view;
 
@@ -37,6 +38,7 @@ void RectangleByVerticesView::draw(cairo_t* cr) const {
     Util::cairo_set_source_rgbi(cr, this->handler->getStrokeColor());
     cairo_rectangle(cr, start.x, start.y, current.x - start.x, current.y - start.y);
     cairo_stroke(cr);
+    drawSnapIndicator(cr, current, this->handler->getCurrentSnapKind());
 }
 
 bool RectangleByVerticesView::isViewOf(const OverlayBase* overlay) const { return overlay == this->handler; }

@@ -27,6 +27,7 @@
 #include "util/StringUtils.h"                          // for ellipsize
 #include "util/i18n.h"                                 // for FS, _F, _
 #include "util/utf8_view.h"                            // for xoj::util::utf8
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"  // for path
 
@@ -375,6 +376,24 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
     // forward data to builder
     this->builder.addStroke(tool, color, width, fill, capStyle, lineStyle, std::move(this->tempFilename),
                             this->tempTimestamp);
+
+    const auto geometryFormat = XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryFormatAttr, attributeMap);
+    const auto geometryObjectId =
+            XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryObjectIdAttr, attributeMap);
+    const auto geometryVertices =
+            XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryVerticesAttr, attributeMap);
+    const auto geometryEdges = XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryEdgesAttr, attributeMap);
+    const auto geometryConstraints =
+            XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryConstraintsAttr, attributeMap);
+
+    if (geometryFormat || geometryObjectId || geometryVertices || geometryEdges || geometryConstraints) {
+        this->builder.setStrokeGeometryMetadata(vn::io::GeometryStrokeMetadata{
+                std::string{geometryFormat.value_or("")}, std::string{geometryObjectId.value_or("")},
+                std::string{geometryVertices.value_or("")}, std::string{geometryEdges.value_or("")},
+                std::string{geometryConstraints.value_or("")}});
+    } else {
+        this->builder.setStrokeGeometryMetadata(std::nullopt);
+    }
 
     // Reset timestamp, filename was already moved from
     this->tempTimestamp = 0;

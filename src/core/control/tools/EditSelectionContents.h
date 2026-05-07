@@ -127,6 +127,8 @@ public:
                        bool aspectRatio, Layer* layer, const PageRef& targetPage, UndoRedoHandler* undo,
                        CursorSelectionType type);
 
+    void invalidateViewBuffer();
+
 private:
     /**
      * Delete our internal View buffer,

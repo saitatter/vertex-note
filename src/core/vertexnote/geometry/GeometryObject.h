@@ -31,6 +31,12 @@ public:
     auto addConstraint(ConstraintKind kind, std::vector<VertexId> vertices = {}, std::vector<EdgeId> edges = {},
                        double value = 0.0) -> ConstraintId;
 
+    auto addVertexWithId(VertexId id, Vec2 position, VertexFlags flags = VertexFlags::Explicit) -> VertexId;
+    auto addEdgeWithId(EdgeId id, EdgeKind kind, VertexId start, VertexId end, std::vector<VertexId> controls = {})
+            -> EdgeId;
+    auto addConstraintWithId(ConstraintId id, ConstraintKind kind, std::vector<VertexId> vertices = {},
+                             std::vector<EdgeId> edges = {}, double value = 0.0) -> ConstraintId;
+
     [[nodiscard]] auto vertex(VertexId id) -> Vertex*;
     [[nodiscard]] auto vertex(VertexId id) const -> const Vertex*;
     [[nodiscard]] auto edge(EdgeId id) const -> const Edge*;
@@ -44,6 +50,7 @@ public:
     [[nodiscard]] auto toPolyline() const -> std::vector<Vec2>;
     [[nodiscard]] auto makeStrokeFallback(double width, Color color) const -> std::unique_ptr<Stroke>;
 
+    [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
     void move(double dx, double dy);
     void scale(double x0, double y0, double fx, double fy, double rotation);
     void rotate(double x0, double y0, double rotation);

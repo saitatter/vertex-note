@@ -14,6 +14,7 @@
 #include "util/Color.h"
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
+#include "view/overlays/SnapIndicatorViewHelper.h"
 
 using namespace xoj::view;
 
@@ -48,6 +49,7 @@ void PolylineByClicksView::draw(cairo_t* cr) const {
     const Point current = this->handler->getCurrentPoint();
     cairo_line_to(cr, current.x, current.y);
     cairo_stroke(cr);
+    drawSnapIndicator(cr, current, this->handler->getCurrentSnapKind());
 }
 
 bool PolylineByClicksView::isViewOf(const OverlayBase* overlay) const { return overlay == this->handler; }

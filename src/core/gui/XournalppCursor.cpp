@@ -270,6 +270,9 @@ void XournalppCursor::updateCursor() {
                 case CURSOR_SELECTION_DELETE:
                     setCursor(CRSR_PIRATE);
                     break;
+                case CURSOR_SELECTION_GEOMETRY_VERTEX:
+                    setCursor(CRSR_MOVE);
+                    break;
                 default:
                     break;
             }
