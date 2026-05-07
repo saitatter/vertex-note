@@ -121,6 +121,15 @@
 
 using std::string;
 
+namespace {
+
+[[nodiscard]] auto hasPendingInputDrawingType(DrawingType type) -> bool {
+    return type == DRAWING_TYPE_SPLINE || type == DRAWING_TYPE_VERTEX_LINE || type == DRAWING_TYPE_VERTEX_POLYLINE ||
+           type == DRAWING_TYPE_VERTEX_RECTANGLE;
+}
+
+}  // namespace
+
 Control::Control(GApplication* gtkApp, GladeSearchpath* gladeSearchPath, bool disableAudio): gtkApp(gtkApp) {
     this->undoRedo = new UndoRedoHandler(this);
     this->undoRedo->addUndoRedoListener(this);
@@ -632,11 +641,10 @@ void Control::setToolDrawingType(DrawingType type) {
     if (this->toolHandler->getDrawingType() != type) {
         const DrawingType previousType = this->toolHandler->getDrawingType();
 
-        if (previousType == DRAWING_TYPE_SPLINE || previousType == DRAWING_TYPE_VERTEX_LINE ||
-            previousType == DRAWING_TYPE_VERTEX_POLYLINE || previousType == DRAWING_TYPE_VERTEX_RECTANGLE) {
+        if (hasPendingInputDrawingType(previousType)) {
             // Multi-click tools keep an active input handler between clicks.
             if (win) {
-                win->getXournal()->endSplineAllPages();
+                win->getXournal()->endPendingInputAllPages();
             }
         }
         this->toolHandler->setDrawingType(type);
@@ -1247,12 +1255,9 @@ void Control::toolChanged() {
             win->getXournal()->endTextAllPages();
         }
     }
-    if (toolHandler->getDrawingType() != DRAWING_TYPE_SPLINE &&
-        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_LINE &&
-        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_POLYLINE &&
-        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_RECTANGLE) {
+    if (!hasPendingInputDrawingType(toolHandler->getDrawingType())) {
         if (win) {
-            win->getXournal()->endSplineAllPages();
+            win->getXournal()->endPendingInputAllPages();
         }
     }
 }

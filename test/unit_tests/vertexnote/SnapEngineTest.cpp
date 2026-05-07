@@ -4,6 +4,7 @@
  * Snapping engine behavior.
  */
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -119,4 +120,24 @@ TEST(VertexNoteSnapEngine, snapsToLineIntersection) {
     EXPECT_EQ(result.candidate->kind, SnapKind::Intersection);
     EXPECT_DOUBLE_EQ(result.pagePoint.x, 5.0);
     EXPECT_DOUBLE_EQ(result.pagePoint.y, 5.0);
+}
+
+TEST(VertexNoteSnapEngine, ignoresIntersectionsOutsideSnapWindow) {
+    GeometryObject first(42);
+    const auto a = first.addVertex(Vec2{40.0, 40.0});
+    const auto b = first.addVertex(Vec2{60.0, 60.0});
+    first.addLine(a, b);
+
+    GeometryObject second(43);
+    const auto c = second.addVertex(Vec2{40.0, 60.0});
+    const auto d = second.addVertex(Vec2{60.0, 40.0});
+    second.addLine(c, d);
+
+    GeometrySnapProvider provider(std::vector<const GeometryObject*>{&first, &second});
+    std::vector<vn::snap::SnapCandidate> candidates;
+    provider.query(SnapQuery{Vec2{0.0, 0.0}, 1.0, 1.0}, candidates);
+
+    EXPECT_TRUE(std::none_of(candidates.begin(), candidates.end(), [](const auto& candidate) {
+        return candidate.kind == SnapKind::Intersection;
+    }));
 }
