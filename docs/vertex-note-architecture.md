@@ -230,6 +230,14 @@ after saving, which should be documented as a compatibility limitation.
 - Add vertex, endpoint, midpoint, edge projection, and intersection providers.
 - Add per-page spatial index.
 
+Initial implementation status:
+
+- `vn::snap::SnapEngine` chooses the highest-priority candidate inside the query radius.
+- `GridSnapProvider` covers regular grid candidates without coupling the engine to GTK/settings.
+- `GeometrySnapProvider` covers explicit vertices, line midpoints, and line projections.
+- Page/document indexing and intersection caching are intentionally deferred until geometry
+  elements can be enumerated from a page-level geometry registry.
+
 ### Phase 3: Geometric Primitives
 
 - Add click-based line and polyline tools.
