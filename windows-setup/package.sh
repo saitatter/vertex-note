@@ -96,6 +96,12 @@ echo "copy qpdf"
 cp "$prefix"/bin/libqpdf*.dll "$setup_dir"/bin
 cp "$prefix"/lib/libqpdf* "$setup_dir"/lib
 
+if [ "${SKIP_INSTALLER:-0}" = "1" ]; then
+    echo "skip installer"
+    echo "finished"
+    exit 0
+fi
+
 echo "create installer"
 version=$(cat "$build_dir/VERSION" | sed '1!d')
 "/c/Program Files (x86)/NSIS/Bin/makensis.exe" -NOCD       \

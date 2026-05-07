@@ -33,3 +33,63 @@ jobs:
           git_committer_name: github-actions[bot]
           git_committer_email: 41898282+github-actions[bot]@users.noreply.github.com
           build: false
+
+  build-windows-portable:
+    needs: release
+    if: ${{ needs.release.outputs.released == 'true' }}
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.commit_sha }}
+
+      - name: Install MSYS2 MinGW64 dependencies
+        uses: ./.github/actions/install_deps_windows
+        with:
+          msystem: mingw64
+          msys_package_env: x86_64
+
+      - name: Build VertexNote
+        uses: ./.github/actions/build
+        with:
+          build_type: RelWithDebInfo
+          cmake_flags: -DENABLE_GTEST=OFF
+          shell: msys2 {0}
+
+      - name: Package portable runtime
+        id: package-portable
+        working-directory: ${{ github.workspace }}/build
+        shell: msys2 {0}
+        run: |
+          SKIP_INSTALLER=1 ../windows-setup/package.sh
+
+          package_dir="vertex-note-v${{ needs.release.outputs.version }}-windows-x86_64-portable"
+          archive_name="${package_dir}.zip"
+
+          mkdir portable
+          mv dist "portable/${package_dir}"
+
+          echo "package_dir=${package_dir}" >> "$GITHUB_OUTPUT"
+          echo "archive_name=${archive_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Compress portable runtime
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "${{ github.workspace }}\build\portable\${{ steps.package-portable.outputs.package_dir }}" `
+            -DestinationPath "${{ github.workspace }}\${{ steps.package-portable.outputs.archive_name }}" `
+            -Force
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package-portable.outputs.archive_name }}
+          path: ${{ steps.package-portable.outputs.archive_name }}
+          if-no-files-found: error
+
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" "${{ steps.package-portable.outputs.archive_name }}" --clobber
