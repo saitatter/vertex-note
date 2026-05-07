@@ -83,7 +83,7 @@ jobs:
           fi
       - name: 'Publish package'
         id: publish
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: "Windows package ${{ runner.arch }} ${{ inputs.msys_package_env }}"
           path: "${{github.workspace}}/build/${{ steps.create-installer.outputs.artifact }}"
@@ -92,7 +92,7 @@ jobs:
       - name: 'Publish portable version'
         id: publish-portable
         if: ${{ inputs.publish_portable_version }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: "Windows package ${{ runner.arch }} ${{ inputs.msys_package_env }} (portable version)"
           path: "${{github.workspace}}/build/portable_content"

@@ -20,7 +20,7 @@ jobs:
           sparse-checkout: '${{ env.build-targets-json }}'
           sparse-checkout-cone-mode: false
       - id: parse
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const available_targets = require('${{ env.build-targets-json }}')
