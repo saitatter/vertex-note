@@ -22,6 +22,10 @@ InputHandler::~InputHandler() = default;
 
 auto InputHandler::getStroke() const -> Stroke* { return stroke.get(); }
 
+auto InputHandler::isDone() const -> bool { return this->stroke == nullptr; }
+
+auto InputHandler::acceptsAdditionalPress() const -> bool { return false; }
+
 auto InputHandler::createStroke(Control* control) -> std::unique_ptr<Stroke> {
     ToolHandler* h = control->getToolHandler();
 

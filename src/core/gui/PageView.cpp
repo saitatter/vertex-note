@@ -36,8 +36,11 @@
 #include "control/tools/ImageSizeSelection.h"       // for ImageSizeSelection
 #include "control/tools/InputHandler.h"             // for InputHandler
 #include "control/tools/LaserPointerHandler.h"      // for LaserPointerHandler
+#include "control/tools/LineByClicksHandler.h"      // for LineByClicksHandler
 #include "control/tools/PdfElemSelection.h"         // for PdfElemSelection
+#include "control/tools/PolylineByClicksHandler.h"  // for PolylineByClicksHandler
 #include "control/tools/RectangleHandler.h"         // for RectangleHandler
+#include "control/tools/RectangleByVerticesHandler.h"  // for RectangleByVerticesHandler
 #include "control/tools/RulerHandler.h"             // for RulerHandler
 #include "control/tools/Selector.h"                 // for RectangularSelector
 #include "control/tools/SplineHandler.h"            // for SplineHandler
@@ -209,6 +212,23 @@ void XojPageView::endSpline() {
     }
 }
 
+void XojPageView::endPendingInput() {
+    if (!this->inputHandler) {
+        return;
+    }
+
+    if (SplineHandler* h = dynamic_cast<SplineHandler*>(this->inputHandler.get()); h) {
+        h->finalizeSpline();
+    } else if (this->inputHandler->acceptsAdditionalPress()) {
+        this->inputHandler->onSequenceCancelEvent();
+    } else {
+        return;
+    }
+
+    xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
+    this->inputHandler.reset();
+}
+
 void XojPageView::deleteLaserPointerHandler() {
     xoj_assert(hasNoViewOf(overlayViews, laserPointer.get()));
     laserPointer.reset();
@@ -242,6 +262,11 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
 
     XournalppCursor* cursor = xournal->getCursor();
     cursor->setMouseDown(true);
+
+    if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
+        this->inputHandler->onButtonPressEvent(pos, zoom);
+        return true;
+    }
 
     if (((h->getToolType() == TOOL_PEN || h->getToolType() == TOOL_HIGHLIGHTER) &&
          h->getDrawingType() != DRAWING_TYPE_SPLINE) ||
@@ -278,6 +303,15 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 break;
             case DRAWING_TYPE_COORDINATE_SYSTEM:
                 this->inputHandler = std::make_unique<CoordinateSystemHandler>(control, getPage());
+                break;
+            case DRAWING_TYPE_VERTEX_LINE:
+                this->inputHandler = std::make_unique<LineByClicksHandler>(control, getPage());
+                break;
+            case DRAWING_TYPE_VERTEX_POLYLINE:
+                this->inputHandler = std::make_unique<PolylineByClicksHandler>(control, getPage());
+                break;
+            case DRAWING_TYPE_VERTEX_RECTANGLE:
+                this->inputHandler = std::make_unique<RectangleByVerticesHandler>(control, getPage());
                 break;
             default:
                 this->inputHandler = std::make_unique<StrokeHandler>(control, getPage());
@@ -451,7 +485,13 @@ auto XojPageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool
     EditSelection* selection = xournal->getSelection();
     bool hasNoModifiers = !pos.isShiftDown() && !pos.isControlDown();
 
-    if (hasNoModifiers && selection != nullptr) {
+    if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
+        this->inputHandler->onButtonDoublePressEvent(pos, zoom);
+        if (this->inputHandler->isDone()) {
+            xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
+            this->inputHandler.reset();
+        }
+    } else if (hasNoModifiers && selection != nullptr) {
         // Find a selected object under the cursor, if possible. The selection doesn't change the
         // element coordinates until it is finalized, so we need to use position relative to the
         // original coordinates of the selection.
@@ -601,7 +641,7 @@ void XojPageView::onTapEvent(const PositionInputData& pos) {
         const double zoom = getZoom();
         this->inputHandler->onButtonPressEvent(pos, zoom);
         this->inputHandler->onButtonReleaseEvent(pos, zoom);
-        if (!this->inputHandler->getStroke()) {
+        if (this->inputHandler->isDone()) {
             // The InputHandler finalized its edition
             xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
             this->inputHandler.reset();
@@ -660,9 +700,7 @@ auto XojPageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
         double zoom = xournal->getZoom();
         this->inputHandler->onButtonReleaseEvent(pos, zoom);
 
-        ToolHandler* h = control->getToolHandler();
-        bool isDrawingTypeSpline = h->getDrawingType() == DRAWING_TYPE_SPLINE;
-        if (!isDrawingTypeSpline || !this->inputHandler->getStroke()) {  // The Spline Tool finalizes drawing manually
+        if (this->inputHandler->isDone()) {
             xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
             this->inputHandler.reset();
         }
@@ -784,12 +822,9 @@ auto XojPageView::onKeyReleaseEvent(const KeyEvent& event) -> bool {
     }
 
     if (this->inputHandler && this->inputHandler->onKeyReleaseEvent(event)) {
-        DrawingType drawingType = this->xournal->getControl()->getToolHandler()->getDrawingType();
-        if (drawingType == DRAWING_TYPE_SPLINE) {  // Spline drawing has been finalized
-            if (this->inputHandler) {
-                xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
-                this->inputHandler.reset();
-            }
+        if (this->inputHandler && this->inputHandler->isDone()) {
+            xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
+            this->inputHandler.reset();
         }
 
         return true;

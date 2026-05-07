@@ -85,7 +85,7 @@ public:
 
     void endTextAllPages(XojPageView* except = nullptr) const;
 
-    void endSplineAllPages() const;
+    void endPendingInputAllPages() const;
 
     int getDisplayWidth() const;
     int getDisplayHeight() const;

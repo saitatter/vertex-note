@@ -88,6 +88,8 @@ public:
     virtual std::unique_ptr<xoj::view::OverlayView> createView(xoj::view::Repaintable* parent) const = 0;
 
     Stroke* getStroke() const;
+    virtual bool isDone() const;
+    virtual bool acceptsAdditionalPress() const;
 
 protected:
     [[nodiscard]] static std::unique_ptr<Stroke> createStroke(Control* control);

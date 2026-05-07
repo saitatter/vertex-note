@@ -38,6 +38,7 @@
 #include "util/PathUtil.h"                     // for clearExtensions, normalizeAssetPath
 #include "util/PlaceholderString.h"            // for PlaceholderString
 #include "util/i18n.h"                         // for FS, _F
+#include "vertexnote/geometry/GeometryElement.h"
 
 #include "config.h"  // for FILE_FORMAT_VERSION
 #include "filesystem.h"
@@ -216,6 +217,16 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             image->setAttrib(xoj::xml_attrs::TOP_POS_STR, i->getY());
             image->setAttrib(xoj::xml_attrs::RIGHT_POS_STR, i->getX() + i->getElementWidth());
             image->setAttrib(xoj::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
+        } else if (e->getType() == ELEMENT_GEOMETRY) {
+            auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(e);
+            auto fallback = geometry->makeStrokeFallback();
+            if (fallback->getPointCount() < 2) {
+                g_warning("Trying to save an empty Geometry element. Discarding it!");
+                continue;
+            }
+            auto* stroke = new XmlPointNode(TAG_NAMES[TagType::STROKE]);
+            layer->addChild(stroke);
+            visitStroke(stroke, fallback.get());
         }
     }
 }

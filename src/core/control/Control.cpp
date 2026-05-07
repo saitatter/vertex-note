@@ -121,6 +121,15 @@
 
 using std::string;
 
+namespace {
+
+[[nodiscard]] auto hasPendingInputDrawingType(DrawingType type) -> bool {
+    return type == DRAWING_TYPE_SPLINE || type == DRAWING_TYPE_VERTEX_LINE || type == DRAWING_TYPE_VERTEX_POLYLINE ||
+           type == DRAWING_TYPE_VERTEX_RECTANGLE;
+}
+
+}  // namespace
+
 Control::Control(GApplication* gtkApp, GladeSearchpath* gladeSearchPath, bool disableAudio): gtkApp(gtkApp) {
     this->undoRedo = new UndoRedoHandler(this);
     this->undoRedo->addUndoRedoListener(this);
@@ -630,11 +639,12 @@ void Control::customizeToolbars() {
 
 void Control::setToolDrawingType(DrawingType type) {
     if (this->toolHandler->getDrawingType() != type) {
+        const DrawingType previousType = this->toolHandler->getDrawingType();
 
-        if (this->toolHandler->getDrawingType() == DRAWING_TYPE_SPLINE) {
-            // Shape changed from spline to something else: finish ongoing splines
+        if (hasPendingInputDrawingType(previousType)) {
+            // Multi-click tools keep an active input handler between clicks.
             if (win) {
-                win->getXournal()->endSplineAllPages();
+                win->getXournal()->endPendingInputAllPages();
             }
         }
         this->toolHandler->setDrawingType(type);
@@ -1195,6 +1205,11 @@ void Control::toolChanged() {
     this->actionDB->enableAction(Action::TOOL_DRAW_DOUBLE_ARROW, toolHandler->hasCapability(TOOL_CAP_DOUBLE_ARROW));
     this->actionDB->enableAction(Action::TOOL_DRAW_COORDINATE_SYSTEM, toolHandler->hasCapability(TOOL_CAP_ARROW));
     this->actionDB->enableAction(Action::TOOL_DRAW_SPLINE, toolHandler->hasCapability(TOOL_CAP_SPLINE));
+    this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_LINE, toolHandler->hasCapability(TOOL_CAP_VERTEX_LINE));
+    this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_POLYLINE,
+                                 toolHandler->hasCapability(TOOL_CAP_VERTEX_POLYLINE));
+    this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_RECTANGLE,
+                                 toolHandler->hasCapability(TOOL_CAP_VERTEX_RECTANGLE));
     this->actionDB->enableAction(Action::TOOL_DRAW_SHAPE_RECOGNIZER, toolHandler->hasCapability(TOOL_CAP_RECOGNIZER));
 
     DrawingType dt = toolHandler->getDrawingType();
@@ -1205,6 +1220,9 @@ void Control::toolChanged() {
     this->actionDB->setActionState(Action::TOOL_DRAW_DOUBLE_ARROW, dt == DRAWING_TYPE_DOUBLE_ARROW);
     this->actionDB->setActionState(Action::TOOL_DRAW_COORDINATE_SYSTEM, dt == DRAWING_TYPE_COORDINATE_SYSTEM);
     this->actionDB->setActionState(Action::TOOL_DRAW_SPLINE, dt == DRAWING_TYPE_SPLINE);
+    this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_LINE, dt == DRAWING_TYPE_VERTEX_LINE);
+    this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_POLYLINE, dt == DRAWING_TYPE_VERTEX_POLYLINE);
+    this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_RECTANGLE, dt == DRAWING_TYPE_VERTEX_RECTANGLE);
     this->actionDB->setActionState(Action::TOOL_DRAW_SHAPE_RECOGNIZER, dt == DRAWING_TYPE_SHAPE_RECOGNIZER);
 
     bool enableSize = toolHandler->hasCapability(TOOL_CAP_SIZE);
@@ -1237,9 +1255,9 @@ void Control::toolChanged() {
             win->getXournal()->endTextAllPages();
         }
     }
-    if (toolHandler->getDrawingType() != DRAWING_TYPE_SPLINE) {
+    if (!hasPendingInputDrawingType(toolHandler->getDrawingType())) {
         if (win) {
-            win->getXournal()->endSplineAllPages();
+            win->getXournal()->endPendingInputAllPages();
         }
     }
 }

@@ -6,7 +6,9 @@
 #include "model/TexImage.h"  // for TexImage
 #include "model/Text.h"      // for Text
 #include "util/Assert.h"     // for xoj_assert
+#include "vertexnote/geometry/GeometryElement.h"
 
+#include "GeometryElementView.h"
 #include "ImageView.h"     // for ImageView
 #include "StrokeView.h"    // for StrokeView
 #include "TexImageView.h"  // for TexImageView
@@ -25,6 +27,8 @@ auto ElementView::createFromElement(const Element* e) -> std::unique_ptr<Element
             return std::make_unique<ImageView>(dynamic_cast<const Image*>(e));
         case ELEMENT_TEXIMAGE:
             return std::make_unique<TexImageView>(dynamic_cast<const TexImage*>(e));
+        case ELEMENT_GEOMETRY:
+            return std::make_unique<GeometryElementView>(dynamic_cast<const vn::geom::GeometryElement*>(e));
         default:
             xoj_assert_message(false, "ElementView::getFromElement: Unknown element type!");
             return nullptr;

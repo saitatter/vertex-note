@@ -56,7 +56,8 @@ void ToolHandler::initTools() {
     tools[TOOL_PEN - TOOL_PEN] = std::make_unique<Tool>(
             "pen", TOOL_PEN, Colors::xopp_royalblue,
             TOOL_CAP_COLOR | TOOL_CAP_SIZE | TOOL_CAP_RULER | TOOL_CAP_RECTANGLE | TOOL_CAP_ELLIPSE | TOOL_CAP_ARROW |
-                    TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_RECOGNIZER | TOOL_CAP_FILL | TOOL_CAP_LINE_STYLE,
+                    TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_RECOGNIZER |
+                    TOOL_CAP_VERTEX_POLYLINE | TOOL_CAP_VERTEX_RECTANGLE | TOOL_CAP_FILL | TOOL_CAP_LINE_STYLE,
             thickness);
 
     thickness[TOOL_SIZE_VERY_FINE] = 1;
@@ -76,7 +77,8 @@ void ToolHandler::initTools() {
     tools[TOOL_HIGHLIGHTER - TOOL_PEN] = std::make_unique<Tool>(
             "highlighter", TOOL_HIGHLIGHTER, Colors::yellow,
             TOOL_CAP_COLOR | TOOL_CAP_SIZE | TOOL_CAP_RULER | TOOL_CAP_RECTANGLE | TOOL_CAP_ELLIPSE | TOOL_CAP_ARROW |
-                    TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_RECOGNIZER | TOOL_CAP_FILL,
+                    TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_RECOGNIZER |
+                    TOOL_CAP_VERTEX_POLYLINE | TOOL_CAP_VERTEX_RECTANGLE | TOOL_CAP_FILL,
             thickness);
 
     tools[TOOL_TEXT - TOOL_PEN] =
@@ -447,7 +449,8 @@ void ToolHandler::saveSettings() const {
 
         static constexpr unsigned int SHAPE_CAPS = TOOL_CAP_RULER | TOOL_CAP_RECTANGLE | TOOL_CAP_ELLIPSE |
                                                    TOOL_CAP_ARROW | TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_RECOGNIZER |
-                                                   TOOL_CAP_SPLINE;
+                                                   TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_VERTEX_POLYLINE |
+                                                   TOOL_CAP_VERTEX_RECTANGLE;
         if (tool->capabilities & SHAPE_CAPS) {
             st.setString("drawingType", drawingTypeToString(tool->getDrawingType()).data());
         }
@@ -626,7 +629,8 @@ auto ToolHandler::isSinglePageTool() const -> bool {
             (drawingType == DRAWING_TYPE_ARROW || drawingType == DRAWING_TYPE_DOUBLE_ARROW ||
              drawingType == DRAWING_TYPE_ELLIPSE || drawingType == DRAWING_TYPE_COORDINATE_SYSTEM ||
              drawingType == DRAWING_TYPE_LINE || drawingType == DRAWING_TYPE_RECTANGLE ||
-             drawingType == DRAWING_TYPE_SPLINE)) ||
+             drawingType == DRAWING_TYPE_SPLINE || drawingType == DRAWING_TYPE_VERTEX_LINE ||
+             drawingType == DRAWING_TYPE_VERTEX_POLYLINE || drawingType == DRAWING_TYPE_VERTEX_RECTANGLE)) ||
            toolType == TOOL_SELECT_RECT || toolType == TOOL_SELECT_REGION || toolType == TOOL_SELECT_MULTILAYER_RECT ||
            toolType == TOOL_SELECT_MULTILAYER_REGION || toolType == TOOL_SELECT_OBJECT ||
            toolType == TOOL_DRAW_RECT || toolType == TOOL_DRAW_ELLIPSE || toolType == TOOL_DRAW_COORDINATE_SYSTEM ||
