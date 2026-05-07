@@ -614,6 +614,7 @@ struct ActionPropDrawingTypes {
         actionDB->setActionState(Action::TOOL_DRAW_LINE, false);
         actionDB->setActionState(Action::TOOL_DRAW_SPLINE, false);
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_LINE, false);
+        actionDB->setActionState(Action::TOOL_DRAW_VERTEX_POLYLINE, false);
 
         g_simple_action_set_state(ga, p);
         bool enabled = g_variant_get_boolean(p);
@@ -640,6 +641,8 @@ template <>
 struct ActionProperties<Action::TOOL_DRAW_SPLINE>: ActionPropDrawingTypes<DRAWING_TYPE_SPLINE> {};
 template <>
 struct ActionProperties<Action::TOOL_DRAW_VERTEX_LINE>: ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_LINE> {};
+template <>
+struct ActionProperties<Action::TOOL_DRAW_VERTEX_POLYLINE>: ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_POLYLINE> {};
 
 template <>
 struct ActionProperties<Action::SETSQUARE> {

@@ -38,6 +38,7 @@
 #include "control/tools/LaserPointerHandler.h"      // for LaserPointerHandler
 #include "control/tools/LineByClicksHandler.h"      // for LineByClicksHandler
 #include "control/tools/PdfElemSelection.h"         // for PdfElemSelection
+#include "control/tools/PolylineByClicksHandler.h"  // for PolylineByClicksHandler
 #include "control/tools/RectangleHandler.h"         // for RectangleHandler
 #include "control/tools/RulerHandler.h"             // for RulerHandler
 #include "control/tools/Selector.h"                 // for RectangularSelector
@@ -305,6 +306,9 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
             case DRAWING_TYPE_VERTEX_LINE:
                 this->inputHandler = std::make_unique<LineByClicksHandler>(control, getPage());
                 break;
+            case DRAWING_TYPE_VERTEX_POLYLINE:
+                this->inputHandler = std::make_unique<PolylineByClicksHandler>(control, getPage());
+                break;
             default:
                 this->inputHandler = std::make_unique<StrokeHandler>(control, getPage());
         }
@@ -477,7 +481,13 @@ auto XojPageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool
     EditSelection* selection = xournal->getSelection();
     bool hasNoModifiers = !pos.isShiftDown() && !pos.isControlDown();
 
-    if (hasNoModifiers && selection != nullptr) {
+    if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
+        this->inputHandler->onButtonDoublePressEvent(pos, zoom);
+        if (this->inputHandler->isDone()) {
+            xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
+            this->inputHandler.reset();
+        }
+    } else if (hasNoModifiers && selection != nullptr) {
         // Find a selected object under the cursor, if possible. The selection doesn't change the
         // element coordinates until it is finalized, so we need to use position relative to the
         // original coordinates of the selection.

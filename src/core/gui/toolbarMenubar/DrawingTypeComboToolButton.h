@@ -53,6 +53,7 @@ public:
         COORDINATE_SYSTEM,
         SPLINE,
         VERTEX_LINE,
+        VERTEX_POLYLINE,
         SHAPE_RECOGNIZER,
         ENUMERATOR_COUNT
     };

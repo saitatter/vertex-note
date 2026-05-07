@@ -245,6 +245,12 @@ Initial implementation status:
 - Add object-based rectangle, arc, and circle.
 - Keep existing drag tools unchanged.
 
+Initial implementation status:
+
+- `LineByClicksHandler` creates a two-vertex `GeometryElement`.
+- `PolylineByClicksHandler` creates a multi-edge `GeometryElement` from discrete clicks.
+- Both handlers use geometry snapping first and legacy grid snapping as fallback.
+
 ### Phase 4: Editable Constraints
 
 - Add constraint objects.

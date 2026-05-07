@@ -632,7 +632,8 @@ void Control::setToolDrawingType(DrawingType type) {
     if (this->toolHandler->getDrawingType() != type) {
         const DrawingType previousType = this->toolHandler->getDrawingType();
 
-        if (previousType == DRAWING_TYPE_SPLINE || previousType == DRAWING_TYPE_VERTEX_LINE) {
+        if (previousType == DRAWING_TYPE_SPLINE || previousType == DRAWING_TYPE_VERTEX_LINE ||
+            previousType == DRAWING_TYPE_VERTEX_POLYLINE) {
             // Multi-click tools keep an active input handler between clicks.
             if (win) {
                 win->getXournal()->endSplineAllPages();
@@ -1197,6 +1198,8 @@ void Control::toolChanged() {
     this->actionDB->enableAction(Action::TOOL_DRAW_COORDINATE_SYSTEM, toolHandler->hasCapability(TOOL_CAP_ARROW));
     this->actionDB->enableAction(Action::TOOL_DRAW_SPLINE, toolHandler->hasCapability(TOOL_CAP_SPLINE));
     this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_LINE, toolHandler->hasCapability(TOOL_CAP_VERTEX_LINE));
+    this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_POLYLINE,
+                                 toolHandler->hasCapability(TOOL_CAP_VERTEX_POLYLINE));
     this->actionDB->enableAction(Action::TOOL_DRAW_SHAPE_RECOGNIZER, toolHandler->hasCapability(TOOL_CAP_RECOGNIZER));
 
     DrawingType dt = toolHandler->getDrawingType();
@@ -1208,6 +1211,7 @@ void Control::toolChanged() {
     this->actionDB->setActionState(Action::TOOL_DRAW_COORDINATE_SYSTEM, dt == DRAWING_TYPE_COORDINATE_SYSTEM);
     this->actionDB->setActionState(Action::TOOL_DRAW_SPLINE, dt == DRAWING_TYPE_SPLINE);
     this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_LINE, dt == DRAWING_TYPE_VERTEX_LINE);
+    this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_POLYLINE, dt == DRAWING_TYPE_VERTEX_POLYLINE);
     this->actionDB->setActionState(Action::TOOL_DRAW_SHAPE_RECOGNIZER, dt == DRAWING_TYPE_SHAPE_RECOGNIZER);
 
     bool enableSize = toolHandler->hasCapability(TOOL_CAP_SIZE);
@@ -1241,7 +1245,8 @@ void Control::toolChanged() {
         }
     }
     if (toolHandler->getDrawingType() != DRAWING_TYPE_SPLINE &&
-        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_LINE) {
+        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_LINE &&
+        toolHandler->getDrawingType() != DRAWING_TYPE_VERTEX_POLYLINE) {
         if (win) {
             win->getXournal()->endSplineAllPages();
         }
