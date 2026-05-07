@@ -235,6 +235,7 @@ Initial implementation status:
 - `vn::snap::SnapEngine` chooses the highest-priority candidate inside the query radius.
 - `GridSnapProvider` covers regular grid candidates without coupling the engine to GTK/settings.
 - `GeometrySnapProvider` covers explicit vertices, line midpoints, and line projections.
+- `PageGeometryCollector` supplies visible page geometry to the snap provider at tool start.
 - Page/document indexing and intersection caching are intentionally deferred until geometry
   elements can be enumerated from a page-level geometry registry.
 

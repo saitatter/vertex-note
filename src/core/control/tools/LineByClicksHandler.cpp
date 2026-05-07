@@ -23,12 +23,21 @@
 #include "util/DispatchPool.h"
 #include "view/overlays/LineByClicksView.h"
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/snapping/GeometrySnapProvider.h"
+#include "vertexnote/snapping/PageGeometryCollector.h"
+
+namespace {
+constexpr double GEOMETRY_SNAP_RADIUS_PIXELS = 8.0;
+}
 
 LineByClicksHandler::LineByClicksHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
         viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::LineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
+    this->snapEngine.addProvider(
+            std::make_shared<vn::snap::GeometrySnapProvider>(vn::snap::collectGeometryObjects(page)));
+
     const auto* toolHandler = control->getToolHandler();
     this->strokeWidth = toolHandler->getThickness();
     this->strokeColor = toolHandler->getColor();
@@ -117,7 +126,17 @@ auto LineByClicksHandler::previewRange() const -> Range {
 
 void LineByClicksHandler::updateCurrentPoint(const PositionInputData& pos, double zoom) {
     Point pagePoint(pos.x / zoom, pos.y / zoom);
-    this->currentPoint = this->snappingHandler.snapToGrid(pagePoint, pos.isAltDown());
+    this->currentPoint = snapPoint(pagePoint, pos.isAltDown(), zoom);
+}
+
+auto LineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point {
+    const auto geometrySnap =
+            this->snapEngine.snap(vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
+    if (geometrySnap.snapped()) {
+        return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
+    }
+
+    return this->snappingHandler.snapToGrid(pagePoint, alt);
 }
 
 void LineByClicksHandler::finalizeLine() {

@@ -13,6 +13,7 @@
 #include "model/Point.h"
 #include "util/Color.h"
 #include "util/Range.h"
+#include "vertexnote/snapping/SnapEngine.h"
 
 #include "InputHandler.h"
 #include "SnapToGridInputHandler.h"
@@ -59,11 +60,13 @@ public:
 private:
     [[nodiscard]] auto previewRange() const -> Range;
     void updateCurrentPoint(const PositionInputData& pos, double zoom);
+    [[nodiscard]] auto snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point;
     void finalizeLine();
     void cancel();
 
 private:
     SnapToGridInputHandler snappingHandler;
+    vn::snap::SnapEngine snapEngine;
     std::optional<Point> startPoint;
     Point currentPoint;
     bool done = false;
