@@ -139,6 +139,8 @@ ButtonConfigGui::ButtonConfigGui(GladeSearchpath* gladeSearchPath, GtkBox* box, 
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Line"));
     // DRAWING_TYPE_VERTEX_POLYLINE
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Polyline"));
+    // DRAWING_TYPE_VERTEX_RECTANGLE
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Rectangle"));
 
 
     // Values in glade GUI!

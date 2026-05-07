@@ -54,6 +54,7 @@ public:
         SPLINE,
         VERTEX_LINE,
         VERTEX_POLYLINE,
+        VERTEX_RECTANGLE,
         SHAPE_RECOGNIZER,
         ENUMERATOR_COUNT
     };

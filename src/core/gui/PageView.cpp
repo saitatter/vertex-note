@@ -40,6 +40,7 @@
 #include "control/tools/PdfElemSelection.h"         // for PdfElemSelection
 #include "control/tools/PolylineByClicksHandler.h"  // for PolylineByClicksHandler
 #include "control/tools/RectangleHandler.h"         // for RectangleHandler
+#include "control/tools/RectangleByVerticesHandler.h"  // for RectangleByVerticesHandler
 #include "control/tools/RulerHandler.h"             // for RulerHandler
 #include "control/tools/Selector.h"                 // for RectangularSelector
 #include "control/tools/SplineHandler.h"            // for SplineHandler
@@ -308,6 +309,9 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 break;
             case DRAWING_TYPE_VERTEX_POLYLINE:
                 this->inputHandler = std::make_unique<PolylineByClicksHandler>(control, getPage());
+                break;
+            case DRAWING_TYPE_VERTEX_RECTANGLE:
+                this->inputHandler = std::make_unique<RectangleByVerticesHandler>(control, getPage());
                 break;
             default:
                 this->inputHandler = std::make_unique<StrokeHandler>(control, getPage());

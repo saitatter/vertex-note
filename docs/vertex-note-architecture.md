@@ -249,6 +249,7 @@ Initial implementation status:
 
 - `LineByClicksHandler` creates a two-vertex `GeometryElement`.
 - `PolylineByClicksHandler` creates a multi-edge `GeometryElement` from discrete clicks.
+- `RectangleByVerticesHandler` creates a four-edge `GeometryElement` from opposite-corner clicks.
 - Both handlers use geometry snapping first and legacy grid snapping as fallback.
 - New geometry objects receive non-zero process-local object IDs through `GeometryIdGenerator`.
 

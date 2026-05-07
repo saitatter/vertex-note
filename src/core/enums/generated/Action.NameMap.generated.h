@@ -78,6 +78,7 @@ constexpr const char* ACTION_NAMES[] = {  // Action to string conversion map
         "tool-draw-spline",
         "tool-draw-vertex-line",
         "tool-draw-vertex-polyline",
+        "tool-draw-vertex-rectangle",
         "setsquare",
         "compass",
         "tool-pen-size",
