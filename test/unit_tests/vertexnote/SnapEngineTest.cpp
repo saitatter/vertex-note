@@ -97,3 +97,26 @@ TEST(VertexNoteSnapEngine, snapsToLineProjection) {
     EXPECT_DOUBLE_EQ(result.pagePoint.x, 7.0);
     EXPECT_DOUBLE_EQ(result.pagePoint.y, 0.0);
 }
+
+TEST(VertexNoteSnapEngine, snapsToLineIntersection) {
+    GeometryObject first(42);
+    const auto a = first.addVertex(Vec2{0.0, 0.0});
+    const auto b = first.addVertex(Vec2{10.0, 10.0});
+    first.addLine(a, b);
+
+    GeometryObject second(43);
+    const auto c = second.addVertex(Vec2{0.0, 10.0});
+    const auto d = second.addVertex(Vec2{10.0, 0.0});
+    second.addLine(c, d);
+
+    SnapEngine engine;
+    engine.addProvider(
+            std::make_shared<GeometrySnapProvider>(std::vector<const GeometryObject*>{&first, &second}));
+
+    auto result = engine.snap(SnapQuery{Vec2{5.2, 5.1}, 1.0, 1.0});
+
+    ASSERT_TRUE(result.snapped());
+    EXPECT_EQ(result.candidate->kind, SnapKind::Intersection);
+    EXPECT_DOUBLE_EQ(result.pagePoint.x, 5.0);
+    EXPECT_DOUBLE_EQ(result.pagePoint.y, 5.0);
+}
