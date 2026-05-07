@@ -52,6 +52,7 @@ public:
         LINE,
         COORDINATE_SYSTEM,
         SPLINE,
+        VERTEX_LINE,
         SHAPE_RECOGNIZER,
         ENUMERATOR_COUNT
     };

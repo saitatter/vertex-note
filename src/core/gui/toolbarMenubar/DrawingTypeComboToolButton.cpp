@@ -40,6 +40,8 @@ static auto makeEntries(IconNameHelper& icons, const ActionDatabase& db)
     entries[Type::COORDINATE_SYSTEM] = Entry(_("Draw coordinate system"), icons.iconName("draw-coordinate-system"), db,
                                              Action::TOOL_DRAW_COORDINATE_SYSTEM);
     entries[Type::SPLINE] = Entry(_("Draw Spline"), icons.iconName("draw-spline"), db, Action::TOOL_DRAW_SPLINE);
+    entries[Type::VERTEX_LINE] =
+            Entry(_("Draw Vertex Line"), icons.iconName("draw-line"), db, Action::TOOL_DRAW_VERTEX_LINE);
     entries[Type::SHAPE_RECOGNIZER] =
             Entry(_("Stroke recognizer"), icons.iconName("shape-recognizer"), db, Action::TOOL_DRAW_SHAPE_RECOGNIZER);
     return res;
@@ -141,6 +143,8 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> xoj::util::Widge
                      data.get());
     g_signal_connect((*entries)[Type::SPLINE].gAction.get(), "notify::state",
                      xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SPLINE>>, data.get());
+    g_signal_connect((*entries)[Type::VERTEX_LINE].gAction.get(), "notify::state",
+                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_LINE>>, data.get());
     g_signal_connect((*entries)[Type::SHAPE_RECOGNIZER].gAction.get(), "notify::state",
                      xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SHAPE_RECOGNIZER>>,
                      data.get());
@@ -157,6 +161,7 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> xoj::util::Widge
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::LINE].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::COORDINATE_SYSTEM].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::SPLINE].gAction.get(), d);
+                g_signal_handlers_disconnect_by_data((*data->entries)[Type::VERTEX_LINE].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::SHAPE_RECOGNIZER].gAction.get(), d);
                 delete data;
             },

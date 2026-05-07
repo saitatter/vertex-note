@@ -78,6 +78,7 @@ public:
     void onButtonDoublePressEvent(const PositionInputData& pos, double zoom) override;
     bool onKeyPressEvent(const KeyEvent& event) override;
     bool onKeyReleaseEvent(const KeyEvent& event) override;
+    bool acceptsAdditionalPress() const override;
 
     void finalizeSpline();
 

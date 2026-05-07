@@ -237,6 +237,8 @@ void SplineHandler::onButtonPressEvent(const PositionInputData& pos, double zoom
 
 void SplineHandler::onButtonDoublePressEvent(const PositionInputData&, double) { finalizeSpline(); }
 
+auto SplineHandler::acceptsAdditionalPress() const -> bool { return true; }
+
 void SplineHandler::movePoint(double dx, double dy) {
     // move last non dynamically changing point
     if (!this->knots.empty()) {

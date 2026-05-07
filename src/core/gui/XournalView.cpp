@@ -480,7 +480,7 @@ void XournalView::endTextAllPages(XojPageView* except) const {
 
 void XournalView::endSplineAllPages() const {
     for (auto& v: this->viewPages) {
-        v->endSpline();
+        v->endPendingInput();
     }
 }
 

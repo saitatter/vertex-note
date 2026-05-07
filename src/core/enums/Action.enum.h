@@ -112,6 +112,7 @@ enum class Action : size_t {
     TOOL_DRAW_COORDINATE_SYSTEM,
     TOOL_DRAW_LINE,
     TOOL_DRAW_SPLINE,
+    TOOL_DRAW_VERTEX_LINE,
     SETSQUARE,
     COMPASS,
 

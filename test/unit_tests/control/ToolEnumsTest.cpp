@@ -9,6 +9,7 @@
  * @license GNU GPLv2 or later
  */
 
+#include <cstddef>
 #include <string>
 
 #include <config-test.h>
@@ -41,5 +42,19 @@ TEST(ToolEnumsTest, testToolTypeSerialization) {
         std::string s = toolTypeToString(toolType).data();
         EXPECT_FALSE(s.empty());
         EXPECT_EQ(toolType, toolTypeFromString(s));
+    }
+}
+
+/**
+ * Test whether the invariant
+ *     fromString(toString(x)) == x
+ * holds.
+ */
+TEST(ToolEnumsTest, testDrawingTypeSerialization) {
+    for (size_t i = 0; i < drawingTypeNames.size(); i++) {
+        auto drawingType = static_cast<DrawingType>(i);
+        std::string s = drawingTypeToString(drawingType).data();
+        EXPECT_FALSE(s.empty());
+        EXPECT_EQ(drawingType, drawingTypeFromString(s));
     }
 }
