@@ -37,7 +37,7 @@ VertexNote is in early foundation work.
 | Geometry value types | ✅ Started |
 | Vertex / edge object model | ✅ Started |
 | Stroke fallback generation | ✅ Started |
-| Snap engine | 🚧 Planned |
+| Snap engine | ✅ Started |
 | Object-based rendering | 🚧 Planned |
 | `.xopp` extension metadata | 🚧 Planned |
 | Constraint solver | 🧪 Future |
@@ -69,6 +69,26 @@ VertexNote keeps Xournal++'s existing stroke model for handwritten content and a
 - Future projected 3D wireframes
 
 See [docs/vertex-note-architecture.md](docs/vertex-note-architecture.md) for the current roadmap and subsystem map.
+
+---
+
+## 🛠️ Local Development on Windows
+
+The current recommended Windows path is **MSYS2 MinGW64**.
+
+```powershell
+.\scripts\mingw64-dev.ps1
+```
+
+Useful tasks:
+
+- `.\scripts\mingw64-dev.ps1 configure`
+- `.\scripts\mingw64-dev.ps1 build`
+- `.\scripts\mingw64-dev.ps1 vertex-tests`
+- `.\scripts\mingw64-dev.ps1 test`
+- `.\scripts\mingw64-dev.ps1 run`
+
+See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and manual commands.
 
 ---
 
