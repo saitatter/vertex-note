@@ -23,6 +23,7 @@
 #include "util/DispatchPool.h"
 #include "view/overlays/LineByClicksView.h"
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 
@@ -145,7 +146,7 @@ void LineByClicksHandler::finalizeLine() {
         return;
     }
 
-    vn::geom::GeometryObject object;
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
     auto start = object.addVertex({this->startPoint->x, this->startPoint->y});
     auto end = object.addVertex({this->currentPoint.x, this->currentPoint.y});
     object.addLine(start, end);

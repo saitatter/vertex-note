@@ -24,6 +24,7 @@
 #include "util/DispatchPool.h"
 #include "view/overlays/PolylineByClicksView.h"
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 
@@ -163,7 +164,7 @@ void PolylineByClicksHandler::finalizePolyline() {
         return;
     }
 
-    vn::geom::GeometryObject object;
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
     std::vector<vn::geom::VertexId> vertices;
     vertices.reserve(this->points.size());
     for (const auto& point: this->points) {
