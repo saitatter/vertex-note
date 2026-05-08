@@ -348,6 +348,8 @@ void SettingsDialog::load() {
     loadCheckbox("cbDoActionOnStrokeFiltered", settings->getDoActionOnStrokeFiltered());
     loadCheckbox("cbTrySelectOnStrokeFiltered", settings->getTrySelectOnStrokeFiltered());
     loadCheckbox("cbSnapRecognizedShapesEnabled", settings->getSnapRecognizedShapesEnabled());
+    loadCheckbox("cbVertexNoteGeometrySnapEnabled", settings->isVertexNoteGeometrySnapEnabled());
+    loadCheckbox("cbVertexNoteGridSnapEnabled", settings->isVertexNoteGridSnapEnabled());
     loadCheckbox("cbRestoreLineWidthEnabled", settings->getRestoreLineWidthEnabled());
     loadCheckbox("cbStockIcons", settings->areStockIconsUsed());
     loadCheckbox("cbShowPageShadow", settings->isShowPageShadow());
@@ -754,6 +756,8 @@ void SettingsDialog::save() {
     settings->setDoActionOnStrokeFiltered(getCheckbox("cbDoActionOnStrokeFiltered"));
     settings->setTrySelectOnStrokeFiltered(getCheckbox("cbTrySelectOnStrokeFiltered"));
     settings->setSnapRecognizedShapesEnabled(getCheckbox("cbSnapRecognizedShapesEnabled"));
+    settings->setVertexNoteGeometrySnapEnabled(getCheckbox("cbVertexNoteGeometrySnapEnabled"));
+    settings->setVertexNoteGridSnapEnabled(getCheckbox("cbVertexNoteGridSnapEnabled"));
     settings->setRestoreLineWidthEnabled(getCheckbox("cbRestoreLineWidthEnabled"));
     settings->setAreStockIconsUsed(getCheckbox("cbStockIcons"));
     settings->setShowPageShadow(getCheckbox("cbShowPageShadow"));

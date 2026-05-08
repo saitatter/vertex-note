@@ -73,6 +73,8 @@ private:
     std::vector<Point> points;
     Point currentPoint;
     std::optional<vn::snap::SnapKind> currentSnapKind;
+    bool geometrySnapEnabled = true;
+    bool gridSnapEnabled = true;
     bool done = false;
     double strokeWidth = 1.0;
     Color strokeColor = Colors::black;

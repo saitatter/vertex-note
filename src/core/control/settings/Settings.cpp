@@ -146,6 +146,8 @@ void Settings::loadDefault() {
     this->snapGrid = true;
     this->snapGridTolerance = 0.50;
     this->snapGridSize = DEFAULT_GRID_SIZE;
+    this->vertexNoteGeometrySnapEnabled = true;
+    this->vertexNoteGridSnapEnabled = true;
 
     this->strokeRecognizerMinSize = 40;
 
@@ -610,6 +612,10 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
         this->snapGridSize = tempg_ascii_strtod(reinterpret_cast<const char*>(value), nullptr);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("snapGridTolerance")) == 0) {
         this->snapGridTolerance = tempg_ascii_strtod(reinterpret_cast<const char*>(value), nullptr);
+    } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("vertexNoteGeometrySnapEnabled")) == 0) {
+        this->vertexNoteGeometrySnapEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
+    } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("vertexNoteGridSnapEnabled")) == 0) {
+        this->vertexNoteGridSnapEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeRecognizerMinSize")) == 0) {
         this->strokeRecognizerMinSize = tempg_ascii_strtod(reinterpret_cast<const char*>(value), nullptr);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("touchDrawing")) == 0) {
@@ -1127,6 +1133,8 @@ void Settings::save() {
     SAVE_BOOL_PROP(snapGrid);
     SAVE_DOUBLE_PROP(snapGridTolerance);
     SAVE_DOUBLE_PROP(snapGridSize);
+    SAVE_BOOL_PROP(vertexNoteGeometrySnapEnabled);
+    SAVE_BOOL_PROP(vertexNoteGridSnapEnabled);
 
     SAVE_DOUBLE_PROP(strokeRecognizerMinSize);
 
@@ -1631,6 +1639,28 @@ void Settings::setSnapGridSize(double gridSize) {
         return;
     }
     this->snapGridSize = gridSize;
+    save();
+}
+
+auto Settings::isVertexNoteGeometrySnapEnabled() const -> bool { return this->vertexNoteGeometrySnapEnabled; }
+
+void Settings::setVertexNoteGeometrySnapEnabled(bool enabled) {
+    if (this->vertexNoteGeometrySnapEnabled == enabled) {
+        return;
+    }
+
+    this->vertexNoteGeometrySnapEnabled = enabled;
+    save();
+}
+
+auto Settings::isVertexNoteGridSnapEnabled() const -> bool { return this->vertexNoteGridSnapEnabled; }
+
+void Settings::setVertexNoteGridSnapEnabled(bool enabled) {
+    if (this->vertexNoteGridSnapEnabled == enabled) {
+        return;
+    }
+
+    this->vertexNoteGridSnapEnabled = enabled;
     save();
 }
 

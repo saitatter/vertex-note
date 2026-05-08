@@ -327,6 +327,11 @@ public:
     double getSnapGridSize() const;
     void setSnapGridSize(double gridSize);
 
+    bool isVertexNoteGeometrySnapEnabled() const;
+    void setVertexNoteGeometrySnapEnabled(bool enabled);
+    bool isVertexNoteGridSnapEnabled() const;
+    void setVertexNoteGridSnapEnabled(bool enabled);
+
     double getStrokeRecognizerMinSize() const;
     void setStrokeRecognizerMinSize(double value);
 
@@ -958,6 +963,16 @@ private:
      * grid snapping enabled by default
      */
     bool snapGrid{};
+
+    /**
+     * VertexNote geometry tools can snap to existing geometry objects.
+     */
+    bool vertexNoteGeometrySnapEnabled{};
+
+    /**
+     * VertexNote geometry tools can snap to the document grid.
+     */
+    bool vertexNoteGridSnapEnabled{};
 
     /**
      * Default name if you save a new document

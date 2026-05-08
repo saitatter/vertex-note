@@ -5287,6 +5287,36 @@ Determination Radius: Radius at which modifiers will lock in until finished draw
                                         <property name="position">1</property>
                                       </packing>
                                     </child>
+                                    <child>
+                                      <object class="GtkCheckButton" id="cbVertexNoteGeometrySnapEnabled">
+                                        <property name="label" translatable="yes">Use VertexNote geometry snapping</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="receives-default">False</property>
+                                        <property name="tooltip-text" translatable="yes">If activated, VertexNote line, polyline, and rectangle tools snap to existing vertices, midpoints, projections, and intersections.</property>
+                                        <property name="draw-indicator">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="expand">False</property>
+                                        <property name="fill">True</property>
+                                        <property name="position">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkCheckButton" id="cbVertexNoteGridSnapEnabled">
+                                        <property name="label" translatable="yes">Use VertexNote grid snapping</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="receives-default">False</property>
+                                        <property name="tooltip-text" translatable="yes">If activated, VertexNote click-based geometry tools can snap to the document grid.</property>
+                                        <property name="draw-indicator">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="expand">False</property>
+                                        <property name="fill">True</property>
+                                        <property name="position">3</property>
+                                      </packing>
+                                    </child>
                                   </object>
                                 </child>
                                 <child type="label">

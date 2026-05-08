@@ -14,6 +14,7 @@
 
 #include "control/Control.h"
 #include "control/ToolHandler.h"
+#include "control/settings/Settings.h"
 #include "gui/inputdevices/InputEvents.h"
 #include "gui/inputdevices/PositionInputData.h"
 #include "model/Document.h"
@@ -38,8 +39,14 @@ PolylineByClicksHandler::PolylineByClicksHandler(Control* control, const PageRef
         snappingHandler(control->getSettings()),
         viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::PolylineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
-    this->snapEngine.addProvider(
-            std::make_shared<vn::snap::GeometrySnapProvider>(vn::snap::collectGeometryObjects(page)));
+    const auto* settings = control->getSettings();
+    this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
+    this->gridSnapEnabled = settings->isVertexNoteGridSnapEnabled();
+
+    if (this->geometrySnapEnabled) {
+        this->snapEngine.addProvider(
+                std::make_shared<vn::snap::GeometrySnapProvider>(vn::snap::collectGeometryObjects(page)));
+    }
 
     const auto* toolHandler = control->getToolHandler();
     this->strokeWidth = toolHandler->getThickness();
@@ -144,11 +151,17 @@ void PolylineByClicksHandler::updateCurrentPoint(const PositionInputData& pos, d
 
 auto PolylineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point {
     this->currentSnapKind.reset();
-    const auto geometrySnap =
-            this->snapEngine.snap(vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
-    if (geometrySnap.snapped()) {
-        this->currentSnapKind = geometrySnap.candidate->kind;
-        return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
+    if (this->geometrySnapEnabled) {
+        const auto geometrySnap = this->snapEngine.snap(
+                vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
+        if (geometrySnap.snapped()) {
+            this->currentSnapKind = geometrySnap.candidate->kind;
+            return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
+        }
+    }
+
+    if (!this->gridSnapEnabled) {
+        return pagePoint;
     }
 
     Point gridPoint = this->snappingHandler.snapToGrid(pagePoint, alt);

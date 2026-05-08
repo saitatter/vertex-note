@@ -46,6 +46,8 @@ TEST(SettingsTest, testReadWrite) {
         settings.setFont(XojFont{"myfontname italic 34"});             // Font
         settings.latexSettings.editorFont = XojFont{"myfonttest 52"};  // Font
         settings.setPreloadPagesAfter(145);                            // unsigned int
+        settings.setVertexNoteGeometrySnapEnabled(false);              // bool
+        settings.setVertexNoteGridSnapEnabled(false);                  // bool
         settings.transactionEnd();                                     // calls save()
 
         Settings loaded(outPath);
@@ -74,6 +76,8 @@ TEST(SettingsTest, testReadWrite) {
         EXPECT_EQ(settings.latexSettings.editorFont.getSize(), loaded.latexSettings.editorFont.getSize());  // Font
         EXPECT_EQ(settings.getPreloadPagesAfter(), loaded.getPreloadPagesAfter());    // unsigned int
         EXPECT_EQ(settings.getPreloadPagesBefore(), loaded.getPreloadPagesBefore());  // unsigned int
+        EXPECT_EQ(settings.isVertexNoteGeometrySnapEnabled(), loaded.isVertexNoteGeometrySnapEnabled());  // bool
+        EXPECT_EQ(settings.isVertexNoteGridSnapEnabled(), loaded.isVertexNoteGridSnapEnabled());          // bool
 
         fs::remove(outPath);
     };
