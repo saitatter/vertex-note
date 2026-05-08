@@ -31,3 +31,82 @@ jobs:
           git_committer_name: github-actions[bot]
           git_committer_email: 41898282+github-actions[bot]@users.noreply.github.com
           build: false
+
+  build-windows-assets:
+    needs: release
+    if: ${{ needs.release.outputs.released == 'true' }}
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.commit_sha }}
+
+      - name: Install MSYS2 MinGW64 dependencies
+        uses: ./.github/actions/install_deps_windows
+        with:
+          msystem: mingw64
+          msys_package_env: x86_64
+
+      - name: Build VertexNote
+        uses: ./.github/actions/build
+        with:
+          build_type: RelWithDebInfo
+          cmake_flags: -DENABLE_GTEST=OFF
+          shell: msys2 {0}
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --no-progress -y
+
+      - name: Package Windows assets
+        id: package-windows
+        working-directory: ${{ github.workspace }}/build
+        shell: msys2 {0}
+        run: |
+          ../windows-setup/package.sh
+
+          package_dir="vertex-note-v${{ needs.release.outputs.version }}-windows-x86_64-portable"
+          portable_archive="${package_dir}.zip"
+          installer_name="vertex-note-v${{ needs.release.outputs.version }}-windows-x86_64-setup.exe"
+
+          mkdir portable
+          mv dist "portable/${package_dir}"
+          mv xournalpp-setup.exe "../${installer_name}"
+
+          echo "package_dir=${package_dir}" >> "$GITHUB_OUTPUT"
+          echo "portable_archive=${portable_archive}" >> "$GITHUB_OUTPUT"
+          echo "installer_name=${installer_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Compress portable runtime
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "${{ github.workspace }}\build\portable\${{ steps.package-windows.outputs.package_dir }}" `
+            -DestinationPath "${{ github.workspace }}\${{ steps.package-windows.outputs.portable_archive }}" `
+            -Force
+
+      - name: Upload portable workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package-windows.outputs.portable_archive }}
+          path: ${{ steps.package-windows.outputs.portable_archive }}
+          if-no-files-found: error
+
+      - name: Upload installer workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package-windows.outputs.installer_name }}
+          path: ${{ steps.package-windows.outputs.installer_name }}
+          if-no-files-found: error
+
+      - name: Upload portable release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" "${{ steps.package-windows.outputs.portable_archive }}" --clobber
+
+      - name: Upload installer release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" "${{ steps.package-windows.outputs.installer_name }}" --clobber
