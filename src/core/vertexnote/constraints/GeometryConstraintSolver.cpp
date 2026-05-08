@@ -6,6 +6,7 @@
 
 #include "GeometryConstraintSolver.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <optional>
@@ -74,7 +75,23 @@ auto alignEdgeToDirection(geom::GeometryObject& object, geom::EdgeId edgeId, geo
 
 }  // namespace
 
+GeometryConstraintSolver::GeometryConstraintSolver(std::size_t maxIterations): maxIterations(std::max<std::size_t>(1U, maxIterations)) {}
+
 auto GeometryConstraintSolver::apply(geom::GeometryObject& object) const -> ConstraintSolveResult {
+    ConstraintSolveResult result;
+    for (std::size_t iteration = 0; iteration < this->maxIterations; ++iteration) {
+        auto pass = applyOnce(object);
+        result.changed = result.changed || pass.changed;
+        result.appliedConstraints += pass.appliedConstraints;
+        result.iterations = iteration + 1U;
+        if (!pass.changed) {
+            break;
+        }
+    }
+    return result;
+}
+
+auto GeometryConstraintSolver::applyOnce(geom::GeometryObject& object) const -> ConstraintSolveResult {
     ConstraintSolveResult result;
     for (const auto& constraint: object.constraints()) {
         bool changed = false;

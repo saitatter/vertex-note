@@ -77,6 +77,22 @@ auto GeometryElement::setVertexPosition(VertexId id, Vec2 position) -> bool {
     return changed;
 }
 
+auto GeometryElement::removeVertex(VertexId id) -> bool {
+    const bool changed = this->object.removeVertex(id);
+    if (changed) {
+        this->sizeCalculated = false;
+    }
+    return changed;
+}
+
+auto GeometryElement::insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId> {
+    auto inserted = this->object.insertVertexOnEdge(edge, position);
+    if (inserted) {
+        this->sizeCalculated = false;
+    }
+    return inserted;
+}
+
 void GeometryElement::move(double dx, double dy) {
     this->object.move(dx, dy);
     if (this->sizeCalculated) {

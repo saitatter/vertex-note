@@ -322,7 +322,7 @@ void ensure_input_model_compatibility() {
  */
 auto findResourcePath(const fs::path& searchFile) -> fs::path {
     auto search_for = [&searchFile](fs::path start) -> std::optional<fs::path> {
-        constexpr auto* postfix = "share/xournalpp";
+        constexpr auto* postfix = "share/vertex-note";
         /// 1. relative install
         /// 2. windows install
         /// 3. build dir
@@ -426,7 +426,7 @@ void on_startup(GApplication* application, XMPtr app_data) {
 
     app_data->gladePath = std::make_unique<GladeSearchpath>();
     initResourcePath(app_data->gladePath.get(), "ui/about.glade");
-    initResourcePath(app_data->gladePath.get(), "ui/xournalpp.css", false);
+    initResourcePath(app_data->gladePath.get(), "ui/vertex-note.css", false);
     initResourcePath(app_data->gladePath.get(), "ui/toolbar.ini", false);
 
     app_data->control = std::make_unique<Control>(application, app_data->gladePath.get(), app_data->disableAudio);
@@ -452,6 +452,9 @@ void on_startup(GApplication* application, XMPtr app_data) {
     // Do we want stuff in gtk_application_set_app_menu?
 
     app_data->win->show(nullptr);
+    if (app_data->control->getSettings()->isVertexNoteAutomaticUpdateCheckEnabled()) {
+        Util::execInUiThread([ctrl = app_data->control.get()]() { ctrl->showUpdateDialog(); });
+    }
 
     fs::path p;
     if (app_data->optFilename) {
@@ -592,7 +595,7 @@ void XournalMain::initLocalisation() {
     } catch (const std::runtime_error& e) {
         g_warning("XournalMain: System default locale could not be set.\n - Caused by: %s\n - Note that it is not "
                   "supported to set the locale using mingw-w64 on windows.\n - This could be solved by compiling "
-                  "xournalpp with msvc",
+                  "vertex-note with MSVC",
                   e.what());
     }
 
@@ -602,9 +605,9 @@ void XournalMain::initLocalisation() {
 auto XournalMain::run(int argc, char** argv) -> int {
 
     XournalMainPrivate app_data;
-    GtkApplication* app = gtk_application_new("com.github.xournalpp.xournalpp", APP_FLAGS);
+    GtkApplication* app = gtk_application_new(PROJECT_APP_ID, APP_FLAGS);
     g_object_set(G_OBJECT(app), "register-session", true, nullptr);  // Needed for opening files on MacOS from Finder
-    g_set_prgname("com.github.xournalpp.xournalpp");
+    g_set_prgname(PROJECT_APP_ID);
     g_signal_connect(app, "activate", G_CALLBACK(&on_activate), &app_data);
     g_signal_connect(app, "command-line", G_CALLBACK(&on_command_line), &app_data);
     g_signal_connect(app, "open", G_CALLBACK(&on_open_files), &app_data);
@@ -617,7 +620,7 @@ auto XournalMain::run(int argc, char** argv) -> int {
                           GOptionEntry{G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &app_data.optFilename,
                                        "<input>", nullptr},
                           GOptionEntry{"version", 0, 0, G_OPTION_ARG_NONE, &app_data.showVersion,
-                                       _("Get version of xournalpp"), nullptr},
+                                       _("Get version of VertexNote"), nullptr},
                           GOptionEntry{"disable-audio", 0, 0, G_OPTION_ARG_NONE, &app_data.disableAudio,
                                        _("Disable audio for this session"), nullptr},
                           GOptionEntry{"attach-mode", 0, 0, G_OPTION_ARG_NONE, &app_data.attachMode,

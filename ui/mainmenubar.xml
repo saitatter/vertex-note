@@ -155,6 +155,14 @@
      <attribute name="label" translatable="yes">Grid Snapping</attribute>
      <attribute name="action">win.grid-snapping</attribute>
     </item>
+    <item>
+     <attribute name="label" translatable="yes">VertexNote Geometry Snapping</attribute>
+     <attribute name="action">win.vertexnote-geometry-snapping</attribute>
+    </item>
+    <item>
+     <attribute name="label" translatable="yes">VertexNote Grid Snapping</attribute>
+     <attribute name="action">win.vertexnote-grid-snapping</attribute>
+    </item>
    </section>
    <section>
     <item>

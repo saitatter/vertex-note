@@ -94,3 +94,45 @@ TEST(VertexNoteGeometryObject, rejectsConstraintsWithMissingReferences) {
     EXPECT_THROW(object.addConstraint(ConstraintKind::Coincident, {a, 999}), std::invalid_argument);
     EXPECT_THROW(object.addConstraint(ConstraintKind::OnEdge, {}, {999}), std::invalid_argument);
 }
+
+TEST(VertexNoteGeometryObject, insertsVertexOnLineEdge) {
+    GeometryObject object(42);
+    auto a = object.addVertex({0.0, 0.0});
+    auto b = object.addVertex({10.0, 0.0});
+    auto edge = object.addLine(a, b);
+
+    auto inserted = object.insertVertexOnEdge(edge, {4.0, 0.0});
+
+    ASSERT_TRUE(inserted.has_value());
+    ASSERT_EQ(object.vertices().size(), 3U);
+    ASSERT_EQ(object.edges().size(), 2U);
+    EXPECT_EQ(object.edge(edge)->end, *inserted);
+}
+
+TEST(VertexNoteGeometryObject, removesVertexWithDependentEdgesAndConstraints) {
+    GeometryObject object(42);
+    auto a = object.addVertex({0.0, 0.0});
+    auto b = object.addVertex({10.0, 0.0});
+    auto edge = object.addLine(a, b);
+    object.addConstraint(ConstraintKind::FixedLength, {a, b}, {edge}, 10.0);
+
+    EXPECT_TRUE(object.removeVertex(b));
+
+    EXPECT_EQ(object.vertices().size(), 1U);
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.constraints().empty());
+}
+
+TEST(VertexNoteGeometryObject, replacesAndRemovesConstraints) {
+    GeometryObject object(42);
+    auto a = object.addVertex({0.0, 0.0});
+    auto b = object.addVertex({10.0, 0.0});
+    auto constraint = object.addConstraint(ConstraintKind::FixedLength, {a, b}, {}, 10.0);
+
+    EXPECT_TRUE(object.replaceConstraint({constraint, ConstraintKind::FixedLength, {a, b}, {}, 5.0}));
+    ASSERT_NE(object.constraint(constraint), nullptr);
+    EXPECT_DOUBLE_EQ(object.constraint(constraint)->value, 5.0);
+
+    EXPECT_TRUE(object.removeConstraint(constraint));
+    EXPECT_TRUE(object.constraints().empty());
+}

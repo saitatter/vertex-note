@@ -19,6 +19,18 @@
 constexpr auto PROJECT_NAME = "@PROJECT_NAME@";
 
 /**
+ * Stable application identity used for desktop integration.
+ */
+constexpr auto PROJECT_APP_ID = "@VERTEX_NOTE_APP_ID@";
+
+/**
+ * Installed executable names.
+ */
+constexpr auto PROJECT_BINARY_NAME = "@VERTEX_NOTE_BINARY_NAME@";
+constexpr auto PROJECT_WRAPPER_BINARY_NAME = "@VERTEX_NOTE_WRAPPER_BINARY_NAME@";
+constexpr auto PROJECT_RESOURCE_DIR = "@VERTEX_NOTE_RESOURCE_DIR@";
+
+/**
  * Project version number
  */
 constexpr auto PROJECT_VERSION = "@PROJECT_VERSION@";

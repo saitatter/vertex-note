@@ -21,6 +21,10 @@ class GeometryVertexMoveUndoAction final: public UndoAction {
 public:
     GeometryVertexMoveUndoAction(PageRef page, vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
                                  vn::geom::Vec2 oldPosition, vn::geom::Vec2 newPosition);
+    GeometryVertexMoveUndoAction(PageRef page, vn::geom::GeometryElement* element,
+                                 std::vector<vn::geom::VertexId> vertices,
+                                 std::vector<vn::geom::Vec2> oldPositions,
+                                 std::vector<vn::geom::Vec2> newPositions);
 
     bool undo(Control* control) override;
     bool redo(Control* control) override;
@@ -28,11 +32,12 @@ public:
     std::string getText() override;
 
 private:
-    bool apply(vn::geom::Vec2 position);
+    bool apply(const std::vector<vn::geom::Vec2>& positions);
 
 private:
+    PageRef page;
     vn::geom::GeometryElement* element = nullptr;
-    vn::geom::VertexId vertex = vn::geom::InvalidVertexId;
-    vn::geom::Vec2 oldPosition;
-    vn::geom::Vec2 newPosition;
+    std::vector<vn::geom::VertexId> vertices;
+    std::vector<vn::geom::Vec2> oldPositions;
+    std::vector<vn::geom::Vec2> newPositions;
 };

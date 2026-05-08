@@ -117,7 +117,7 @@ void PageTemplateDialog::saveToFile() {
                                         GTK_RESPONSE_CANCEL, _("_Save"), GTK_RESPONSE_OK, nullptr);
 
     GtkFileFilter* filterXoj = gtk_file_filter_new();
-    gtk_file_filter_set_name(filterXoj, _("Xournal++ template"));
+    gtk_file_filter_set_name(filterXoj, _("VertexNote template"));
     gtk_file_filter_add_mime_type(filterXoj, "application/x-xopt");
     gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filterXoj);
 

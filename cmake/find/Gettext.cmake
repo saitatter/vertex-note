@@ -651,7 +651,7 @@ if(XGETTEXT_FOUND)
           FILES
             "${inifile_abs}"
           DESTINATION
-            "share/xournalpp/ui"
+            "share/${VERTEX_NOTE_RESOURCE_DIR}/ui"
         )
       endforeach()
 

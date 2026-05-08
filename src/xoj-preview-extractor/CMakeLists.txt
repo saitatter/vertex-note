@@ -32,12 +32,13 @@ target_link_libraries (xournalpp-thumbnailer
   )
 
 target_include_directories (xournalpp-thumbnailer PRIVATE ${librsvg_INCLUDE_DIRS})
+set_target_properties(xournalpp-thumbnailer PROPERTIES OUTPUT_NAME "vertex-note-thumbnailer")
 
 ## Install ##
 
 install (TARGETS xournalpp-thumbnailer
   RUNTIME DESTINATION bin
-  COMPONENT xournalpp-thumbnailer
+  COMPONENT vertex-note-thumbnailer
 )
 
 ## Desktop install targets ##
@@ -47,13 +48,13 @@ configure_file (xournalpp-thumbnailer-xoj.schemas xournalpp-thumbnailer-xoj.sche
 add_custom_target (desktop-install-thumbnailer
   COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" install
 
-  COMMENT "Install xournalpp-thumbnailer as xoj file thumbnail generator"
+  COMMENT "Install vertex-note-thumbnailer as xoj file thumbnail generator"
   SOURCES xournalpp-thumbnailer xournalpp-thumbnailer-xoj.schemas desktop-install.sh
 )
 
 add_custom_target (desktop-uninstall-thumbnailer
   COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" uninstall
 
-  COMMENT "Uninstall xournalpp-thumbnailer as xoj file thumbnail generator"
+  COMMENT "Uninstall vertex-note-thumbnailer as xoj file thumbnail generator"
   SOURCES xournalpp-thumbnailer xournalpp-thumbnailer-xoj.schemas desktop-install.sh
 )

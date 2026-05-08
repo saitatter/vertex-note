@@ -380,6 +380,8 @@ public:
 protected:
     void setRotationSnapping(bool enable);
     void setGridSnapping(bool enable);
+    void setVertexNoteGeometrySnapping(bool enable);
+    void setVertexNoteGridSnapping(bool enable);
 
     void showFontDialog();
     void showColorChooserDialog();

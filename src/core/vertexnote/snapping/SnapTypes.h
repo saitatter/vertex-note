@@ -22,10 +22,41 @@ enum class SnapKind {
     ConstraintGuide,
 };
 
+struct SnapPriorities {
+    double grid = 10.0;
+    double explicitVertex = 100.0;
+    double edgeEndpoint = 100.0;
+    double midpoint = 70.0;
+    double edgeProjection = 50.0;
+    double intersection = 90.0;
+    double constraintGuide = 80.0;
+
+    [[nodiscard]] auto priorityFor(SnapKind kind) const -> double {
+        switch (kind) {
+            case SnapKind::Grid:
+                return grid;
+            case SnapKind::ExplicitVertex:
+                return explicitVertex;
+            case SnapKind::EdgeEndpoint:
+                return edgeEndpoint;
+            case SnapKind::Midpoint:
+                return midpoint;
+            case SnapKind::EdgeProjection:
+                return edgeProjection;
+            case SnapKind::Intersection:
+                return intersection;
+            case SnapKind::ConstraintGuide:
+                return constraintGuide;
+        }
+        return 0.0;
+    }
+};
+
 struct SnapQuery {
     geom::Vec2 pagePoint;
     double zoom = 1.0;
     double maxScreenDistance = 8.0;
+    SnapPriorities priorities;
 };
 
 struct SnapCandidate {

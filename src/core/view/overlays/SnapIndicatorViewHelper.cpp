@@ -16,6 +16,25 @@ constexpr double SNAP_MARKER_RADIUS = 4.5;
 constexpr double SNAP_MARKER_INNER_RADIUS = 1.7;
 constexpr double FULL_CIRCLE_RADIANS = 6.28318530717958647692;
 
+auto labelFor(vn::snap::SnapKind kind) -> const char* {
+    switch (kind) {
+        case vn::snap::SnapKind::Grid:
+            return "GRID";
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+            return "VERTEX";
+        case vn::snap::SnapKind::Midpoint:
+            return "MID";
+        case vn::snap::SnapKind::EdgeProjection:
+            return "PROJ";
+        case vn::snap::SnapKind::Intersection:
+            return "INT";
+        case vn::snap::SnapKind::ConstraintGuide:
+            return "CONST";
+    }
+    return "";
+}
+
 void setSnapColor(cairo_t* cr, vn::snap::SnapKind kind, double alpha = 1.0) {
     switch (kind) {
         case vn::snap::SnapKind::Grid:
@@ -127,6 +146,23 @@ void drawSnapIndicator(cairo_t* cr, const Point& point, std::optional<vn::snap::
     drawOpenSnapGlyph(cr, *kind, point);
     setSnapColor(cr, *kind);
     cairo_stroke(cr);
+
+    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, 9.0);
+    cairo_text_extents_t extents{};
+    const char* label = labelFor(*kind);
+    cairo_text_extents(cr, label, &extents);
+    const double paddingX = 4.0;
+    const double paddingY = 2.0;
+    const double labelX = point.x + SNAP_MARKER_RADIUS + 5.0;
+    const double labelY = point.y - SNAP_MARKER_RADIUS - 3.0;
+    cairo_rectangle(cr, labelX - paddingX, labelY - extents.height - paddingY, extents.width + paddingX * 2.0,
+                    extents.height + paddingY * 2.0);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.86);
+    cairo_fill(cr);
+    setSnapColor(cr, *kind);
+    cairo_move_to(cr, labelX, labelY);
+    cairo_show_text(cr, label);
 }
 
 }  // namespace xoj::view

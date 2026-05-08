@@ -1,5 +1,5 @@
-; Xournal++ NSIS installation script for Windows
-; Author: The Xournal++ Team
+; VertexNote NSIS installation script for Windows
+; Author: The VertexNote Team
 
 ;--------------------------------
 ; NSIS setup
@@ -15,8 +15,8 @@ Unicode true
 !include nsDialogs.nsh
 
 ; Options for MultiUser plugin
-!define MULTIUSER_INSTALLMODE_INSTDIR "Xournal++"
-!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "Software\Xournal++"
+!define MULTIUSER_INSTALLMODE_INSTDIR "VertexNote"
+!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "Software\VertexNote"
 
 !define MULTIUSER_EXECUTIONLEVEL Highest ; Mixed-mode installer that can both be per-machine or per-user
 !define MULTIUSER_MUI
@@ -34,7 +34,7 @@ Function .onInit
 		SetRegView 64
 	${Else}
 		# 32 bit code
-		MessageBox MB_OK "Xournal++ requires 64-bit Windows. Sorry!"
+		MessageBox MB_OK "VertexNote requires 64-bit Windows. Sorry!"
 		Abort
 	${EndIf}
 
@@ -47,7 +47,7 @@ Function un.onInit
 		SetRegView 64
 	${Else}
 		# 32 bit code
-		MessageBox MB_OK "Xournal++ requires 64-bit Windows. Sorry!"
+		MessageBox MB_OK "VertexNote requires 64-bit Windows. Sorry!"
 		Abort
 	${EndIf}
 
@@ -55,7 +55,7 @@ Function un.onInit
 FunctionEnd
 
 ; Name and file
-Name "Xournal++ ${XOURNALPP_VERSION}"
+Name "VertexNote ${VERTEX_NOTE_VERSION}"
 OutFile "${OUTPUT_INSTALLER_FILE}"
 
 ;--------------------------------
@@ -79,9 +79,9 @@ Var StartMenuFolder
 
 ;Start Menu Folder Page Configuration
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX"
-!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\Xournal++"
+!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\VertexNote"
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "StartMenuEntry"
-!define MUI_STARTMENUPAGE_DEFAULTFOLDER "Xournal++"
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "VertexNote"
 
 !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 
@@ -100,10 +100,10 @@ Var StartMenuFolder
 
 Var IsLegacyInstall
 Section "" SecUninstallPrevious
-	ReadRegStr $R0 SHCTX "Software\Xournal++" ""
+	ReadRegStr $R0 SHCTX "Software\VertexNote" ""
 	${If} $R0 == ""
 		; check for legacy installation
-		ReadRegStr $R0 HKCU "Software\Xournalpp" ""
+		ReadRegStr $R0 HKCU "Software\VertexNote" ""
 		${If} $R0 != ""
 			StrCpy $IsLegacyInstall 1
 		${EndIf}
@@ -125,15 +125,15 @@ Section "" SecUninstallPrevious
 			DetailPrint "Removing old start menu entries"
 
 			!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
-			Delete "$SMPROGRAMS\$StartMenuFolder\Xournal++.lnk"
+			Delete "$SMPROGRAMS\$StartMenuFolder\VertexNote.lnk"
 			Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
 			RMDir "$SMPROGRAMS\$StartMenuFolder"
 			
 			DetailPrint "Removing old registry keys"
-			DeleteRegKey HKLM "Software\Classes\Xournal++ file"
-			DeleteRegKey HKLM "Software\Classes\Xournal++ Template Files"
-			DeleteRegKey HKLM "Software\Classes\Xournal file"
-			DeleteRegKey HKCU "Software\Xournalpp"
+			DeleteRegKey HKLM "Software\Classes\VertexNote file"
+			DeleteRegKey HKLM "Software\Classes\VertexNote Template Files"
+			DeleteRegKey HKLM "Software\Classes\VertexNote legacy note"
+			DeleteRegKey HKCU "Software\VertexNote"
 		${EndIf}
     ${EndIf}
 SectionEnd
@@ -148,7 +148,7 @@ SectionEnd
 
 !macro RegisterExt EXT PROGID
 	WriteRegStr SHCTX "Software\Classes\${EXT}\OpenWithProgIds" "${PROGID}" ""
-	WriteRegStr SHCTX "Software\Classes\Applications\xournalpp.exe\SupportedTypes" "${EXT}" ""
+	WriteRegStr SHCTX "Software\Classes\Applications\vertex-note.exe\SupportedTypes" "${EXT}" ""
 !macroend
 
 !macro AddProgId PROGID CMD DESC
@@ -157,7 +157,7 @@ SectionEnd
 	WriteRegStr SHCTX "Software\Classes\${PROGID}\DefaultIcon" "" '"${CMD}",0'
 	WriteRegStr SHCTX "Software\Classes\${PROGID}\shell" "" "open"
 	WriteRegStr SHCTX "Software\Classes\${PROGID}\shell\open\command" "" '"${CMD}" "%1"'
-	WriteRegStr SHCTX "Software\Classes\${PROGID}\shell\edit" "" "Edit with Xournal++"
+	WriteRegStr SHCTX "Software\Classes\${PROGID}\shell\edit" "" "Edit with VertexNote"
 	WriteRegStr SHCTX "Software\Classes\${PROGID}\shell\edit\command" "" '"${CMD}" "%1"'
 !macroend
 
@@ -187,16 +187,16 @@ SectionEnd
 ;-------------------------------
 ; Installer Sections
 
-Section "Associate .xopp files with Xournal++" SecFileXopp
-	!insertmacro SetDefaultExt ".xopp" "Xournal++.File"
+Section "Associate .xopp files with VertexNote" SecFileXopp
+	!insertmacro SetDefaultExt ".xopp" "VertexNote.File"
 SectionEnd
 
-Section "Associate .xopt files with Xournal++" SecFileXopt
-	!insertmacro SetDefaultExt ".xopt" "Xournal++.Template"
+Section "Associate .xopt files with VertexNote" SecFileXopt
+	!insertmacro SetDefaultExt ".xopt" "VertexNote.Template"
 SectionEnd
 
-Section "Associate .xoj files with Xournal++" SecFileXoj
-	!insertmacro SetDefaultExt ".xoj" "Xournal++.Xournal"
+Section "Associate .xoj files with VertexNote" SecFileXoj
+	!insertmacro SetDefaultExt ".xoj" "VertexNote.LegacyXoj"
 SectionEnd
 
 Function OnDirectoryLeave
@@ -244,12 +244,12 @@ Function .onVerifyInstDir
     ; Get last component of path
     ${GetFileName} $INSTDIR $0
     
-    ${If} $0 != "Xournal++"
-        StrCpy $INSTDIR "$INSTDIR\Xournal++"
+    ${If} $0 != "VertexNote"
+        StrCpy $INSTDIR "$INSTDIR\VertexNote"
     ${EndIf}
 FunctionEnd
 
-Section "Xournal++" SecXournalpp
+Section "VertexNote" SecVertexNote
 	; Required
 	SectionIn RO
 
@@ -259,47 +259,47 @@ Section "Xournal++" SecXournalpp
 	File /r ${SETUP_DIR}\*
 
 	; Set install information
-	WriteRegStr SHCTX "Software\Xournal++" "" '"$INSTDIR"'
+	WriteRegStr SHCTX "Software\VertexNote" "" '"$INSTDIR"'
 
 	; Set program information
-	WriteRegStr SHCTX "Software\Classes\Applications\xournalpp.exe" "" '"$INSTDIR\bin\xournalpp-wrapper.exe"'
-	WriteRegStr SHCTX "Software\Classes\Applications\xournalpp.exe" "FriendlyAppName" "Xournal++"
-	WriteRegExpandStr SHCTX "Software\Classes\Applications\xournalpp.exe" "DefaultIcon" '"$INSTDIR\bin\xournalpp-wrapper.exe",0'
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\App Paths\xournalpp.exe" "" '"$INSTDIR\bin\xournalpp-wrapper.exe"'
+	WriteRegStr SHCTX "Software\Classes\Applications\vertex-note.exe" "" '"$INSTDIR\bin\vertex-note-wrapper.exe"'
+	WriteRegStr SHCTX "Software\Classes\Applications\vertex-note.exe" "FriendlyAppName" "VertexNote"
+	WriteRegExpandStr SHCTX "Software\Classes\Applications\vertex-note.exe" "DefaultIcon" '"$INSTDIR\bin\vertex-note-wrapper.exe",0'
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\App Paths\vertex-note.exe" "" '"$INSTDIR\bin\vertex-note-wrapper.exe"'
 
 	; Add file type information
-	!insertmacro RegisterExt ".xopp" "Xournal++.File"
-	!insertmacro RegisterExt ".xopt" "Xournal++.Template"
-	!insertmacro RegisterExt ".xoj" "Xournal++.Xournal"
-	!insertmacro RegisterExt ".pdf" "Xournal++.AnnotatePdf"
+	!insertmacro RegisterExt ".xopp" "VertexNote.File"
+	!insertmacro RegisterExt ".xopt" "VertexNote.Template"
+	!insertmacro RegisterExt ".xoj" "VertexNote.LegacyXoj"
+	!insertmacro RegisterExt ".pdf" "VertexNote.AnnotatePdf"
 	push $R0
-	StrCpy $R0 "$INSTDIR\bin\xournalpp-wrapper.exe"
-	!insertmacro AddProgId "Xournal++.File" "$R0" "Xournal++ file"
-	!insertmacro AddProgId "Xournal++.Template" "$R0" "Xournal++ template file"
-	!insertmacro AddProgId "Xournal++.Xournal" "$R0" "Xournal file"
-	!insertmacro AddProgId "Xournal++.AnnotatePdf" "$R0" "PDF file"
+	StrCpy $R0 "$INSTDIR\bin\vertex-note-wrapper.exe"
+	!insertmacro AddProgId "VertexNote.File" "$R0" "VertexNote file"
+	!insertmacro AddProgId "VertexNote.Template" "$R0" "VertexNote template file"
+	!insertmacro AddProgId "VertexNote.LegacyXoj" "$R0" "VertexNote legacy note"
+	!insertmacro AddProgId "VertexNote.AnnotatePdf" "$R0" "PDF file"
 	pop $R0
 
 	; Create uninstaller
 	WriteUninstaller "$INSTDIR\Uninstall.exe"
 	; Add uninstall entry. See https://docs.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "DisplayIcon" '"$INSTDIR\bin\xournalpp-wrapper.exe"'
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "DisplayName" "Xournal++"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "DisplayVersion" "${XOURNALPP_VERSION}"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "Publisher" "The Xournal++ Team"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "URLInfoAbout" "https://xournalpp.github.io"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "InstallLocation" '"$INSTDIR"'
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "NoModify" 1
-	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++" "NoRepair" 1
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "DisplayIcon" '"$INSTDIR\bin\vertex-note-wrapper.exe"'
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "DisplayName" "VertexNote"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "DisplayVersion" "${VERTEX_NOTE_VERSION}"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "Publisher" "The VertexNote Team"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "URLInfoAbout" "https://github.com/saitatter/vertex-note"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "InstallLocation" '"$INSTDIR"'
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "NoModify" 1
+	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote" "NoRepair" 1
 
 	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 		;Create shortcuts
 		CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-		CreateShortcut "$SMPROGRAMS\$StartMenuFolder\Xournal++.lnk" '"$INSTDIR\bin\xournalpp-wrapper.exe"'
+		CreateShortcut "$SMPROGRAMS\$StartMenuFolder\VertexNote.lnk" '"$INSTDIR\bin\vertex-note-wrapper.exe"'
 		CreateShortcut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" '"$INSTDIR\Uninstall.exe"'
 		
-		!insertmacro RefreshShellIconCreate "$SMPROGRAMS\$StartMenuFolder\Xournal++.lnk"
+		!insertmacro RefreshShellIconCreate "$SMPROGRAMS\$StartMenuFolder\VertexNote.lnk"
 	!insertmacro MUI_STARTMENU_WRITE_END
 
 	!insertmacro RefreshShellIcons
@@ -309,14 +309,14 @@ SectionEnd
 ; Descriptions
 
 ; Language strings
-LangString DESC_SecXournalpp ${LANG_ENGLISH} "Xournal++ executable"
-LangString DESC_SecFileXopp ${LANG_ENGLISH} "Open .xopp files with Xournal++"
-LangString DESC_SecFileXopt ${LANG_ENGLISH} "Open .xopt files with Xournal++"
-LangString DESC_SecFileXoj ${LANG_ENGLISH} "Open .xoj files with Xournal++"
+LangString DESC_SecVertexNote ${LANG_ENGLISH} "VertexNote executable"
+LangString DESC_SecFileXopp ${LANG_ENGLISH} "Open .xopp files with VertexNote"
+LangString DESC_SecFileXopt ${LANG_ENGLISH} "Open .xopt files with VertexNote"
+LangString DESC_SecFileXoj ${LANG_ENGLISH} "Open .xoj files with VertexNote"
 
 ; Assign language strings to sections
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-	!insertmacro MUI_DESCRIPTION_TEXT ${SecXournalpp} $(DESC_SecXournalpp)
+	!insertmacro MUI_DESCRIPTION_TEXT ${SecVertexNote} $(DESC_SecVertexNote)
 	!insertmacro MUI_DESCRIPTION_TEXT ${SecFileXopp} $(DESC_SecFileXopp)
 	!insertmacro MUI_DESCRIPTION_TEXT ${SecFileXopt} $(DESC_SecFileXopt)
 	!insertmacro MUI_DESCRIPTION_TEXT ${SecFileXoj} $(DESC_SecFileXoj)
@@ -330,7 +330,7 @@ Section "Uninstall"
 	SetRegView 64
 
 	; FIXME: ask if the user wants to uninstall the user or system wide install
-	ReadRegStr $0 HKCU "Software\Xournal++" ""
+	ReadRegStr $0 HKCU "Software\VertexNote" ""
 	${IF} $0 == ""
 		SetShellVarContext all
 	${ELSE}
@@ -338,19 +338,19 @@ Section "Uninstall"
 	${ENDIF}
 
 	; Remove registry keys
-	DeleteRegKey SHCTX "Software\Xournal++"
-	DeleteRegKey SHCTX "Software\Classes\Applications\xournalpp.exe"
-	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\App Paths\xournalpp.exe"
-	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Xournal++"
+	DeleteRegKey SHCTX "Software\VertexNote"
+	DeleteRegKey SHCTX "Software\Classes\Applications\vertex-note.exe"
+	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\App Paths\vertex-note.exe"
+	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\VertexNote"
 
-	!insertmacro DeleteProgId "Xournal++.File"
-	!insertmacro DeleteProgId "Xournal++.Template"
-	!insertmacro DeleteProgId "Xournal++.Xournal"
-	!insertmacro DeleteProgId "Xournal++.AnnotatePdf"
+	!insertmacro DeleteProgId "VertexNote.File"
+	!insertmacro DeleteProgId "VertexNote.Template"
+	!insertmacro DeleteProgId "VertexNote.LegacyXoj"
+	!insertmacro DeleteProgId "VertexNote.AnnotatePdf"
 
 	; Clean up start menu
 	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
-	Delete "$SMPROGRAMS\$StartMenuFolder\Xournal++.lnk"
+	Delete "$SMPROGRAMS\$StartMenuFolder\VertexNote.lnk"
 	Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
 	RMDir "$SMPROGRAMS\$StartMenuFolder"
 
@@ -362,6 +362,6 @@ Section "Uninstall"
 	Delete "$INSTDIR\Uninstall.exe"
 	RMDir "$INSTDIR"
 
-	!insertmacro RefreshShellIconDelete "$SMPROGRAMS\$StartMenuFolder\Xournal++.lnk"
+	!insertmacro RefreshShellIconDelete "$SMPROGRAMS\$StartMenuFolder\VertexNote.lnk"
 	!insertmacro RefreshShellIcons
 SectionEnd

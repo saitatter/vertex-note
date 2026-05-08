@@ -31,9 +31,14 @@ project(VertexNote
 # And https://gitlab.kitware.com/cmake/cmake/-/issues/16716 is still open:
 set(VERSION_SUFFIX "+dev")
 set(PROJECT_VERSION "${PROJECT_VERSION}${VERSION_SUFFIX}")
-set(xournalpp_VERSION ${PROJECT_VERSION})
+set(vertexnote_VERSION ${PROJECT_VERSION})
+set(xournalpp_VERSION ${PROJECT_VERSION}) # Compatibility for upstream CMake snippets and packaging scripts.
 set(CMAKE_PROJECT_VERSION ${PROJECT_VERSION})
 set(PROJECT_CONTACT "https://github.com/saitatter/vertex-note/issues")
+set(VERTEX_NOTE_APP_ID "app.vertexnote.VertexNote")
+set(VERTEX_NOTE_BINARY_NAME "vertex-note")
+set(VERTEX_NOTE_WRAPPER_BINARY_NAME "vertex-note-wrapper")
+set(VERTEX_NOTE_RESOURCE_DIR "vertex-note")
 
 ## CMAKE_Variables
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/find" "${PROJECT_SOURCE_DIR}/cmake/include")
@@ -359,8 +364,9 @@ configure_file(
         ESCAPE_QUOTES @ONLY
 )
 
-option(xournalpp_LINT "enable lint (clang-tidy) target" OFF)
-if (xournalpp_LINT)
+option(VERTEX_NOTE_LINT "enable lint (clang-tidy) target" OFF)
+option(xournalpp_LINT "legacy alias for VERTEX_NOTE_LINT" OFF)
+if (VERTEX_NOTE_LINT OR xournalpp_LINT)
     include(clang-tidy)
 endif ()
 
@@ -384,20 +390,20 @@ add_subdirectory (man)
 
 # Install resources
 install(DIRECTORY ui
-        DESTINATION "share/xournalpp"
-        COMPONENT xournalpp
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
+        COMPONENT vertex-note
         )
 install(DIRECTORY plugins
-        DESTINATION "share/xournalpp"
-        COMPONENT xournalpp
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
+        COMPONENT vertex-note
         )
 install(DIRECTORY resources
-        DESTINATION "share/xournalpp"
-        COMPONENT xournalpp
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
+        COMPONENT vertex-note
         )
 install(DIRECTORY palettes
-        DESTINATION "share/xournalpp"
-        COMPONENT xournalpp
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
+        COMPONENT vertex-note
         )
 
 # Install desktop shortcuts for Linux
@@ -405,7 +411,7 @@ if (${INSTALL_DESKTOP_FILES})
     message("Installing desktop files")
 
     # Install icons
-    install(FILES ui/pixmaps/com.github.xournalpp.xournalpp.svg
+    install(FILES ui/pixmaps/app.vertexnote.VertexNote.svg
             DESTINATION share/icons/hicolor/scalable/apps)
     install(FILES ui/pixmaps/application-x-xopp.svg
             DESTINATION share/icons/hicolor/scalable/mimetypes/)
@@ -417,11 +423,11 @@ if (${INSTALL_DESKTOP_FILES})
             DESTINATION share/icons/hicolor/scalable/mimetypes/)
     install(FILES ui/pixmaps/gnome-mime-application-x-xopt.svg
             DESTINATION share/icons/hicolor/scalable/mimetypes/)
-    install(FILES ${CMAKE_BINARY_DIR}/generated/com.github.xournalpp.xournalpp.xml
+    install(FILES ${CMAKE_BINARY_DIR}/generated/app.vertexnote.VertexNote.xml
             DESTINATION share/mime/packages)
-    install(FILES desktop/com.github.xournalpp.xournalpp.thumbnailer
+    install(FILES desktop/app.vertexnote.VertexNote.thumbnailer
             DESTINATION share/thumbnailers)
-    install(FILES ${CMAKE_BINARY_DIR}/generated/com.github.xournalpp.xournalpp.appdata.xml
+    install(FILES ${CMAKE_BINARY_DIR}/generated/app.vertexnote.VertexNote.appdata.xml
             DESTINATION share/metainfo)
 endif ()
 
@@ -484,14 +490,13 @@ if (CPACK_GENERATOR MATCHES "DEB")
     message("Preparing documentation for DEB package")
     add_custom_target(package_documentation ALL)
 
-    #Compress changelog and save it as share/doc/xournalpp/changelog.Debian.gz
+    # Compress changelog and save it as share/doc/vertex-note/changelog.Debian.gz
     add_custom_command(TARGET package_documentation PRE_BUILD
             COMMAND gzip -c -9 -n "${PROJECT_SOURCE_DIR}/debian/changelog" > "changelog.Debian.gz" VERBATIM)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/changelog.Debian.gz" DESTINATION "share/doc/xournalpp/")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/changelog.Debian.gz" DESTINATION "share/doc/vertex-note/")
 
     message("Install copyright for DEB package")
-    #Copy copyright to share/doc/xournalpp/copyright
-    install(FILES "${PROJECT_SOURCE_DIR}/debian/copyright" DESTINATION "share/doc/xournalpp/")
+    install(FILES "${PROJECT_SOURCE_DIR}/debian/copyright" DESTINATION "share/doc/vertex-note/")
 endif ()
 
 if (NOT DEFINED CPACK_GENERATOR)

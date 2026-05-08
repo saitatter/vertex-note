@@ -350,6 +350,7 @@ void SettingsDialog::load() {
     loadCheckbox("cbSnapRecognizedShapesEnabled", settings->getSnapRecognizedShapesEnabled());
     loadCheckbox("cbVertexNoteGeometrySnapEnabled", settings->isVertexNoteGeometrySnapEnabled());
     loadCheckbox("cbVertexNoteGridSnapEnabled", settings->isVertexNoteGridSnapEnabled());
+    loadCheckbox("cbVertexNoteAutomaticUpdateCheckEnabled", settings->isVertexNoteAutomaticUpdateCheckEnabled());
     loadCheckbox("cbRestoreLineWidthEnabled", settings->getRestoreLineWidthEnabled());
     loadCheckbox("cbStockIcons", settings->areStockIconsUsed());
     loadCheckbox("cbShowPageShadow", settings->isShowPageShadow());
@@ -758,6 +759,7 @@ void SettingsDialog::save() {
     settings->setSnapRecognizedShapesEnabled(getCheckbox("cbSnapRecognizedShapesEnabled"));
     settings->setVertexNoteGeometrySnapEnabled(getCheckbox("cbVertexNoteGeometrySnapEnabled"));
     settings->setVertexNoteGridSnapEnabled(getCheckbox("cbVertexNoteGridSnapEnabled"));
+    settings->setVertexNoteAutomaticUpdateCheckEnabled(getCheckbox("cbVertexNoteAutomaticUpdateCheckEnabled"));
     settings->setRestoreLineWidthEnabled(getCheckbox("cbRestoreLineWidthEnabled"));
     settings->setAreStockIconsUsed(getCheckbox("cbStockIcons"));
     settings->setShowPageShadow(getCheckbox("cbShowPageShadow"));

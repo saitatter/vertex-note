@@ -2280,7 +2280,7 @@ void Control::showAbout() {
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
 
-void Control::showUpdateDialog() { xoj::popup::UpdateDialog::show(GTK_WINDOW(this->win->getWindow())); }
+void Control::showUpdateDialog() { xoj::popup::UpdateDialog::show(GTK_WINDOW(this->win->getWindow()), this->settings); }
 
 static void onGtkDemoShown(GObject* proc_object, GAsyncResult* res, gpointer) {
     gboolean success = g_subprocess_wait_finish(G_SUBPROCESS(proc_object), res, NULL);
@@ -2666,6 +2666,16 @@ void Control::setRotationSnapping(bool enable) {
 void Control::setGridSnapping(bool enable) {
     settings->setSnapGrid(enable);
     this->actionDB->setActionState(Action::GRID_SNAPPING, enable);
+}
+
+void Control::setVertexNoteGeometrySnapping(bool enable) {
+    settings->setVertexNoteGeometrySnapEnabled(enable);
+    this->actionDB->setActionState(Action::VERTEXNOTE_GEOMETRY_SNAPPING, enable);
+}
+
+void Control::setVertexNoteGridSnapping(bool enable) {
+    settings->setVertexNoteGridSnapEnabled(enable);
+    this->actionDB->setActionState(Action::VERTEXNOTE_GRID_SNAPPING, enable);
 }
 
 auto Control::getTextEditor() -> TextEditor* {

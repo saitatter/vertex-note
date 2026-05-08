@@ -76,6 +76,7 @@ add_dependencies(xournalpp-wrapper xournalpp-wrapper-resource)
 target_link_libraries(xournalpp-wrapper
         PUBLIC xoj::defaults xoj::util xoj::external_modules)
 set_target_properties(xournalpp-wrapper PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        OUTPUT_NAME "${VERTEX_NOTE_WRAPPER_BINARY_NAME}"
         MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
         WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
         )
@@ -89,6 +90,7 @@ target_include_directories(xournalpp-wrapper PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}
 add_executable(xournalpp exe/Xournalpp.cpp)
 target_link_libraries(xournalpp PRIVATE xoj::core xoj::util)
 set_target_properties(xournalpp PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+        OUTPUT_NAME "${VERTEX_NOTE_BINARY_NAME}"
         MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
         WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
         )
@@ -121,22 +123,22 @@ if (WIN32)
   find_package(ImageMagick REQUIRED COMPONENTS magick)
   set (ICON_SIZES 16 32 48 256)
   foreach (SIZE IN LISTS ICON_SIZES)
-    set (RESIZED_ICON ${PROJECT_BINARY_DIR}/xournalpp-icon-${SIZE}.png)
+    set (RESIZED_ICON ${PROJECT_BINARY_DIR}/vertex-note-icon-${SIZE}.png)
     add_custom_command (
                 OUTPUT ${RESIZED_ICON}
-                COMMAND rsvg-convert ${PROJECT_SOURCE_DIR}/ui/pixmaps/com.github.xournalpp.xournalpp.svg --width=${SIZE} --height=${SIZE} -o ${RESIZED_ICON}
+                COMMAND rsvg-convert ${PROJECT_SOURCE_DIR}/ui/pixmaps/app.vertexnote.VertexNote.svg --width=${SIZE} --height=${SIZE} -o ${RESIZED_ICON}
 	)
   set (ICON_DEPS ${ICON_DEPS} ${RESIZED_ICON})
   unset (RESIZED_ICON)
   endforeach()
   add_custom_command (
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/win32/xournalpp.ico
-                COMMAND magick convert ${ICON_DEPS} ${CMAKE_CURRENT_BINARY_DIR}/win32/xournalpp.ico
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/win32/vertex-note.ico
+                COMMAND magick ${ICON_DEPS} ${CMAKE_CURRENT_BINARY_DIR}/win32/vertex-note.ico
                 DEPENDS ${ICON_DEPS}
   )
   unset(ICON_SIZES)
   unset(ICON_DEPS)
-  add_custom_target(xournalpp_icon DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/win32/xournalpp.ico)
+  add_custom_target(xournalpp_icon DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/win32/vertex-note.ico)
   add_dependencies(xournalpp xournalpp_icon)
   add_dependencies(xournalpp-wrapper xournalpp_icon)
   
@@ -164,11 +166,11 @@ endif ()
 
 install(TARGETS xournalpp-wrapper
         RUNTIME DESTINATION bin
-        COMPONENT xournalpp-wrapper
+        COMPONENT vertex-note-wrapper
         )
 install(TARGETS xournalpp
         RUNTIME DESTINATION bin
-        COMPONENT xournalpp
+        COMPONENT vertex-note
         )
 
 add_subdirectory(xoj-preview-extractor)

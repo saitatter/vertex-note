@@ -255,6 +255,26 @@ struct ActionProperties<Action::GRID_SNAPPING> {
 };
 
 template <>
+struct ActionProperties<Action::VERTEXNOTE_GEOMETRY_SNAPPING> {
+    using state_type = bool;
+    static state_type initialState(Control* ctrl) { return ctrl->getSettings()->isVertexNoteGeometrySnapEnabled(); }
+    static void callback(GSimpleAction* ga, GVariant* p, Control* ctrl) {
+        g_simple_action_set_state(ga, p);
+        ctrl->setVertexNoteGeometrySnapping(g_variant_get_boolean(p));
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_GRID_SNAPPING> {
+    using state_type = bool;
+    static state_type initialState(Control* ctrl) { return ctrl->getSettings()->isVertexNoteGridSnapEnabled(); }
+    static void callback(GSimpleAction* ga, GVariant* p, Control* ctrl) {
+        g_simple_action_set_state(ga, p);
+        ctrl->setVertexNoteGridSnapping(g_variant_get_boolean(p));
+    }
+};
+
+template <>
 struct ActionProperties<Action::PREFERENCES> {
     using app_namespace = std::true_type;
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->showSettings(); }

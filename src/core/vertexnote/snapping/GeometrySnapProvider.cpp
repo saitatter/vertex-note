@@ -100,7 +100,8 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
             continue;
         }
 
-        addCandidate(candidates, query, SnapKind::ExplicitVertex, vertex.position, 100.0, vertex.object, vertex.vertex);
+        addCandidate(candidates, query, SnapKind::ExplicitVertex, vertex.position,
+                     query.priorities.priorityFor(SnapKind::ExplicitVertex), vertex.object, vertex.vertex);
     }
 
     const auto nearbySegments = this->lineSegmentIndex.querySegmentIndices(snapBounds);
@@ -110,12 +111,14 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
             continue;
         }
 
-        addCandidate(candidates, query, SnapKind::Midpoint, midpoint(segment.start, segment.end), 70.0, segment.object,
-                     geom::InvalidVertexId, segment.edge);
+        addCandidate(candidates, query, SnapKind::Midpoint, midpoint(segment.start, segment.end),
+                     query.priorities.priorityFor(SnapKind::Midpoint), segment.object, geom::InvalidVertexId,
+                     segment.edge);
 
         if (auto projection = projectionOnSegment(query.pagePoint, segment.start, segment.end)) {
-            addCandidate(candidates, query, SnapKind::EdgeProjection, *projection, 50.0, segment.object,
-                         geom::InvalidVertexId, segment.edge);
+            addCandidate(candidates, query, SnapKind::EdgeProjection, *projection,
+                         query.priorities.priorityFor(SnapKind::EdgeProjection), segment.object, geom::InvalidVertexId,
+                         segment.edge);
         }
     }
 
@@ -129,8 +132,9 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
         if (auto intersection = segmentIntersection(lhs, rhs)) {
             const double screenDistance = distance(query.pagePoint, *intersection) * query.zoom;
             if (screenDistance <= query.maxScreenDistance + INTERSECTION_EPSILON) {
-                addCandidate(candidates, query, SnapKind::Intersection, *intersection, 90.0, lhs.object,
-                             geom::InvalidVertexId, lhs.edge);
+                addCandidate(candidates, query, SnapKind::Intersection, *intersection,
+                             query.priorities.priorityFor(SnapKind::Intersection), lhs.object, geom::InvalidVertexId,
+                             lhs.edge);
             }
         }
     }

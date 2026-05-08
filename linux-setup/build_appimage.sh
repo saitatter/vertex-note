@@ -42,16 +42,16 @@ fi
 
 # Extract tar contents to APPDIR; tar file already contains a top
 # level dir, so remove it.
-TAR_NAME=$(find packages/xournalpp-*.tar.gz | head -n 1)
+TAR_NAME=$(find packages/vertex-note-*.tar.gz | head -n 1)
 if [[ ! -d "$APPDIR" ]]; then
     tar xf "$TAR_NAME" --one-top-level="$APPDIR"/usr --strip=1
 fi
 
-ICON_FILE="$APPDIR"/usr/share/icons/hicolor/scalable/apps/com.github.xournalpp.xournalpp.svg
-DESKTOP_FILE="$APPDIR"/usr/share/applications/com.github.xournalpp.xournalpp.desktop
+ICON_FILE="$APPDIR"/usr/share/icons/hicolor/scalable/apps/app.vertexnote.VertexNote.svg
+DESKTOP_FILE="$APPDIR"/usr/share/applications/app.vertexnote.VertexNote.desktop
 echo "Use the icon file $ICON_FILE and the desktop file $DESKTOP_FILE"
 
-filename_pattern="xournalpp-*$ARCH.AppImage.zsync"
+filename_pattern="vertex-note-*$ARCH.AppImage.zsync"
 # See https://github.com/AppImage/AppImageSpec/blob/master/draft.md#update-information
 
 if [[ $VERSION = *dev ]]; then
@@ -60,7 +60,7 @@ else
   gh_tag='latest'   # latest stable version
 fi
 
-export UPD_INFO="gh-releases-zsync|xournalpp|xournalpp|$gh_tag|$filename_pattern"
+export UPD_INFO="gh-releases-zsync|saitatter|vertex-note|$gh_tag|$filename_pattern"
 export VERBOSE=1
 
 # call through linuxdeploy

@@ -37,13 +37,28 @@
 #endif
 #endif
 
-#ifdef GHC_FILESYSTEM
-// Fix of ghc::filesystem bug (path::operator/=() won't support string_views)
-constexpr auto const* CONFIG_FOLDER_NAME = "xournalpp";
-#else
-using namespace std::string_view_literals;
-constexpr auto CONFIG_FOLDER_NAME = "xournalpp"sv;
-#endif
+constexpr auto const* CONFIG_FOLDER_NAME = "vertex-note";
+constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "xournalpp";
+
+static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const fs::path& legacyFolder) {
+    try {
+        if (currentFolder.empty() || legacyFolder.empty() || fs::exists(currentFolder) || !fs::exists(legacyFolder)) {
+            return;
+        }
+
+        fs::create_directories(currentFolder.parent_path());
+        fs::copy(legacyFolder, currentFolder, fs::copy_options::recursive | fs::copy_options::skip_existing);
+    } catch (const fs::filesystem_error& fe) {
+        g_warning("Could not migrate legacy Xournal++ folder %s to VertexNote folder %s: %s",
+                  char_cast(legacyFolder.u8string().c_str()), char_cast(currentFolder.u8string().c_str()), fe.what());
+    }
+}
+
+static auto migratedUserFolder(const fs::path& base) -> fs::path {
+    auto current = base / CONFIG_FOLDER_NAME;
+    migrateLegacyUserFolderIfNeeded(current, base / LEGACY_CONFIG_FOLDER_NAME);
+    return current;
+}
 
 #ifdef _WIN32
 auto Util::getLongPath(const fs::path& path) -> fs::path {
@@ -329,7 +344,7 @@ auto Util::getAutosaveFilepath() -> fs::path {
 
 auto Util::getConfigFolder() -> fs::path {
     auto p = GFilename(g_get_user_config_dir()).toPath().value_or(fs::path());
-    return (p /= CONFIG_FOLDER_NAME);
+    return migratedUserFolder(p);
 }
 
 auto Util::getConfigSubfolder(const fs::path& subfolder) -> fs::path {
@@ -341,7 +356,7 @@ auto Util::getConfigSubfolder(const fs::path& subfolder) -> fs::path {
 
 auto Util::getCacheSubfolder(const fs::path& subfolder) -> fs::path {
     auto p = GFilename(g_get_user_cache_dir()).toPath().value_or(fs::path());
-    p /= CONFIG_FOLDER_NAME;
+    p = migratedUserFolder(p);
     p /= subfolder;
 
     return Util::ensureFolderExists(p);
@@ -349,7 +364,7 @@ auto Util::getCacheSubfolder(const fs::path& subfolder) -> fs::path {
 
 auto Util::getDataSubfolder(const fs::path& subfolder) -> fs::path {
     auto p = GFilename(g_get_user_data_dir()).toPath().value_or(fs::path());
-    p /= CONFIG_FOLDER_NAME;
+    p = migratedUserFolder(p);
     p /= subfolder;
 
     return Util::ensureFolderExists(p);
@@ -386,7 +401,7 @@ static auto getUserStateDir() -> const fs::path& {
 
 auto Util::getStateSubfolder(const fs::path& subfolder) -> fs::path {
     auto p = getUserStateDir();
-    p /= CONFIG_FOLDER_NAME;
+    p = migratedUserFolder(p);
     p /= subfolder;
 
     return Util::ensureFolderExists(p);
@@ -406,7 +421,7 @@ auto Util::getCacheFile(const fs::path& relativeFileName) -> fs::path {
 
 auto Util::getTmpDirSubfolder(const fs::path& subfolder) -> fs::path {
     auto p = GFilename(g_get_tmp_dir()).toPath().value_or(fs::path());
-    p /= FS(_F("xournalpp-{1}") % Util::getPid());
+    p /= FS(_F("vertex-note-{1}") % Util::getPid());
     p /= subfolder;
     return Util::ensureFolderExists(p);
 }
@@ -497,7 +512,7 @@ auto Util::getDataPath() -> fs::path {
     }
 #endif
 
-    return getExePath().parent_path() / "share" / PROJECT_NAME;
+    return getExePath().parent_path() / "share" / PROJECT_RESOURCE_DIR;
 }
 
 auto Util::getLocalePath() -> fs::path {
@@ -513,7 +528,7 @@ auto Util::getLocalePath() -> fs::path {
 
 auto Util::getInstallUiPath() -> fs::path {
     fs::path p = PROJECT_INSTALL_DIR;
-    return p / "share" / PROJECT_NAME / "ui";
+    return p / "share" / PROJECT_RESOURCE_DIR / "ui";
 }
 
 auto Util::getBuiltInPaletteDirectoryPath() -> fs::path { return getDataPath() / "palettes"; }

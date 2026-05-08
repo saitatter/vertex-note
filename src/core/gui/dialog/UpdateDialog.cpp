@@ -2,14 +2,22 @@
 
 #include <gio/gio.h>
 
+#include <algorithm>
+#include <array>
+#include <charconv>
+#include <cctype>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
+#include "control/settings/Settings.h"
 #include "util/XojMsgBox.h"
 #include "util/gtk4_helper.h"
 #include "util/i18n.h"
 #include "vertexnote/update/GithubReleaseParser.h"
+#include "vertexnote/update/ReleaseAssetSelector.h"
 #include "vertexnote/update/ReleaseInfo.h"
 #include "vertexnote/update/VersionComparator.h"
 
@@ -19,15 +27,143 @@ namespace xoj::popup {
 namespace {
 
 constexpr auto RELEASES_URL = "https://github.com/saitatter/vertex-note/releases";
-constexpr auto GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/saitatter/vertex-note/releases/latest";
+constexpr auto GITHUB_API_HOST = "api.github.com";
+constexpr auto GITHUB_LATEST_RELEASE_PATH = "/repos/saitatter/vertex-note/releases/latest";
+
+auto lower(std::string_view value) -> std::string {
+    std::string result(value);
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return result;
+}
+
+auto decodeChunkedBody(std::string_view body) -> std::optional<std::string> {
+    std::string decoded;
+    std::size_t offset = 0;
+
+    while (offset < body.size()) {
+        const auto sizeEnd = body.find("\r\n", offset);
+        if (sizeEnd == std::string_view::npos) {
+            return std::nullopt;
+        }
+
+        auto sizeLine = body.substr(offset, sizeEnd - offset);
+        if (const auto extension = sizeLine.find(';'); extension != std::string_view::npos) {
+            sizeLine = sizeLine.substr(0, extension);
+        }
+
+        std::size_t chunkSize = 0;
+        const auto* begin = sizeLine.data();
+        const auto* end = sizeLine.data() + sizeLine.size();
+        const auto [ptr, ec] = std::from_chars(begin, end, chunkSize, 16);
+        if (ec != std::errc{} || ptr != end) {
+            return std::nullopt;
+        }
+
+        offset = sizeEnd + 2;
+        if (chunkSize == 0) {
+            return decoded;
+        }
+        if (offset + chunkSize + 2 > body.size()) {
+            return std::nullopt;
+        }
+
+        decoded.append(body.substr(offset, chunkSize));
+        offset += chunkSize;
+        if (body.substr(offset, 2) != "\r\n") {
+            return std::nullopt;
+        }
+        offset += 2;
+    }
+
+    return std::nullopt;
+}
+
+auto fetchLatestReleaseJson() -> std::string {
+    GError* error = nullptr;
+    auto* client = g_socket_client_new();
+    g_socket_client_set_tls(client, true);
+    g_socket_client_set_timeout(client, 15);
+
+    auto* connection = g_socket_client_connect_to_host(client, GITHUB_API_HOST, 443, nullptr, &error);
+    g_object_unref(client);
+    if (error) {
+        const std::string message = error->message;
+        g_error_free(error);
+        throw std::runtime_error(message);
+    }
+
+    auto* stream = G_IO_STREAM(connection);
+    auto* output = g_io_stream_get_output_stream(stream);
+    const std::string request = std::string{"GET "} + GITHUB_LATEST_RELEASE_PATH +
+                                " HTTP/1.1\r\n"
+                                "Host: " +
+                                GITHUB_API_HOST +
+                                "\r\n"
+                                "User-Agent: VertexNote\r\n"
+                                "Accept: application/vnd.github+json\r\n"
+                                "Connection: close\r\n\r\n";
+
+    gsize bytesWritten = 0;
+    if (!g_output_stream_write_all(output, request.data(), request.size(), &bytesWritten, nullptr, &error)) {
+        const std::string message = error ? error->message : "Could not write HTTP request.";
+        if (error) {
+            g_error_free(error);
+        }
+        g_object_unref(connection);
+        throw std::runtime_error(message);
+    }
+
+    std::string response;
+    auto* input = g_io_stream_get_input_stream(stream);
+    std::array<char, 4096> buffer{};
+    while (true) {
+        const auto read = g_input_stream_read(input, buffer.data(), buffer.size(), nullptr, &error);
+        if (read < 0) {
+            const std::string message = error ? error->message : "Could not read HTTP response.";
+            if (error) {
+                g_error_free(error);
+            }
+            g_object_unref(connection);
+            throw std::runtime_error(message);
+        }
+        if (read == 0) {
+            break;
+        }
+        response.append(buffer.data(), static_cast<std::size_t>(read));
+    }
+    g_object_unref(connection);
+
+    const auto headerEnd = response.find("\r\n\r\n");
+    if (headerEnd == std::string::npos) {
+        throw std::runtime_error("GitHub returned an invalid HTTP response.");
+    }
+
+    const auto headers = response.substr(0, headerEnd);
+    auto body = response.substr(headerEnd + 4);
+    if (headers.find(" 200 ") == std::string::npos) {
+        throw std::runtime_error("GitHub returned a non-success HTTP response.");
+    }
+
+    if (lower(headers).find("transfer-encoding: chunked") != std::string::npos) {
+        auto decoded = decodeChunkedBody(body);
+        if (!decoded) {
+            throw std::runtime_error("GitHub returned a chunked response VertexNote could not decode.");
+        }
+        body = std::move(*decoded);
+    }
+
+    return body;
+}
 
 class UpdateDialogController {
 public:
-    explicit UpdateDialogController(GtkWindow* parent):
+    explicit UpdateDialogController(GtkWindow* parent, Settings* settings):
             dialog(GTK_DIALOG(gtk_dialog_new_with_buttons(_("VertexNote Updates"), parent,
                                                           static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL |
                                                                                       GTK_DIALOG_DESTROY_WITH_PARENT),
                                                           _("_Close"), GTK_RESPONSE_CLOSE, nullptr))),
+            settings(settings),
             statusLabel(GTK_LABEL(gtk_label_new(_("Ready to check for updates.")))),
             latestLabel(GTK_LABEL(gtk_label_new("-"))),
             textView(GTK_TEXT_VIEW(gtk_text_view_new())) {
@@ -51,6 +187,19 @@ public:
         attachRow(GTK_GRID(grid), 0, _("Current version"), PROJECT_VERSION);
         attachRow(GTK_GRID(grid), 1, _("Latest release"), latestLabel);
         attachRow(GTK_GRID(grid), 2, _("Status"), statusLabel);
+
+        auto* autoCheck = gtk_check_button_new_with_label(_("Check automatically on startup"));
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(autoCheck),
+                                     settings && settings->isVertexNoteAutomaticUpdateCheckEnabled());
+        g_signal_connect(autoCheck, "toggled", G_CALLBACK(+[](GtkToggleButton* button, gpointer data) {
+                             auto* self = static_cast<UpdateDialogController*>(data);
+                             if (self->settings) {
+                                 self->settings->setVertexNoteAutomaticUpdateCheckEnabled(
+                                         gtk_toggle_button_get_active(button));
+                             }
+                         }),
+                         this);
+        gtk_box_append(GTK_BOX(box), autoCheck);
 
         gtk_text_view_set_editable(textView, false);
         gtk_text_view_set_wrap_mode(textView, GTK_WRAP_WORD_CHAR);
@@ -117,10 +266,10 @@ private:
 
     auto downloadUrl() const -> const std::string& {
         static const std::string fallback = RELEASES_URL;
-        if (!latestRelease || latestRelease->assets.empty()) {
+        if (!selectedAsset) {
             return fallback;
         }
-        return latestRelease->assets.front().downloadUrl;
+        return selectedAsset->downloadUrl;
     }
 
     void setBodyText(const std::string& text) {
@@ -144,6 +293,7 @@ private:
 
     void setReleaseState(vn::update::ReleaseInfo release) {
         latestRelease = std::move(release);
+        selectedAsset = vn::update::selectBestAsset(*latestRelease, vn::update::currentReleasePlatform());
         gtk_label_set_text(latestLabel, latestRelease->tagName.c_str());
 
         const auto updateAvailable = vn::update::isUpdateAvailable(PROJECT_VERSION, latestRelease->tagName);
@@ -153,16 +303,20 @@ private:
         body += latestRelease->name.empty() ? latestRelease->tagName : latestRelease->name;
         body += "\n\n";
         body += latestRelease->body.empty() ? _("No release notes were published for this release.") : latestRelease->body;
-        if (!latestRelease->assets.empty()) {
+        if (selectedAsset) {
             body += "\n\n";
-            body += _("Download asset:");
+            body += FS(_F("Download asset for {1}:") %
+                       std::string(vn::update::platformName(vn::update::currentReleasePlatform())));
             body += "\n";
-            body += latestRelease->assets.front().name;
+            body += selectedAsset->name;
+        } else if (!latestRelease->assets.empty()) {
+            body += "\n\n";
+            body += _("No platform-specific build asset was found for this system.");
         }
         setBodyText(body);
 
         gtk_widget_set_sensitive(refreshButton, true);
-        gtk_widget_set_sensitive(downloadButton, updateAvailable && !latestRelease->assets.empty());
+        gtk_widget_set_sensitive(downloadButton, updateAvailable && selectedAsset.has_value());
     }
 
     void finishRequest() {
@@ -173,54 +327,23 @@ private:
     }
 
     void startCheck() {
-        auto curl = g_find_program_in_path("curl");
-        if (!curl) {
-            setErrorState(_("Automatic update checks need curl in PATH for now."));
-            return;
-        }
-
         setCheckingState();
         requestInFlight = true;
 
-        GError* error = nullptr;
-        const auto flags =
-                static_cast<GSubprocessFlags>(G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE);
-        auto* process = g_subprocess_new(flags, &error, curl,
-                                         "--fail", "--silent", "--show-error", "--location", "--max-time", "15", "-H",
-                                         "Accept: application/vnd.github+json", "-H", "User-Agent: VertexNote",
-                                         GITHUB_LATEST_RELEASE_API, nullptr);
-        g_free(curl);
-
-        if (error) {
-            const auto message = std::string{_("Could not start curl: ")} + error->message;
-            g_error_free(error);
-            setErrorState(message);
-            finishRequest();
-            return;
-        }
-
-        g_subprocess_communicate_utf8_async(
-                process, nullptr, nullptr,
-                +[](GObject* source, GAsyncResult* result, gpointer data) {
+        auto* task = g_task_new(nullptr, nullptr,
+                                +[](GObject*, GAsyncResult* result, gpointer data) {
                     auto* self = static_cast<UpdateDialogController*>(data);
-                    gchar* stdoutData = nullptr;
-                    gchar* stderrData = nullptr;
                     GError* error = nullptr;
-                    const auto ok = g_subprocess_communicate_utf8_finish(G_SUBPROCESS(source), result, &stdoutData,
-                                                                         &stderrData, &error);
+                    auto* response = static_cast<std::string*>(g_task_propagate_pointer(G_TASK(result), &error));
 
                     if (!self->destroyed) {
-                        if (!ok || error) {
+                        if (error) {
                             std::string message = _("GitHub release check failed.");
-                            if (error) {
-                                message += "\n";
-                                message += error->message;
-                            } else if (stderrData) {
-                                message += "\n";
-                                message += stderrData;
-                            }
+                            message += "\n";
+                            message += error->message;
                             self->setErrorState(message);
-                        } else if (auto release = vn::update::parseGithubRelease(stdoutData ? stdoutData : "")) {
+                        } else if (response && (vn::update::parseGithubRelease(*response))) {
+                            auto release = vn::update::parseGithubRelease(*response);
                             self->setReleaseState(std::move(*release));
                         } else {
                             self->setErrorState(_("GitHub returned release data that VertexNote could not parse."));
@@ -230,15 +353,22 @@ private:
                     if (error) {
                         g_error_free(error);
                     }
-                    g_free(stdoutData);
-                    g_free(stderrData);
-                    g_object_unref(source);
+                    delete response;
                     self->finishRequest();
                 },
                 this);
+        g_task_run_in_thread(task, +[](GTask* task, gpointer, gpointer, GCancellable*) {
+            try {
+                g_task_return_pointer(task, new std::string(fetchLatestReleaseJson()), nullptr);
+            } catch (const std::exception& e) {
+                g_task_return_new_error(task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", e.what());
+            }
+        });
+        g_object_unref(task);
     }
 
     GtkDialog* dialog = nullptr;
+    Settings* settings = nullptr;
     GtkLabel* statusLabel = nullptr;
     GtkLabel* latestLabel = nullptr;
     GtkTextView* textView = nullptr;
@@ -246,12 +376,13 @@ private:
     GtkWidget* releaseButton = nullptr;
     GtkWidget* downloadButton = nullptr;
     std::optional<vn::update::ReleaseInfo> latestRelease;
+    std::optional<vn::update::ReleaseAsset> selectedAsset;
     bool requestInFlight = false;
     bool destroyed = false;
 };
 
 }  // namespace
 
-void UpdateDialog::show(GtkWindow* parent) { new UpdateDialogController(parent); }
+void UpdateDialog::show(GtkWindow* parent, Settings* settings) { new UpdateDialogController(parent, settings); }
 
 }  // namespace xoj::popup

@@ -116,9 +116,19 @@ auto GeometryObject::vertex(VertexId id) const -> const Vertex* {
     return it == this->vertexList.end() ? nullptr : &*it;
 }
 
+auto GeometryObject::edge(EdgeId id) -> Edge* {
+    auto it = std::ranges::find(this->edgeList, id, &Edge::id);
+    return it == this->edgeList.end() ? nullptr : &*it;
+}
+
 auto GeometryObject::edge(EdgeId id) const -> const Edge* {
     auto it = std::ranges::find(this->edgeList, id, &Edge::id);
     return it == this->edgeList.end() ? nullptr : &*it;
+}
+
+auto GeometryObject::constraint(ConstraintId id) -> Constraint* {
+    auto it = std::ranges::find(this->constraintList, id, &Constraint::id);
+    return it == this->constraintList.end() ? nullptr : &*it;
 }
 
 auto GeometryObject::constraint(ConstraintId id) const -> const Constraint* {
@@ -195,6 +205,80 @@ auto GeometryObject::setVertexPosition(VertexId id, Vec2 position) -> bool {
     }
 
     target->position = position;
+    return true;
+}
+
+auto GeometryObject::removeVertex(VertexId id) -> bool {
+    auto vertexIt = std::ranges::find(this->vertexList, id, &Vertex::id);
+    if (vertexIt == this->vertexList.end()) {
+        return false;
+    }
+
+    std::vector<EdgeId> removedEdges;
+    this->edgeList.erase(std::remove_if(this->edgeList.begin(), this->edgeList.end(),
+                                        [id, &removedEdges](const Edge& edge) {
+                                            const bool referenced = edge.start == id || edge.end == id ||
+                                                                    std::ranges::find(edge.controls, id) !=
+                                                                            edge.controls.end();
+                                            if (referenced) {
+                                                removedEdges.push_back(edge.id);
+                                            }
+                                            return referenced;
+                                        }),
+                         this->edgeList.end());
+
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [id, &removedEdges](const Constraint& constraint) {
+                               return std::ranges::find(constraint.vertices, id) != constraint.vertices.end() ||
+                                      std::ranges::any_of(removedEdges, [&constraint](EdgeId edgeId) {
+                                          return std::ranges::find(constraint.edges, edgeId) != constraint.edges.end();
+                                      });
+                           }),
+            this->constraintList.end());
+
+    this->vertexList.erase(vertexIt);
+    return true;
+}
+
+auto GeometryObject::insertVertexOnEdge(EdgeId edgeId, Vec2 position) -> std::optional<VertexId> {
+    auto* target = edge(edgeId);
+    if (!target || target->kind != EdgeKind::Line || !containsVertex(target->start) || !containsVertex(target->end)) {
+        return std::nullopt;
+    }
+
+    const VertexId originalEnd = target->end;
+    const VertexId inserted = addVertex(position);
+    target = edge(edgeId);
+    target->end = inserted;
+    addLine(inserted, originalEnd);
+    return inserted;
+}
+
+auto GeometryObject::removeConstraint(ConstraintId id) -> bool {
+    const auto oldSize = this->constraintList.size();
+    this->constraintList.erase(std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                                             [id](const Constraint& constraint) { return constraint.id == id; }),
+                               this->constraintList.end());
+    return this->constraintList.size() != oldSize;
+}
+
+auto GeometryObject::replaceConstraint(Constraint constraint) -> bool {
+    if (constraint.id == InvalidConstraintId) {
+        return false;
+    }
+    if (!std::ranges::all_of(constraint.vertices, [this](VertexId id) { return containsVertex(id); }) ||
+        !std::ranges::all_of(constraint.edges, [this](EdgeId id) { return containsEdge(id); })) {
+        return false;
+    }
+
+    auto* existing = this->constraint(constraint.id);
+    if (!existing) {
+        this->constraintList.push_back(std::move(constraint));
+        return true;
+    }
+
+    *existing = std::move(constraint);
     return true;
 }
 

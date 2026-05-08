@@ -63,6 +63,23 @@ TEST(VertexNoteSnapEngine, prefersExplicitVertexOverGrid) {
     EXPECT_DOUBLE_EQ(result.pagePoint.y, 10.5);
 }
 
+TEST(VertexNoteSnapEngine, usesConfigurableSnapPriorities) {
+    GeometryObject object(42);
+    object.addVertex(Vec2{10.5, 10.5});
+
+    SnapEngine engine;
+    engine.addProvider(std::make_shared<GridSnapProvider>(10.0, 10.0, 0.5));
+    engine.addProvider(std::make_shared<GeometrySnapProvider>(std::vector<const GeometryObject*>{&object}));
+
+    SnapQuery query{Vec2{10.4, 10.4}, 1.0, 8.0};
+    query.priorities.grid = 200.0;
+    query.priorities.explicitVertex = 1.0;
+    auto result = engine.snap(query);
+
+    ASSERT_TRUE(result.snapped());
+    EXPECT_EQ(result.candidate->kind, SnapKind::Grid);
+}
+
 TEST(VertexNoteSnapEngine, snapsToLineMidpoint) {
     GeometryObject object(42);
     const auto start = object.addVertex(Vec2{0.0, 0.0});

@@ -35,7 +35,7 @@
 #include "config.h"
 #include "filesystem.h"
 
-static constexpr const char* UI_RESOURCE = "/org/xournalpp/wrapper/ui/crashDialog.glade";
+static constexpr const char* UI_RESOURCE = "/app/vertexnote/VertexNote/wrapper/ui/crashDialog.glade";
 
 // See CrashHandler::emergencySave()
 static constexpr const char* EMERGENCY_SAVE_MSG_REGEX = "Successfully saved document to \"(.*)\"";
@@ -121,7 +121,7 @@ auto main(int argc, char* argv[]) -> int {
         std::vector<const char*> subargv;
         std::cout << Util::getExePath() << std::endl;
 
-        const std::u8string path = (Util::getExePath() / "xournalpp").u8string();
+        const std::u8string path = (Util::getExePath() / PROJECT_BINARY_NAME).u8string();
         subargv.emplace_back(char_cast(path.c_str()));  // Data is owned by `path` - Do not delete it
         errorlog << "Executing \"" << char_cast(path);
 
@@ -187,8 +187,8 @@ auto main(int argc, char* argv[]) -> int {
         xoj::util::OwnedCString stderrBuffer;
 #endif
 
-        std::cout << "Xournal++ started with PID: " << g_subprocess_get_identifier(p.get()) << std::endl;
-        errorlog << "Xournal++ started with PID: " << g_subprocess_get_identifier(p.get()) << std::endl;
+        std::cout << "VertexNote started with PID: " << g_subprocess_get_identifier(p.get()) << std::endl;
+        errorlog << "VertexNote started with PID: " << g_subprocess_get_identifier(p.get()) << std::endl;
 
         g_subprocess_communicate_utf8(p.get(), nullptr, nullptr, stdoutBuffer.contentReplacer(),
 #ifdef _WIN32  // On Windows, STDERR_MERGE does not work. See https://gitlab.gnome.org/GNOME/glib/-/issues/3723
@@ -233,7 +233,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
     }
 
-    GtkApplication* app = gtk_application_new("com.github.xournalpp.xournalpp", G_APPLICATION_FLAGS_NONE);
+    GtkApplication* app = gtk_application_new(PROJECT_APP_ID, G_APPLICATION_FLAGS_NONE);
     g_signal_connect_data(app, "activate", xoj::util::wrap_for_g_callback_v<activate>, new std::string(errorlog.str()),
                           xoj::util::closure_notify_cb<std::string>, GConnectFlags(0));
 

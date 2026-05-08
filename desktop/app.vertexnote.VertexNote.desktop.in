@@ -6,11 +6,11 @@ GenericName=Note-taking application
 Comment=Take CAD-inspired technical notes
 Keywords=tablet;Wacom;pen input;PDF Annotation;markup;journal;handwriting;diary;notes;
 
-Exec=xournalpp-wrapper %f
+Exec=vertex-note-wrapper %f
 SingleMainWindow=false
-StartupWMClass=com.github.xournalpp.xournalpp
+StartupWMClass=app.vertexnote.VertexNote
 Terminal=false
 StartupNotify=true
 MimeType=application/x-xoj;application/x-xojpp;application/x-xopp;application/x-xopt;application/pdf
-Icon=com.github.xournalpp.xournalpp
+Icon=app.vertexnote.VertexNote
 Categories=Office;GNOME;GTK

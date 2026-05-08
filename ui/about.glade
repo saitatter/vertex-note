@@ -38,7 +38,7 @@
                 <property name="name">VertexNoteIcon</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="pixbuf">pixmaps/com.github.xournalpp.xournalpp.svg</property>
+                <property name="pixbuf">pixmaps/app.vertexnote.VertexNote.svg</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>

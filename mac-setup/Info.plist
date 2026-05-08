@@ -5,15 +5,15 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
-    <string>Xournal++</string>
+    <string>VertexNote</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.business</string>
     <key>CFBundleIdentifier</key>
-    <string>com.github.xournalpp</string>
+    <string>app.vertexnote.VertexNote</string>
     <key>CFBundleName</key>
-    <string>Xournal++</string>
+    <string>VertexNote</string>
     <key>CFBundleDisplayName</key>
-    <string>Xournal++</string>
+    <string>VertexNote</string>
 
     <key>CFBundleShortVersionString</key>
     <string>1.3.4+dev</string>
@@ -31,12 +31,12 @@
     <string>en-US</string>
 
     <key>CFBundleIconFile</key>
-    <string>xournalpp.icns</string>
+    <string>vertex-note.icns</string>
     <key>NSHighResolutionCapable</key>
     <true />
 
     <key>CFBundleExecutable</key>
-    <string>xournalpp-wrapper</string>
+    <string>vertex-note-wrapper</string>
     <key>LSArchitecturePriority</key>
     <array>
       <string>x86_64</string>
@@ -63,9 +63,9 @@
           <string>xopp</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-	        <string>xournalpp.icns</string>
+	        <string>vertex-note.icns</string>
         <key>CFBundleTypeName</key>
-        <string>Xournal++ Document</string>
+        <string>VertexNote Document</string>
         <key>CFBundleTypeMIMETypes</key>
         <array>
           <string>application/x-xopp</string>
@@ -79,9 +79,9 @@
           <string>xopt</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-	        <string>xournalpp.icns</string>
+	        <string>vertex-note.icns</string>
         <key>CFBundleTypeName</key>
-        <string>Xournal++ Template</string>
+        <string>VertexNote Template</string>
         <key>CFBundleTypeMIMETypes</key>
         <array>
           <string>application/x-xopt</string>
@@ -95,7 +95,7 @@
           <string>xoj</string>
         </array>
         <key>CFBundleTypeIconFile</key>
-	        <string>xournalpp.icns</string>
+	        <string>vertex-note.icns</string>
         <key>CFBundleTypeName</key>
         <string>Xournal Document</string>
         <key>CFBundleTypeMIMETypes</key>
@@ -111,14 +111,14 @@
     <array>
       <dict>
         <key>UTTypeIdentifier</key>
-        <string>com.github.xournalpp.xopp</string>
+        <string>app.vertexnote.xopp</string>
         <key>UTTypeConformsTo</key>
         <array>
           <string>public.data</string>
           <string>org.gnu.gnu-zip-archive</string>
         </array>
         <key>UTTypeDescription</key>
-        <string>Xournal++ Document</string>
+        <string>VertexNote Document</string>
         <key>UTTypeTagSpecification</key>
         <dict>
           <key>public.mime-type</key>
@@ -133,14 +133,14 @@
       </dict>
       <dict>
         <key>UTTypeIdentifier</key>
-        <string>com.github.xournalpp.xopt</string>
+        <string>app.vertexnote.xopt</string>
         <key>UTTypeConformsTo</key>
         <array>
           <string>public.data</string>
           <string>public.text</string>
         </array>
         <key>UTTypeDescription</key>
-        <string>Xournal++ Template</string>
+        <string>VertexNote Template</string>
         <key>UTTypeTagSpecification</key>
         <dict>
           <key>public.mime-type</key>
@@ -185,7 +185,7 @@
     <key>LSEnvironment</key>
     <dict>
         <key>DYLD_LIBRARY_PATH</key>
-        <string>/Applications/Xournal++.app/Contents/Resources/lib</string>
+        <string>/Applications/VertexNote.app/Contents/Resources/lib</string>
     </dict>
 
     <key>NSHighResolutionCapable</key>

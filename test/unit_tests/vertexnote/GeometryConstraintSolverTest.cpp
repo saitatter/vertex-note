@@ -66,3 +66,20 @@ TEST(VertexNoteGeometryConstraintSolver, appliesParallelAndPerpendicularEdgeCons
     EXPECT_TRUE(result.changed);
     EXPECT_DOUBLE_EQ(object.vertex(d)->position.x, 1.0);
 }
+
+TEST(VertexNoteGeometryConstraintSolver, iteratesChainedConstraintsUntilStable) {
+    GeometryObject object(42);
+    auto a = object.addVertex(Vec2{0.0, 0.0});
+    auto b = object.addVertex(Vec2{5.0, 4.0});
+    auto c = object.addVertex(Vec2{8.0, 9.0});
+    object.addConstraint(ConstraintKind::Horizontal, {a, b});
+    object.addConstraint(ConstraintKind::Coincident, {b, c});
+
+    GeometryConstraintSolver solver;
+    auto result = solver.apply(object);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_GE(result.iterations, 2U);
+    EXPECT_DOUBLE_EQ(object.vertex(b)->position.y, 0.0);
+    EXPECT_DOUBLE_EQ(object.vertex(c)->position.y, 0.0);
+}

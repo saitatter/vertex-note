@@ -20,16 +20,27 @@ GeometryVertexMoveUndoAction::GeometryVertexMoveUndoAction(PageRef page, vn::geo
                                                            vn::geom::Vec2 newPosition):
         UndoAction("GeometryVertexMoveUndoAction"),
         element(element),
-        vertex(vertex),
-        oldPosition(oldPosition),
-        newPosition(newPosition) {
+        vertices({vertex}),
+        oldPositions({oldPosition}),
+        newPositions({newPosition}) {
     this->page = std::move(page);
 }
+
+GeometryVertexMoveUndoAction::GeometryVertexMoveUndoAction(PageRef page, vn::geom::GeometryElement* element,
+                                                           std::vector<vn::geom::VertexId> vertices,
+                                                           std::vector<vn::geom::Vec2> oldPositions,
+                                                           std::vector<vn::geom::Vec2> newPositions):
+        UndoAction("GeometryVertexMoveUndoAction"),
+        page(std::move(page)),
+        element(element),
+        vertices(std::move(vertices)),
+        oldPositions(std::move(oldPositions)),
+        newPositions(std::move(newPositions)) {}
 
 auto GeometryVertexMoveUndoAction::undo(Control* control) -> bool {
     Document* doc = control->getDocument();
     doc->lock();
-    const bool changed = apply(this->oldPosition);
+    const bool changed = apply(this->oldPositions);
     doc->unlock();
     if (changed) {
         this->page->fireElementChanged(this->element);
@@ -41,7 +52,7 @@ auto GeometryVertexMoveUndoAction::undo(Control* control) -> bool {
 auto GeometryVertexMoveUndoAction::redo(Control* control) -> bool {
     Document* doc = control->getDocument();
     doc->lock();
-    const bool changed = apply(this->newPosition);
+    const bool changed = apply(this->newPositions);
     doc->unlock();
     if (changed) {
         this->page->fireElementChanged(this->element);
@@ -52,12 +63,18 @@ auto GeometryVertexMoveUndoAction::redo(Control* control) -> bool {
 
 auto GeometryVertexMoveUndoAction::getPages() -> std::vector<PageRef> { return {this->page}; }
 
-auto GeometryVertexMoveUndoAction::getText() -> std::string { return _("Move geometry vertex"); }
+auto GeometryVertexMoveUndoAction::getText() -> std::string {
+    return this->vertices.size() > 1U ? _("Move geometry vertices") : _("Move geometry vertex");
+}
 
-auto GeometryVertexMoveUndoAction::apply(vn::geom::Vec2 position) -> bool {
-    if (!this->element || !this->element->setVertexPosition(this->vertex, position)) {
+auto GeometryVertexMoveUndoAction::apply(const std::vector<vn::geom::Vec2>& positions) -> bool {
+    if (!this->element || this->vertices.size() != positions.size()) {
         return false;
     }
 
-    return true;
+    bool changed = false;
+    for (std::size_t i = 0; i < this->vertices.size(); ++i) {
+        changed = this->element->setVertexPosition(this->vertices[i], positions[i]) || changed;
+    }
+    return changed;
 }

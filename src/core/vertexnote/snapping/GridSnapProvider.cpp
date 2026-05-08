@@ -39,7 +39,8 @@ void GridSnapProvider::query(const SnapQuery& query, std::vector<SnapCandidate>&
         return;
     }
 
-    candidates.push_back(SnapCandidate{SnapKind::Grid, snapped, pageDistance * query.zoom, 10.0});
+    candidates.push_back(
+            SnapCandidate{SnapKind::Grid, snapped, pageDistance * query.zoom, query.priorities.priorityFor(SnapKind::Grid)});
 }
 
 }  // namespace vn::snap

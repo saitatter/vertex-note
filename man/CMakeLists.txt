@@ -21,19 +21,19 @@ if(WITH_MAN)
 
 
   set(MAN_INCLUDE "${PROJECT_SOURCE_DIR}/man/extra.groff")
-  set(MAN_PAGE "${CMAKE_CURRENT_BINARY_DIR}/xournalpp.1")
-  set(MAN_PAGE_THUMB "${CMAKE_CURRENT_BINARY_DIR}/xournalpp-thumbnailer.1")
+  set(MAN_PAGE "${CMAKE_CURRENT_BINARY_DIR}/vertex-note.1")
+  set(MAN_PAGE_THUMB "${CMAKE_CURRENT_BINARY_DIR}/vertex-note-thumbnailer.1")
 
   add_custom_command(
     OUTPUT ${MAN_PAGE}
-    COMMAND ${HELP2MAN} --no-info -i ${MAN_INCLUDE} -o ${MAN_PAGE} --version-string=${PROJECT_VERSION} --name="open-source hand note-taking program" ${CMAKE_BINARY_DIR}/xournalpp
-    DEPENDS ${CMAKE_BINARY_DIR}/xournalpp
+    COMMAND ${HELP2MAN} --no-info -i ${MAN_INCLUDE} -o ${MAN_PAGE} --version-string=${PROJECT_VERSION} --name="CAD-inspired technical note-taking program" ${CMAKE_BINARY_DIR}/${VERTEX_NOTE_BINARY_NAME}
+    DEPENDS ${CMAKE_BINARY_DIR}/${VERTEX_NOTE_BINARY_NAME}
   )
 
   add_custom_command(
     OUTPUT ${MAN_PAGE_THUMB}
-    COMMAND ${HELP2MAN} --no-info  --no-discard-stderr -o ${MAN_PAGE_THUMB} --version-string=${PROJECT_VERSION} --name="creates thumbnails" ${CMAKE_BINARY_DIR}/src/xoj-preview-extractor/xournalpp-thumbnailer
-    DEPENDS ${CMAKE_BINARY_DIR}/src/xoj-preview-extractor/xournalpp-thumbnailer
+    COMMAND ${HELP2MAN} --no-info  --no-discard-stderr -o ${MAN_PAGE_THUMB} --version-string=${PROJECT_VERSION} --name="creates thumbnails" ${CMAKE_BINARY_DIR}/src/xoj-preview-extractor/vertex-note-thumbnailer
+    DEPENDS ${CMAKE_BINARY_DIR}/src/xoj-preview-extractor/vertex-note-thumbnailer
   )
 
   if (NOT MAN_COMPRESS)

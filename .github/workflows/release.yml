@@ -73,7 +73,7 @@ jobs:
 
           mkdir portable
           mv dist "portable/${package_dir}"
-          mv xournalpp-setup.exe "../${installer_name}"
+          mv vertex-note-setup.exe "../${installer_name}"
 
           echo "package_dir=${package_dir}" >> "$GITHUB_OUTPUT"
           echo "portable_archive=${portable_archive}" >> "$GITHUB_OUTPUT"
@@ -110,3 +110,65 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ needs.release.outputs.tag }}" "${{ steps.package-windows.outputs.installer_name }}" --clobber
+
+  build-linux-assets:
+    needs: release
+    if: ${{ needs.release.outputs.released == 'true' }}
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release.outputs.commit_sha }}
+
+      - name: Install Ubuntu dependencies
+        uses: ./.github/actions/install_deps_ubuntu
+        with:
+          extra_packages: >-
+            fcitx-frontend-gtk3
+            fcitx5-frontend-gtk3
+            gcin-gtk3-immodule
+            ibus-gtk3
+            uim-data
+            uim-gtk3-immodule
+
+      - name: Build Linux packages
+        uses: ./.github/actions/build
+        with:
+          build_type: RelWithDebInfo
+          cmake_flags: >-
+            -DENABLE_GTEST=OFF
+            -DCMAKE_INSTALL_PREFIX=/usr
+            -DCPACK_GENERATOR="TGZ;DEB"
+          cmake_commands: '--target package'
+
+      - name: Build Linux AppImage
+        id: package-linux
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: |
+          export VERSION=$(cat VERSION | sed '1q;d')
+          export ARCH=$(cat VERSION | sed '4q;d')
+          export OUTPUT="vertex-note-v${{ needs.release.outputs.version }}-linux-$ARCH.AppImage"
+
+          ../linux-setup/build_appimage.sh
+
+          mkdir ../linux-assets
+          cp packages/* ../linux-assets/
+          mv "$OUTPUT" "$OUTPUT".zsync ../linux-assets/
+
+          echo "appimage=${OUTPUT}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: vertex-note-v${{ needs.release.outputs.version }}-linux-assets
+          path: ${{ github.workspace }}/linux-assets
+          if-no-files-found: error
+
+      - name: Upload Linux release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${{ needs.release.outputs.tag }}" linux-assets/* --clobber

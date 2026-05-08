@@ -39,7 +39,9 @@ public:
 
     [[nodiscard]] auto vertex(VertexId id) -> Vertex*;
     [[nodiscard]] auto vertex(VertexId id) const -> const Vertex*;
+    [[nodiscard]] auto edge(EdgeId id) -> Edge*;
     [[nodiscard]] auto edge(EdgeId id) const -> const Edge*;
+    [[nodiscard]] auto constraint(ConstraintId id) -> Constraint*;
     [[nodiscard]] auto constraint(ConstraintId id) const -> const Constraint*;
 
     [[nodiscard]] auto vertices() const -> std::span<const Vertex>;
@@ -51,6 +53,10 @@ public:
     [[nodiscard]] auto makeStrokeFallback(double width, Color color) const -> std::unique_ptr<Stroke>;
 
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
+    [[nodiscard]] auto removeVertex(VertexId id) -> bool;
+    [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
+    [[nodiscard]] auto removeConstraint(ConstraintId id) -> bool;
+    [[nodiscard]] auto replaceConstraint(Constraint constraint) -> bool;
     void move(double dx, double dy);
     void scale(double x0, double y0, double fx, double fy, double rotation);
     void rotate(double x0, double y0, double rotation);

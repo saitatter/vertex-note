@@ -5317,6 +5317,21 @@ Determination Radius: Radius at which modifiers will lock in until finished draw
                                         <property name="position">3</property>
                                       </packing>
                                     </child>
+                                    <child>
+                                      <object class="GtkCheckButton" id="cbVertexNoteAutomaticUpdateCheckEnabled">
+                                        <property name="label" translatable="yes">Check for VertexNote updates automatically</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="receives-default">False</property>
+                                        <property name="tooltip-text" translatable="yes">If activated, VertexNote may check GitHub releases when the application starts.</property>
+                                        <property name="draw-indicator">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="expand">False</property>
+                                        <property name="fill">True</property>
+                                        <property name="position">4</property>
+                                      </packing>
+                                    </child>
                                   </object>
                                 </child>
                                 <child type="label">

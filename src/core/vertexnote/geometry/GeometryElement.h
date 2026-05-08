@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "model/Element.h"
 #include "vertexnote/geometry/GeometryObject.h"
@@ -29,6 +30,8 @@ public:
     [[nodiscard]] auto makeStrokeFallback() const -> std::unique_ptr<Stroke>;
     void assignNewObjectId();
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
+    [[nodiscard]] auto removeVertex(VertexId id) -> bool;
+    [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
 
     void move(double dx, double dy) override;
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;

@@ -148,6 +148,7 @@ void Settings::loadDefault() {
     this->snapGridSize = DEFAULT_GRID_SIZE;
     this->vertexNoteGeometrySnapEnabled = true;
     this->vertexNoteGridSnapEnabled = true;
+    this->vertexNoteAutomaticUpdateCheckEnabled = false;
 
     this->strokeRecognizerMinSize = 40;
 
@@ -616,6 +617,8 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
         this->vertexNoteGeometrySnapEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("vertexNoteGridSnapEnabled")) == 0) {
         this->vertexNoteGridSnapEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
+    } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("vertexNoteAutomaticUpdateCheckEnabled")) == 0) {
+        this->vertexNoteAutomaticUpdateCheckEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeRecognizerMinSize")) == 0) {
         this->strokeRecognizerMinSize = tempg_ascii_strtod(reinterpret_cast<const char*>(value), nullptr);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("touchDrawing")) == 0) {
@@ -1135,6 +1138,7 @@ void Settings::save() {
     SAVE_DOUBLE_PROP(snapGridSize);
     SAVE_BOOL_PROP(vertexNoteGeometrySnapEnabled);
     SAVE_BOOL_PROP(vertexNoteGridSnapEnabled);
+    SAVE_BOOL_PROP(vertexNoteAutomaticUpdateCheckEnabled);
 
     SAVE_DOUBLE_PROP(strokeRecognizerMinSize);
 
@@ -1661,6 +1665,19 @@ void Settings::setVertexNoteGridSnapEnabled(bool enabled) {
     }
 
     this->vertexNoteGridSnapEnabled = enabled;
+    save();
+}
+
+auto Settings::isVertexNoteAutomaticUpdateCheckEnabled() const -> bool {
+    return this->vertexNoteAutomaticUpdateCheckEnabled;
+}
+
+void Settings::setVertexNoteAutomaticUpdateCheckEnabled(bool enabled) {
+    if (this->vertexNoteAutomaticUpdateCheckEnabled == enabled) {
+        return;
+    }
+
+    this->vertexNoteAutomaticUpdateCheckEnabled = enabled;
     save();
 }
 

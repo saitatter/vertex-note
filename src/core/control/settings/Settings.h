@@ -331,6 +331,8 @@ public:
     void setVertexNoteGeometrySnapEnabled(bool enabled);
     bool isVertexNoteGridSnapEnabled() const;
     void setVertexNoteGridSnapEnabled(bool enabled);
+    bool isVertexNoteAutomaticUpdateCheckEnabled() const;
+    void setVertexNoteAutomaticUpdateCheckEnabled(bool enabled);
 
     double getStrokeRecognizerMinSize() const;
     void setStrokeRecognizerMinSize(double value);
@@ -973,6 +975,11 @@ private:
      * VertexNote geometry tools can snap to the document grid.
      */
     bool vertexNoteGridSnapEnabled{};
+
+    /**
+     * VertexNote may check GitHub releases automatically at startup.
+     */
+    bool vertexNoteAutomaticUpdateCheckEnabled{};
 
     /**
      * Default name if you save a new document
