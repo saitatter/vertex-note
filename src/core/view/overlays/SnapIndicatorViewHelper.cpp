@@ -13,28 +13,90 @@ namespace xoj::view {
 namespace {
 
 constexpr double SNAP_MARKER_RADIUS = 4.5;
+constexpr double SNAP_MARKER_INNER_RADIUS = 1.7;
 constexpr double FULL_CIRCLE_RADIANS = 6.28318530717958647692;
 
-void setSnapColor(cairo_t* cr, vn::snap::SnapKind kind) {
+void setSnapColor(cairo_t* cr, vn::snap::SnapKind kind, double alpha = 1.0) {
     switch (kind) {
         case vn::snap::SnapKind::Grid:
-            cairo_set_source_rgb(cr, 0.35, 0.35, 0.35);
+            cairo_set_source_rgba(cr, 0.35, 0.35, 0.35, alpha);
             break;
         case vn::snap::SnapKind::ExplicitVertex:
         case vn::snap::SnapKind::EdgeEndpoint:
-            cairo_set_source_rgb(cr, 0.0, 0.45, 1.0);
+            cairo_set_source_rgba(cr, 0.0, 0.45, 1.0, alpha);
             break;
         case vn::snap::SnapKind::Midpoint:
-            cairo_set_source_rgb(cr, 0.0, 0.65, 0.35);
+            cairo_set_source_rgba(cr, 0.0, 0.65, 0.35, alpha);
             break;
         case vn::snap::SnapKind::EdgeProjection:
-            cairo_set_source_rgb(cr, 1.0, 0.55, 0.0);
+            cairo_set_source_rgba(cr, 1.0, 0.55, 0.0, alpha);
             break;
         case vn::snap::SnapKind::Intersection:
-            cairo_set_source_rgb(cr, 0.85, 0.0, 0.85);
+            cairo_set_source_rgba(cr, 0.85, 0.0, 0.85, alpha);
             break;
         case vn::snap::SnapKind::ConstraintGuide:
-            cairo_set_source_rgb(cr, 0.0, 0.6, 0.75);
+            cairo_set_source_rgba(cr, 0.0, 0.6, 0.75, alpha);
+            break;
+    }
+}
+
+void drawClosedSnapShape(cairo_t* cr, vn::snap::SnapKind kind, const Point& point) {
+    switch (kind) {
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+            cairo_rectangle(cr, point.x - SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS,
+                            SNAP_MARKER_RADIUS * 2.0, SNAP_MARKER_RADIUS * 2.0);
+            break;
+        case vn::snap::SnapKind::Midpoint:
+            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x - SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
+            cairo_close_path(cr);
+            break;
+        case vn::snap::SnapKind::ConstraintGuide:
+            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y);
+            cairo_line_to(cr, point.x, point.y + SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x - SNAP_MARKER_RADIUS, point.y);
+            cairo_close_path(cr);
+            break;
+        case vn::snap::SnapKind::Grid:
+        case vn::snap::SnapKind::EdgeProjection:
+        case vn::snap::SnapKind::Intersection:
+            cairo_arc(cr, point.x, point.y, SNAP_MARKER_RADIUS, 0.0, FULL_CIRCLE_RADIANS);
+            break;
+    }
+}
+
+void drawOpenSnapGlyph(cairo_t* cr, vn::snap::SnapKind kind, const Point& point) {
+    switch (kind) {
+        case vn::snap::SnapKind::Grid:
+            cairo_move_to(cr, point.x - SNAP_MARKER_RADIUS, point.y);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y);
+            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x, point.y + SNAP_MARKER_RADIUS);
+            break;
+        case vn::snap::SnapKind::EdgeProjection:
+            cairo_move_to(cr, point.x - SNAP_MARKER_RADIUS, point.y);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y);
+            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x, point.y + SNAP_MARKER_RADIUS);
+            cairo_move_to(cr, point.x + SNAP_MARKER_RADIUS * 0.45, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS * 0.45, point.y - SNAP_MARKER_RADIUS * 0.45);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS * 0.45);
+            break;
+        case vn::snap::SnapKind::Intersection:
+            cairo_move_to(cr, point.x - SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
+            cairo_move_to(cr, point.x + SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS);
+            cairo_line_to(cr, point.x - SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
+            break;
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+        case vn::snap::SnapKind::Midpoint:
+        case vn::snap::SnapKind::ConstraintGuide:
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, point.x, point.y, SNAP_MARKER_INNER_RADIUS, 0.0, FULL_CIRCLE_RADIANS);
             break;
     }
 }
@@ -47,44 +109,24 @@ void drawSnapIndicator(cairo_t* cr, const Point& point, std::optional<vn::snap::
     }
 
     xoj::util::CairoSaveGuard saveGuard(cr);
-    cairo_set_line_width(cr, 1.3);
     cairo_set_dash(cr, nullptr, 0, 0);
-    setSnapColor(cr, *kind);
 
-    switch (*kind) {
-        case vn::snap::SnapKind::ExplicitVertex:
-        case vn::snap::SnapKind::EdgeEndpoint:
-            cairo_rectangle(cr, point.x - SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS,
-                            SNAP_MARKER_RADIUS * 2.0, SNAP_MARKER_RADIUS * 2.0);
-            cairo_stroke(cr);
-            break;
-        case vn::snap::SnapKind::Midpoint:
-            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
-            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
-            cairo_line_to(cr, point.x - SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
-            cairo_close_path(cr);
-            cairo_stroke(cr);
-            break;
-        case vn::snap::SnapKind::EdgeProjection:
-            cairo_move_to(cr, point.x - SNAP_MARKER_RADIUS, point.y);
-            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y);
-            cairo_move_to(cr, point.x, point.y - SNAP_MARKER_RADIUS);
-            cairo_line_to(cr, point.x, point.y + SNAP_MARKER_RADIUS);
-            cairo_stroke(cr);
-            break;
-        case vn::snap::SnapKind::Intersection:
-            cairo_move_to(cr, point.x - SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS);
-            cairo_line_to(cr, point.x + SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
-            cairo_move_to(cr, point.x + SNAP_MARKER_RADIUS, point.y - SNAP_MARKER_RADIUS);
-            cairo_line_to(cr, point.x - SNAP_MARKER_RADIUS, point.y + SNAP_MARKER_RADIUS);
-            cairo_stroke(cr);
-            break;
-        case vn::snap::SnapKind::Grid:
-        case vn::snap::SnapKind::ConstraintGuide:
-            cairo_arc(cr, point.x, point.y, SNAP_MARKER_RADIUS, 0.0, FULL_CIRCLE_RADIANS);
-            cairo_stroke(cr);
-            break;
-    }
+    cairo_set_line_width(cr, 3.3);
+    drawClosedSnapShape(cr, *kind, point);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.92);
+    cairo_stroke_preserve(cr);
+
+    setSnapColor(cr, *kind, 0.16);
+    cairo_fill_preserve(cr);
+
+    cairo_set_line_width(cr, 1.35);
+    setSnapColor(cr, *kind);
+    cairo_stroke(cr);
+
+    cairo_set_line_width(cr, 1.5);
+    drawOpenSnapGlyph(cr, *kind, point);
+    setSnapColor(cr, *kind);
+    cairo_stroke(cr);
 }
 
 }  // namespace xoj::view
