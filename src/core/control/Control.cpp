@@ -54,6 +54,7 @@
 #include "gui/dialog/SelectOpacityDialog.h"                      // for Opac...
 #include "gui/dialog/SettingsDialog.h"                           // for Sett...
 #include "gui/dialog/ToolbarManageDialog.h"                      // for Tool...
+#include "gui/dialog/UpdateDialog.h"                             // for UpdateDialog
 #include "gui/dialog/XojOpenDlg.h"                               // for XojO...
 #include "gui/dialog/XojSaveDlg.h"                               // for XojS...
 #include "gui/dialog/toolbarCustomize/ToolbarDragDropHandler.h"  // for Tool...
@@ -1671,7 +1672,7 @@ void Control::openXoppFile(fs::path filepath, int scrollToPage, std::function<vo
         XojMsgBox::askQuestion(
                 this->getGtkWindow(), _("File version mismatch"),
                 _("The file being loaded has a file format version newer than the one currently supported by this "
-                  "version of Xournal++, so it may not load properly. Open anyways?"),
+                  "version of VertexNote, so it may not load properly. Open anyways?"),
                 buttons, [afterOpen = std::move(afterOpen), callback = std::move(callback)](int response) mutable {
                     if (response == YES) {
                         afterOpen();
@@ -2090,7 +2091,7 @@ void Control::updateWindowTitle() {
     }
     this->doc->unlock_shared();
 
-    title += " - Xournal++";
+    title += " - VertexNote";
 
     gtk_window_set_title(getGtkWindow(), title.c_str());
 }
@@ -2279,6 +2280,8 @@ void Control::showAbout() {
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
 
+void Control::showUpdateDialog() { xoj::popup::UpdateDialog::show(GTK_WINDOW(this->win->getWindow())); }
+
 static void onGtkDemoShown(GObject* proc_object, GAsyncResult* res, gpointer) {
     gboolean success = g_subprocess_wait_finish(G_SUBPROCESS(proc_object), res, NULL);
 
@@ -2454,7 +2457,7 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
         ElementPtr element;
         std::string version = in.readString();
         if (version != PROJECT_STRING) {
-            g_warning("Paste from Xournal Version %s to Xournal Version %s", version.c_str(), PROJECT_STRING);
+            g_warning("Paste from document editor version %s to VertexNote version %s", version.c_str(), PROJECT_STRING);
         }
 
         selection->readSerialized(in);

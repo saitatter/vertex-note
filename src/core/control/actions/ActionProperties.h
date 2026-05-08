@@ -933,6 +933,11 @@ struct ActionProperties<Action::DEMO> {
 };
 
 template <>
+struct ActionProperties<Action::CHECK_FOR_UPDATES> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->showUpdateDialog(); }
+};
+
+template <>
 struct ActionProperties<Action::ABOUT> {
     using app_namespace = std::true_type;
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->showAbout(); }

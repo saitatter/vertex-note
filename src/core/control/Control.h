@@ -153,6 +153,7 @@ public:
     void runLatex();
 
     // Menu Help
+    void showUpdateDialog();
     void showAbout();
     void showGtkDemo();
 

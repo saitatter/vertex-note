@@ -64,6 +64,7 @@ static const std::map<std::string_view, Action> STATELESS_ACTION_MAP = {
         {"ACTION_AUDIO_STOP_PLAYBACK"sv, Action::AUDIO_STOP_PLAYBACK},
         {"ACTION_PLUGIN_MANAGER"sv, Action::PLUGIN_MANAGER},
         {"ACTION_HELP"sv, Action::HELP},
+        {"ACTION_CHECK_FOR_UPDATES"sv, Action::CHECK_FOR_UPDATES},
         {"ACTION_ABOUT"sv, Action::ABOUT},
         {"ACTION_NEW_LAYER"sv, Action::LAYER_NEW_ABOVE_CURRENT},
         {"ACTION_NEW_LAYER_BELOW_CURRENT"sv, Action::LAYER_NEW_BELOW_CURRENT},
