@@ -150,16 +150,14 @@ auto parseInteger(std::string_view value) -> std::optional<T> {
 }
 
 auto parseDouble(std::string_view value) -> std::optional<double> {
-    try {
-        std::size_t parsedLength = 0U;
-        const auto parsed = std::stod(std::string{value}, &parsedLength);
-        if (parsedLength != value.size()) {
-            return std::nullopt;
-        }
-        return parsed;
-    } catch (const std::exception&) {
+    double parsed{};
+    const auto* begin = value.data();
+    const auto* end = value.data() + value.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, parsed);
+    if (ec != std::errc{} || ptr != end) {
         return std::nullopt;
     }
+    return parsed;
 }
 
 auto formatDouble(double value) -> std::string {

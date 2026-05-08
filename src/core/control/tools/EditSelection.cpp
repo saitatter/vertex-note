@@ -1262,14 +1262,19 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
     const double fy = this->height / original.height;
     const double hitRadius = std::max(6.0, static_cast<double>(this->btnWidth));
 
-    for (auto* element: this->contents->getElementsView()) {
-        if (element->getType() != ELEMENT_GEOMETRY) {
-            continue;
+    bool selected = false;
+    this->contents->forEachMutableElement([&](Element* element) {
+        if (selected) {
+            return;
         }
 
-        auto* geometry = dynamic_cast<vn::geom::GeometryElement*>(const_cast<Element*>(element));
+        if (element->getType() != ELEMENT_GEOMETRY) {
+            return;
+        }
+
+        auto* geometry = dynamic_cast<vn::geom::GeometryElement*>(element);
         if (!geometry) {
-            continue;
+            return;
         }
 
         for (const auto& vertex: geometry->geometry().vertices()) {
@@ -1281,12 +1286,13 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
                 this->activeGeometryVertexStart = vertex.position;
                 this->activeGeometryVertexCurrent = vertex.position;
                 this->activeGeometryVertexMoved = false;
-                return true;
+                selected = true;
+                return;
             }
         }
-    }
+    });
 
-    return false;
+    return selected;
 }
 
 auto EditSelection::geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2 {

@@ -97,6 +97,7 @@ public:
     auto getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>>;
 
     void forEachElement(std::function<void(const Element*)> f) const override;
+    void forEachMutableElement(std::function<void(Element*)> f);
 
     /**
      * Returns the insert order of this selection
