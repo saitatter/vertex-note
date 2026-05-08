@@ -11,11 +11,16 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "model/Point.h"
 #include "model/Stroke.h"
 #include "util/Rectangle.h"
+#include "util/serializing/InputStreamException.h"
+#include "util/serializing/ObjectInputStream.h"
+#include "util/serializing/ObjectOutputStream.h"
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 using xoj::util::Rectangle;
 
@@ -115,6 +120,47 @@ auto GeometryElement::clone() const -> ElementPtr {
     element->snappedBounds = this->snappedBounds;
     element->sizeCalculated = this->sizeCalculated;
     return element;
+}
+
+void GeometryElement::serialize(ObjectOutputStream& out) const {
+    out.writeObject("GeometryElement");
+
+    this->Element::serialize(out);
+    out.writeDouble(this->strokeWidth);
+
+    const auto metadata = vn::io::serializeGeometryStrokeMetadata(this->object);
+    out.writeString(metadata.format);
+    out.writeString(metadata.objectId);
+    out.writeString(metadata.vertices);
+    out.writeString(metadata.edges);
+    out.writeString(metadata.constraints);
+
+    out.endObject();
+}
+
+void GeometryElement::readSerialized(ObjectInputStream& in) {
+    in.readObject("GeometryElement");
+
+    this->Element::readSerialized(in);
+    this->strokeWidth = in.readDouble();
+
+    vn::io::GeometryStrokeMetadata metadata;
+    metadata.format = in.readString();
+    metadata.objectId = in.readString();
+    metadata.vertices = in.readString();
+    metadata.edges = in.readString();
+    metadata.constraints = in.readString();
+
+    std::string error;
+    auto parsed = vn::io::parseGeometryStrokeMetadata(metadata, &error);
+    if (!parsed) {
+        throw InputStreamException("Could not read VertexNote geometry clipboard data: " + error, __FILE__, __LINE__);
+    }
+
+    this->object = std::move(*parsed);
+    this->sizeCalculated = false;
+
+    in.endObject();
 }
 
 void GeometryElement::calcSize() const {

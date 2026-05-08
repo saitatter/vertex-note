@@ -5,12 +5,19 @@
 #include <config-test.h>
 #include <gtest/gtest.h>
 
+#include <string>
 #include <utility>
+
+#include <glib.h>
 
 #include "model/Element.h"
 #include "util/Color.h"
+#include "util/serializing/BinObjectEncoding.h"
+#include "util/serializing/ObjectInputStream.h"
+#include "util/serializing/ObjectOutputStream.h"
 #include "vertexnote/geometry/GeometryElement.h"
 
+using vn::geom::ConstraintKind;
 using vn::geom::GeometryElement;
 using vn::geom::GeometryObject;
 using vn::geom::Vec2;
@@ -84,4 +91,38 @@ TEST(VertexNoteGeometryElement, clonesGeometryState) {
     EXPECT_DOUBLE_EQ(clone->getX(), element.getX());
     EXPECT_DOUBLE_EQ(clone->getElementWidth(), element.getElementWidth());
     EXPECT_EQ(clone->getColor(), Colors::black);
+}
+
+TEST(VertexNoteGeometryElement, serializesClipboardGeometryState) {
+    GeometryObject object(84);
+    const auto a = object.addVertex(Vec2{1.0, 2.0});
+    const auto b = object.addVertex(Vec2{5.0, 2.0});
+    const auto edge = object.addLine(a, b);
+    object.addConstraint(ConstraintKind::FixedLength, {}, {edge}, 4.0);
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::red);
+    element.setStrokeWidth(3.0);
+
+    ObjectOutputStream out(new BinObjectEncoding);
+    element.serialize(out);
+    auto* raw = out.stealData();
+    const std::string serialized(raw->str, raw->len);
+    g_string_free(raw, true);
+
+    ObjectInputStream in;
+    ASSERT_TRUE(in.read(serialized.c_str(), serialized.size() + 1U));
+    ASSERT_EQ(in.getNextObjectName(), "GeometryElement");
+
+    GeometryElement loaded;
+    loaded.readSerialized(in);
+
+    EXPECT_EQ(loaded.getColor(), Colors::red);
+    EXPECT_DOUBLE_EQ(loaded.getStrokeWidth(), 3.0);
+    EXPECT_EQ(loaded.geometry().objectId(), 84U);
+    EXPECT_EQ(loaded.geometry().vertices().size(), 2U);
+    EXPECT_EQ(loaded.geometry().edges().size(), 1U);
+    EXPECT_EQ(loaded.geometry().constraints().size(), 1U);
+    EXPECT_DOUBLE_EQ(loaded.geometry().vertex(a)->position.x, 1.0);
+    EXPECT_DOUBLE_EQ(loaded.geometry().vertex(b)->position.x, 5.0);
 }

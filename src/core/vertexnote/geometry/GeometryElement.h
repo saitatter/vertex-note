@@ -34,6 +34,8 @@ public:
     void rotate(double x0, double y0, double th) override;
     [[nodiscard]] auto distanceTo(double x, double y) const -> double override;
     [[nodiscard]] auto clone() const -> ElementPtr override;
+    void serialize(ObjectOutputStream& out) const override;
+    void readSerialized(ObjectInputStream& in) override;
 
 protected:
     void calcSize() const override;

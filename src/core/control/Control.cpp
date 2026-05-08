@@ -107,6 +107,7 @@
 #include "util/safe_casts.h"                                     // for as_unsigned
 #include "util/serializing/InputStreamException.h"               // for Inpu...
 #include "util/serializing/ObjectInputStream.h"                  // for Obje...
+#include "vertexnote/geometry/GeometryElement.h"                 // for GeometryElement
 #include "view/CompassView.h"                                    // for Comp...
 #include "view/SetsquareView.h"                                  // for Sets...
 #include "view/overlays/OverlayView.h"                           // for Over...
@@ -2476,6 +2477,8 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
                 element = std::make_unique<TexImage>();
             } else if (name == "Text") {
                 element = std::make_unique<Text>();
+            } else if (name == "GeometryElement") {
+                element = std::make_unique<vn::geom::GeometryElement>();
             } else {
                 throw InputStreamException(FS(FORMAT_STR("Get unknown object {1}") % name), __FILE__, __LINE__);
             }
