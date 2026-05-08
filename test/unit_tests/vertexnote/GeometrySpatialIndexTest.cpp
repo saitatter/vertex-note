@@ -63,6 +63,24 @@ TEST(VertexNoteGeometrySpatialIndex, deduplicatesPairsAcrossSharedCells) {
     EXPECT_EQ(pairs.front().second, 1U);
 }
 
+TEST(VertexNoteGeometrySpatialIndex, querySegmentPairsIgnoresFarIntersections) {
+    const std::vector<IndexedSegment> segments{
+            IndexedSegment{1, 1, Vec2{0.0, 0.0}, Vec2{16.0, 16.0}},
+            IndexedSegment{2, 2, Vec2{0.0, 16.0}, Vec2{16.0, 0.0}},
+            IndexedSegment{3, 3, Vec2{512.0, 512.0}, Vec2{528.0, 528.0}},
+            IndexedSegment{4, 4, Vec2{512.0, 528.0}, Vec2{528.0, 512.0}},
+    };
+
+    GeometrySpatialIndex index(32.0);
+    index.rebuild(segments);
+
+    const auto pairs = index.querySegmentPairs(SpatialBounds{-4.0, -4.0, 20.0, 20.0});
+
+    ASSERT_EQ(pairs.size(), 1U);
+    EXPECT_EQ(pairs.front().first, 0U);
+    EXPECT_EQ(pairs.front().second, 1U);
+}
+
 TEST(VertexNoteGeometrySpatialIndex, returnsSegmentsCrossingNegativeCoordinates) {
     const std::vector<IndexedSegment> segments{
             IndexedSegment{1, 1, Vec2{-20.0, -20.0}, Vec2{-5.0, -5.0}},
