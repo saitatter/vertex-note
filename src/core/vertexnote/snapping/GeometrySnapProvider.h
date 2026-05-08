@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "vertexnote/geometry/GeometryObject.h"
+#include "vertexnote/snapping/GeometrySpatialIndex.h"
 #include "vertexnote/snapping/ISnapProvider.h"
 
 namespace vn::snap {
@@ -22,7 +23,12 @@ public:
     void query(const SnapQuery& query, std::vector<SnapCandidate>& candidates) const override;
 
 private:
+    void rebuildLineSegments();
+
+private:
     std::vector<const geom::GeometryObject*> objects;
+    std::vector<IndexedSegment> lineSegments;
+    GeometrySpatialIndex lineSegmentIndex;
 };
 
 }  // namespace vn::snap

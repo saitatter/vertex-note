@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -16,20 +15,6 @@ namespace vn::snap {
 
 namespace {
 constexpr double INTERSECTION_EPSILON = 0.000001;
-
-struct Segment {
-    geom::ObjectId object = geom::InvalidObjectId;
-    geom::EdgeId edge = geom::InvalidEdgeId;
-    geom::Vec2 start;
-    geom::Vec2 end;
-};
-
-struct Bounds {
-    double minX = 0.0;
-    double minY = 0.0;
-    double maxX = 0.0;
-    double maxY = 0.0;
-};
 
 [[nodiscard]] auto distance(geom::Vec2 lhs, geom::Vec2 rhs) -> double {
     return std::hypot(rhs.x - lhs.x, rhs.y - lhs.y);
@@ -59,7 +44,8 @@ struct Bounds {
     return geom::Vec2{start.x + t * dx, start.y + t * dy};
 }
 
-[[nodiscard]] auto segmentIntersection(const Segment& lhs, const Segment& rhs) -> std::optional<geom::Vec2> {
+[[nodiscard]] auto segmentIntersection(const IndexedSegment& lhs, const IndexedSegment& rhs)
+        -> std::optional<geom::Vec2> {
     const geom::Vec2 r = subtract(lhs.end, lhs.start);
     const geom::Vec2 s = subtract(rhs.end, rhs.start);
     const double denominator = cross(r, s);
@@ -77,21 +63,11 @@ struct Bounds {
     return geom::Vec2{lhs.start.x + t * r.x, lhs.start.y + t * r.y};
 }
 
-[[nodiscard]] auto queryBounds(const SnapQuery& query) -> Bounds {
+[[nodiscard]] auto queryBounds(const SnapQuery& query) -> SpatialBounds {
     const double pageRadius = query.zoom > INTERSECTION_EPSILON ? query.maxScreenDistance / query.zoom :
                                                                   query.maxScreenDistance;
-    return Bounds{query.pagePoint.x - pageRadius, query.pagePoint.y - pageRadius, query.pagePoint.x + pageRadius,
-                  query.pagePoint.y + pageRadius};
-}
-
-[[nodiscard]] auto segmentOverlapsBounds(const Segment& segment, const Bounds& bounds) -> bool {
-    const double minX = std::min(segment.start.x, segment.end.x);
-    const double maxX = std::max(segment.start.x, segment.end.x);
-    const double minY = std::min(segment.start.y, segment.end.y);
-    const double maxY = std::max(segment.start.y, segment.end.y);
-
-    return maxX + INTERSECTION_EPSILON >= bounds.minX && minX - INTERSECTION_EPSILON <= bounds.maxX &&
-           maxY + INTERSECTION_EPSILON >= bounds.minY && minY - INTERSECTION_EPSILON <= bounds.maxY;
+    return SpatialBounds{query.pagePoint.x - pageRadius, query.pagePoint.y - pageRadius,
+                         query.pagePoint.x + pageRadius, query.pagePoint.y + pageRadius};
 }
 
 void addCandidate(std::vector<SnapCandidate>& candidates, const SnapQuery& query, SnapKind kind, geom::Vec2 point,
@@ -104,16 +80,16 @@ void addCandidate(std::vector<SnapCandidate>& candidates, const SnapQuery& query
 }  // namespace
 
 GeometrySnapProvider::GeometrySnapProvider(std::vector<const geom::GeometryObject*> objects):
-        objects(std::move(objects)) {}
+        objects(std::move(objects)) {
+    this->rebuildLineSegments();
+}
 
 void GeometrySnapProvider::setObjects(std::vector<const geom::GeometryObject*> objects) {
     this->objects = std::move(objects);
+    this->rebuildLineSegments();
 }
 
 void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandidate>& candidates) const {
-    const Bounds snapBounds = queryBounds(query);
-    std::vector<Segment> intersectionSegments;
-
     for (const auto* object: this->objects) {
         if (!object) {
             continue;
@@ -123,7 +99,49 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
             addCandidate(candidates, query, SnapKind::ExplicitVertex, vertex.position, 100.0, object->objectId(),
                          vertex.id);
         }
+    }
 
+    const SpatialBounds snapBounds = queryBounds(query);
+    const auto nearbySegments = this->lineSegmentIndex.querySegmentIndices(snapBounds);
+    for (const auto segmentIndex: nearbySegments) {
+        const auto& segment = this->lineSegments[segmentIndex];
+        if (!overlaps(segmentBounds(segment), snapBounds)) {
+            continue;
+        }
+
+        addCandidate(candidates, query, SnapKind::Midpoint, midpoint(segment.start, segment.end), 70.0, segment.object,
+                     geom::InvalidVertexId, segment.edge);
+
+        if (auto projection = projectionOnSegment(query.pagePoint, segment.start, segment.end)) {
+            addCandidate(candidates, query, SnapKind::EdgeProjection, *projection, 50.0, segment.object,
+                         geom::InvalidVertexId, segment.edge);
+        }
+    }
+
+    for (const auto& [lhsIndex, rhsIndex]: this->lineSegmentIndex.querySegmentPairs(snapBounds)) {
+        const auto& lhs = this->lineSegments[lhsIndex];
+        const auto& rhs = this->lineSegments[rhsIndex];
+        if (!overlaps(segmentBounds(lhs), snapBounds) || !overlaps(segmentBounds(rhs), snapBounds)) {
+            continue;
+        }
+
+        if (auto intersection = segmentIntersection(lhs, rhs)) {
+            const double screenDistance = distance(query.pagePoint, *intersection) * query.zoom;
+            if (screenDistance <= query.maxScreenDistance + INTERSECTION_EPSILON) {
+                addCandidate(candidates, query, SnapKind::Intersection, *intersection, 90.0, lhs.object,
+                             geom::InvalidVertexId, lhs.edge);
+            }
+        }
+    }
+}
+
+void GeometrySnapProvider::rebuildLineSegments() {
+    this->lineSegments.clear();
+
+    for (const auto* object: this->objects) {
+        if (!object) {
+            continue;
+        }
         for (const auto& edge: object->edges()) {
             if (edge.kind != geom::EdgeKind::Line) {
                 continue;
@@ -135,32 +153,11 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
                 continue;
             }
 
-            Segment segment{object->objectId(), edge.id, start->position, end->position};
-            if (segmentOverlapsBounds(segment, snapBounds)) {
-                intersectionSegments.push_back(segment);
-            }
-
-            addCandidate(candidates, query, SnapKind::Midpoint, midpoint(start->position, end->position), 70.0,
-                         object->objectId(), geom::InvalidVertexId, edge.id);
-
-            if (auto projection = projectionOnSegment(query.pagePoint, start->position, end->position)) {
-                addCandidate(candidates, query, SnapKind::EdgeProjection, *projection, 50.0, object->objectId(),
-                             geom::InvalidVertexId, edge.id);
-            }
+            this->lineSegments.push_back(IndexedSegment{object->objectId(), edge.id, start->position, end->position});
         }
     }
 
-    for (auto lhs = intersectionSegments.begin(); lhs != intersectionSegments.end(); ++lhs) {
-        for (auto rhs = std::next(lhs); rhs != intersectionSegments.end(); ++rhs) {
-            if (auto intersection = segmentIntersection(*lhs, *rhs)) {
-                const double screenDistance = distance(query.pagePoint, *intersection) * query.zoom;
-                if (screenDistance <= query.maxScreenDistance + INTERSECTION_EPSILON) {
-                    addCandidate(candidates, query, SnapKind::Intersection, *intersection, 90.0, lhs->object,
-                                 geom::InvalidVertexId, lhs->edge);
-                }
-            }
-        }
-    }
+    this->lineSegmentIndex.rebuild(this->lineSegments);
 }
 
 }  // namespace vn::snap
