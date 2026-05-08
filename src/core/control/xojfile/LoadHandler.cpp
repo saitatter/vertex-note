@@ -48,6 +48,7 @@
 #include "util/raii/GLibGuards.h"       // for GErrorGuard
 #include "util/raii/GObjectSPtr.h"      // for GObjectSPtr
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"  // for path, is_regular_file
@@ -356,6 +357,7 @@ void LoadHandler::finalizeStroke() {
             std::string error;
             auto object = vn::io::parseGeometryStrokeMetadata(*this->strokeGeometryMetadata, &error);
             if (object) {
+                vn::geom::GeometryIdGenerator::observeObjectId(object->objectId());
                 auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(*object));
                 geometry->setColor(this->stroke->getColor());
                 geometry->setStrokeWidth(this->stroke->getWidth());

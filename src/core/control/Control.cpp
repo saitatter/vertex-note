@@ -2484,6 +2484,9 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
             }
 
             element->readSerialized(in);
+            if (auto* geometry = dynamic_cast<vn::geom::GeometryElement*>(element.get())) {
+                geometry->assignNewObjectId();
+            }
 
             pasteAddUndoAction->addElement(layer, element.get(), layer->indexOf(element.get()));
             // Todo: unique_ptr

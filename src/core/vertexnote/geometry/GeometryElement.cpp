@@ -20,6 +20,7 @@
 #include "util/serializing/InputStreamException.h"
 #include "util/serializing/ObjectInputStream.h"
 #include "util/serializing/ObjectOutputStream.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
 
 using xoj::util::Rectangle;
@@ -65,6 +66,8 @@ auto GeometryElement::getStrokeWidth() const -> double { return this->strokeWidt
 auto GeometryElement::makeStrokeFallback() const -> std::unique_ptr<Stroke> {
     return this->object.makeStrokeFallback(this->strokeWidth, this->getColor());
 }
+
+void GeometryElement::assignNewObjectId() { this->object.setObjectId(GeometryIdGenerator::nextObjectId()); }
 
 auto GeometryElement::setVertexPosition(VertexId id, Vec2 position) -> bool {
     const bool changed = this->object.setVertexPosition(id, position);
@@ -158,6 +161,7 @@ void GeometryElement::readSerialized(ObjectInputStream& in) {
     }
 
     this->object = std::move(*parsed);
+    GeometryIdGenerator::observeObjectId(this->object.objectId());
     this->sizeCalculated = false;
 
     in.endObject();

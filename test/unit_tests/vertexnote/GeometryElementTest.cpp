@@ -16,9 +16,11 @@
 #include "util/serializing/ObjectInputStream.h"
 #include "util/serializing/ObjectOutputStream.h"
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 
 using vn::geom::ConstraintKind;
 using vn::geom::GeometryElement;
+using vn::geom::GeometryIdGenerator;
 using vn::geom::GeometryObject;
 using vn::geom::Vec2;
 
@@ -125,4 +127,19 @@ TEST(VertexNoteGeometryElement, serializesClipboardGeometryState) {
     EXPECT_EQ(loaded.geometry().constraints().size(), 1U);
     EXPECT_DOUBLE_EQ(loaded.geometry().vertex(a)->position.x, 1.0);
     EXPECT_DOUBLE_EQ(loaded.geometry().vertex(b)->position.x, 5.0);
+}
+
+TEST(VertexNoteGeometryElement, assignsNewObjectIdAndRetargetsVertices) {
+    GeometryIdGenerator::resetForTests(200);
+    GeometryElement element = makeLineElement();
+    const auto oldObjectId = element.geometry().objectId();
+
+    element.assignNewObjectId();
+
+    EXPECT_NE(element.geometry().objectId(), oldObjectId);
+    EXPECT_EQ(element.geometry().objectId(), 200U);
+    for (const auto& vertex: element.geometry().vertices()) {
+        EXPECT_EQ(vertex.owner, element.geometry().objectId());
+    }
+    GeometryIdGenerator::resetForTests();
 }
