@@ -152,7 +152,7 @@ GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are required. Un
 
 ## 🔄 Releases
 
-VertexNote uses **semantic-release** with Conventional Commits. On every push to `main`, CI checks if a new version should be published.
+VertexNote uses **semantic-release** with Conventional Commits. Releases are published from the manual GitHub Actions release workflow after `main` is ready.
 
 - Use Conventional Commits: `feat: ...`, `fix: ...`, `chore: ...`
 - Breaking changes: use `!` or a `BREAKING CHANGE:` footer

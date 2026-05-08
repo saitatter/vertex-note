@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout release commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.release.outputs.commit_sha }}
 
@@ -88,14 +88,14 @@ jobs:
             -Force
 
       - name: Upload portable workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package-windows.outputs.portable_archive }}
           path: ${{ steps.package-windows.outputs.portable_archive }}
           if-no-files-found: error
 
       - name: Upload installer workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package-windows.outputs.installer_name }}
           path: ${{ steps.package-windows.outputs.installer_name }}
