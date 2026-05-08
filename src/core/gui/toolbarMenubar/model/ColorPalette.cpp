@@ -115,7 +115,7 @@ auto Palette::size() const -> size_t { return namedColors.size(); }
 auto Palette::default_palette() -> const std::string {
     auto d = serdes_stream<std::stringstream>();
     d << "GIMP Palette\n"
-      << "Name: Xournal Palette\n"
+      << "Name: VertexNote Palette\n"
       << "#\n"
       << 0 << " " << 0 << " " << 0 << " " << NC_("Color", "Black") << "\n"
       << 0 << " " << 128 << " " << 0 << " " << NC_("Color", "Green") << "\n"
@@ -173,7 +173,7 @@ auto Palette::parseErrorDialog(const std::exception& e) const -> void {
                << "\n\n";
     msg_stream << "What happened:\n" << e.what() << "\n";
     msg_stream << "What to do:\n";
-    msg_stream << "Please fix your palette file, or rename it so xournalpp creates a new default palette file "
+    msg_stream << "Please fix your palette file, or rename it so VertexNote creates a new default palette file "
                   "for you. This file can then be used as a template.\n";
     msg_stream << "Until this is fixed, the application will use the default color palette." << std::endl;
 

@@ -18,12 +18,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
-## Project related Variables
-## Also update changelog in debian folder!
-project(xournalpp
-        VERSION 1.3.4
-        DESCRIPTION "Xournal++ - Open source hand note-taking program"
-        HOMEPAGE_URL "https://xournalpp.github.io/"
+## Project related variables
+file(STRINGS pyproject.toml VERTEX_NOTE_VERSION_LINE REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+\"")
+string(REGEX REPLACE "^version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"$" "\\1" VERTEX_NOTE_VERSION "${VERTEX_NOTE_VERSION_LINE}")
+
+project(VertexNote
+        VERSION ${VERTEX_NOTE_VERSION}
+        DESCRIPTION "VertexNote - CAD-inspired technical note-taking"
+        HOMEPAGE_URL "https://github.com/saitatter/vertex-note"
         LANGUAGES CXX C)
 # according to https://cmake.org/cmake/help/latest/command/project.html we must fix the suffix:
 # And https://gitlab.kitware.com/cmake/cmake/-/issues/16716 is still open:
@@ -31,7 +33,7 @@ set(VERSION_SUFFIX "+dev")
 set(PROJECT_VERSION "${PROJECT_VERSION}${VERSION_SUFFIX}")
 set(xournalpp_VERSION ${PROJECT_VERSION})
 set(CMAKE_PROJECT_VERSION ${PROJECT_VERSION})
-set(PROJECT_CONTACT "core.xournalpp@github.com")
+set(PROJECT_CONTACT "https://github.com/saitatter/vertex-note/issues")
 
 ## CMAKE_Variables
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/find" "${PROJECT_SOURCE_DIR}/cmake/include")
@@ -188,14 +190,14 @@ endif ()
 
 option(ENABLE_PLUGINS "Compile with plugin support" ON)
 if (ENABLE_PLUGINS)
-    message(STATUS "Enable Xournal++ Plugins")
+    message(STATUS "Enable VertexNote Plugins")
     find_package(Lua REQUIRED)
     add_library(lua INTERFACE)
     target_link_libraries(lua INTERFACE ${LUA_LIBRARIES})
     target_include_directories(lua INTERFACE ${LUA_INCLUDE_DIR})
     add_library(Lua::lua ALIAS lua)
 else ()
-    message(STATUS "Disable Xournal++ Plugins")
+    message(STATUS "Disable VertexNote Plugins")
 endif ()
 
 option(ENABLE_GTK_SOURCEVIEW "Enable syntax highlighting in TeX editor" ON)
@@ -314,7 +316,7 @@ mark_as_advanced(FORCE
 # Advanced development config
 set(DEV_TOOLBAR_CONFIG "toolbar.ini" CACHE STRING "Toolbar config file name")
 set(DEV_SETTINGS_XML_FILE "settings.xml" CACHE STRING "Settings file name")
-set(DEV_DEFAULT_PALETTE_FILE "xournal.gpl" CACHE STRING "Default Color Palette")
+set(DEV_DEFAULT_PALETTE_FILE "vertex-note.gpl" CACHE STRING "Default Color Palette")
 set(DEV_PRINT_CONFIG_FILE "print-config.ini" CACHE STRING "Print config file name")
 set(DEV_METADATA_FILE "metadata.ini" CACHE STRING "Metadata file name")
 set(DEV_ERRORLOG_DIR "errorlogs" CACHE STRING "Directory where errorlogfiles will be placed")
@@ -366,7 +368,7 @@ endif ()
 add_subdirectory(src)
 
 ## Tests ##
-option (ENABLE_GTEST "Enable gtest build for xournalpp application" OFF)
+option (ENABLE_GTEST "Enable gtest build for VertexNote application" OFF)
 if (ENABLE_GTEST)
   enable_testing()
   add_subdirectory (test ${CMAKE_BINARY_DIR}/test EXCLUDE_FROM_ALL)
@@ -433,7 +435,7 @@ configure_file(
 add_custom_target(uninstall
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake/cmake_uninstall.cmake
 
-        COMMENT "Uninstall entire Xournal++"
+        COMMENT "Uninstall entire VertexNote"
         )
 
 message("
@@ -460,8 +462,8 @@ set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION}~git${PACKAGE_TIMESTAMP}-${RELEASE_IDENTIFIER}-${DISTRO_CODENAME})
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/package_description")
 set(CPACK_PACKAGE_CONTACT "${PROJECT_CONTACT}")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "Xournal++")
-set(CPACK_PACKAGE_FILE_NAME "xournalpp-${PROJECT_VERSION}-${DISTRO_NAME}-${DISTRO_CODENAME}-${PACKAGE_ARCH}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "VertexNote")
+set(CPACK_PACKAGE_FILE_NAME "vertex-note-${PROJECT_VERSION}-${DISTRO_NAME}-${DISTRO_CODENAME}-${PACKAGE_ARCH}")
 set(CPACK_OUTPUT_FILE_PREFIX packages)
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_STRIP_FILES ON) # Debian packages must be stripped from debug messages, so lintian doesn't complain

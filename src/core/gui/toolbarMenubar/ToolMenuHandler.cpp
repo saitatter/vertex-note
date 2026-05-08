@@ -286,7 +286,7 @@ void ToolMenuHandler::initToolItems() {
      * ------------------------------------------------------------------------
      */
 
-    emplaceCustomItem("NEW", Cat::FILES, Action::NEW_FILE, "document-new", _("New Xournal"));
+    emplaceCustomItem("NEW", Cat::FILES, Action::NEW_FILE, "document-new", _("New VertexNote document"));
     emplaceCustomItem("OPEN", Cat::FILES, Action::OPEN, "document-open", _("Open file"));
     emplaceCustomItem("SAVE", Cat::FILES, Action::SAVE, "document-save", _("Save"));
     emplaceCustomItem("SAVEPDF", Cat::FILES, Action::EXPORT_AS_PDF, "document-export-pdf", _("Export as PDF"));

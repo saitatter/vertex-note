@@ -9,7 +9,7 @@
   </object>
   <object class="GtkWindow" id="aboutDialog">
     <property name="can-focus">False</property>
-    <property name="title" translatable="yes">About Xournal++</property>
+    <property name="title" translatable="yes">About VertexNote</property>
     <property name="resizable">False</property>
     <property name="modal">True</property>
     <property name="destroy-with-parent">True</property>
@@ -34,8 +34,8 @@
             <property name="can-focus">False</property>
             <property name="column-homogeneous">True</property>
             <child>
-              <object class="GtkImage" id="XournalIcon">
-                <property name="name">XournalIcon</property>
+              <object class="GtkImage" id="VertexNoteIcon">
+                <property name="name">VertexNoteIcon</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="pixbuf">pixmaps/com.github.xournalpp.xournalpp.svg</property>
@@ -90,8 +90,8 @@
                 <property name="name">labelTitle</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;Xournal++&lt;/span&gt;
-&lt;i&gt;The next generation&lt;/i&gt;</property>
+                <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;VertexNote&lt;/span&gt;
+&lt;i&gt;CAD-inspired technical notes&lt;/i&gt;</property>
                 <property name="use-markup">True</property>
                 <property name="justify">center</property>
               </object>
@@ -183,8 +183,8 @@ Luya Tshimbalanga</property>
                     <property name="name">lbXournal</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Partially based on Xournal
-by Denis Auroux</property>
+                    <property name="label" translatable="yes">Based on Xournal++ and Xournal
+with continuing attribution to their contributors</property>
                     <property name="use-markup">True</property>
                     <property name="justify">center</property>
                   </object>

@@ -89,7 +89,7 @@ void SaveHandler::writeHeader() {
     this->root->setAttrib(xoj::xml_attrs::CREATOR_STR, PROJECT_STRING);
     this->root->setAttrib(xoj::xml_attrs::FILEVERSION_STR, FILE_FORMAT_VERSION);
     this->root->addChild(new XmlTextNode(TAG_NAMES[TagType::TITLE],
-                                         std::string{"Xournal++ document - see "} + PROJECT_HOMEPAGE_URL));
+                                         std::string{"VertexNote document - see "} + PROJECT_HOMEPAGE_URL));
 }
 
 auto SaveHandler::getColorStr(Color c, unsigned char alpha) -> std::string {

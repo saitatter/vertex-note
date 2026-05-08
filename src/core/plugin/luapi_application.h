@@ -483,7 +483,7 @@ static int applib_openDialog(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
 
     const std::string& pluginName = plugin->getName();
-    auto header = (error ? std::string("<b>Error in </b>") : "") + std::string("Xournal++ Plugin «") + pluginName + "»";
+    auto header = (error ? std::string("<b>Error in </b>") : "") + std::string("VertexNote Plugin «") + pluginName + "»";
 
     XojMsgBox::askQuestionWithMarkup(nullptr, header, msg, buttons, [cb, plugin](int response) {
         if (cb != "" && response >= 1) {

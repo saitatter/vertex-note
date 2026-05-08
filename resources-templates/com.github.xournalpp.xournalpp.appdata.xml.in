@@ -3,19 +3,17 @@
 <component type="desktop">
   <id>com.github.xournalpp.xournalpp</id>
   <translation type="gettext">xournalpp</translation>
-  <name>Xournal++</name>
-  <summary>Take handwritten notes</summary>
-  <developer_name>Xournalpp Developers</developer_name>
+  <name>VertexNote</name>
+  <summary>Take CAD-inspired technical notes</summary>
+  <developer_name>VertexNote Developers</developer_name>
   <description>
     <p>
-      Xournal++ is a hand note-taking software written in C++ with the target of
-      flexibility, functionality and speed. Stroke recognizer and other parts are
-      based on Xournal Code, which you can find at sourceforge. It supports GNU/Linux
-      (e.g. Ubuntu, Debian, Arch, SUSE), macOS and Windows. Supports pen input
-      from devices such as Wacom Tablets.
+      VertexNote is a CAD-inspired technical note-taking application based on Xournal++.
+      It keeps the fast handwritten note-taking workflow while adding object-based
+      geometry, vertices, snapping, and precision drawing tools for engineering notes.
     </p>
     <p>
-      Xournal++ features:
+      VertexNote features:
     </p>
     <ul>
       <li>Supports pressure-sensitive styluses and digital pen tables (e.g. Wacom, Huion, XP Pen, etc. tablets)</li>
@@ -25,11 +23,11 @@
       <li>Follow links from the background PDF</li>
       <li>Export to a variety of formats including SVG, PNG and PDF, both from the GUI and command line</li>
       <li>Different drawing tools (e.g. pen, highlighter) and stroke styles (e.g. solid, dotted)</li>
-      <li>Shape drawing (line, arrow, circle, rectangle, spline)</li>
+      <li>Shape drawing (line, arrow, circle, rectangle, spline) plus VertexNote geometry primitives</li>
       <li>Use the set-square and compass tools for measurements or as a guide for drawing straight lines, circular arcs and radii</li>
       <li>Fill shape functionality</li>
       <li>Shape resizing and rotation</li>
-      <li>Rotation and grid snapping for precise alignment of objects</li>
+      <li>Rotation, grid, vertex, midpoint, projection, and intersection snapping for precise alignment</li>
       <li>Input stabilization for smoother writing/drawing</li>
       <li>Text tool for adding text in different fonts, colors, and sizes</li>
       <li>Enhanced support for image insertion</li>
@@ -48,9 +46,9 @@
   </description>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0</project_license>
-  <url type="bugtracker">https://github.com/xournalpp/xournalpp/issues</url>
-  <url type="help">https://xournalpp.github.io/community/help/</url>
-  <url type="homepage">https://xournalpp.github.io/</url>
+  <url type="bugtracker">https://github.com/saitatter/vertex-note/issues</url>
+  <url type="help">https://github.com/saitatter/vertex-note</url>
+  <url type="homepage">https://github.com/saitatter/vertex-note</url>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/xournalpp/xournalpp-examples/6aaf99756b0cc6a9d600b72490766330601daa67/appdata/screenshots_1.2.7/Note_taking.png</image>
@@ -77,7 +75,7 @@
     <mediatype>application/x-xopp</mediatype>
     <mediatype>application/x-xopt</mediatype>
   </provides>
-  <update_contact>webmaster_AT_huberulrich.de</update_contact>
+  <update_contact>https://github.com/saitatter/vertex-note/issues</update_contact>
   <content_rating type="oars-1.0" />
   <releases>
     <!-- Could be automated more:
