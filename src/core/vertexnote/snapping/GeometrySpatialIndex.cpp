@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
+#include <functional>
 #include <iterator>
 #include <unordered_map>
 #include <unordered_set>
@@ -25,6 +25,14 @@ constexpr double BOUNDS_EPSILON = 0.000001;
 
 [[nodiscard]] auto normalizedPair(std::size_t lhs, std::size_t rhs) -> std::pair<std::size_t, std::size_t> {
     return lhs < rhs ? std::make_pair(lhs, rhs) : std::make_pair(rhs, lhs);
+}
+
+[[nodiscard]] constexpr auto hashCombineMagic() -> std::size_t {
+    return sizeof(std::size_t) >= 8 ? std::size_t{0x9e3779b97f4a7c15ULL} : std::size_t{0x9e3779b9U};
+}
+
+[[nodiscard]] auto combineHash(std::size_t seed, std::size_t value) -> std::size_t {
+    return seed ^ (value + hashCombineMagic() + (seed << 6U) + (seed >> 2U));
 }
 }  // namespace
 
@@ -58,7 +66,6 @@ void GeometrySpatialIndex::rebuildPoints(std::span<const IndexedPoint> points) {
 
 auto GeometrySpatialIndex::queryPointIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t> {
     std::vector<std::size_t> result;
-    std::unordered_set<std::size_t> seen;
 
     for (const auto& cell: this->cellsFor(bounds)) {
         const auto it = this->pointCells.find(cell);
@@ -67,9 +74,7 @@ auto GeometrySpatialIndex::queryPointIndices(const SpatialBounds& bounds) const 
         }
 
         for (const auto pointIndex: it->second) {
-            if (seen.insert(pointIndex).second) {
-                result.push_back(pointIndex);
-            }
+            result.push_back(pointIndex);
         }
     }
 
@@ -122,14 +127,13 @@ auto GeometrySpatialIndex::querySegmentPairs(const SpatialBounds& bounds) const
 }
 
 auto GeometrySpatialIndex::CellKeyHash::operator()(const CellKey& key) const -> std::size_t {
-    const auto x = static_cast<std::uint64_t>(static_cast<std::uint32_t>(key.x));
-    const auto y = static_cast<std::uint64_t>(static_cast<std::uint32_t>(key.y));
-    return static_cast<std::size_t>((x << 32U) ^ y);
+    auto hash = std::hash<int>{}(key.x);
+    return combineHash(hash, std::hash<int>{}(key.y));
 }
 
 auto GeometrySpatialIndex::SegmentPairHash::operator()(const std::pair<std::size_t, std::size_t>& pair) const
         -> std::size_t {
-    return pair.first ^ (pair.second + 0x9e3779b97f4a7c15ULL + (pair.first << 6U) + (pair.first >> 2U));
+    return combineHash(pair.first, pair.second);
 }
 
 auto GeometrySpatialIndex::cellFor(double coordinate) const -> int {
@@ -143,7 +147,8 @@ auto GeometrySpatialIndex::cellsFor(const SpatialBounds& bounds) const -> std::v
     const int maxCellY = this->cellFor(std::max(bounds.minY, bounds.maxY));
 
     std::vector<CellKey> result;
-    result.reserve(static_cast<std::size_t>((maxCellX - minCellX + 1) * (maxCellY - minCellY + 1)));
+    result.reserve(static_cast<std::size_t>(maxCellX - minCellX + 1) *
+                   static_cast<std::size_t>(maxCellY - minCellY + 1));
     for (int y = minCellY; y <= maxCellY; ++y) {
         for (int x = minCellX; x <= maxCellX; ++x) {
             result.push_back(CellKey{x, y});
