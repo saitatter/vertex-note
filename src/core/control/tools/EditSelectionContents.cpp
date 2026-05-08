@@ -99,6 +99,12 @@ void EditSelectionContents::forEachElement(std::function<void(const Element*)> f
     }
 }
 
+void EditSelectionContents::forEachMutableElement(std::function<void(Element*)> f) {
+    for (auto* e: this->selected) {
+        f(e);
+    }
+}
+
 /**
  * Returns the insert order of this selection
  */
@@ -346,6 +352,8 @@ void EditSelectionContents::deleteViewBuffer() {
         this->crBuffer = nullptr;
     }
 }
+
+void EditSelectionContents::invalidateViewBuffer() { deleteViewBuffer(); }
 
 InsertionOrder EditSelectionContents::makeMoveEffective(const xoj::util::Rectangle<double>& bounds,
                                                         const xoj::util::Rectangle<double>& snappedBounds,

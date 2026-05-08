@@ -47,6 +47,8 @@
 #include "util/raii/CLibrariesSPtr.h"   // for adopt
 #include "util/raii/GLibGuards.h"       // for GErrorGuard
 #include "util/raii/GObjectSPtr.h"      // for GObjectSPtr
+#include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"  // for path, is_regular_file
 
@@ -315,6 +317,10 @@ void LoadHandler::addStroke(StrokeTool tool, Color color, double width, int fill
     setAudioAttributes(*this->stroke, std::move(filename), timestamp);
 }
 
+void LoadHandler::setStrokeGeometryMetadata(std::optional<vn::io::GeometryStrokeMetadata> metadata) {
+    this->strokeGeometryMetadata = std::move(metadata);
+}
+
 void LoadHandler::setStrokePoints(std::vector<Point> pointVector, bool hasPressure) {
     // Check if stroke still exists or has already been assigned points.
     // In corrupt files, this function may be called more than once, and the
@@ -342,11 +348,29 @@ void LoadHandler::finalizeStroke() {
             // Strokes with less than two points can't be drawn
             g_warning("LoadHandler: Ignoring stroke with less than two points");
             this->stroke.reset();
+            this->strokeGeometryMetadata.reset();
             return;
+        }
+
+        if (this->strokeGeometryMetadata) {
+            std::string error;
+            auto object = vn::io::parseGeometryStrokeMetadata(*this->strokeGeometryMetadata, &error);
+            if (object) {
+                auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(*object));
+                geometry->setColor(this->stroke->getColor());
+                geometry->setStrokeWidth(this->stroke->getWidth());
+                this->layer->addElement(std::move(geometry));
+                this->stroke.reset();
+                this->strokeGeometryMetadata.reset();
+                return;
+            }
+
+            g_warning("LoadHandler: Ignoring invalid VertexNote geometry metadata: %s", error.c_str());
         }
 
         this->layer->addElement(std::move(this->stroke));
     }
+    this->strokeGeometryMetadata.reset();
 }
 
 void LoadHandler::addText(std::string font, double size, double x, double y, Color color, fs::path filename,

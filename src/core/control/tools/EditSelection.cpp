@@ -28,6 +28,7 @@
 #include "model/Point.h"                          // for Point
 #include "model/XojPage.h"                        // for XojPage
 #include "undo/ArrangeUndoAction.h"               // for ArrangeUndoAction
+#include "undo/GeometryVertexMoveUndoAction.h"
 #include "undo/InsertUndoAction.h"                // for InsertsUndoAction
 #include "undo/UndoRedoHandler.h"                 // for UndoRedoHandler
 #include "util/Range.h"                           // for Range
@@ -515,6 +516,21 @@ void EditSelection::mouseUp() {
         return;
     }
 
+    if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
+        if (this->activeGeometryElement && this->activeGeometryVertexMoved) {
+            this->undo->addUndoAction(std::make_unique<GeometryVertexMoveUndoAction>(
+                    this->sourcePage, this->activeGeometryElement, this->activeGeometryVertex,
+                    this->activeGeometryVertexStart, this->activeGeometryVertexCurrent));
+        }
+
+        this->activeGeometryElement = nullptr;
+        this->activeGeometryVertex = vn::geom::InvalidVertexId;
+        this->activeGeometryVertexMoved = false;
+        this->mouseDownType = CURSOR_SELECTION_NONE;
+        this->view->getXournal()->repaintSelection();
+        return;
+    }
+
 
     PageRef page = this->view->getPage();
     Layer* layer = page->getSelectedLayer();
@@ -540,6 +556,11 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
     double zoom = this->view->getXournal()->getZoom();
 
     this->mouseDownType = type;
+    if (type != CURSOR_SELECTION_GEOMETRY_VERTEX) {
+        this->activeGeometryElement = nullptr;
+        this->activeGeometryVertex = vn::geom::InvalidVertexId;
+        this->activeGeometryVertexMoved = false;
+    }
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is not modified
     this->relMousePosX = x / zoom - this->snappedBounds.x;
@@ -554,6 +575,28 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
 
 void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
     double zoom = this->view->getXournal()->getZoom();
+
+    if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
+        if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId) {
+            return;
+        }
+
+        double transformedX = mouseX;
+        double transformedY = mouseY;
+        cairo_matrix_transform_point(&this->cmatrix, &transformedX, &transformedY);
+        auto modelPosition = geometryVertexPreviewToModel(transformedX / zoom, transformedY / zoom);
+        Point snapped(modelPosition.x, modelPosition.y);
+        snapped = snappingHandler.snapToGrid(snapped, alt);
+        modelPosition = {snapped.x, snapped.y};
+
+        if (this->activeGeometryElement->setVertexPosition(this->activeGeometryVertex, modelPosition)) {
+            this->activeGeometryVertexCurrent = modelPosition;
+            this->activeGeometryVertexMoved = true;
+            this->contents->invalidateViewBuffer();
+            this->view->getXournal()->repaintSelection();
+        }
+        return;
+    }
 
     if (this->mouseDownType == CURSOR_SELECTION_MOVE) {
         // compute translation (without snapping)
@@ -989,6 +1032,11 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
 
     cairo_matrix_transform_point(&this->cmatrix, &x, &y);
 
+    if (selectGeometryVertexHandleAt(x, y, zoom)) {
+        return CURSOR_SELECTION_GEOMETRY_VERTEX;
+    }
+    this->activeGeometryElement = nullptr;
+    this->activeGeometryVertex = vn::geom::InvalidVertexId;
 
     const int EDGE_PADDING = (this->btnWidth / 2) + 2;
     const int BORDER_PADDING = (this->btnWidth / 2);
@@ -1078,6 +1126,7 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
         cairo_translate(cr, -rx, -ry);
     }
     this->contents->paint(cr, x, y, this->rotation, this->width, this->height, zoom);
+    drawGeometryVertexHandles(cr, x, y, zoom);
 
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
@@ -1159,6 +1208,100 @@ void EditSelection::drawAnchorRect(cairo_t* cr, double x, double y, double zoom)
     cairo_fill(cr);
 }
 
+void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const {
+    const auto original = this->contents->getOriginalBounds();
+    if (original.width == 0.0 || original.height == 0.0) {
+        return;
+    }
+
+    const double fx = this->width / original.width;
+    const double fy = this->height / original.height;
+
+    for (const auto* element: this->contents->getElementsView()) {
+        if (element->getType() != ELEMENT_GEOMETRY) {
+            continue;
+        }
+
+        const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
+        if (!geometry) {
+            continue;
+        }
+
+        for (const auto& vertex: geometry->geometry().vertices()) {
+            const double handleX = x + (vertex.position.x - original.x) * fx;
+            const double handleY = y + (vertex.position.y - original.y) * fy;
+            drawGeometryVertexHandle(cr, handleX, handleY, zoom);
+        }
+    }
+}
+
+void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom) const {
+    GdkRGBA selectionColor = view->getSelectionColor();
+    const double size = std::max(5.0, static_cast<double>(this->btnWidth) * 0.65);
+    const double px = x * zoom;
+    const double py = y * zoom;
+
+    cairo_save(cr);
+    cairo_set_dash(cr, nullptr, 0, 0);
+    cairo_set_line_width(cr, 1.5);
+    cairo_rectangle(cr, px - size / 2.0, py - size / 2.0, size, size);
+    gdk_cairo_set_source_rgba(cr, &selectionColor);
+    cairo_stroke_preserve(cr);
+    cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom) {
+    const auto original = this->contents->getOriginalBounds();
+    if (original.width == 0.0 || original.height == 0.0) {
+        return false;
+    }
+
+    const double fx = this->width / original.width;
+    const double fy = this->height / original.height;
+    const double hitRadius = std::max(6.0, static_cast<double>(this->btnWidth));
+
+    bool selected = false;
+    this->contents->forEachMutableElement([&](Element* element) {
+        if (selected) {
+            return;
+        }
+
+        if (element->getType() != ELEMENT_GEOMETRY) {
+            return;
+        }
+
+        auto* geometry = dynamic_cast<vn::geom::GeometryElement*>(element);
+        if (!geometry) {
+            return;
+        }
+
+        for (const auto& vertex: geometry->geometry().vertices()) {
+            const double handleX = (this->x + (vertex.position.x - original.x) * fx) * zoom;
+            const double handleY = (this->y + (vertex.position.y - original.y) * fy) * zoom;
+            if (std::hypot(x - handleX, y - handleY) <= hitRadius) {
+                this->activeGeometryElement = geometry;
+                this->activeGeometryVertex = vertex.id;
+                this->activeGeometryVertexStart = vertex.position;
+                this->activeGeometryVertexCurrent = vertex.position;
+                this->activeGeometryVertexMoved = false;
+                selected = true;
+                return;
+            }
+        }
+    });
+
+    return selected;
+}
+
+auto EditSelection::geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2 {
+    const auto original = this->contents->getOriginalBounds();
+    const double fx = this->width / original.width;
+    const double fy = this->height / original.height;
+
+    return {original.x + (x - this->x) / fx, original.y + (y - this->y) / fy};
+}
 
 /**
  * draws an idicator where you can delete the selection

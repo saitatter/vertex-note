@@ -31,6 +31,7 @@
 #include "util/Rectangle.h"                  // for Rectangle
 #include "util/raii/GSourceURef.h"           // for GSourceURef
 #include "util/serializing/Serializable.h"   // for Serializable
+#include "vertexnote/geometry/GeometryElement.h"
 
 #include "CursorSelectionType.h"     // for CursorSelectionType, CURS...
 #include "SnapToGridInputHandler.h"  // for SnapToGridInputHandler
@@ -319,6 +320,14 @@ private:
      */
     void drawDeleteRect(cairo_t* cr, double x, double y, double zoom) const;
 
+    /**
+     * Draw VertexNote vertex handles for selected object-based geometry.
+     */
+    void drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const;
+    void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom) const;
+    bool selectGeometryVertexHandleAt(double x, double y, double zoom);
+    [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
+
 
     /**
      * Finishes all pending changes, move the elements, scale the elements and add
@@ -392,6 +401,12 @@ private:  // DATA
     double relMousePosY{};
     double relMousePosRotX{};
     double relMousePosRotY{};
+
+    vn::geom::GeometryElement* activeGeometryElement = nullptr;
+    vn::geom::VertexId activeGeometryVertex = vn::geom::InvalidVertexId;
+    vn::geom::Vec2 activeGeometryVertexStart;
+    vn::geom::Vec2 activeGeometryVertexCurrent;
+    bool activeGeometryVertexMoved = false;
 
     /**
      * If both scale axes should have the same scale factor, e.g. for Text

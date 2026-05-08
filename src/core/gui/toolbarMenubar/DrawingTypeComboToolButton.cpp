@@ -41,11 +41,13 @@ static auto makeEntries(IconNameHelper& icons, const ActionDatabase& db)
                                              Action::TOOL_DRAW_COORDINATE_SYSTEM);
     entries[Type::SPLINE] = Entry(_("Draw Spline"), icons.iconName("draw-spline"), db, Action::TOOL_DRAW_SPLINE);
     entries[Type::VERTEX_LINE] =
-            Entry(_("Draw Vertex Line"), icons.iconName("draw-line"), db, Action::TOOL_DRAW_VERTEX_LINE);
+            Entry(_("Draw Vertex Line by Clicks"), icons.iconName("draw-line"), db, Action::TOOL_DRAW_VERTEX_LINE);
     entries[Type::VERTEX_POLYLINE] =
-            Entry(_("Draw Vertex Polyline"), icons.iconName("draw-line"), db, Action::TOOL_DRAW_VERTEX_POLYLINE);
+            Entry(_("Draw Vertex Polyline by Clicks"), icons.iconName("draw-line"), db,
+                  Action::TOOL_DRAW_VERTEX_POLYLINE);
     entries[Type::VERTEX_RECTANGLE] =
-            Entry(_("Draw Vertex Rectangle"), icons.iconName("draw-rect"), db, Action::TOOL_DRAW_VERTEX_RECTANGLE);
+            Entry(_("Draw Vertex Rectangle by Clicks"), icons.iconName("draw-rect"),
+                  db, Action::TOOL_DRAW_VERTEX_RECTANGLE);
     entries[Type::SHAPE_RECOGNIZER] =
             Entry(_("Stroke recognizer"), icons.iconName("shape-recognizer"), db, Action::TOOL_DRAW_SHAPE_RECOGNIZER);
     return res;

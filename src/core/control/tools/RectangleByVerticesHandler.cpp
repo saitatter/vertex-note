@@ -29,6 +29,7 @@
 
 namespace {
 constexpr double GEOMETRY_SNAP_RADIUS_PIXELS = 8.0;
+constexpr double SNAP_INDICATOR_PADDING = 8.0;
 }
 
 RectangleByVerticesHandler::RectangleByVerticesHandler(Control* control, const PageRef& page):
@@ -105,6 +106,10 @@ auto RectangleByVerticesHandler::getStartPoint() const -> Point { return this->s
 
 auto RectangleByVerticesHandler::getCurrentPoint() const -> Point { return this->currentPoint; }
 
+auto RectangleByVerticesHandler::getCurrentSnapKind() const -> std::optional<vn::snap::SnapKind> {
+    return this->currentSnapKind;
+}
+
 auto RectangleByVerticesHandler::getStrokeWidth() const -> double { return this->strokeWidth; }
 
 auto RectangleByVerticesHandler::getStrokeColor() const -> Color { return this->strokeColor; }
@@ -121,7 +126,7 @@ auto RectangleByVerticesHandler::previewRange() const -> Range {
 
     Range range(this->startPoint->x, this->startPoint->y);
     range.addPoint(this->currentPoint.x, this->currentPoint.y);
-    range.addPadding(this->strokeWidth);
+    range.addPadding(this->strokeWidth + SNAP_INDICATOR_PADDING);
     return range;
 }
 
@@ -130,14 +135,20 @@ void RectangleByVerticesHandler::updateCurrentPoint(const PositionInputData& pos
     this->currentPoint = snapPoint(pagePoint, pos.isAltDown(), zoom);
 }
 
-auto RectangleByVerticesHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point {
+auto RectangleByVerticesHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point {
+    this->currentSnapKind.reset();
     const auto geometrySnap =
             this->snapEngine.snap(vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
     if (geometrySnap.snapped()) {
+        this->currentSnapKind = geometrySnap.candidate->kind;
         return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
     }
 
-    return this->snappingHandler.snapToGrid(pagePoint, alt);
+    Point gridPoint = this->snappingHandler.snapToGrid(pagePoint, alt);
+    if (gridPoint.x != pagePoint.x || gridPoint.y != pagePoint.y) {
+        this->currentSnapKind = vn::snap::SnapKind::Grid;
+    }
+    return gridPoint;
 }
 
 void RectangleByVerticesHandler::finalizeRectangle() {

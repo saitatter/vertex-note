@@ -29,6 +29,7 @@
 
 namespace {
 constexpr double GEOMETRY_SNAP_RADIUS_PIXELS = 8.0;
+constexpr double SNAP_INDICATOR_PADDING = 8.0;
 }
 
 LineByClicksHandler::LineByClicksHandler(Control* control, const PageRef& page):
@@ -105,6 +106,10 @@ auto LineByClicksHandler::getStartPoint() const -> Point { return this->startPoi
 
 auto LineByClicksHandler::getCurrentPoint() const -> Point { return this->currentPoint; }
 
+auto LineByClicksHandler::getCurrentSnapKind() const -> std::optional<vn::snap::SnapKind> {
+    return this->currentSnapKind;
+}
+
 auto LineByClicksHandler::getStrokeWidth() const -> double { return this->strokeWidth; }
 
 auto LineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
@@ -121,7 +126,7 @@ auto LineByClicksHandler::previewRange() const -> Range {
 
     Range range(this->startPoint->x, this->startPoint->y);
     range.addPoint(this->currentPoint.x, this->currentPoint.y);
-    range.addPadding(this->strokeWidth);
+    range.addPadding(this->strokeWidth + SNAP_INDICATOR_PADDING);
     return range;
 }
 
@@ -130,14 +135,20 @@ void LineByClicksHandler::updateCurrentPoint(const PositionInputData& pos, doubl
     this->currentPoint = snapPoint(pagePoint, pos.isAltDown(), zoom);
 }
 
-auto LineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point {
+auto LineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point {
+    this->currentSnapKind.reset();
     const auto geometrySnap =
             this->snapEngine.snap(vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
     if (geometrySnap.snapped()) {
+        this->currentSnapKind = geometrySnap.candidate->kind;
         return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
     }
 
-    return this->snappingHandler.snapToGrid(pagePoint, alt);
+    Point gridPoint = this->snappingHandler.snapToGrid(pagePoint, alt);
+    if (gridPoint.x != pagePoint.x || gridPoint.y != pagePoint.y) {
+        this->currentSnapKind = vn::snap::SnapKind::Grid;
+    }
+    return gridPoint;
 }
 
 void LineByClicksHandler::finalizeLine() {

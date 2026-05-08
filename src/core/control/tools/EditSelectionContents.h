@@ -97,6 +97,7 @@ public:
     auto getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>>;
 
     void forEachElement(std::function<void(const Element*)> f) const override;
+    void forEachMutableElement(std::function<void(Element*)> f);
 
     /**
      * Returns the insert order of this selection
@@ -126,6 +127,8 @@ public:
     void updateContent(xoj::util::Rectangle<double> bounds, xoj::util::Rectangle<double> snappedBounds, double rotation,
                        bool aspectRatio, Layer* layer, const PageRef& targetPage, UndoRedoHandler* undo,
                        CursorSelectionType type);
+
+    void invalidateViewBuffer();
 
 private:
     /**

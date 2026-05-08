@@ -12,6 +12,7 @@
 #include "util/Color.h"
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
+#include "view/overlays/SnapIndicatorViewHelper.h"
 
 using namespace xoj::view;
 
@@ -38,6 +39,7 @@ void LineByClicksView::draw(cairo_t* cr) const {
     cairo_move_to(cr, start.x, start.y);
     cairo_line_to(cr, current.x, current.y);
     cairo_stroke(cr);
+    drawSnapIndicator(cr, current, this->handler->getCurrentSnapKind());
 }
 
 bool LineByClicksView::isViewOf(const OverlayBase* overlay) const { return overlay == this->handler; }

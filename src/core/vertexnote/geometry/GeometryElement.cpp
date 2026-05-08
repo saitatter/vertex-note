@@ -61,6 +61,14 @@ auto GeometryElement::makeStrokeFallback() const -> std::unique_ptr<Stroke> {
     return this->object.makeStrokeFallback(this->strokeWidth, this->getColor());
 }
 
+auto GeometryElement::setVertexPosition(VertexId id, Vec2 position) -> bool {
+    const bool changed = this->object.setVertexPosition(id, position);
+    if (changed) {
+        this->sizeCalculated = false;
+    }
+    return changed;
+}
+
 void GeometryElement::move(double dx, double dy) {
     this->object.move(dx, dy);
     if (this->sizeCalculated) {

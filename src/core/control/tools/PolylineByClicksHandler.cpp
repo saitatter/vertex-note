@@ -30,6 +30,7 @@
 
 namespace {
 constexpr double GEOMETRY_SNAP_RADIUS_PIXELS = 8.0;
+constexpr double SNAP_INDICATOR_PADDING = 8.0;
 }
 
 PolylineByClicksHandler::PolylineByClicksHandler(Control* control, const PageRef& page):
@@ -109,6 +110,10 @@ auto PolylineByClicksHandler::getPoints() const -> const std::vector<Point>& { r
 
 auto PolylineByClicksHandler::getCurrentPoint() const -> Point { return this->currentPoint; }
 
+auto PolylineByClicksHandler::getCurrentSnapKind() const -> std::optional<vn::snap::SnapKind> {
+    return this->currentSnapKind;
+}
+
 auto PolylineByClicksHandler::getStrokeWidth() const -> double { return this->strokeWidth; }
 
 auto PolylineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
@@ -128,7 +133,7 @@ auto PolylineByClicksHandler::previewRange() const -> Range {
         range.addPoint(point.x, point.y);
     }
     range.addPoint(this->currentPoint.x, this->currentPoint.y);
-    range.addPadding(this->strokeWidth);
+    range.addPadding(this->strokeWidth + SNAP_INDICATOR_PADDING);
     return range;
 }
 
@@ -137,14 +142,20 @@ void PolylineByClicksHandler::updateCurrentPoint(const PositionInputData& pos, d
     this->currentPoint = snapPoint(pagePoint, pos.isAltDown(), zoom);
 }
 
-auto PolylineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) const -> Point {
+auto PolylineByClicksHandler::snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point {
+    this->currentSnapKind.reset();
     const auto geometrySnap =
             this->snapEngine.snap(vn::snap::SnapQuery{{pagePoint.x, pagePoint.y}, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
     if (geometrySnap.snapped()) {
+        this->currentSnapKind = geometrySnap.candidate->kind;
         return Point(geometrySnap.pagePoint.x, geometrySnap.pagePoint.y, pagePoint.z);
     }
 
-    return this->snappingHandler.snapToGrid(pagePoint, alt);
+    Point gridPoint = this->snappingHandler.snapToGrid(pagePoint, alt);
+    if (gridPoint.x != pagePoint.x || gridPoint.y != pagePoint.y) {
+        this->currentSnapKind = vn::snap::SnapKind::Grid;
+    }
+    return gridPoint;
 }
 
 void PolylineByClicksHandler::addCurrentPoint() {
