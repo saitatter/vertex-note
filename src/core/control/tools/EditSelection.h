@@ -324,7 +324,7 @@ private:
      * Draw VertexNote vertex handles for selected object-based geometry.
      */
     void drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const;
-    void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom) const;
+    void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const;
     bool selectGeometryVertexHandleAt(double x, double y, double zoom);
     [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
 

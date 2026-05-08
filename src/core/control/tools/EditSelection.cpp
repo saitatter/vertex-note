@@ -1126,7 +1126,6 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
         cairo_translate(cr, -rx, -ry);
     }
     this->contents->paint(cr, x, y, this->rotation, this->width, this->height, zoom);
-    drawGeometryVertexHandles(cr, x, y, zoom);
 
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
@@ -1183,6 +1182,8 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
 
         drawDeleteRect(cr, std::min(x, x + width) - (DELETE_PADDING + this->btnWidth) / zoom, y, zoom);
     }
+
+    drawGeometryVertexHandles(cr, x, y, zoom);
 }
 
 void EditSelection::drawAnchorRotation(cairo_t* cr, double x, double y, double zoom) {
@@ -1210,12 +1211,14 @@ void EditSelection::drawAnchorRect(cairo_t* cr, double x, double y, double zoom)
 
 void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const {
     const auto original = this->contents->getOriginalBounds();
-    if (original.width == 0.0 || original.height == 0.0) {
+    if (original.width == 0.0 && original.height == 0.0) {
         return;
     }
 
-    const double fx = this->width / original.width;
-    const double fy = this->height / original.height;
+    const bool hasWidth = original.width != 0.0;
+    const bool hasHeight = original.height != 0.0;
+    const double fx = hasWidth ? this->width / original.width : 0.0;
+    const double fy = hasHeight ? this->height / original.height : 0.0;
 
     for (const auto* element: this->contents->getElementsView()) {
         if (element->getType() != ELEMENT_GEOMETRY) {
@@ -1228,38 +1231,48 @@ void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, d
         }
 
         for (const auto& vertex: geometry->geometry().vertices()) {
-            const double handleX = x + (vertex.position.x - original.x) * fx;
-            const double handleY = y + (vertex.position.y - original.y) * fy;
-            drawGeometryVertexHandle(cr, handleX, handleY, zoom);
+            const double handleX = hasWidth ? x + (vertex.position.x - original.x) * fx : x + this->width / 2.0;
+            const double handleY = hasHeight ? y + (vertex.position.y - original.y) * fy : y + this->height / 2.0;
+            const bool active = geometry == this->activeGeometryElement && vertex.id == this->activeGeometryVertex;
+            drawGeometryVertexHandle(cr, handleX, handleY, zoom, active);
         }
     }
 }
 
-void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom) const {
+void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const {
     GdkRGBA selectionColor = view->getSelectionColor();
-    const double size = std::max(5.0, static_cast<double>(this->btnWidth) * 0.65);
+    const double baseSize = std::max(5.0, static_cast<double>(this->btnWidth) * 0.65);
+    const double size = active ? baseSize * 1.25 : baseSize;
     const double px = x * zoom;
     const double py = y * zoom;
 
     cairo_save(cr);
     cairo_set_dash(cr, nullptr, 0, 0);
-    cairo_set_line_width(cr, 1.5);
+    cairo_set_line_width(cr, active ? 2.1 : 1.5);
     cairo_rectangle(cr, px - size / 2.0, py - size / 2.0, size, size);
+    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.95);
+    cairo_fill_preserve(cr);
     gdk_cairo_set_source_rgba(cr, &selectionColor);
-    cairo_stroke_preserve(cr);
-    cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
-    cairo_fill(cr);
+    cairo_stroke(cr);
+
+    if (active) {
+        cairo_arc(cr, px, py, size * 0.22, 0.0, 2.0 * M_PI);
+        gdk_cairo_set_source_rgba(cr, &selectionColor);
+        cairo_fill(cr);
+    }
     cairo_restore(cr);
 }
 
 bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom) {
     const auto original = this->contents->getOriginalBounds();
-    if (original.width == 0.0 || original.height == 0.0) {
+    if (original.width == 0.0 && original.height == 0.0) {
         return false;
     }
 
-    const double fx = this->width / original.width;
-    const double fy = this->height / original.height;
+    const bool hasWidth = original.width != 0.0;
+    const bool hasHeight = original.height != 0.0;
+    const double fx = hasWidth ? this->width / original.width : 0.0;
+    const double fy = hasHeight ? this->height / original.height : 0.0;
     const double hitRadius = std::max(6.0, static_cast<double>(this->btnWidth));
 
     bool selected = false;
@@ -1278,8 +1291,12 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
         }
 
         for (const auto& vertex: geometry->geometry().vertices()) {
-            const double handleX = (this->x + (vertex.position.x - original.x) * fx) * zoom;
-            const double handleY = (this->y + (vertex.position.y - original.y) * fy) * zoom;
+            const double modelX =
+                    hasWidth ? this->x + (vertex.position.x - original.x) * fx : this->x + this->width / 2.0;
+            const double modelY =
+                    hasHeight ? this->y + (vertex.position.y - original.y) * fy : this->y + this->height / 2.0;
+            const double handleX = modelX * zoom;
+            const double handleY = modelY * zoom;
             if (std::hypot(x - handleX, y - handleY) <= hitRadius) {
                 this->activeGeometryElement = geometry;
                 this->activeGeometryVertex = vertex.id;
@@ -1297,10 +1314,13 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
 
 auto EditSelection::geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2 {
     const auto original = this->contents->getOriginalBounds();
-    const double fx = this->width / original.width;
-    const double fy = this->height / original.height;
+    const bool hasWidth = original.width != 0.0;
+    const bool hasHeight = original.height != 0.0;
+    const double fx = hasWidth ? this->width / original.width : 1.0;
+    const double fy = hasHeight ? this->height / original.height : 1.0;
 
-    return {original.x + (x - this->x) / fx, original.y + (y - this->y) / fy};
+    return {hasWidth ? original.x + (x - this->x) / fx : original.x,
+            hasHeight ? original.y + (y - this->y) / fy : original.y};
 }
 
 /**
