@@ -23,11 +23,14 @@ public:
     void query(const SnapQuery& query, std::vector<SnapCandidate>& candidates) const override;
 
 private:
+    void rebuildExplicitVertices();
     void rebuildLineSegments();
 
 private:
     std::vector<const geom::GeometryObject*> objects;
+    std::vector<IndexedPoint> explicitVertices;
     std::vector<IndexedSegment> lineSegments;
+    GeometrySpatialIndex explicitVertexIndex;
     GeometrySpatialIndex lineSegmentIndex;
 };
 

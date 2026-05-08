@@ -81,27 +81,28 @@ void addCandidate(std::vector<SnapCandidate>& candidates, const SnapQuery& query
 
 GeometrySnapProvider::GeometrySnapProvider(std::vector<const geom::GeometryObject*> objects):
         objects(std::move(objects)) {
+    this->rebuildExplicitVertices();
     this->rebuildLineSegments();
 }
 
 void GeometrySnapProvider::setObjects(std::vector<const geom::GeometryObject*> objects) {
     this->objects = std::move(objects);
+    this->rebuildExplicitVertices();
     this->rebuildLineSegments();
 }
 
 void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandidate>& candidates) const {
-    for (const auto* object: this->objects) {
-        if (!object) {
+    const SpatialBounds snapBounds = queryBounds(query);
+    const auto nearbyVertices = this->explicitVertexIndex.queryPointIndices(snapBounds);
+    for (const auto vertexIndex: nearbyVertices) {
+        const auto& vertex = this->explicitVertices[vertexIndex];
+        if (!overlaps(pointBounds(vertex), snapBounds)) {
             continue;
         }
 
-        for (const auto& vertex: object->vertices()) {
-            addCandidate(candidates, query, SnapKind::ExplicitVertex, vertex.position, 100.0, object->objectId(),
-                         vertex.id);
-        }
+        addCandidate(candidates, query, SnapKind::ExplicitVertex, vertex.position, 100.0, vertex.object, vertex.vertex);
     }
 
-    const SpatialBounds snapBounds = queryBounds(query);
     const auto nearbySegments = this->lineSegmentIndex.querySegmentIndices(snapBounds);
     for (const auto segmentIndex: nearbySegments) {
         const auto& segment = this->lineSegments[segmentIndex];
@@ -133,6 +134,21 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
             }
         }
     }
+}
+
+void GeometrySnapProvider::rebuildExplicitVertices() {
+    this->explicitVertices.clear();
+
+    for (const auto* object: this->objects) {
+        if (!object) {
+            continue;
+        }
+        for (const auto& vertex: object->vertices()) {
+            this->explicitVertices.push_back(IndexedPoint{object->objectId(), vertex.id, vertex.position});
+        }
+    }
+
+    this->explicitVertexIndex.rebuildPoints(this->explicitVertices);
 }
 
 void GeometrySnapProvider::rebuildLineSegments() {

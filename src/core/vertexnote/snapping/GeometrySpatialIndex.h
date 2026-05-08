@@ -30,13 +30,22 @@ struct IndexedSegment {
     geom::Vec2 end;
 };
 
+struct IndexedPoint {
+    geom::ObjectId object = geom::InvalidObjectId;
+    geom::VertexId vertex = geom::InvalidVertexId;
+    geom::Vec2 position;
+};
+
 class GeometrySpatialIndex {
 public:
     explicit GeometrySpatialIndex(double cellSize = 64.0);
 
     void clear();
     void rebuild(std::span<const IndexedSegment> segments);
+    void rebuildSegments(std::span<const IndexedSegment> segments);
+    void rebuildPoints(std::span<const IndexedPoint> points);
 
+    [[nodiscard]] auto queryPointIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t>;
     [[nodiscard]] auto querySegmentIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t>;
     [[nodiscard]] auto querySegmentPairs(const SpatialBounds& bounds) const
             -> std::vector<std::pair<std::size_t, std::size_t>>;
@@ -63,9 +72,11 @@ private:
 
 private:
     double cellSize = 64.0;
-    std::unordered_map<CellKey, std::vector<std::size_t>, CellKeyHash> cells;
+    std::unordered_map<CellKey, std::vector<std::size_t>, CellKeyHash> pointCells;
+    std::unordered_map<CellKey, std::vector<std::size_t>, CellKeyHash> segmentCells;
 };
 
+[[nodiscard]] auto pointBounds(const IndexedPoint& point) -> SpatialBounds;
 [[nodiscard]] auto segmentBounds(const IndexedSegment& segment) -> SpatialBounds;
 [[nodiscard]] auto overlaps(const SpatialBounds& lhs, const SpatialBounds& rhs) -> bool;
 

@@ -30,16 +30,50 @@ constexpr double BOUNDS_EPSILON = 0.000001;
 
 GeometrySpatialIndex::GeometrySpatialIndex(double cellSize): cellSize(normalizedCellSize(cellSize)) {}
 
-void GeometrySpatialIndex::clear() { this->cells.clear(); }
+void GeometrySpatialIndex::clear() {
+    this->pointCells.clear();
+    this->segmentCells.clear();
+}
 
-void GeometrySpatialIndex::rebuild(std::span<const IndexedSegment> segments) {
-    this->clear();
+void GeometrySpatialIndex::rebuild(std::span<const IndexedSegment> segments) { this->rebuildSegments(segments); }
+
+void GeometrySpatialIndex::rebuildSegments(std::span<const IndexedSegment> segments) {
+    this->segmentCells.clear();
 
     for (std::size_t index = 0; index < segments.size(); ++index) {
         for (const auto& cell: this->cellsFor(segmentBounds(segments[index]))) {
-            this->cells[cell].push_back(index);
+            this->segmentCells[cell].push_back(index);
         }
     }
+}
+
+void GeometrySpatialIndex::rebuildPoints(std::span<const IndexedPoint> points) {
+    this->pointCells.clear();
+
+    for (std::size_t index = 0; index < points.size(); ++index) {
+        const auto& position = points[index].position;
+        this->pointCells[CellKey{this->cellFor(position.x), this->cellFor(position.y)}].push_back(index);
+    }
+}
+
+auto GeometrySpatialIndex::queryPointIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t> {
+    std::vector<std::size_t> result;
+    std::unordered_set<std::size_t> seen;
+
+    for (const auto& cell: this->cellsFor(bounds)) {
+        const auto it = this->pointCells.find(cell);
+        if (it == this->pointCells.end()) {
+            continue;
+        }
+
+        for (const auto pointIndex: it->second) {
+            if (seen.insert(pointIndex).second) {
+                result.push_back(pointIndex);
+            }
+        }
+    }
+
+    return result;
 }
 
 auto GeometrySpatialIndex::querySegmentIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t> {
@@ -47,8 +81,8 @@ auto GeometrySpatialIndex::querySegmentIndices(const SpatialBounds& bounds) cons
     std::unordered_set<std::size_t> seen;
 
     for (const auto& cell: this->cellsFor(bounds)) {
-        const auto it = this->cells.find(cell);
-        if (it == this->cells.end()) {
+        const auto it = this->segmentCells.find(cell);
+        if (it == this->segmentCells.end()) {
             continue;
         }
 
@@ -68,8 +102,8 @@ auto GeometrySpatialIndex::querySegmentPairs(const SpatialBounds& bounds) const
     std::unordered_set<std::pair<std::size_t, std::size_t>, SegmentPairHash> seenPairs;
 
     for (const auto& cell: this->cellsFor(bounds)) {
-        const auto it = this->cells.find(cell);
-        if (it == this->cells.end()) {
+        const auto it = this->segmentCells.find(cell);
+        if (it == this->segmentCells.end()) {
             continue;
         }
 
@@ -116,6 +150,10 @@ auto GeometrySpatialIndex::cellsFor(const SpatialBounds& bounds) const -> std::v
         }
     }
     return result;
+}
+
+auto pointBounds(const IndexedPoint& point) -> SpatialBounds {
+    return SpatialBounds{point.position.x, point.position.y, point.position.x, point.position.y};
 }
 
 auto segmentBounds(const IndexedSegment& segment) -> SpatialBounds {

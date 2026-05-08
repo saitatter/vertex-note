@@ -13,8 +13,24 @@
 
 using vn::geom::Vec2;
 using vn::snap::GeometrySpatialIndex;
+using vn::snap::IndexedPoint;
 using vn::snap::IndexedSegment;
 using vn::snap::SpatialBounds;
+
+TEST(VertexNoteGeometrySpatialIndex, queriesOnlyPointsInNearbyCells) {
+    const std::vector<IndexedPoint> points{
+            IndexedPoint{1, 1, Vec2{4.0, 4.0}},
+            IndexedPoint{2, 2, Vec2{200.0, 200.0}},
+    };
+
+    GeometrySpatialIndex index(32.0);
+    index.rebuildPoints(points);
+
+    const auto result = index.queryPointIndices(SpatialBounds{0.0, 0.0, 8.0, 8.0});
+
+    ASSERT_EQ(result.size(), 1U);
+    EXPECT_EQ(result.front(), 0U);
+}
 
 TEST(VertexNoteGeometrySpatialIndex, queriesOnlySegmentsInNearbyCells) {
     const std::vector<IndexedSegment> segments{
