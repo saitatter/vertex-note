@@ -489,7 +489,7 @@ void LoadHandler::logError(const std::string& error) {
 
 
 auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<vn::util::InputStream> {
-    this->xournalFilepath = filepath;
+    this->sourceDocumentPath = filepath;
     int zipError = 0;
     this->zipFp = zip_wrapper{zip_open(char_cast(filepath.u8string().c_str()), ZIP_RDONLY, &zipError)};
 
@@ -754,13 +754,13 @@ auto LoadHandler::getAbsoluteFilepath(const fs::path& filename, bool attach) con
     if (attach) {
         // For a file xyz.xopp, the PDF background is saved in the same
         // directory as xyz.xopp.[filename]
-        absolutePath = (fs::path{this->xournalFilepath} += ".") += filename;
+        absolutePath = (fs::path{this->sourceDocumentPath} += ".") += filename;
     } else {
         // domain = "absolute" doesn't forcefully mean an absolute path
         if (filename.is_relative()) {
             // The path is relative to the .xopp file's location
             this->doc->setPathStorageMode(Util::PathStorageMode::AS_RELATIVE_PATH);
-            absolutePath = fs::path{this->xournalFilepath}.remove_filename() / filename;
+            absolutePath = fs::path{this->sourceDocumentPath}.remove_filename() / filename;
         } else {
             this->doc->setPathStorageMode(Util::PathStorageMode::AS_ABSOLUTE_PATH);
             absolutePath = filename;

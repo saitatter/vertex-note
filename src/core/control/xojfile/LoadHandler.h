@@ -168,7 +168,7 @@ private:
     fs::path getAbsoluteFilepath(const fs::path& filename, bool attach) const;
 
 private:
-    fs::path xournalFilepath;
+    fs::path sourceDocumentPath;
 
     bool parsingComplete;
     std::vector<std::string>* errorMessages;

@@ -45,8 +45,8 @@
 #include "filesystem.h"
 
 
-static constexpr auto& TAG_NAMES = xoj::xml_tags::NAMES;
-using TagType = xoj::xml_tags::Type;
+static constexpr auto& TAG_NAMES = vn::xopp::xml_tags::NAMES;
+using TagType = vn::xopp::xml_tags::Type;
 
 SaveHandler::SaveHandler() {
     this->firstPdfPageVisited = false;
@@ -86,8 +86,8 @@ void SaveHandler::prepareSave(const Document* doc, const fs::path& target) {
 }
 
 void SaveHandler::writeHeader() {
-    this->root->setAttrib(xoj::xml_attrs::CREATOR_STR, PROJECT_STRING);
-    this->root->setAttrib(xoj::xml_attrs::FILEVERSION_STR, FILE_FORMAT_VERSION);
+    this->root->setAttrib(vn::xopp::xml_attrs::CREATOR_STR, PROJECT_STRING);
+    this->root->setAttrib(vn::xopp::xml_attrs::FILEVERSION_STR, FILE_FORMAT_VERSION);
     this->root->addChild(new XmlTextNode(TAG_NAMES[TagType::TITLE],
                                          std::string{"VertexNote document - see "} + PROJECT_HOMEPAGE_URL));
 }
@@ -102,9 +102,9 @@ auto SaveHandler::getColorStr(Color c, unsigned char alpha) -> std::string {
 void SaveHandler::writeTimestamp(XmlAudioNode* xmlAudioNode, const AudioElement* audioElement) {
     if (!audioElement->getAudioFilename().empty()) {
         /** set stroke timestamp value to the XmlPointNode */
-        xmlAudioNode->setAttrib(xoj::xml_attrs::TIMESTAMP_STR, audioElement->getTimestamp());
+        xmlAudioNode->setAttrib(vn::xopp::xml_attrs::TIMESTAMP_STR, audioElement->getTimestamp());
         auto audioFilename = audioElement->getAudioFilename().generic_u8string();
-        xmlAudioNode->setAttrib(xoj::xml_attrs::AUDIO_FILENAME_STR, audioFilename);
+        xmlAudioNode->setAttrib(vn::xopp::xml_attrs::AUDIO_FILENAME_STR, audioFilename);
     }
 }
 
@@ -118,7 +118,7 @@ void SaveHandler::visitStroke(XmlPointNode* stroke, const Stroke* s) {
         t = StrokeTool::PEN;
     }
 
-    stroke->setAttrib(xoj::xml_attrs::TOOL_STR, StrokeTool::NAMES[t]);
+    stroke->setAttrib(vn::xopp::xml_attrs::TOOL_STR, StrokeTool::NAMES[t]);
 
     if (t == StrokeTool::PEN) {
         writeTimestamp(stroke, s);
@@ -126,7 +126,7 @@ void SaveHandler::visitStroke(XmlPointNode* stroke, const Stroke* s) {
         alpha = 0x7f;
     }
 
-    stroke->setAttrib(xoj::xml_attrs::COLOR_STR, getColorStr(s->getColor(), alpha).c_str());
+    stroke->setAttrib(vn::xopp::xml_attrs::COLOR_STR, getColorStr(s->getColor(), alpha).c_str());
 
     const auto& pts = s->getPointVector();
 
@@ -137,9 +137,9 @@ void SaveHandler::visitStroke(XmlPointNode* stroke, const Stroke* s) {
         values.reserve(pts.size() + 1);
         values.emplace_back(s->getWidth());
         std::transform(pts.begin(), pts.end() - 1, std::back_inserter(values), [](const Point& p) { return p.z; });
-        stroke->setAttrib(xoj::xml_attrs::WIDTH_STR, std::move(values));
+        stroke->setAttrib(vn::xopp::xml_attrs::WIDTH_STR, std::move(values));
     } else {
-        stroke->setAttrib(xoj::xml_attrs::WIDTH_STR, s->getWidth());
+        stroke->setAttrib(vn::xopp::xml_attrs::WIDTH_STR, s->getWidth());
     }
 
     visitStrokeExtended(stroke, s);
@@ -150,7 +150,7 @@ void SaveHandler::visitStroke(XmlPointNode* stroke, const Stroke* s) {
  */
 void SaveHandler::visitStrokeExtended(XmlPointNode* stroke, const Stroke* s) {
     if (s->getFill() != -1) {
-        stroke->setAttrib(xoj::xml_attrs::FILL_STR, s->getFill());
+        stroke->setAttrib(vn::xopp::xml_attrs::FILL_STR, s->getFill());
     }
 
     StrokeCapStyle capStyle = s->getStrokeCapStyle();
@@ -160,10 +160,10 @@ void SaveHandler::visitStrokeExtended(XmlPointNode* stroke, const Stroke* s) {
         capStyle = StrokeCapStyle::ROUND;
     }
 
-    stroke->setAttrib(xoj::xml_attrs::CAPSTYLE_STR, StrokeCapStyle::NAMES[capStyle]);
+    stroke->setAttrib(vn::xopp::xml_attrs::CAPSTYLE_STR, StrokeCapStyle::NAMES[capStyle]);
 
     if (s->getLineStyle().hasDashes()) {
-        stroke->setAttrib(xoj::xml_attrs::STYLE_STR, StrokeStyle::formatStyle(s->getLineStyle()));
+        stroke->setAttrib(vn::xopp::xml_attrs::STYLE_STR, StrokeStyle::formatStyle(s->getLineStyle()));
     }
 }
 
@@ -171,7 +171,7 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
     auto* layer = new XmlNode(TAG_NAMES[TagType::LAYER]);
     page->addChild(layer);
     if (l->hasName()) {
-        layer->setAttrib(xoj::xml_attrs::NAME_STR, l->getName().c_str());
+        layer->setAttrib(vn::xopp::xml_attrs::NAME_STR, l->getName().c_str());
     }
 
     for (const auto& e: l->getElementsView()) {
@@ -191,11 +191,11 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
 
             const NoteFont& f = t->getFont();
 
-            text->setAttrib(xoj::xml_attrs::FONT_STR, f.getName().c_str());
-            text->setAttrib(xoj::xml_attrs::SIZE_STR, f.getSize());
-            text->setAttrib(xoj::xml_attrs::X_COORD_STR, t->getX());
-            text->setAttrib(xoj::xml_attrs::Y_COORD_STR, t->getY());
-            text->setAttrib(xoj::xml_attrs::COLOR_STR, getColorStr(t->getColor()).c_str());
+            text->setAttrib(vn::xopp::xml_attrs::FONT_STR, f.getName().c_str());
+            text->setAttrib(vn::xopp::xml_attrs::SIZE_STR, f.getSize());
+            text->setAttrib(vn::xopp::xml_attrs::X_COORD_STR, t->getX());
+            text->setAttrib(vn::xopp::xml_attrs::Y_COORD_STR, t->getY());
+            text->setAttrib(vn::xopp::xml_attrs::COLOR_STR, getColorStr(t->getColor()).c_str());
 
             writeTimestamp(text, t);
         } else if (e->getType() == ELEMENT_IMAGE) {
@@ -205,20 +205,20 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
 
             image->setImage(i->getImage());
 
-            image->setAttrib(xoj::xml_attrs::LEFT_POS_STR, i->getX());
-            image->setAttrib(xoj::xml_attrs::TOP_POS_STR, i->getY());
-            image->setAttrib(xoj::xml_attrs::RIGHT_POS_STR, i->getX() + i->getElementWidth());
-            image->setAttrib(xoj::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
+            image->setAttrib(vn::xopp::xml_attrs::LEFT_POS_STR, i->getX());
+            image->setAttrib(vn::xopp::xml_attrs::TOP_POS_STR, i->getY());
+            image->setAttrib(vn::xopp::xml_attrs::RIGHT_POS_STR, i->getX() + i->getElementWidth());
+            image->setAttrib(vn::xopp::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
         } else if (e->getType() == ELEMENT_TEXIMAGE) {
             auto* i = dynamic_cast<const TexImage*>(e);
             auto* image = new XmlTexNode(TAG_NAMES[TagType::TEXIMAGE], std::string(i->getBinaryData()));
             layer->addChild(image);
 
-            image->setAttrib(xoj::xml_attrs::TEXT_STR, i->getText().c_str());
-            image->setAttrib(xoj::xml_attrs::LEFT_POS_STR, i->getX());
-            image->setAttrib(xoj::xml_attrs::TOP_POS_STR, i->getY());
-            image->setAttrib(xoj::xml_attrs::RIGHT_POS_STR, i->getX() + i->getElementWidth());
-            image->setAttrib(xoj::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
+            image->setAttrib(vn::xopp::xml_attrs::TEXT_STR, i->getText().c_str());
+            image->setAttrib(vn::xopp::xml_attrs::LEFT_POS_STR, i->getX());
+            image->setAttrib(vn::xopp::xml_attrs::TOP_POS_STR, i->getY());
+            image->setAttrib(vn::xopp::xml_attrs::RIGHT_POS_STR, i->getX() + i->getElementWidth());
+            image->setAttrib(vn::xopp::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
         } else if (e->getType() == ELEMENT_GEOMETRY) {
             auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(e);
             auto fallback = geometry->makeStrokeFallback();
@@ -242,16 +242,16 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
 void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, int id, const fs::path& target) {
     auto* page = new XmlNode(TAG_NAMES[TagType::PAGE]);
     root->addChild(page);
-    page->setAttrib(xoj::xml_attrs::WIDTH_STR, p->getWidth());
-    page->setAttrib(xoj::xml_attrs::HEIGHT_STR, p->getHeight());
+    page->setAttrib(vn::xopp::xml_attrs::WIDTH_STR, p->getWidth());
+    page->setAttrib(vn::xopp::xml_attrs::HEIGHT_STR, p->getHeight());
 
     auto* background = new XmlNode(TAG_NAMES[TagType::BACKGROUND]);
     page->addChild(background);
 
     writeBackgroundName(background, p);
 
-    using xoj::xml_attrs::BackgroundType;
-    using xoj::xml_attrs::Domain;
+    using vn::xopp::xml_attrs::BackgroundType;
+    using vn::xopp::xml_attrs::Domain;
 
     if (p->getBackgroundType().isPdfPage()) {
         /**
@@ -259,16 +259,16 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
          * DO NOT CHANGE THE ORDER OF THE ATTRIBUTES!
          */
 
-        background->setAttrib(xoj::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::PDF]);
+        background->setAttrib(vn::xopp::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::PDF]);
         if (!firstPdfPageVisited) {
             firstPdfPageVisited = true;
 
             if (doc->isAttachPdf()) {
-                background->setAttrib(xoj::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
+                background->setAttrib(vn::xopp::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
                 auto filepath = doc->getFilepath();
                 Util::clearExtensions(filepath);
                 filepath += ".xopp.bg.pdf";
-                background->setAttrib(xoj::xml_attrs::FILENAME_STR, "bg.pdf");
+                background->setAttrib(vn::xopp::xml_attrs::FILENAME_STR, "bg.pdf");
 
                 GError* error = nullptr;
                 if (!exists(filepath)) {
@@ -286,36 +286,36 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
                 }
             } else {
                 // "absolute" just means path. For backward compatibility, it is hard to change the word
-                background->setAttrib(xoj::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ABSOLUTE]);
+                background->setAttrib(vn::xopp::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ABSOLUTE]);
                 auto normalizedPath = Util::normalizeAssetPath(doc->getPdfFilepath(), target.parent_path(),
                                                                doc->getPathStorageMode());
-                background->setAttrib(xoj::xml_attrs::FILENAME_STR, normalizedPath.c_str());
+                background->setAttrib(vn::xopp::xml_attrs::FILENAME_STR, normalizedPath.c_str());
             }
         }
-        background->setAttrib(xoj::xml_attrs::PAGE_NUMBER_STR, p->getPdfPageNr() + 1);
+        background->setAttrib(vn::xopp::xml_attrs::PAGE_NUMBER_STR, p->getPdfPageNr() + 1);
     } else if (p->getBackgroundType().isImagePage()) {
-        background->setAttrib(xoj::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::PIXMAP]);
+        background->setAttrib(vn::xopp::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::PIXMAP]);
 
         int cloneId = p->getBackgroundImage().getCloneId();
         if (cloneId != -1) {
-            background->setAttrib(xoj::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::CLONE]);
+            background->setAttrib(vn::xopp::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::CLONE]);
             char* filename = g_strdup_printf("%i", cloneId);
-            background->setAttrib(xoj::xml_attrs::FILENAME_STR, filename);
+            background->setAttrib(vn::xopp::xml_attrs::FILENAME_STR, filename);
             g_free(filename);
         } else if (p->getBackgroundImage().isAttached() && p->getBackgroundImage().getPixbuf()) {
             char* filename = g_strdup_printf("bg_%d.png", this->attachBgId++);
-            background->setAttrib(xoj::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
-            background->setAttrib(xoj::xml_attrs::FILENAME_STR, filename);
+            background->setAttrib(vn::xopp::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
+            background->setAttrib(vn::xopp::xml_attrs::FILENAME_STR, filename);
 
             // Store the changed info to update the document in updateDocumentInfo()
             backgroundImages.emplace_back(ImageInfo{p->getBackgroundImage(), fs::path(filename), id});
             g_free(filename);
         } else {
             // "absolute" just means path. For backward compatibility, it is hard to change the word
-            background->setAttrib(xoj::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ABSOLUTE]);
+            background->setAttrib(vn::xopp::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ABSOLUTE]);
             auto normalizedPath = Util::normalizeAssetPath(p->getBackgroundImage().getFilepath(), target.parent_path(),
                                                            doc->getPathStorageMode());
-            background->setAttrib(xoj::xml_attrs::FILENAME_STR, normalizedPath.c_str());
+            background->setAttrib(vn::xopp::xml_attrs::FILENAME_STR, normalizedPath.c_str());
 
             // Store the changed info to update the document in updateDocumentInfo()
             backgroundImages.emplace_back(ImageInfo{p->getBackgroundImage(), std::nullopt, id});
@@ -336,22 +336,22 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
 }
 
 void SaveHandler::writeSolidBackground(XmlNode* background, ConstPageRef p) {
-    using xoj::xml_attrs::BackgroundType;
-    background->setAttrib(xoj::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::SOLID]);
-    background->setAttrib(xoj::xml_attrs::COLOR_STR, getColorStr(p->getBackgroundColor()));
-    background->setAttrib(xoj::xml_attrs::STYLE_STR,
+    using vn::xopp::xml_attrs::BackgroundType;
+    background->setAttrib(vn::xopp::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::SOLID]);
+    background->setAttrib(vn::xopp::xml_attrs::COLOR_STR, getColorStr(p->getBackgroundColor()));
+    background->setAttrib(vn::xopp::xml_attrs::STYLE_STR,
                           PageTypeHandler::getStringForPageTypeFormat(p->getBackgroundType().format));
 
     // Not compatible with Xournal, so the background needs
     // to be changed to a basic one!
     if (!p->getBackgroundType().config.empty()) {
-        background->setAttrib(xoj::xml_attrs::CONFIG_STR, p->getBackgroundType().config);
+        background->setAttrib(vn::xopp::xml_attrs::CONFIG_STR, p->getBackgroundType().config);
     }
 }
 
 void SaveHandler::writeBackgroundName(XmlNode* background, ConstPageRef p) {
     if (p->backgroundHasName()) {
-        background->setAttrib(xoj::xml_attrs::NAME_STR, p->getBackgroundName());
+        background->setAttrib(vn::xopp::xml_attrs::NAME_STR, p->getBackgroundName());
     }
 }
 
