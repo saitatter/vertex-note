@@ -49,6 +49,7 @@ private:
     void setGridSnapEnabled(bool enabled);
     void selectTool(QtToolType tool);
     void updateToolCommandStates();
+    void showBackgroundDialog();
 
 private:
     QtMainWindow window;

@@ -15,6 +15,8 @@
 #include <QString>
 #include <QToolBar>
 
+#include "QtBackgroundDialog.h"
+
 namespace {
 
 const std::vector<vn::ui::common::FileDialogFilter> SESSION_FILTERS = {
@@ -33,6 +35,7 @@ QtAppShell::QtAppShell():
         plugins(this->window.commandHost()) {
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
+    this->window.layerPanel()->setDocumentController(&this->documentController);
     registerBootstrapCommands();
     wireWindowState();
     rebuildToolbar();
@@ -278,6 +281,13 @@ void QtAppShell::registerBootstrapCommands() {
              .checkable = true,
              .checked = this->window.canvas()->activeTool() == QtToolType::SelectRect},
             [this]() { selectTool(QtToolType::SelectRect); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.background",
+             .text = "Page Background...",
+             .tooltip = "Change the page background colour and pattern",
+             .menu = "Edit"},
+            [this]() { showBackgroundDialog(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -293,6 +303,15 @@ void QtAppShell::wireWindowState() {
                              markSessionDirty();
                          }
                          updateEditCommandStates();
+                         this->window.layerPanel()->refresh();
+                     });
+
+    QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
+                     [this]() {
+                         this->window.canvas()->update();
+                         if (!this->suppressDirtyTracking) {
+                             markSessionDirty();
+                         }
                      });
 
     updateEditCommandStates();
@@ -344,6 +363,7 @@ void QtAppShell::newSession() {
     this->window.canvas()->newBlankDocument();
     this->suppressDirtyTracking = false;
     updateEditCommandStates();
+    this->window.layerPanel()->refresh();
     this->window.statusBar()->showMessage(QStringLiteral("Created a blank document"), 3000);
     updateWindowTitle();
 }
@@ -378,6 +398,7 @@ void QtAppShell::openSession() {
         this->suppressDirtyTracking = false;
         this->recentFiles.addRecentFile(*path);
         updateEditCommandStates();
+        this->window.layerPanel()->refresh();
         this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path->filename().string()), 4000);
         updateWindowTitle();
         return;
@@ -395,6 +416,7 @@ void QtAppShell::openSession() {
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(*path);
     updateEditCommandStates();
+    this->window.layerPanel()->refresh();
     this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path->filename().string()), 4000);
     updateWindowTitle();
 }
@@ -459,4 +481,29 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
+}
+
+void QtAppShell::showBackgroundDialog() {
+    // Use page 0 for now (single-page focus)
+    const std::size_t pageIndex = 0;
+    if (!this->documentController.hasDocument() || pageIndex >= this->documentController.pageCount()) {
+        return;
+    }
+
+    const auto& pages = this->documentController.snapshotPages();
+    if (pageIndex >= pages.size()) {
+        return;
+    }
+
+    const auto& bg = pages[pageIndex].background;
+    QtBackgroundDialog dialog(bg.backgroundColor, bg.backgroundFormat, &this->window);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    this->documentController.setPageBackgroundColor(pageIndex, dialog.selectedColor());
+    this->documentController.setPageBackgroundType(pageIndex, dialog.selectedFormat());
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page background updated"), 3000);
 }

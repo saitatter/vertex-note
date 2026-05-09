@@ -2,6 +2,8 @@ set(vertexnote_qt_sources
         main.cpp
         QtAppShell.h
         QtAppShell.cpp
+        QtBackgroundDialog.h
+        QtBackgroundDialog.cpp
         QtCanvas.h
         QtCanvas.cpp
         QtClipboardService.h
@@ -35,6 +37,8 @@ set(vertexnote_qt_sources
         QtUpdatePresentationService.cpp
         QtInputAdapter.h
         QtInputAdapter.cpp
+        QtLayerPanel.h
+        QtLayerPanel.cpp
         QtPageContentRenderer.h
         QtPageContentRenderer.cpp
 )

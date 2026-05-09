@@ -114,6 +114,14 @@ struct QtActiveStroke {
     bool hasPressure = false;
 };
 
+struct QtLayerInfo {
+    std::size_t index = 0U;
+    std::string name;
+    bool visible = true;
+    bool selected = false;
+    std::size_t elementCount = 0U;
+};
+
 class QtDocumentController {
 public:
     QtDocumentController();
@@ -179,6 +187,22 @@ public:
     auto endMoveSelection() -> bool;
     auto cancelMoveSelection() -> void;
     [[nodiscard]] auto isMovingSelection() const -> bool;
+
+    // Layer management
+    [[nodiscard]] auto layerCount(std::size_t pageIndex) const -> std::size_t;
+    [[nodiscard]] auto layerInfos(std::size_t pageIndex) const -> std::vector<QtLayerInfo>;
+    [[nodiscard]] auto selectedLayerIndex(std::size_t pageIndex) const -> std::size_t;
+    void selectLayer(std::size_t pageIndex, std::size_t layerIndex);
+    void setLayerVisible(std::size_t pageIndex, std::size_t layerIndex, bool visible);
+    void addLayer(std::size_t pageIndex);
+    void removeLayer(std::size_t pageIndex, std::size_t layerIndex);
+    void renameLayer(std::size_t pageIndex, std::size_t layerIndex, const std::string& name);
+    void moveLayerUp(std::size_t pageIndex, std::size_t layerIndex);
+    void moveLayerDown(std::size_t pageIndex, std::size_t layerIndex);
+
+    // Page background
+    void setPageBackgroundColor(std::size_t pageIndex, Color color);
+    void setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format);
 
     // Unified undo/redo
     [[nodiscard]] auto canUndo() const -> bool;

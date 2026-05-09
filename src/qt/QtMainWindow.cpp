@@ -20,6 +20,10 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
 
     this->canvasWidget = new QtCanvas(this);
     setCentralWidget(this->canvasWidget);
+
+    this->layerPanelWidget = new QtLayerPanel(this);
+    addDockWidget(Qt::RightDockWidgetArea, this->layerPanelWidget);
+
     statusBar()->showMessage(QStringLiteral("Qt shell ready"));
 }
 
@@ -28,3 +32,5 @@ auto QtMainWindow::canvas() -> QtCanvas* { return this->canvasWidget; }
 auto QtMainWindow::commandHost() -> QtCommandHost* { return &this->commandRegistry; }
 
 auto QtMainWindow::mainToolBar() -> QToolBar* { return this->toolBar; }
+
+auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget; }

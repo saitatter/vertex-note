@@ -57,17 +57,28 @@ This document tracks the executable slices of the Qt migration.
 - **Stroke drawing**:
   - Pressure-sensitive input from mouse and tablet (Wacom) devices.
   - Pen and Highlighter tools create `Stroke` elements on the active layer.
-  - Active stroke rendered live during drawing via `QPainterPath`.
+  - Active stroke rendered live through shared `StrokeRenderer` pipeline.
   - Minimum distance filtering between points.
 - **Whole-stroke eraser**:
   - Eraser tool deletes strokes that intersect the eraser path.
   - Uses `Stroke::intersects()` for precise hit testing.
   - All strokes erased in one drag are batched into a single undo entry.
+- **Element selection** (SelectRect tool):
+  - Click-to-select with distance-based hit testing.
+  - Rubber-band rectangle selection for multi-select.
+  - Shift+click additive/toggle selection.
+  - Drag selected elements to move them.
+  - Selection overlay with dashed bounding box and corner handles.
+- **Shared page rendering** (`PageContentRenderer`):
+  - Dispatches all drawable types through abstract renderer interfaces.
+  - Both committed strokes and in-progress active strokes render through
+    the same `StrokeRenderer` pipeline.
 - **Unified undo/redo**:
-  - Supports geometry edits, stroke creation, and stroke erasure.
+  - Supports geometry edits, stroke creation, stroke erasure, and
+    element moves.
   - Stroke undo removes from layer, redo re-inserts at original position.
   - Erase undo re-inserts all removed strokes at original z-order.
-  - Erase redo re-removes by saved element pointers.
+  - Move undo/redo applies inverse/forward delta to element positions.
 
 ## Build
 
@@ -95,24 +106,27 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   but does not host the GTK `Control` class (too tightly coupled). Instead,
   tool management and undo/redo are implemented Qt-natively using the same
   core model objects (`Stroke`, `Layer`, `Document`).
-- Preview renderers are simplified (no pressure curves, no arc/bezier
-  geometry, no grid/ruled/dotted background patterns).
+- Preview renderers cover pressure-sensitive strokes, all background
+  patterns (ruled, graph, dotted, staves, etc.), multi-line text with
+  correct Pango-equivalent sizing, and images.
 - No segment eraser — only whole-stroke deletion.
-- No layer management, selection system, sidebar, or tool palette in the
-  Qt shell.
+- No layer management, sidebar, or tool palette in the Qt shell yet.
+
+## Completed Slices
+
+### Phase 2 — Production rendering & selection ✓
+
+1. ✓ Pressure-sensitive variable-width stroke rendering with cap styles.
+2. ✓ All background patterns (ruled, graph, dotted, staves, iso, etc.)
+   with page colour support.
+3. ✓ Full `TextRenderer` with `QTextDocument` multi-line layout and
+   Pango-equivalent pixel sizing.
+4. ✓ Element selection system: click-to-select, rubber-band rectangle
+   multi-select, drag-to-move with undo/redo, selection overlay.
+5. ✓ Shared `PageContentRenderer` routes drawables through abstract
+   renderer interfaces; active stroke preview uses the same pipeline.
 
 ## Next Slices
-
-### Phase 2 — Production rendering & selection
-
-1. Extend `StrokeRenderer` for pressure-sensitive curves, cap styles, and
-   dash patterns.
-2. Extend `BackgroundRenderer` for grid/ruled/dotted/graph patterns.
-3. Implement full `TextRenderer` with Pango/Qt layout parity.
-4. Wire the element selection system (`EditSelection`) and overlay
-   rendering (selection handles, resize grips).
-5. Route interactive notebook painting through the render contracts so GTK
-   and Qt share page rendering logic.
 
 ### Phase 3 — Feature parity & polish
 
