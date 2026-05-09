@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 cmake_policy(VERSION 3.12)
 
+# Long-term shell migration seams live under ui/ and view/render/ and stay part of the core target.
 file(GLOB_RECURSE vertexnote_sources CONFIGURE_DEPENDS *.cpp *.h)
 
 if(NOT ENABLE_AUDIO)

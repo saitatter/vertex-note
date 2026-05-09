@@ -4,10 +4,22 @@ set(vertexnote_qt_sources
         QtExperimentalAppShell.cpp
         QtExperimentalCanvas.h
         QtExperimentalCanvas.cpp
+        QtExperimentalClipboardService.h
+        QtExperimentalClipboardService.cpp
         QtExperimentalCommandHost.h
         QtExperimentalCommandHost.cpp
+        QtExperimentalDialogService.h
+        QtExperimentalDialogService.cpp
         QtExperimentalMainWindow.h
         QtExperimentalMainWindow.cpp
+        QtExperimentalPluginUiBridge.h
+        QtExperimentalPluginUiBridge.cpp
+        QtExperimentalRecentFilesService.h
+        QtExperimentalRecentFilesService.cpp
+        QtExperimentalUpdatePresentationService.h
+        QtExperimentalUpdatePresentationService.cpp
+        QtInputAdapter.h
+        QtInputAdapter.cpp
 )
 
 add_executable(vertexnote-qt-experimental ${vertexnote_qt_sources})
