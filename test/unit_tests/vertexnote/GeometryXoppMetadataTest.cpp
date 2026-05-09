@@ -42,6 +42,21 @@ TEST(VertexNoteGeometryXoppMetadata, roundTripsObjectGraph) {
     EXPECT_DOUBLE_EQ(restored->constraint(40)->value, 3.75);
 }
 
+TEST(VertexNoteGeometryXoppMetadata, roundTripsConstructionLineKind) {
+    GeometryObject object(42);
+    auto a = object.addVertexWithId(10, Vec2{1.0, 1.0}, VertexFlags::Explicit);
+    auto b = object.addVertexWithId(20, Vec2{9.0, 3.0}, VertexFlags::Explicit);
+    object.addEdgeWithId(30, EdgeKind::ConstructionLine, a, b);
+
+    const auto metadata = vn::io::serializeGeometryStrokeMetadata(object);
+    std::string error;
+    auto restored = vn::io::parseGeometryStrokeMetadata(metadata, &error);
+
+    ASSERT_TRUE(restored.has_value()) << error;
+    ASSERT_NE(restored->edge(30), nullptr);
+    EXPECT_EQ(restored->edge(30)->kind, EdgeKind::ConstructionLine);
+}
+
 TEST(VertexNoteGeometryXoppMetadata, rejectsUnsupportedFormat) {
     vn::io::GeometryStrokeMetadata metadata;
     metadata.format = "geometry-v99";

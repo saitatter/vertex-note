@@ -660,9 +660,14 @@
       <attribute name="accel">&lt;Ctrl&gt;9</attribute>
      </item>
      <item>
-      <attribute name="label" translatable="yes">Draw Vertex Arc by Clicks</attribute>
+     <attribute name="label" translatable="yes">Draw Vertex Arc by Clicks</attribute>
       <attribute name="action">win.tool-draw-vertex-arc</attribute>
       <attribute name="accel">&lt;Ctrl&gt;0</attribute>
+     </item>
+     <item>
+      <attribute name="label" translatable="yes">Draw Construction Line by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-construction-line</attribute>
+      <attribute name="accel">&lt;Ctrl&gt;&lt;Shift&gt;0</attribute>
      </item>
     </submenu>
    </section>

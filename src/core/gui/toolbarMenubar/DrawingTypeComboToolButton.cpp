@@ -53,6 +53,9 @@ static auto makeEntries(IconNameHelper& icons, const ActionDatabase& db)
                   Action::TOOL_DRAW_VERTEX_CIRCLE);
     entries[Type::VERTEX_ARC] =
             Entry(_("Draw Vertex Arc by Clicks"), icons.iconName("draw-ellipse"), db, Action::TOOL_DRAW_VERTEX_ARC);
+    entries[Type::VERTEX_CONSTRUCTION_LINE] =
+            Entry(_("Draw Construction Line by Clicks"), icons.iconName("draw-line"), db,
+                  Action::TOOL_DRAW_VERTEX_CONSTRUCTION_LINE);
     entries[Type::SHAPE_RECOGNIZER] =
             Entry(_("Stroke recognizer"), icons.iconName("shape-recognizer"), db, Action::TOOL_DRAW_SHAPE_RECOGNIZER);
     return res;

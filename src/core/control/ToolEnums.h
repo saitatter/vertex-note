@@ -57,12 +57,13 @@ enum DrawingType {
     DRAWING_TYPE_VERTEX_POLYLINE,
     DRAWING_TYPE_VERTEX_RECTANGLE,
     DRAWING_TYPE_VERTEX_CIRCLE,
-    DRAWING_TYPE_VERTEX_ARC
+    DRAWING_TYPE_VERTEX_ARC,
+    DRAWING_TYPE_VERTEX_CONSTRUCTION_LINE
 };
-static constexpr std::array<std::string_view, 15> drawingTypeNames{
+static constexpr std::array<std::string_view, 16> drawingTypeNames{
         "dontChange",           "default",          "line",  "rectangle", "ellipse", "arrow", "doubleArrow",
         "drawCoordinateSystem", "strokeRecognizer", "spline", "vertexLine", "vertexPolyline", "vertexRectangle",
-        "vertexCircle",         "vertexArc"};
+        "vertexCircle",         "vertexArc",        "vertexConstructionLine"};
 
 static constexpr std::string_view drawingTypeToString(DrawingType type) {
     return drawingTypeNames.at(static_cast<size_t>(type));
@@ -183,7 +184,8 @@ enum ToolCapabilities : unsigned int {
     TOOL_CAP_VERTEX_POLYLINE = 1 << 13,
     TOOL_CAP_VERTEX_RECTANGLE = 1 << 14,
     TOOL_CAP_VERTEX_CIRCLE = 1 << 15,
-    TOOL_CAP_VERTEX_ARC = 1 << 16
+    TOOL_CAP_VERTEX_ARC = 1 << 16,
+    TOOL_CAP_VERTEX_CONSTRUCTION_LINE = 1 << 17
 };
 
 enum StrokeType {

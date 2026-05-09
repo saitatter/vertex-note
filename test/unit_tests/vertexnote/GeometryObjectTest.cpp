@@ -106,6 +106,21 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackForPartialArc) {
     EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
 }
 
+TEST(VertexNoteGeometryObject, createsStrokeFallbackForConstructionLine) {
+    GeometryObject object(42);
+
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+    auto b = object.addVertex(Vec2{5.0, 7.0});
+    object.addEdge(EdgeKind::ConstructionLine, a, b);
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+
+    ASSERT_NE(stroke, nullptr);
+    ASSERT_EQ(stroke->getPointCount(), 2U);
+    EXPECT_DOUBLE_EQ(stroke->getPoint(0).x, 1.0);
+    EXPECT_DOUBLE_EQ(stroke->getPoint(1).y, 7.0);
+}
+
 TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     GeometryObject object(42);
     auto a = object.addVertex(Vec2{1.0, 2.0});

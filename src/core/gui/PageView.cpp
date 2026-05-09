@@ -30,6 +30,7 @@
 #include "control/tools/ArrowHandler.h"             // for ArrowHandler
 #include "control/tools/CoordinateSystemHandler.h"  // for CoordinateSystemH...
 #include "control/tools/CircleByCenterRadiusHandler.h"
+#include "control/tools/ConstructionLineByClicksHandler.h"
 #include "control/tools/ArcByCenterStartEndHandler.h"
 #include "control/tools/EditSelection.h"            // for EditSelection
 #include "control/tools/EllipseHandler.h"           // for EllipseHandler
@@ -320,6 +321,9 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 break;
             case DRAWING_TYPE_VERTEX_ARC:
                 this->inputHandler = std::make_unique<ArcByCenterStartEndHandler>(control, getPage());
+                break;
+            case DRAWING_TYPE_VERTEX_CONSTRUCTION_LINE:
+                this->inputHandler = std::make_unique<ConstructionLineByClicksHandler>(control, getPage());
                 break;
             default:
                 this->inputHandler = std::make_unique<StrokeHandler>(control, getPage());

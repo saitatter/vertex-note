@@ -6,6 +6,7 @@
 
 #include "GeometryElementView.h"
 
+#include <array>
 #include <cmath>
 
 #include <cairo.h>
@@ -15,6 +16,10 @@
 #include "vertexnote/geometry/GeometryElement.h"
 
 using namespace vn::view;
+
+namespace {
+constexpr std::array<double, 2> ConstructionDash{8.0, 6.0};
+}
 
 GeometryElementView::GeometryElementView(const vn::geom::GeometryElement* geometry): geometry(geometry) {}
 
@@ -35,6 +40,12 @@ void GeometryElementView::draw(const Context& ctx) const {
         const auto* end = object.vertex(edge.end);
         if (!start || !end) {
             continue;
+        }
+
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            cairo_set_dash(ctx.cr, ConstructionDash.data(), static_cast<int>(ConstructionDash.size()), 0.0);
+        } else {
+            cairo_set_dash(ctx.cr, nullptr, 0, 0);
         }
 
         if (edge.kind == vn::geom::EdgeKind::Arc && !edge.controls.empty()) {

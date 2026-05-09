@@ -1,5 +1,6 @@
 #include "EditSelection.h"
 
+#include <array>
 #include <algorithm>  // for min, max, stable_sort
 #include <cmath>      // for abs, cos, sin, cop...
 #include <cstddef>    // for size_t
@@ -1781,6 +1782,12 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
         GdkRGBA color = selectionColor;
         color.alpha *= alpha;
         cairo_set_line_width(cr, std::max(2.0, static_cast<double>(this->btnWidth) * widthScale));
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            constexpr std::array<double, 2> dash{6.0, 4.0};
+            cairo_set_dash(cr, dash.data(), static_cast<int>(dash.size()), 0.0);
+        } else {
+            cairo_set_dash(cr, nullptr, 0, 0);
+        }
         gdk_cairo_set_source_rgba(cr, &color);
         cairo_move_to(cr, startX * zoom, startY * zoom);
         cairo_line_to(cr, endX * zoom, endY * zoom);
@@ -1788,7 +1795,7 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
     };
 
     for (const auto& edge: geometry.edges()) {
-        if (edge.kind != vn::geom::EdgeKind::Line) {
+        if (edge.kind != vn::geom::EdgeKind::Line && edge.kind != vn::geom::EdgeKind::ConstructionLine) {
             continue;
         }
 
@@ -1969,7 +1976,7 @@ bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
         }
 
         for (const auto& edge: geometry->geometry().edges()) {
-            if (edge.kind != vn::geom::EdgeKind::Line) {
+            if (edge.kind != vn::geom::EdgeKind::Line && edge.kind != vn::geom::EdgeKind::ConstructionLine) {
                 continue;
             }
 
