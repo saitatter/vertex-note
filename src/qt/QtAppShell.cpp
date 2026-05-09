@@ -36,7 +36,7 @@ auto isSessionFile(const std::filesystem::path& path) -> bool { return path.exte
 QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
-        plugins(this->window.commandHost()) {
+        plugins(this->window.commandHost(), &this->window) {
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
     this->window.layerPanel()->setDocumentController(&this->documentController);
@@ -411,6 +411,9 @@ void QtAppShell::wireWindowState() {
 
     QObject::connect(this->window.toolPalette(), &QtToolPalette::pressureToggled, &this->window,
                      [this](bool enabled) { this->window.canvas()->toolState().pressureSensitive = enabled; });
+
+    QObject::connect(this->window.toolPalette(), &QtToolPalette::eraserModeChanged, &this->window,
+                     [this](QtEraserMode mode) { this->window.canvas()->toolState().eraserMode = mode; });
 
     updateEditCommandStates();
 }

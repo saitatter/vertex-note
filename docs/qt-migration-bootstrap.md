@@ -109,8 +109,6 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 - Preview renderers cover pressure-sensitive strokes, all background
   patterns (ruled, graph, dotted, staves, etc.), multi-line text with
   correct Pango-equivalent sizing, images, and PDF/image raster backgrounds.
-- No segment eraser — only whole-stroke deletion.
-- No text input — only rendering of existing text elements.
 - Plugin system has UI bridge for menu/toolbar actions but no Qt-native
   Lua runtime; plugins require the GTK shell to execute.
 
@@ -128,7 +126,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 5. ✓ Shared `PageContentRenderer` routes drawables through abstract
    renderer interfaces; active stroke preview uses the same pipeline.
 
-### Phase 3 — Feature parity & polish (partial) ✓
+### Phase 3 — Feature parity & polish ✓
 
 6. ✓ Layer panel dock widget with visibility toggles, add/remove/reorder.
 7. ✓ Page background dialog with colour picker and pattern dropdown.
@@ -138,14 +136,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 11. ✓ Fullscreen (F11) and presentation mode (F5) with toolbar/sidebar toggle.
 12. ✓ Toolbar palette with colour picker, pen width spinner, pressure toggle.
 
-## Next Slices
+### Phase 4 — Advanced editing & plugin bridge ✓
 
-### Phase 3 — Feature parity & polish
-
-6. ✅ Layer panel UI and layer operations.
-7. ✅ Page templates, background colour/pattern dialogs.
-8. ✅ PDF annotation overlay — raster preview via `PdfPage::renderPreviewRaster`.
-9. ✅ Export (PDF, PNG) via QPdfWriter / QImage.
-10. ✅ Sidebar (page thumbnails with rendered previews, click-to-scroll).
-11. ✅ Fullscreen (F11) and presentation mode (F5); plugin UI bridge stub.
-12. ✅ Toolbar with colour picker, pen width spinner, pressure toggle.
+13. ✓ Segment eraser — splits strokes at eraser intersection points, with full undo/redo.
+14. ✓ Plugin UI bridge — real callbacks, separate menu/toolbar registration, true action removal.
+15. ✓ Inline text editing — click to create/edit Text elements with overlay editor, undo/redo.

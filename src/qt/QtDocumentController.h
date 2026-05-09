@@ -21,6 +21,7 @@
 #include "model/Element.h"
 #include "model/Point.h"
 #include "model/Stroke.h"
+#include "model/Text.h"
 #include "util/Color.h"
 #include "vertexnote/geometry/GeometryObject.h"
 #include "vertexnote/geometry/GeometryTypes.h"
@@ -81,6 +82,15 @@ struct QtEraseHistoryEntry {
     std::string text;
 };
 
+struct QtSegmentEraseHistoryEntry {
+    std::size_t pageIndex = 0U;
+    InsertionOrder removedOriginals;                  // original strokes removed
+    std::vector<const Element*> removedOriginalPtrs;  // raw ptrs for redo removal of re-inserted originals
+    InsertionOrder ownedFragments;                    // fragments owned after undo
+    std::vector<const Element*> fragmentPtrs;         // raw ptrs of fragments currently in layer
+    std::string text;
+};
+
 struct QtMoveHistoryEntry {
     std::size_t pageIndex = 0U;
     std::vector<const Element*> elements;
@@ -89,8 +99,20 @@ struct QtMoveHistoryEntry {
     std::string text;
 };
 
+struct QtTextHistoryEntry {
+    std::size_t pageIndex = 0U;
+    const Element* element = nullptr;
+    ElementPtr ownedElement;        // populated after undo (for redo)
+    Element::Index insertionPos{};  // original position in layer
+    std::string previousContent;    // for edit undo (empty if new)
+    bool isNew = false;             // true if this was an insert, false if edit
+    std::string text;
+};
+
 struct QtHistoryEntry {
-    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtMoveHistoryEntry> data;
+    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtSegmentEraseHistoryEntry,
+                 QtMoveHistoryEntry, QtTextHistoryEntry>
+            data;
     [[nodiscard]] auto text() const -> std::string;
 };
 
@@ -168,6 +190,7 @@ public:
     // Eraser
     auto beginErase(std::size_t pageIndex) -> void;
     auto eraseAt(std::size_t pageIndex, double x, double y, double halfSize) -> int;
+    auto eraseSegmentAt(std::size_t pageIndex, double x, double y, double halfSize) -> int;
     auto finalizeErase() -> bool;
     auto cancelErase() -> void;
     [[nodiscard]] auto isErasing() const -> bool;
@@ -203,6 +226,10 @@ public:
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);
     void setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format);
+
+    // Text editing
+    auto insertTextElement(std::size_t pageIndex, std::unique_ptr<Text> text) -> const Element*;
+    auto hitTestTextElement(std::size_t pageIndex, double pageX, double pageY, double maxDistance) const -> Text*;
 
     // Unified undo/redo
     [[nodiscard]] auto canUndo() const -> bool;
@@ -240,6 +267,7 @@ private:
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
     std::optional<QtActiveStroke> currentStroke;
     std::optional<QtEraseHistoryEntry> pendingErase;
+    std::optional<QtSegmentEraseHistoryEntry> pendingSegmentErase;
     std::optional<QtElementSelection> currentSelection;
     std::optional<QtMoveState> moveState;
     std::deque<QtHistoryEntry> undoHistory;

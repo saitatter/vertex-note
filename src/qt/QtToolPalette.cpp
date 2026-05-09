@@ -45,6 +45,16 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     connect(this->pressureCheck, &QCheckBox::toggled, this, &QtToolPalette::pressureToggled);
     layout->addWidget(this->pressureCheck);
 
+    // Segment eraser toggle (visible only when eraser tool is active)
+    this->segmentCheck = new QCheckBox(QStringLiteral("Segment"), this);
+    this->segmentCheck->setChecked(false);
+    this->segmentCheck->setToolTip(QStringLiteral("Segment eraser — split strokes instead of deleting whole strokes"));
+    this->segmentCheck->setVisible(false);
+    connect(this->segmentCheck, &QCheckBox::toggled, this, [this](bool checked) {
+        Q_EMIT eraserModeChanged(checked ? QtEraserMode::Segment : QtEraserMode::WholeStroke);
+    });
+    layout->addWidget(this->segmentCheck);
+
     setLayout(layout);
 }
 
@@ -63,6 +73,7 @@ void QtToolPalette::syncFromToolState(const QtToolState& state) {
     // Block signals to avoid feedback loops
     const QSignalBlocker widthBlock(this->widthSpinner);
     const QSignalBlocker pressureBlock(this->pressureCheck);
+    const QSignalBlocker segmentBlock(this->segmentCheck);
 
     switch (state.activeTool) {
         case QtToolType::Pen:
@@ -71,17 +82,21 @@ void QtToolPalette::syncFromToolState(const QtToolState& state) {
             this->colorSwatch->setVisible(true);
             this->pressureCheck->setVisible(true);
             this->pressureCheck->setChecked(state.pressureSensitive);
+            this->segmentCheck->setVisible(false);
             break;
         case QtToolType::Highlighter:
             this->currentColor = state.highlighterColor;
             this->widthSpinner->setValue(state.highlighterWidth);
             this->colorSwatch->setVisible(true);
             this->pressureCheck->setVisible(false);
+            this->segmentCheck->setVisible(false);
             break;
         case QtToolType::Eraser:
             this->widthSpinner->setValue(state.eraserWidth);
             this->colorSwatch->setVisible(false);
             this->pressureCheck->setVisible(false);
+            this->segmentCheck->setVisible(true);
+            this->segmentCheck->setChecked(state.eraserMode == QtEraserMode::Segment);
             break;
         default:
             break;

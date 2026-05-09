@@ -26,6 +26,7 @@ Q_SIGNALS:
     void colorChanged(Color newColor);
     void widthChanged(double newWidth);
     void pressureToggled(bool enabled);
+    void eraserModeChanged(QtEraserMode mode);
 
 private:
     void pickColor();
@@ -35,6 +36,7 @@ private:
     QToolButton* colorSwatch = nullptr;
     QDoubleSpinBox* widthSpinner = nullptr;
     QCheckBox* pressureCheck = nullptr;
+    QCheckBox* segmentCheck = nullptr;
     Color currentColor{0x33, 0x33, 0xcc, 0xff};
     QtToolType currentTool = QtToolType::Hand;
 };

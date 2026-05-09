@@ -393,6 +393,11 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
             event->accept();
             return;
         }
+        if (tool == QtToolType::Text) {
+            beginTextEditAtScreen(event->position());
+            event->accept();
+            return;
+        }
         if (tool == QtToolType::SelectRect) {
             // Check if clicking on an already-selected element to start a move
             if (this->documentController && this->documentController->elementSelection()) {
@@ -1225,7 +1230,10 @@ void QtCanvas::beginEraseAtScreen(const QPointF& screenPoint) {
     const double pageY = scenePoint.y() - pageRect.y();
     const double halfSize = this->currentToolState.eraserWidth / 2.0;
 
-    if (this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize) > 0) {
+    const bool segment = this->currentToolState.eraserMode == QtEraserMode::Segment;
+    const int erased = segment ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
+                               : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
+    if (erased > 0) {
         update();
         Q_EMIT documentEdited();
     }
@@ -1252,7 +1260,10 @@ void QtCanvas::eraseAtScreen(const QPointF& screenPoint) {
     const double pageY = scenePoint.y() - pageRect.y();
     const double halfSize = this->currentToolState.eraserWidth / 2.0;
 
-    if (this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize) > 0) {
+    const bool segment = this->currentToolState.eraserMode == QtEraserMode::Segment;
+    const int erased = segment ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
+                               : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
+    if (erased > 0) {
         update();
         Q_EMIT documentEdited();
     }
@@ -1273,6 +1284,76 @@ void QtCanvas::cancelErase() {
         this->documentController->cancelErase();
     }
     this->erasing = false;
+}
+
+// ---------------------------------------------------------------------------
+// Text editing
+// ---------------------------------------------------------------------------
+
+void QtCanvas::beginTextEditAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController) {
+        return;
+    }
+
+    // Commit any existing text edit first
+    commitTextEdit();
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[*pageIdx];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+
+    // Create text editor if needed
+    if (!this->textEditor) {
+        this->textEditor = new QtTextEditor(this);
+        connect(this->textEditor, &QtTextEditor::editingFinished, this, [this](bool committed) {
+            if (committed && this->textEditor->isNewText()) {
+                auto textElem = this->textEditor->newTextElement();
+                if (textElem) {
+                    this->documentController->insertTextElement(this->textEditor->editedPageIndex(),
+                                                                std::move(textElem));
+                    update();
+                    Q_EMIT documentEdited();
+                }
+            } else if (committed) {
+                update();
+                Q_EMIT documentEdited();
+            }
+        });
+    }
+
+    // Check if clicking on an existing text element
+    const double hitRadius = 20.0 / this->zoomFactor;
+    auto* existingText = this->documentController->hitTestTextElement(*pageIdx, pageX, pageY, hitRadius);
+
+    if (existingText) {
+        this->textEditor->beginEditing(existingText, pageRect, this->zoomFactor);
+    } else {
+        this->textEditor->beginNewText(*pageIdx, pageX, pageY, pageRect, this->zoomFactor,
+                                       this->currentToolState.penColor, "Sans", 12.0);
+    }
+}
+
+void QtCanvas::commitTextEdit() {
+    if (this->textEditor && this->textEditor->isEditing()) {
+        this->textEditor->commit();
+    }
+}
+
+void QtCanvas::cancelTextEdit() {
+    if (this->textEditor && this->textEditor->isEditing()) {
+        this->textEditor->cancel();
+    }
 }
 
 // ---------------------------------------------------------------------------

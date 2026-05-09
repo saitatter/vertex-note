@@ -18,6 +18,9 @@
 #include "model/NotePage.h"
 #include "model/Text.h"
 #include "model/Stroke.h"
+#include "model/PathParameter.h"
+#include "model/eraser/PaddedBox.h"
+#include "util/SmallVector.h"
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
@@ -738,6 +741,24 @@ auto QtDocumentController::eraseAt(std::size_t pageIndex, double x, double y, do
 }
 
 auto QtDocumentController::finalizeErase() -> bool {
+    // Finalize segment erase if active
+    if (this->pendingSegmentErase) {
+        if (this->pendingSegmentErase->removedOriginals.empty()) {
+            this->pendingSegmentErase.reset();
+            return false;
+        }
+        auto entry = std::move(*this->pendingSegmentErase);
+        this->pendingSegmentErase.reset();
+
+        const auto count = entry.removedOriginals.size();
+        entry.text = count == 1 ? "Segment erase stroke"
+                                : "Segment erase " + std::to_string(count) + " strokes";
+
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        return true;
+    }
+
+    // Finalize whole-stroke erase
     if (!this->pendingErase || this->pendingErase->removedElements.empty()) {
         this->pendingErase.reset();
         return false;
@@ -753,9 +774,142 @@ auto QtDocumentController::finalizeErase() -> bool {
     return true;
 }
 
-auto QtDocumentController::cancelErase() -> void { this->pendingErase.reset(); }
+auto QtDocumentController::cancelErase() -> void {
+    // Cancel segment erase: remove fragments from layer, let owned originals drop
+    if (this->pendingSegmentErase) {
+        if (this->document) {
+            this->document->lock();
+            for (auto pageIdx = this->pendingSegmentErase->pageIndex;
+                 pageIdx < this->document->getPageCount() && !this->pendingSegmentErase->fragmentPtrs.empty();) {
+                auto page = this->document->getPage(this->pendingSegmentErase->pageIndex);
+                auto* layer = page ? page->getSelectedLayer() : nullptr;
+                if (layer) {
+                    for (const auto* frag: this->pendingSegmentErase->fragmentPtrs) {
+                        layer->removeElement(frag);
+                    }
+                }
+                break;
+            }
+            this->document->unlock();
+        }
+        this->pendingSegmentErase.reset();
+        rebuildPageSnapshots();
+        return;
+    }
+    this->pendingErase.reset();
+}
 
-auto QtDocumentController::isErasing() const -> bool { return this->pendingErase.has_value(); }
+auto QtDocumentController::isErasing() const -> bool {
+    return this->pendingErase.has_value() || this->pendingSegmentErase.has_value();
+}
+
+auto QtDocumentController::eraseSegmentAt(std::size_t pageIndex, double x, double y, double halfSize) -> int {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return 0;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return 0;
+    }
+
+    // Initialize segment erase state if needed
+    if (!this->pendingSegmentErase) {
+        this->pendingSegmentErase =
+                QtSegmentEraseHistoryEntry{.pageIndex = pageIndex, .text = "Segment erase"};
+    }
+
+    const PaddedBox box{Point(x, y), halfSize, halfSize * 1.2};
+
+    // Collect strokes that might intersect
+    std::vector<Stroke*> candidates;
+    for (auto& ep: layer->getElements()) {
+        if (!ep || ep->getType() != ELEMENT_STROKE) {
+            continue;
+        }
+        auto* s = dynamic_cast<Stroke*>(ep.get());
+        if (s && s->intersects(x, y, halfSize)) {
+            candidates.push_back(s);
+        }
+    }
+
+    int affected = 0;
+    for (auto* stroke: candidates) {
+        if (stroke->getPointCount() < 2) {
+            continue;
+        }
+
+        // Get precise intersection parameters
+        auto intersections = stroke->intersectWithPaddedBox(box);
+        if (intersections.empty()) {
+            continue;
+        }
+
+        // Compute remaining sections (parts NOT erased)
+        const PathParameter strokeStart{0, 0.0};
+        const PathParameter strokeEnd{stroke->getPointCount() - 2, 1.0};
+
+        std::vector<std::pair<PathParameter, PathParameter>> remaining;
+        PathParameter current = strokeStart;
+        for (std::size_t i = 0; i + 1 < intersections.size(); i += 2) {
+            if (current < intersections[i]) {
+                remaining.emplace_back(current, intersections[i]);
+            }
+            current = intersections[i + 1];
+        }
+        if (current < strokeEnd) {
+            remaining.emplace_back(current, strokeEnd);
+        }
+
+        // If no remaining sections, delete the whole stroke
+        if (remaining.empty()) {
+            auto removed = layer->removeElement(stroke);
+            if (removed.e) {
+                this->pendingSegmentErase->removedOriginals.push_back(std::move(removed));
+                ++affected;
+            }
+            continue;
+        }
+
+        // If remaining sections cover the whole stroke, skip
+        if (remaining.size() == 1 && !(strokeStart < remaining[0].first) && !(remaining[0].second < strokeEnd)) {
+            continue;
+        }
+
+        // Create fragment strokes from remaining sections
+        std::vector<std::unique_ptr<Stroke>> fragments;
+        for (const auto& [lo, hi]: remaining) {
+            auto frag = stroke->cloneSection(lo, hi);
+            if (frag && frag->getPointCount() >= 2) {
+                fragments.push_back(std::move(frag));
+            }
+        }
+
+        // Remove original stroke
+        auto removed = layer->removeElement(stroke);
+        if (!removed.e) {
+            continue;
+        }
+        this->pendingSegmentErase->removedOriginals.push_back(std::move(removed));
+
+        // Insert fragments
+        for (auto& frag: fragments) {
+            const auto* ptr = frag.get();
+            layer->addElement(std::move(frag));
+            this->pendingSegmentErase->fragmentPtrs.push_back(ptr);
+        }
+        ++affected;
+    }
+
+    this->document->unlock();
+    if (affected > 0) {
+        rebuildPageSnapshots();
+    }
+    return affected;
+}
 
 // ---------------------------------------------------------------------------
 // Element selection
@@ -1161,6 +1315,69 @@ void QtDocumentController::setPageBackgroundType(std::size_t pageIndex, PageType
 }
 
 // ---------------------------------------------------------------------------
+// Text editing
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::insertTextElement(std::size_t pageIndex, std::unique_ptr<Text> text) -> const Element* {
+    if (!this->document || !text || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return nullptr;
+    }
+
+    const auto* ptr = text.get();
+    layer->addElement(std::move(text));
+
+    // Push to undo history
+    QtTextHistoryEntry entry;
+    entry.pageIndex = pageIndex;
+    entry.element = ptr;
+    entry.isNew = true;
+    entry.text = "Insert text";
+    pushHistory(QtHistoryEntry{std::move(entry)});
+
+    this->document->unlock();
+    rebuildPageSnapshots();
+    return ptr;
+}
+
+auto QtDocumentController::hitTestTextElement(std::size_t pageIndex, double pageX, double pageY,
+                                              double maxDistance) const -> Text* {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        return nullptr;
+    }
+
+    Text* best = nullptr;
+    double bestDist = maxDistance;
+
+    for (auto& ep: layer->getElements()) {
+        if (!ep || ep->getType() != ELEMENT_TEXT) {
+            continue;
+        }
+        auto* t = dynamic_cast<Text*>(ep.get());
+        if (!t) {
+            continue;
+        }
+        const double dist = t->distanceTo(pageX, pageY);
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = t;
+        }
+    }
+    return best;
+}
+
+// ---------------------------------------------------------------------------
 // Unified undo/redo
 // ---------------------------------------------------------------------------
 
@@ -1233,6 +1450,38 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtSegmentEraseHistoryEntry>) {
+                    // Segment erase undo: remove fragments, re-insert originals
+                    if (e.removedOriginals.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    // Remove fragments from layer
+                    e.ownedFragments.clear();
+                    for (const auto* frag: e.fragmentPtrs) {
+                        auto removed = layer->removeElement(frag);
+                        if (removed.e) {
+                            e.ownedFragments.push_back(std::move(removed));
+                        }
+                    }
+                    e.fragmentPtrs.clear();
+                    // Re-insert originals at their original positions
+                    std::sort(e.removedOriginals.begin(), e.removedOriginals.end());
+                    e.removedOriginalPtrs.clear();
+                    for (auto& ip: e.removedOriginals) {
+                        e.removedOriginalPtrs.push_back(ip.e.get());
+                        layer->insertElement(std::move(ip.e), ip.pos);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 } else if constexpr (std::is_same_v<T, QtMoveHistoryEntry>) {
                     // Move undo: move elements back by -dx, -dy
                     if (e.elements.empty() || !this->document ||
@@ -1247,6 +1496,32 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtTextHistoryEntry>) {
+                    // Text undo: remove the text element from the layer
+                    if (!this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    for (auto* layer: page->getLayers()) {
+                        if (!layer) {
+                            continue;
+                        }
+                        auto removed = layer->removeElement(e.element);
+                        if (removed.e) {
+                            e.ownedElement = std::move(removed.e);
+                            e.insertionPos = removed.pos;
+                            this->document->unlock();
+                            rebuildPageSnapshots();
+                            return true;
+                        }
+                    }
+                    this->document->unlock();
+                    return false;
                 }
             },
             entry.data);
@@ -1303,6 +1578,38 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                         return true;
                     }
                     return false;
+                } else if constexpr (std::is_same_v<T, QtSegmentEraseHistoryEntry>) {
+                    // Segment erase redo: remove originals, re-insert fragments
+                    if (e.removedOriginalPtrs.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    // Remove originals from layer
+                    e.removedOriginals.clear();
+                    for (const auto* ptr: e.removedOriginalPtrs) {
+                        auto removed = layer->removeElement(ptr);
+                        if (removed.e) {
+                            e.removedOriginals.push_back(std::move(removed));
+                        }
+                    }
+                    e.removedOriginalPtrs.clear();
+                    // Re-insert fragments
+                    e.fragmentPtrs.clear();
+                    for (auto& ip: e.ownedFragments) {
+                        e.fragmentPtrs.push_back(ip.e.get());
+                        layer->addElement(std::move(ip.e));
+                    }
+                    e.ownedFragments.clear();
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 } else if constexpr (std::is_same_v<T, QtMoveHistoryEntry>) {
                     // Move redo: move elements by dx, dy again
                     if (e.elements.empty() || !this->document ||
@@ -1314,6 +1621,24 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                         auto* mutableElem = const_cast<Element*>(elem);
                         mutableElem->move(e.dx, e.dy);
                     }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
+                } else if constexpr (std::is_same_v<T, QtTextHistoryEntry>) {
+                    // Text redo: re-insert the text element at its original position
+                    if (!e.ownedElement || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    e.element = e.ownedElement.get();
+                    layer->insertElement(std::move(e.ownedElement), e.insertionPos);
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;

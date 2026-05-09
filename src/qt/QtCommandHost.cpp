@@ -57,6 +57,17 @@ void QtCommandHost::triggerCommand(std::string_view id) {
     }
 }
 
+void QtCommandHost::removeCommand(std::string_view id) {
+    const std::string key(id);
+    auto it = this->actions.find(key);
+    if (it == this->actions.end()) {
+        return;
+    }
+    auto* action = it->second;
+    this->actions.erase(it);
+    delete action;
+}
+
 auto QtCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
 
 auto QtCommandHost::ensureMenu(std::string_view title) -> QMenu* {

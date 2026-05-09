@@ -16,6 +16,7 @@
 #include "QtDocumentSession.h"
 #include "QtInputAdapter.h"
 #include "QtPageContentRenderer.h"
+#include "QtTextEditor.h"
 #include "QtToolState.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
@@ -116,6 +117,11 @@ private:
     void finalizeErase();
     void cancelErase();
 
+    // Text editing helpers
+    void beginTextEditAtScreen(const QPointF& screenPoint);
+    void commitTextEdit();
+    void cancelTextEdit();
+
     // Selection helpers
     void selectElementAtScreen(const QPointF& screenPoint, bool additive);
     void beginRubberBand(const QPointF& screenPoint);
@@ -154,4 +160,5 @@ private:
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
     QtToolState currentToolState;
+    QtTextEditor* textEditor = nullptr;
 };

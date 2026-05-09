@@ -11,6 +11,7 @@
 #include "util/Color.h"
 
 enum class QtToolType { Hand, Pen, Eraser, Highlighter, Text, SelectRect };
+enum class QtEraserMode { WholeStroke, Segment };
 
 struct QtToolState {
     QtToolType activeTool = QtToolType::Hand;
@@ -20,6 +21,7 @@ struct QtToolState {
     double highlighterWidth = 8.50;
     double eraserWidth = 8.50;
     bool pressureSensitive = true;
+    QtEraserMode eraserMode = QtEraserMode::WholeStroke;
 
     [[nodiscard]] auto activeToolName() const -> std::string {
         switch (activeTool) {

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,7 @@ struct PluginUiActionDescriptor {
     std::string id;
     std::string label;
     std::string tooltip;
+    std::function<void()> callback;
 };
 
 }  // namespace vn::ui::common
