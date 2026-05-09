@@ -74,6 +74,7 @@ public:
      */
     virtual void render(cairo_t* cr) const = 0;
     virtual void renderForPrinting(cairo_t* cr) const = 0;
+    virtual std::string renderPreviewPng(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const = 0;
 
     virtual std::vector<PdfRectangle> findText(const std::string& text) = 0;
 

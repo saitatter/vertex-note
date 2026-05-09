@@ -19,6 +19,29 @@
 #include "PopplerGlibAction.h"  // for PopplerGlibAction
 #include "cairo.h"              // for cairo_region_create, cairo_reg...
 
+namespace {
+
+auto writeSurfaceToPng(cairo_surface_t* surface) -> std::string {
+    if (!surface) {
+        return {};
+    }
+
+    std::string encoded;
+    const auto writer = [](void* closure, const unsigned char* data, unsigned int length) -> cairo_status_t {
+        auto* target = static_cast<std::string*>(closure);
+        target->append(reinterpret_cast<const char*>(data), length);
+        return CAIRO_STATUS_SUCCESS;
+    };
+
+    if (cairo_surface_write_to_png_stream(surface, writer, &encoded) != CAIRO_STATUS_SUCCESS) {
+        return {};
+    }
+
+    return encoded;
+}
+
+}  // namespace
+
 PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc): page(page), document(parentDoc) {
     if (page != nullptr) {
         g_object_ref(page);
@@ -82,6 +105,24 @@ void PopplerGlibPage::render(cairo_t* cr) const {
 }
 
 void PopplerGlibPage::renderForPrinting(cairo_t* cr) const { poppler_page_render_for_printing(page, cr); }
+
+auto PopplerGlibPage::renderPreviewPng(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
+        -> std::string {
+    if (pixelWidth <= 0 || pixelHeight <= 0) {
+        return {};
+    }
+
+    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixelWidth, pixelHeight),
+                                       vn::util::adopt);
+    vn::util::CairoSPtr cr(cairo_create(surface.get()), vn::util::adopt);
+
+    cairo_set_source_rgb(cr.get(), 1.0, 1.0, 1.0);
+    cairo_paint(cr.get());
+    cairo_scale(cr.get(), pixelWidth / std::max(pageWidth, 1.0), pixelHeight / std::max(pageHeight, 1.0));
+    poppler_page_render(page, cr.get());
+
+    return writeSurfaceToPng(surface.get());
+}
 
 auto PopplerGlibPage::getPageId() const -> int { return poppler_page_get_index(page); }
 

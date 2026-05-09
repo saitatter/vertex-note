@@ -84,4 +84,25 @@ void BackgroundImage::setAttach(bool attach) {
 auto BackgroundImage::getPixbuf() -> GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
 auto BackgroundImage::getPixbuf() const -> const GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
 
+auto BackgroundImage::encodePreviewPng() const -> std::string {
+    const auto* pixbuf = getPixbuf();
+    if (!pixbuf) {
+        return {};
+    }
+
+    gchar* buffer = nullptr;
+    gsize size = 0;
+    GError* error = nullptr;
+    if (!gdk_pixbuf_save_to_buffer(const_cast<GdkPixbuf*>(pixbuf), &buffer, &size, "png", &error, nullptr)) {
+        if (error) {
+            g_error_free(error);
+        }
+        return {};
+    }
+
+    std::string encoded(buffer, size);
+    g_free(buffer);
+    return encoded;
+}
+
 auto BackgroundImage::isEmpty() const -> bool { return !this->img; }

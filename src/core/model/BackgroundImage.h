@@ -12,6 +12,7 @@
 #pragma once
 
 #include <memory>  // for shared_ptr
+#include <string>
 
 #include <gdk-pixbuf/gdk-pixbuf.h>  // for GdkPixbuf
 #include <gio/gio.h>                // for GInputStream
@@ -39,6 +40,8 @@ struct BackgroundImage {
 
     GdkPixbuf* getPixbuf();
     const GdkPixbuf* getPixbuf() const;
+
+    [[nodiscard]] auto encodePreviewPng() const -> std::string;
 
     bool isEmpty() const;
 
