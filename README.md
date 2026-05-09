@@ -28,19 +28,21 @@ VertexNote is a long-term fork of **Xournal++**. The goal is not to replace Xour
 
 ## 🧭 Current Status
 
-VertexNote is in early foundation work.
+VertexNote has a working geometry system and an alternative Qt Widgets shell alongside the original GTK3 UI.
 
 | Area | Status |
 |------|--------|
-| VertexNote fork baseline | ✅ Started |
-| Architecture notes | ✅ Added |
-| Geometry value types | ✅ Started |
-| Vertex / edge object model | ✅ Started |
-| Stroke fallback generation | ✅ Started |
-| Snap engine | ✅ Started |
-| Object-based rendering | 🚧 Planned |
+| VertexNote fork baseline | ✅ Done |
+| Architecture notes | ✅ Done |
+| Geometry value types | ✅ Done |
+| Vertex / edge object model | ✅ Done |
+| Stroke fallback generation | ✅ Done |
+| Snap engine | ✅ Done |
+| Click-based shape tools | ✅ Done |
+| Geometry constraints | ✅ Done (6 kinds) |
+| Object-based rendering | ✅ Done |
+| Qt Widgets shell | ✅ Done (14 phases) |
 | `.xopp` extension metadata | 🚧 Planned |
-| Constraint solver | 🧪 Future |
 | 3D wireframe layer | 🧪 Future |
 
 ---
@@ -65,10 +67,24 @@ VertexNote keeps Xournal++'s existing stroke model for handwritten content and a
 - Edges, polylines, arcs, circles, and construction geometry
 - Editable endpoints and control points
 - Snapping targets and intersections
-- Persistent constraints
+- Persistent constraints (Coincident, Horizontal, Vertical, FixedLength, Radius, Parallel, Perpendicular)
 - Future projected 3D wireframes
 
-See [docs/vertex-note-architecture.md](docs/vertex-note-architecture.md) for the current roadmap and subsystem map.
+### Qt Widgets shell
+
+An alternative Qt6-based shell (`ENABLE_QT_SHELL`) provides the same document editing workflow
+without the GTK3 dependency. It includes:
+
+- Full document open/save/export (`.xopp`, `.xoj`, `.xopt`, `.pdf`)
+- Pressure-sensitive pen, highlighter, eraser (whole-stroke & segment)
+- Click-based shape tools (line, rectangle, circle, arc, polyline, construction geometry)
+- Geometry editing with vertex drag, snapping, and constraint application
+- Element selection, clipboard, z-order, page & layer management
+- Navigation history, annotated page navigation, text search
+- Settings, printing, image insertion, plugin UI bridge
+
+See [docs/vertex-note-architecture.md](docs/vertex-note-architecture.md) for the core roadmap and
+[docs/qt-migration-bootstrap.md](docs/qt-migration-bootstrap.md) for the Qt shell feature log.
 
 ---
 
@@ -80,13 +96,19 @@ The current recommended Windows path is **MSYS2 MinGW64**.
 .\scripts\mingw64-dev.ps1
 ```
 
-Useful tasks:
+### GTK shell (default)
 
 - `.\scripts\mingw64-dev.ps1 configure`
 - `.\scripts\mingw64-dev.ps1 build`
 - `.\scripts\mingw64-dev.ps1 vertex-tests`
-- `.\scripts\mingw64-dev.ps1 test`
 - `.\scripts\mingw64-dev.ps1 run`
+
+### Qt shell
+
+Requires `mingw-w64-x86_64-qt6-base` and `mingw-w64-x86_64-qt6-printsupport`.
+
+- `.\scripts\mingw64-dev.ps1 build-qt`
+- `.\scripts\mingw64-dev.ps1 run-qt`
 
 See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and manual commands.
 
@@ -94,33 +116,31 @@ See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and ma
 
 ## 🎯 Geometry Roadmap
 
-### Phase 1: Vertex System
+### Phase 1: Vertex System ✅
 
-- Add stable geometry IDs
-- Add vertices and edges
-- Add object-local geometry containers
-- Add stroke fallback generation
-- Add tests for core model behavior
+- Stable geometry IDs, vertices, edges
+- Object-local geometry containers
+- Stroke fallback generation
+- Core model tests
 
-### Phase 2: Snapping Engine
+### Phase 2: Snapping Engine ✅
 
-- Add provider-based snapping
-- Wrap existing grid snapping as a provider
-- Add endpoint, midpoint, vertex, edge projection, and intersection snapping
-- Add per-page spatial indexes for large notebooks
+- Provider-based `SnapEngine`
+- `GridSnapProvider` and `GeometrySnapProvider`
+- Vertex, endpoint, midpoint, edge projection, and intersection snapping
 
-### Phase 3: Geometric Primitives
+### Phase 3: Geometric Primitives ✅
 
-- Add click-based line and polyline tools
-- Add object-based rectangle, arc, and circle tools
-- Keep existing Xournal++ drag tools unchanged
+- Click-based line, polyline, rectangle, arc, circle tools
+- Construction line and construction circle tools
+- Geometry snapping with grid fallback
 
-### Phase 4: Editable Constraints
+### Phase 4: Editable Constraints ✅
 
-- Add constraint objects
-- Add vertex handles and geometry edit mode
-- Add grouped undo/redo for geometry edits
-- Add a small connected-component solver
+- Coincident, Horizontal, Vertical, FixedLength, Radius, Parallel, Perpendicular
+- Constraint creation, deletion, and value editing
+- Connected-component solver
+- Vertex drag with constraint enforcement
 
 ### Phase 5: Lightweight 3D Wireframe Layer
 

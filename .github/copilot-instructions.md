@@ -9,10 +9,13 @@
 ## Project Context
 
 - VertexNote is a long-term fork of Xournal++ for CAD-inspired technical note-taking.
-- The stack is C++, GTK3, Cairo, CMake, and the existing Xournal++ architecture.
+- The stack is C++20, GTK3, Cairo, CMake, and the existing Xournal++ architecture.
+- An alternative Qt6 Widgets shell (`ENABLE_QT_SHELL`) provides full document editing
+  without GTK3. Qt shell code lives in `src/qt/`.
 - Preserve existing Xournal++ behavior unless a change is explicitly part of the VertexNote roadmap.
 - App code lives in `src/core`; tests live in `test/unit_tests`.
 - VertexNote-specific geometry code lives under `src/core/vertexnote`.
+- Platform-neutral render/input abstractions live in `src/core/view/render/` and `src/core/ui/`.
 
 ## Architecture Rules
 
@@ -22,6 +25,16 @@
 - Do not turn `Stroke` into a general CAD object.
 - Keep geometry, snapping, constraints, and future 3D support in separable modules.
 - Maintain compatibility with existing `.xopp` documents.
+
+## Qt Shell Conventions
+
+- Qt shell uses `QtDocumentController` for all document mutations, not the GTK `Control` class.
+- Commands are registered via `QtCommandHost::registerCommand()` with `CommandDescriptor`.
+- Shortcuts are plain strings (e.g. `\"Ctrl+S\"`, `\"Alt+Left\"`), not `QKeySequence`.
+- Tool state lives in `QtToolState` struct on `QtCanvas`.
+- All editing operations must support undo/redo via `QtHistoryEntry` variants.
+- Prefer `this->window.commandHost()->` over local `host` variables in `registerBootstrapCommands()`.
+- Build: `scripts/mingw64-dev.ps1 build-qt`; run: `scripts/mingw64-dev.ps1 run-qt`.
 
 ## Git and Releases
 

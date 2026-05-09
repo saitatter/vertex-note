@@ -30,13 +30,13 @@ This document tracks the executable slices of the Qt migration.
 
 - **App bootstrap**: `QApplication`, `QMainWindow`, full `IAppShell`
   implementation (`QtAppShell`).
-- **Command host**: `QtCommandHost` — ~35 bootstrap commands wired to
-  `QAction`/`QMenu`.
+- **Command host**: `QtCommandHost` — ~80 bootstrap commands wired to
+  `QAction`/`QMenu` across 14 phases.
 - **Services**: `QtClipboardService`, `QtDialogService`,
   `QtRecentFilesService` (working), `QtUpdatePresentationService` and
   `QtPluginUiBridge` (real callbacks, menu/toolbar integration).
 - **Canvas**: `QtCanvas` — viewport rendering with translated mouse, pen,
-  wheel, key, and touch input; pan / zoom / fit-page interactions.
+  wheel, key, and touch input; pan / zoom / fit-page / fit-width interactions.
 - **Input adapter**: `QtInputAdapter` translates Qt events → neutral
   `vn::ui::input` events.
 - **Document controller**: `QtDocumentController` — loads real `.xopp`,
@@ -50,35 +50,57 @@ This document tracks the executable slices of the Qt migration.
   - Drag vertices with grid and geometry snapping.
   - Insert vertex on edge, delete selected geometry.
   - Local undo/redo history for geometry edits.
+  - Constraint application (Coincident, Horizontal, Vertical, FixedLength,
+    Radius, Parallel, Perpendicular) with validation and value editing.
 - **Tool system** (`QtToolState`):
-  - Tool types: Hand, Pen, Eraser, Highlighter, Text, SelectRect.
-  - Tool commands with keyboard shortcuts (H, P, E, G) and toolbar buttons.
-  - Per-tool state: color, width, pressure sensitivity.
+  - Tool types: Hand, Pen, Eraser, Highlighter, Text, SelectRect,
+    DrawLine, DrawRectangle, DrawCircle, DrawArc, DrawPolyline,
+    DrawConstructionLine, DrawConstructionCircle.
+  - Tool commands with keyboard shortcuts and toolbar buttons.
+  - Per-tool state: color, width, pressure sensitivity, line style, fill, font.
 - **Stroke drawing**:
   - Pressure-sensitive input from mouse and tablet (Wacom) devices.
   - Pen and Highlighter tools create `Stroke` elements on the active layer.
   - Active stroke rendered live through shared `StrokeRenderer` pipeline.
-  - Minimum distance filtering between points.
-- **Whole-stroke eraser**:
-  - Eraser tool deletes strokes that intersect the eraser path.
-  - Uses `Stroke::intersects()` for precise hit testing.
-  - All strokes erased in one drag are batched into a single undo entry.
-- **Element selection** (SelectRect tool):
+  - Pen line style (solid/dash/dashdot/dot) and stroke fill support.
+- **Eraser**:
+  - Whole-stroke eraser deletes strokes that intersect the eraser path.
+  - Segment eraser splits strokes at intersection points.
+  - Both modes batch operations into single undo entries.
+- **Element operations**:
   - Click-to-select with distance-based hit testing.
   - Rubber-band rectangle selection for multi-select.
   - Shift+click additive/toggle selection.
   - Drag selected elements to move them.
-  - Selection overlay with dashed bounding box and corner handles.
+  - Copy/cut/paste with in-memory clipboard.
+  - Delete selection, select all, z-order (bring to front/back/forward/backward).
+- **Shape drawing**:
+  - 7 click-based shape tools with live dashed-line preview.
+  - 2-click tools (line, rectangle, circle, construction geometry).
+  - 3-click arc tool, multi-click polyline (double-click to finalize).
+- **Page & layer management**:
+  - Add, duplicate, delete, reorder pages.
+  - Layer panel with visibility toggles, add/remove/reorder/rename/copy/merge.
+  - Show/hide all layers, add layer above/below current.
+- **Navigation**:
+  - Page navigation: first/last/next/previous/goto with keyboard shortcuts.
+  - Navigation history with back/forward (Alt+Left/Right).
+  - Annotated page navigation (next/previous page with content).
+  - Layer navigation: next/previous/top layer switching.
+- **Document workflow**:
+  - Save to `.xopp`, PDF export, PNG export, print.
+  - Image insertion with undo support.
+  - Text search across all text elements.
+  - Settings dialog with tabbed preferences.
+  - Font selection dialog.
 - **Shared page rendering** (`PageContentRenderer`):
   - Dispatches all drawable types through abstract renderer interfaces.
   - Both committed strokes and in-progress active strokes render through
     the same `StrokeRenderer` pipeline.
 - **Unified undo/redo**:
-  - Supports geometry edits, stroke creation, stroke erasure, and
-    element moves.
-  - Stroke undo removes from layer, redo re-inserts at original position.
-  - Erase undo re-inserts all removed strokes at original z-order.
-  - Move undo/redo applies inverse/forward delta to element positions.
+  - Supports geometry edits, stroke creation, stroke erasure, element
+    moves, element deletion, and shape creation.
+  - Full undo/redo for all document-modifying operations.
 
 ## Build
 
@@ -101,16 +123,13 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 ## Intentional Limits
 
-- The shipping GTK application remains the primary shell for now.
-- The Qt target opens real core documents and supports drawing and erasing,
-  but does not host the GTK `Control` class (too tightly coupled). Instead,
-  tool management and undo/redo are implemented Qt-natively using the same
-  core model objects (`Stroke`, `Layer`, `Document`).
-- Preview renderers cover pressure-sensitive strokes, all background
-  patterns (ruled, graph, dotted, staves, etc.), multi-line text with
-  correct Pango-equivalent sizing, images, and PDF/image raster backgrounds.
+- The GTK shell remains the primary shell for plugin execution (Lua runtime).
+- The Qt shell opens real core documents and supports the full drawing, editing,
+  and document management workflow, but does not host the GTK `Control` class.
+  Tool management, undo/redo, and all editing operations are implemented
+  Qt-natively using the same core model objects (`Stroke`, `Layer`, `Document`).
 - Plugin system has UI bridge for menu/toolbar actions but no Qt-native
-  Lua runtime; plugins require the GTK shell to execute.
+  Lua runtime; plugins requiring Lua execution need the GTK shell.
 
 ## Completed Slices
 

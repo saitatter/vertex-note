@@ -192,7 +192,9 @@ Solve constraints per connected component, not per document.
 Initial implementation status:
 
 - `GeometryObject` stores validated `Constraint` records with object-local IDs.
-- Constraint solving, edit handles, and undo actions are still deferred.
+- Constraint solving is implemented for all 7 supported kinds.
+- Edit handles and vertex drag with constraint enforcement are working.
+- Undo/redo actions cover constraint creation, deletion, and geometry edits.
 
 ## Undo/Redo
 
@@ -220,50 +222,40 @@ after saving, which should be documented as a compatibility limitation.
 
 ## Roadmap
 
-### Phase 1: Vertex System
+### Phase 1: Vertex System ✅
 
-- Add `GeometryElement`.
-- Add IDs, vertices, and edges.
-- Add fallback stroke generation.
-- Add `GeometryElementView`.
-- Add save/load extension scaffolding.
+- ✅ `GeometryElement` with IDs, vertices, edges.
+- ✅ Fallback stroke generation.
+- ✅ `GeometryElementView`.
+- ✅ Save/load extension scaffolding.
 
-### Phase 2: Snapping Engine
+### Phase 2: Snapping Engine ✅
 
-- Add provider-based `SnapEngine`.
-- Wrap current grid snapping as `GridSnapProvider`.
-- Add vertex, endpoint, midpoint, edge projection, and intersection providers.
-- Add per-page spatial index.
+- ✅ Provider-based `SnapEngine` chooses highest-priority candidate.
+- ✅ `GridSnapProvider` covers regular grid candidates.
+- ✅ `GeometrySnapProvider` covers vertices, midpoints, projections, intersections.
+- ✅ `PageGeometryCollector` supplies visible page geometry at tool start.
+- Per-page spatial index and intersection caching deferred until geometry
+  elements scale beyond current workloads.
 
-Initial implementation status:
+### Phase 3: Geometric Primitives ✅
 
-- `vn::snap::SnapEngine` chooses the highest-priority candidate inside the query radius.
-- `GridSnapProvider` covers regular grid candidates without coupling the engine to GTK/settings.
-- `GeometrySnapProvider` covers explicit vertices, line midpoints, line projections, and line intersections.
-- `PageGeometryCollector` supplies visible page geometry to the snap provider at tool start.
-- Page/document indexing and intersection caching are intentionally deferred until geometry
-  elements can be enumerated from a page-level geometry registry.
+- ✅ `LineByClicksHandler` creates two-vertex elements.
+- ✅ `PolylineByClicksHandler` creates multi-edge elements from discrete clicks.
+- ✅ `RectangleByVerticesHandler` creates four-edge elements from corner clicks.
+- ✅ Arc (3-click), circle, construction line, and construction circle tools.
+- ✅ Geometry snapping first, grid fallback.
+- ✅ Process-local IDs via `GeometryIdGenerator`.
+- Existing Xournal++ drag tools remain unchanged.
 
-### Phase 3: Geometric Primitives
+### Phase 4: Editable Constraints ✅
 
-- Add click-based line and polyline tools.
-- Add object-based rectangle, arc, and circle.
-- Keep existing drag tools unchanged.
-
-Initial implementation status:
-
-- `LineByClicksHandler` creates a two-vertex `GeometryElement`.
-- `PolylineByClicksHandler` creates a multi-edge `GeometryElement` from discrete clicks.
-- `RectangleByVerticesHandler` creates a four-edge `GeometryElement` from opposite-corner clicks.
-- Both handlers use geometry snapping first and legacy grid snapping as fallback.
-- New geometry objects receive non-zero process-local object IDs through `GeometryIdGenerator`.
-
-### Phase 4: Editable Constraints
-
-- Add constraint objects.
-- Add vertex handles and object edit mode.
-- Add grouped undo actions for geometry edits.
-- Add small connected-component solver.
+- ✅ Constraint objects: Coincident, Horizontal, Vertical, FixedLength, Radius,
+  Parallel, Perpendicular.
+- ✅ Constraint creation, deletion, and value editing.
+- ✅ Connected-component solver.
+- ✅ Vertex drag with constraint enforcement.
+- ✅ Grouped undo actions for geometry edits.
 
 ### Phase 5: Lightweight 3D Wireframe Layer
 
