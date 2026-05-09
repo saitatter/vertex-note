@@ -366,40 +366,32 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                                             std::size_t pageIndex) const {
     if (this->backgroundRenderer) {
         vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
-        const vn::view::render::PageBackgroundRenderModel model{
-                .backgroundFormat = pageInfo.backgroundFormat,
-                .annotated = pageInfo.annotated,
-                .hasBackgroundName = pageInfo.hasBackgroundName,
-                .backgroundName = pageInfo.backgroundName,
-                .layerCount = pageInfo.layerCount,
-                .pdfPageNumber = pageInfo.pdfPageNumber,
-        };
         const vn::view::render::RenderRect renderRect{
                 .x = rect.x(),
                 .y = rect.y(),
                 .width = rect.width(),
                 .height = rect.height(),
         };
-        this->backgroundRenderer->draw(model, renderRect, renderContext);
+        this->backgroundRenderer->draw(pageInfo.background, renderRect, renderContext);
     }
 
     painter.setPen(QColor(61, 74, 89));
     painter.drawText(QRectF(rect.left() + 26.0, rect.top() + 18.0, rect.width() - 52.0, 30.0), Qt::AlignLeft | Qt::AlignVCenter,
                      QStringLiteral("Page %1").arg(static_cast<int>(pageIndex + 1)));
 
-    if (pageInfo.hasBackgroundName) {
+    if (pageInfo.background.hasBackgroundName) {
         painter.setPen(QColor(120, 131, 146));
         painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 48.0, rect.width() - 52.0, 24.0),
                          Qt::AlignLeft | Qt::AlignVCenter,
-                         QString::fromStdString(pageInfo.backgroundName));
+                         QString::fromStdString(pageInfo.background.backgroundName));
     }
 
     painter.setPen(QColor(102, 112, 133));
     painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 74.0, rect.width() - 52.0, 24.0),
                      Qt::AlignLeft | Qt::AlignVCenter,
                      QStringLiteral("Layers %1  |  Annotated %2")
-                             .arg(static_cast<int>(pageInfo.layerCount))
-                             .arg(pageInfo.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
+                             .arg(static_cast<int>(pageInfo.background.layerCount))
+                             .arg(pageInfo.background.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
 }
 
 void QtExperimentalCanvas::beginPan(const QPointF& position) {

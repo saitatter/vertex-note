@@ -14,17 +14,12 @@
 
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
-#include "model/PageType.h"
+#include "view/render/Renderers.h"
 
 struct QtExperimentalPageInfo {
     double width = 0.0;
     double height = 0.0;
-    PageTypeFormat backgroundFormat = PageTypeFormat::Plain;
-    bool annotated = false;
-    bool hasBackgroundName = false;
-    std::string backgroundName;
-    std::size_t layerCount = 0;
-    std::size_t pdfPageNumber = 0;
+    vn::view::render::PageBackgroundRenderModel background;
 };
 
 class QtExperimentalDocumentController {

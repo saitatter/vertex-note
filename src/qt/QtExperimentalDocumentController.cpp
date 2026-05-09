@@ -12,6 +12,7 @@
 #include "control/xojfile/LoadHandler.h"
 #include "model/Document.h"
 #include "model/NotePage.h"
+#include "view/render/PageBackgroundRenderModelFactory.h"
 
 QtExperimentalDocumentController::QtExperimentalDocumentController() { newBlankDocument(); }
 
@@ -79,15 +80,9 @@ auto QtExperimentalDocumentController::snapshotPages() const -> std::vector<QtEx
             continue;
         }
 
-        const auto pageType = page->getBackgroundType();
         pages.push_back({.width = page->getWidth(),
                          .height = page->getHeight(),
-                         .backgroundFormat = pageType.format,
-                         .annotated = page->isAnnotated(),
-                         .hasBackgroundName = page->backgroundHasName(),
-                         .backgroundName = page->getBackgroundName(),
-                         .layerCount = static_cast<std::size_t>(page->getLayerCount()),
-                         .pdfPageNumber = page->getPdfPageNr()});
+                         .background = vn::view::render::PageBackgroundRenderModelFactory::fromPage(page)});
     }
     this->document->unlock_shared();
     return pages;

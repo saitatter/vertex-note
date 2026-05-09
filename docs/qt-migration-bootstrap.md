@@ -20,6 +20,7 @@ This document tracks the first executable slices of the Qt migration.
   - experimental `.vnsession` open/save flow as a viewport sidecar linked to a document path
   - shared-core page stack preview driven by `Document` and `NotePage`
   - first background preview renderer wired through the backend-neutral render seam
+  - GTK page-type previews now consume the same background render model seam through a Cairo preview renderer
 
 ## Build
 
