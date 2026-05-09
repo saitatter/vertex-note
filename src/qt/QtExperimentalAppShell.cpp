@@ -185,6 +185,19 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
             });
 
     this->window.commandHost()->registerCommand(
+            {.id = "edit.insert-vertex",
+             .text = "Insert Vertex on Edge",
+             .tooltip = "Insert a geometry vertex on the selected experimental Qt edge",
+             .shortcut = "Insert",
+             .menu = "Edit"},
+            [this]() {
+                if (this->window.canvas()->insertVertexOnSelectedEdge()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Inserted geometry vertex"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+
+    this->window.commandHost()->registerCommand(
             {.id = "edit.delete-geometry",
              .text = "Delete Selected Geometry",
              .tooltip = "Delete the selected experimental Qt geometry vertex or edge",
@@ -238,11 +251,12 @@ void QtExperimentalAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
-    const std::array<std::string_view, 12> commandIds = {"app.new",
+    const std::array<std::string_view, 13> commandIds = {"app.new",
                                                           "app.open",
                                                           "app.save-as",
                                                           "edit.undo-geometry",
                                                           "edit.redo-geometry",
+                                                          "edit.insert-vertex",
                                                           "edit.delete-geometry",
                                                           "view.zoom-in",
                                                           "view.zoom-out",

@@ -47,6 +47,7 @@ public:
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
     [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
     [[nodiscard]] auto undoGeometryEdit() -> bool;
@@ -55,6 +56,7 @@ public:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;

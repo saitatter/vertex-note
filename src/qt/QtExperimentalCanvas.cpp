@@ -252,6 +252,20 @@ auto QtExperimentalCanvas::deleteSelectedGeometry() -> bool {
     return changed;
 }
 
+auto QtExperimentalCanvas::insertVertexOnSelectedEdge() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const bool changed = this->documentController->insertVertexOnSelectedEdge();
+    if (changed) {
+        updateDebugOverlay(QStringLiteral("inserted geometry vertex"));
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
 auto QtExperimentalCanvas::canUndoGeometryEdit() const -> bool {
     return this->documentController && this->documentController->canUndoGeometryEdit();
 }
@@ -368,6 +382,19 @@ void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
     QWidget::mousePressEvent(event);
 }
 
+void QtExperimentalCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
+    this->inputAdapter->handleMousePress(*event);
+    if (event->button() == Qt::LeftButton) {
+        updateGeometryHover(event->position());
+        selectHoveredGeometry();
+        if (insertVertexOnSelectedEdge()) {
+            event->accept();
+            return;
+        }
+    }
+    QWidget::mouseDoubleClickEvent(event);
+}
+
 void QtExperimentalCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
     if (this->panning && (event->button() == Qt::MiddleButton || event->button() == Qt::LeftButton)) {
@@ -447,6 +474,9 @@ void QtExperimentalCanvas::keyPressEvent(QKeyEvent* event) {
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = true;
         setCursor(Qt::OpenHandCursor);
+    } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Insert && insertVertexOnSelectedEdge()) {
+        event->accept();
+        return;
     } else if (!event->isAutoRepeat() &&
                (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && deleteSelectedGeometry()) {
         event->accept();

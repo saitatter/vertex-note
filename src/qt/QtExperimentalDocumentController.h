@@ -89,6 +89,7 @@ public:
     [[nodiscard]] auto endGeometryVertexDrag() -> bool;
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtExperimentalGeometryDragState>&;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
     [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
     [[nodiscard]] auto undoGeometryEdit() -> bool;

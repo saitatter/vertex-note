@@ -328,6 +328,59 @@ auto QtExperimentalDocumentController::deleteSelectedGeometry() -> bool {
     return changed;
 }
 
+auto QtExperimentalDocumentController::insertVertexOnSelectedEdge() -> bool {
+    if (!this->selectedGeometryHit || !this->document ||
+        this->selectedGeometryHit->hit.type != vn::view::render::GeometryHitType::Edge ||
+        this->selectedGeometryHit->hit.edgeId == vn::geom::InvalidEdgeId) {
+        return false;
+    }
+
+    bool changed = false;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    std::optional<vn::geom::VertexId> insertedVertexId;
+    vn::geom::Vec2 insertedPoint{this->selectedGeometryHit->hit.point.x, this->selectedGeometryHit->hit.point.y};
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    insertedVertexId = geometry->insertVertexOnEdge(this->selectedGeometryHit->hit.edgeId, insertedPoint);
+    changed = insertedVertexId.has_value();
+    if (changed) {
+        afterGeometry = geometry->geometry();
+        if (const auto* vertex = geometry->geometry().vertex(*insertedVertexId)) {
+            insertedPoint = vertex->position;
+        }
+    }
+    this->document->unlock();
+
+    if (changed) {
+        pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                             .objectId = this->selectedGeometryHit->hit.objectId,
+                             .before = std::move(*beforeGeometry),
+                             .after = std::move(*afterGeometry),
+                             .text = "Insert geometry vertex"});
+        vn::view::render::GeometryHitResult insertedHit;
+        insertedHit.type = vn::view::render::GeometryHitType::Vertex;
+        insertedHit.objectId = this->selectedGeometryHit->hit.objectId;
+        insertedHit.vertexId = *insertedVertexId;
+        insertedHit.edgeId = vn::geom::InvalidEdgeId;
+        insertedHit.point = Point(insertedPoint.x, insertedPoint.y);
+        insertedHit.snapKind.reset();
+        insertedHit.screenDistance = 0.0;
+        this->selectedGeometryHit = QtExperimentalGeometryHit{.pageIndex = this->selectedGeometryHit->pageIndex,
+                                                              .hit = std::move(insertedHit)};
+        this->hoveredGeometryHit = this->selectedGeometryHit;
+        rebuildPageSnapshots();
+    }
+
+    return changed;
+}
+
 auto QtExperimentalDocumentController::canUndoGeometryEdit() const -> bool { return !this->geometryUndoHistory.empty(); }
 
 auto QtExperimentalDocumentController::canRedoGeometryEdit() const -> bool { return !this->geometryRedoHistory.empty(); }
