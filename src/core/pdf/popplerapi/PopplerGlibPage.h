@@ -33,7 +33,8 @@ public:
 
     void render(cairo_t* cr) const override;
     void renderForPrinting(cairo_t* cr) const override;
-    std::string renderPreviewPng(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const override;
+    vn::util::RasterImageData renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth,
+                                                  double pageHeight) const override;
 
     std::vector<PdfRectangle> findText(const std::string& text) override;
 

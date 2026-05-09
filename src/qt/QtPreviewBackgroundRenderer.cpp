@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include <QByteArray>
 #include <QColor>
 #include <QImage>
 #include <QPainter>
@@ -22,6 +21,16 @@ namespace {
 
 auto penWidthForZoom(double baseWidth, double zoomFactor) -> double {
     return std::max(baseWidth / std::max(zoomFactor, 0.001), 0.35);
+}
+
+auto qtImageFormatFor(vn::util::RasterPixelFormat format) -> QImage::Format {
+    switch (format) {
+        case vn::util::RasterPixelFormat::Argb32Premultiplied:
+            return QImage::Format_ARGB32_Premultiplied;
+        case vn::util::RasterPixelFormat::Rgba8888:
+        default:
+            return QImage::Format_RGBA8888;
+    }
 }
 
 }  // namespace
@@ -50,11 +59,11 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
     const QColor ruling(134, 177, 255);
     const QColor margin(255, 79, 129);
 
-    if (!page.rasterContentPng.empty()) {
-        QImage raster;
-        if (raster.loadFromData(QByteArray(page.rasterContentPng.data(), static_cast<qsizetype>(page.rasterContentPng.size())))) {
-            painter->drawImage(pageRect, raster);
-        }
+    if (!page.rasterContent.empty()) {
+        const auto format = qtImageFormatFor(page.rasterContent.format);
+        const QImage raster(page.rasterContent.pixels.data(), page.rasterContent.width, page.rasterContent.height,
+                            page.rasterContent.stride, format);
+        painter->drawImage(pageRect, raster);
     }
 
     switch (page.backgroundFormat) {

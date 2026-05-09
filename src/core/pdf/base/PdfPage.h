@@ -19,6 +19,7 @@
 #include <cairo.h>  // for cairo_region_t, cairo_t
 #include <glib.h>   // for GURI
 
+#include "util/RasterImageData.h"
 #include "util/raii/CairoWrappers.h"
 
 #include "PdfAction.h"
@@ -74,7 +75,8 @@ public:
      */
     virtual void render(cairo_t* cr) const = 0;
     virtual void renderForPrinting(cairo_t* cr) const = 0;
-    virtual std::string renderPreviewPng(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const = 0;
+    virtual vn::util::RasterImageData renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth,
+                                                          double pageHeight) const = 0;
 
     virtual std::vector<PdfRectangle> findText(const std::string& text) = 0;
 

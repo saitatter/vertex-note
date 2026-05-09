@@ -14,6 +14,7 @@
 #include "model/Point.h"
 #include "model/PageType.h"
 #include "util/Color.h"
+#include "util/RasterImageData.h"
 #include "RenderContext.h"
 #include "vertexnote/geometry/GeometryTypes.h"
 
@@ -40,7 +41,7 @@ struct PageBackgroundRenderModel {
     std::string backgroundName;
     std::size_t layerCount = 0;
     std::size_t pdfPageNumber = 0;
-    std::string rasterContentPng;
+    vn::util::RasterImageData rasterContent;
 };
 
 struct StrokeRenderModel {

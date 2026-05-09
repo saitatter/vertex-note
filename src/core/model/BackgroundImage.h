@@ -19,6 +19,7 @@
 #include <glib.h>                   // for GError
 
 #include "filesystem.h"  // for path
+#include "util/RasterImageData.h"
 
 struct BackgroundImage {
     friend bool operator==(const BackgroundImage& lhs, const BackgroundImage& rhs) = default;
@@ -41,7 +42,7 @@ struct BackgroundImage {
     GdkPixbuf* getPixbuf();
     const GdkPixbuf* getPixbuf() const;
 
-    [[nodiscard]] auto encodePreviewPng() const -> std::string;
+    [[nodiscard]] auto renderPreviewRaster() const -> xoj::util::RasterImageData;
 
     bool isEmpty() const;
 

@@ -1,5 +1,6 @@
 #include "BackgroundImage.h"
 
+#include <cstddef>
 #include <string>   // for string
 #include <utility>  // for move
 
@@ -84,25 +85,43 @@ void BackgroundImage::setAttach(bool attach) {
 auto BackgroundImage::getPixbuf() -> GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
 auto BackgroundImage::getPixbuf() const -> const GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
 
-auto BackgroundImage::encodePreviewPng() const -> std::string {
+auto BackgroundImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
     const auto* pixbuf = getPixbuf();
     if (!pixbuf) {
         return {};
     }
 
-    gchar* buffer = nullptr;
-    gsize size = 0;
-    GError* error = nullptr;
-    if (!gdk_pixbuf_save_to_buffer(const_cast<GdkPixbuf*>(pixbuf), &buffer, &size, "png", &error, nullptr)) {
-        if (error) {
-            g_error_free(error);
-        }
+    const int width = gdk_pixbuf_get_width(pixbuf);
+    const int height = gdk_pixbuf_get_height(pixbuf);
+    const int rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+    const int channels = gdk_pixbuf_get_n_channels(pixbuf);
+    const bool hasAlpha = gdk_pixbuf_get_has_alpha(pixbuf);
+    const auto* sourcePixels = gdk_pixbuf_read_pixels(pixbuf);
+    if (!sourcePixels || width <= 0 || height <= 0 || rowstride <= 0 || channels < 3) {
         return {};
     }
 
-    std::string encoded(buffer, size);
-    g_free(buffer);
-    return encoded;
+    xoj::util::RasterImageData raster;
+    raster.width = width;
+    raster.height = height;
+    raster.stride = width * 4;
+    raster.format = xoj::util::RasterPixelFormat::Rgba8888;
+    raster.pixels.resize(static_cast<std::size_t>(raster.stride * raster.height));
+
+    for (int y = 0; y < height; ++y) {
+        const auto* sourceRow = sourcePixels + static_cast<std::ptrdiff_t>(y * rowstride);
+        auto* targetRow = raster.pixels.data() + static_cast<std::size_t>(y * raster.stride);
+        for (int x = 0; x < width; ++x) {
+            const auto sourceOffset = static_cast<std::ptrdiff_t>(x * channels);
+            const auto targetOffset = static_cast<std::size_t>(x * 4);
+            targetRow[targetOffset + 0] = sourceRow[sourceOffset + 0];
+            targetRow[targetOffset + 1] = sourceRow[sourceOffset + 1];
+            targetRow[targetOffset + 2] = sourceRow[sourceOffset + 2];
+            targetRow[targetOffset + 3] = hasAlpha ? sourceRow[sourceOffset + 3] : 255;
+        }
+    }
+
+    return raster;
 }
 
 auto BackgroundImage::isEmpty() const -> bool { return !this->img; }

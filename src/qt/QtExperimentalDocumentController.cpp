@@ -515,10 +515,10 @@ void QtExperimentalDocumentController::rebuildPageSnapshots() {
 
         auto background = vn::view::render::PageBackgroundRenderModelFactory::fromPage(page);
         if (background.backgroundFormat == PageTypeFormat::Pdf) {
-            background.rasterContentPng = vn::view::render::encodePdfPagePreviewPng(*this->document, page->getPdfPageNr(),
+            background.rasterContent = vn::view::render::createPdfPagePreviewRaster(*this->document, page->getPdfPageNr(),
                                                                                     page->getWidth(), page->getHeight());
         } else if (background.backgroundFormat == PageTypeFormat::Image) {
-            background.rasterContentPng = vn::view::render::encodeBackgroundImagePreviewPng(page->getBackgroundImage());
+            background.rasterContent = vn::view::render::createBackgroundImagePreviewRaster(page->getBackgroundImage());
         }
 
         std::vector<vn::view::render::PageDrawableRenderModel> drawables;
