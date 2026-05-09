@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("configure", "build", "test", "vertex-tests", "run", "all")]
+    [ValidateSet("configure", "build", "test", "vertex-tests", "run", "all", "configure-qt", "build-qt", "run-qt", "all-qt")]
     [string] $Task = "all"
 )
 
@@ -28,8 +28,16 @@ function Configure-VertexNote {
     Invoke-Mingw64 "cmake -S . -B build/mingw64 -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON"
 }
 
+function Configure-VertexNoteQt {
+    Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_EXPERIMENTAL=ON -DCMAKE_PREFIX_PATH=/mingw64"
+}
+
 function Build-VertexNote {
     Invoke-Mingw64 "cmake --build build/mingw64"
+}
+
+function Build-VertexNoteQt {
+    Invoke-Mingw64 "cmake --build build/mingw64-qt --target vertexnote-qt-experimental"
 }
 
 function Build-Tests {
@@ -43,6 +51,13 @@ switch ($Task) {
     "build" {
         Build-VertexNote
     }
+    "configure-qt" {
+        Configure-VertexNoteQt
+    }
+    "build-qt" {
+        Configure-VertexNoteQt
+        Build-VertexNoteQt
+    }
     "test" {
         Build-Tests
         Invoke-Mingw64 "./build/mingw64/test/test-units.exe"
@@ -55,10 +70,19 @@ switch ($Task) {
         Build-VertexNote
         Invoke-Mingw64 "./build/mingw64/src/vertex-note.exe"
     }
+    "run-qt" {
+        Configure-VertexNoteQt
+        Build-VertexNoteQt
+        Invoke-Mingw64 "./build/mingw64-qt/vertex-note-qt-experimental.exe"
+    }
     "all" {
         Configure-VertexNote
         Build-VertexNote
         Build-Tests
         Invoke-Mingw64 "./build/mingw64/test/test-units.exe"
+    }
+    "all-qt" {
+        Configure-VertexNoteQt
+        Build-VertexNoteQt
     }
 }

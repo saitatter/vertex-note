@@ -6,9 +6,8 @@
 
 #pragma once
 
+#include <string>
 #include <unordered_map>
-
-#include <QString>
 
 #include "ui/common/ICommandHost.h"
 
@@ -28,11 +27,11 @@ public:
     void triggerCommand(std::string_view id) override;
 
 private:
-    [[nodiscard]] auto ensureMenu(const QString& title) -> QMenu*;
+    [[nodiscard]] auto ensureMenu(std::string_view title) -> QMenu*;
     [[nodiscard]] auto actionFor(std::string_view id) const -> QAction*;
 
 private:
     QMainWindow* window = nullptr;
     std::unordered_map<std::string, QAction*> actions;
-    std::unordered_map<QString, QMenu*> menus;
+    std::unordered_map<std::string, QMenu*> menus;
 };

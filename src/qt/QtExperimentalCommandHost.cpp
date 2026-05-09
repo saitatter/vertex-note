@@ -11,6 +11,7 @@
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
+#include <QString>
 
 QtExperimentalCommandHost::QtExperimentalCommandHost(QMainWindow* window): window(window) {}
 
@@ -29,7 +30,7 @@ void QtExperimentalCommandHost::registerCommand(vn::ui::common::CommandDescripto
         }
     });
 
-    auto* menu = ensureMenu(descriptor.menu.empty() ? QStringLiteral("File") : QString::fromStdString(descriptor.menu));
+    auto* menu = ensureMenu(descriptor.menu.empty() ? std::string_view("File") : std::string_view(descriptor.menu));
     menu->addAction(action);
     this->actions.insert_or_assign(std::move(descriptor.id), action);
 }
@@ -56,13 +57,14 @@ void QtExperimentalCommandHost::triggerCommand(std::string_view id) {
     }
 }
 
-auto QtExperimentalCommandHost::ensureMenu(const QString& title) -> QMenu* {
-    if (auto it = this->menus.find(title); it != this->menus.end()) {
+auto QtExperimentalCommandHost::ensureMenu(std::string_view title) -> QMenu* {
+    const std::string key(title);
+    if (auto it = this->menus.find(key); it != this->menus.end()) {
         return it->second;
     }
 
-    auto* menu = this->window->menuBar()->addMenu(title);
-    this->menus.emplace(title, menu);
+    auto* menu = this->window->menuBar()->addMenu(QString::fromUtf8(key.data(), static_cast<int>(key.size())));
+    this->menus.emplace(key, menu);
     return menu;
 }
 

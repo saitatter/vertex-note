@@ -17,13 +17,19 @@ This document tracks the first executable slice of the Qt migration.
 The Qt shell is intentionally opt-in.
 
 ```powershell
-cmake -S . -B build/qt -DENABLE_QT_EXPERIMENTAL=ON
-cmake --build build/qt
+pacman -S mingw-w64-x86_64-qt6-base
+powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 build-qt
 ```
 
 Current binary name:
 
 - `vertex-note-qt-experimental`
+
+Run it with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
+```
 
 ## Intentional Limits
 

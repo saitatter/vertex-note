@@ -6,8 +6,6 @@
 
 #include "QtExperimentalMainWindow.h"
 
-#include <QIcon>
-
 QtExperimentalMainWindow::QtExperimentalMainWindow(): commandRegistry(this) {
     setObjectName("vertexNoteQtExperimentalMainWindow");
     setWindowTitle("VertexNote");
