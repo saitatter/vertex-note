@@ -37,6 +37,9 @@ struct RenderRect {
 
 struct PageBackgroundRenderModel {
     PageTypeFormat backgroundFormat = PageTypeFormat::Plain;
+    Color backgroundColor{Colors::white};
+    double pageWidth = 0.0;
+    double pageHeight = 0.0;
     bool annotated = false;
     bool hasBackgroundName = false;
     std::string backgroundName;

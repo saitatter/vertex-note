@@ -17,6 +17,9 @@ auto PageBackgroundRenderModelFactory::fromPage(ConstPageRef page) -> PageBackgr
 
     const auto pageType = page->getBackgroundType();
     return {.backgroundFormat = pageType.format,
+            .backgroundColor = page->getBackgroundColor(),
+            .pageWidth = page->getWidth(),
+            .pageHeight = page->getHeight(),
             .annotated = page->isAnnotated(),
             .hasBackgroundName = page->backgroundHasName(),
             .backgroundName = page->backgroundHasName() ? page->getBackgroundName() : std::string{},
@@ -26,6 +29,9 @@ auto PageBackgroundRenderModelFactory::fromPage(ConstPageRef page) -> PageBackgr
 
 auto PageBackgroundRenderModelFactory::fromPageType(const PageType& pageType) -> PageBackgroundRenderModel {
     return {.backgroundFormat = pageType.format,
+            .backgroundColor = Colors::white,
+            .pageWidth = 0.0,
+            .pageHeight = 0.0,
             .annotated = false,
             .hasBackgroundName = false,
             .backgroundName = {},
