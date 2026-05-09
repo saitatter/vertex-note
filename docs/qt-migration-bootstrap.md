@@ -108,9 +108,11 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   core model objects (`Stroke`, `Layer`, `Document`).
 - Preview renderers cover pressure-sensitive strokes, all background
   patterns (ruled, graph, dotted, staves, etc.), multi-line text with
-  correct Pango-equivalent sizing, and images.
+  correct Pango-equivalent sizing, images, and PDF/image raster backgrounds.
 - No segment eraser — only whole-stroke deletion.
-- No layer management, sidebar, or tool palette in the Qt shell yet.
+- No text input — only rendering of existing text elements.
+- Plugin system has UI bridge for menu/toolbar actions but no Qt-native
+  Lua runtime; plugins require the GTK shell to execute.
 
 ## Completed Slices
 
@@ -130,8 +132,10 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 6. ✓ Layer panel dock widget with visibility toggles, add/remove/reorder.
 7. ✓ Page background dialog with colour picker and pattern dropdown.
+8. ✓ PDF/Image raster preview via `PdfPage::renderPreviewRaster`.
 9. ✓ Export: PDF via `QPdfWriter`, PNG via `QImage` at configurable scale.
 10. ✓ Page sidebar dock with rendered thumbnails and click-to-scroll navigation.
+11. ✓ Fullscreen (F11) and presentation mode (F5) with toolbar/sidebar toggle.
 12. ✓ Toolbar palette with colour picker, pen width spinner, pressure toggle.
 
 ## Next Slices
@@ -143,5 +147,5 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 8. ✅ PDF annotation overlay — raster preview via `PdfPage::renderPreviewRaster`.
 9. ✅ Export (PDF, PNG) via QPdfWriter / QImage.
 10. ✅ Sidebar (page thumbnails with rendered previews, click-to-scroll).
-11. Plugin system, fullscreen/presentation modes.
+11. ✅ Fullscreen (F11) and presentation mode (F5); plugin UI bridge stub.
 12. ✅ Toolbar with colour picker, pen width spinner, pressure toggle.

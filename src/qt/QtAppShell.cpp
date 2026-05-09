@@ -13,6 +13,7 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QShortcut>
 #include <QStatusBar>
 #include <QString>
 #include <QToolBar>
@@ -314,6 +315,24 @@ void QtAppShell::registerBootstrapCommands() {
              .shortcut = "Ctrl+Shift+E",
              .menu = "File"},
             [this]() { exportPng(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.fullscreen",
+             .text = "Fullscreen",
+             .tooltip = "Toggle fullscreen mode",
+             .shortcut = "F11",
+             .menu = "View",
+             .checkable = true},
+            [this]() { toggleFullscreen(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.presentation",
+             .text = "Presentation Mode",
+             .tooltip = "Toggle presentation mode (fullscreen, no sidebar, fit page)",
+             .shortcut = "F5",
+             .menu = "View",
+             .checkable = true},
+            [this]() { togglePresentationMode(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -651,5 +670,52 @@ void QtAppShell::exportPng() {
     } else {
         QMessageBox::warning(&this->window, QStringLiteral("Export Failed"),
                              QString::fromStdString(errorMsg));
+    }
+}
+
+void QtAppShell::toggleFullscreen() {
+    const bool isFullscreen = this->window.isFullScreen();
+    if (isFullscreen) {
+        this->window.showNormal();
+    } else {
+        this->window.showFullScreen();
+    }
+    this->window.commandHost()->setCommandChecked("view.fullscreen", !isFullscreen);
+
+    // If leaving fullscreen while in presentation mode, exit presentation too
+    if (isFullscreen && this->presentationMode) {
+        this->presentationMode = false;
+        this->window.commandHost()->setCommandChecked("view.presentation", false);
+        this->window.mainToolBar()->setVisible(true);
+        this->window.pageSidebar()->setVisible(true);
+        this->window.layerPanel()->setVisible(true);
+    }
+}
+
+void QtAppShell::togglePresentationMode() {
+    this->presentationMode = !this->presentationMode;
+    this->window.commandHost()->setCommandChecked("view.presentation", this->presentationMode);
+
+    if (this->presentationMode) {
+        // Enter presentation: fullscreen, hide sidebar + layer panel + toolbar, fit page
+        if (!this->window.isFullScreen()) {
+            this->window.showFullScreen();
+            this->window.commandHost()->setCommandChecked("view.fullscreen", true);
+        }
+        this->window.mainToolBar()->setVisible(false);
+        this->window.pageSidebar()->setVisible(false);
+        this->window.layerPanel()->setVisible(false);
+        this->window.canvas()->fitPage(false);
+        this->window.statusBar()->showMessage(QStringLiteral("Presentation mode — press F5 or Escape to exit"), 4000);
+    } else {
+        // Exit presentation: restore toolbar + sidebar, leave fullscreen
+        this->window.mainToolBar()->setVisible(true);
+        this->window.pageSidebar()->setVisible(true);
+        this->window.layerPanel()->setVisible(true);
+        if (this->window.isFullScreen()) {
+            this->window.showNormal();
+            this->window.commandHost()->setCommandChecked("view.fullscreen", false);
+        }
+        this->window.statusBar()->showMessage(QStringLiteral("Exited presentation mode"), 3000);
     }
 }

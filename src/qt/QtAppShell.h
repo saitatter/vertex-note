@@ -53,6 +53,8 @@ private:
     void showBackgroundDialog();
     void exportPdf();
     void exportPng();
+    void toggleFullscreen();
+    void togglePresentationMode();
 
 private:
     QtMainWindow window;
@@ -65,4 +67,5 @@ private:
     QtDocumentSession session;
     std::unique_ptr<QtDocumentExporter> exporter;
     bool suppressDirtyTracking = false;
+    bool presentationMode = false;
 };
