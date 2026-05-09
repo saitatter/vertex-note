@@ -355,6 +355,17 @@ void EditSelectionContents::deleteViewBuffer() {
 
 void EditSelectionContents::invalidateViewBuffer() { deleteViewBuffer(); }
 
+void EditSelectionContents::rebaseBounds(Rectangle<double> bounds, Rectangle<double> snappedBounds) {
+    this->originalBounds = bounds;
+    this->lastBounds = bounds;
+    this->lastSnappedBounds = snappedBounds;
+    this->relativeX = -9999999999;
+    this->relativeY = -9999999999;
+    this->rotation = 0.0;
+    this->lastRotation = 0.0;
+    invalidateViewBuffer();
+}
+
 InsertionOrder EditSelectionContents::makeMoveEffective(const vn::util::Rectangle<double>& bounds,
                                                         const vn::util::Rectangle<double>& snappedBounds,
                                                         bool preserveAspectRatio) {

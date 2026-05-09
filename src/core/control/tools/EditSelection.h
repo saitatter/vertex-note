@@ -290,6 +290,7 @@ public:
     bool isDeleting() const;
 
     void copySelection();
+    [[nodiscard]] auto deleteActiveGeometryVertex() -> bool;
 
 public:
     PageView* getView();
@@ -350,6 +351,7 @@ private:
      * Updates rotation matrix
      */
     void updateMatrix();
+    void rebaseSelectionBounds();
 
     /**
      * scales and shifts to update bounding boxes

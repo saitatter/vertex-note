@@ -6,6 +6,7 @@
 #include <limits>     // for numeric_limits
 #include <memory>     // for make_unique, __sha...
 #include <numeric>    // for reduce
+#include <optional>
 #include <string>     // for string
 #include <utility>
 
@@ -28,6 +29,7 @@
 #include "model/Point.h"                          // for Point
 #include "model/NotePage.h"                        // for NotePage
 #include "undo/ArrangeUndoAction.h"               // for ArrangeUndoAction
+#include "undo/GeometryTopologyUndoAction.h"
 #include "undo/GeometryVertexMoveUndoAction.h"
 #include "undo/InsertUndoAction.h"                // for InsertsUndoAction
 #include "undo/UndoRedoHandler.h"                 // for UndoRedoHandler
@@ -51,6 +53,7 @@ constexpr size_t MINPIXSIZE = 5;
 /// Padding for ui buttons
 constexpr int DELETE_PADDING = 20;
 constexpr int ROTATE_PADDING = 8;
+constexpr double SELECTION_PADDING = 12.;
 
 /// Number of times to trigger edge pan timer per second
 constexpr unsigned int PAN_TIMER_RATE = 30;
@@ -223,11 +226,10 @@ EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& 
         snappingHandler(ctrl->getSettings()) {
     snappingHandler.setPageRef(page);
     // make the visible bounding box large enough so that anchors do not collapse even for horizontal/vertical strokes
-    const double PADDING = 12.;
-    x = bounds.minX - PADDING;
-    y = bounds.minY - PADDING;
-    width = bounds.getWidth() + 2 * PADDING;
-    height = bounds.getHeight() + 2 * PADDING;
+    x = bounds.minX - SELECTION_PADDING;
+    y = bounds.minY - SELECTION_PADDING;
+    width = bounds.getWidth() + 2 * SELECTION_PADDING;
+    height = bounds.getHeight() + 2 * SELECTION_PADDING;
 
     this->contents = std::make_unique<EditSelectionContents>(this->getRect(), this->snappedBounds, this->sourcePage,
                                                              this->sourceLayer, this->view);
@@ -851,6 +853,34 @@ void EditSelection::updateMatrix() {
     cairo_matrix_translate(&this->cmatrix, -rx, -ry);
 }
 
+void EditSelection::rebaseSelectionBounds() {
+    std::optional<Range> bounds;
+    std::optional<Range> snappingBounds;
+
+    for (const auto* element: this->contents->getElementsView()) {
+        if (!bounds) {
+            bounds = Range(element->boundingRect());
+            snappingBounds = Range(element->getSnappedBounds());
+            continue;
+        }
+
+        bounds = bounds->unite(Range(element->boundingRect()));
+        snappingBounds = snappingBounds->unite(Range(element->getSnappedBounds()));
+    }
+
+    if (!bounds || !snappingBounds) {
+        return;
+    }
+
+    this->x = bounds->minX - SELECTION_PADDING;
+    this->y = bounds->minY - SELECTION_PADDING;
+    this->width = bounds->getWidth() + 2 * SELECTION_PADDING;
+    this->height = bounds->getHeight() + 2 * SELECTION_PADDING;
+    this->snappedBounds = Rectangle<double>(*snappingBounds);
+    this->contents->rebaseBounds(this->getRect(), this->snappedBounds);
+    updateMatrix();
+}
+
 void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
     this->x += dx;
     this->y += dy;
@@ -876,6 +906,28 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
     }
 
     this->view->getNoteView()->repaintSelection();
+}
+
+auto EditSelection::deleteActiveGeometryVertex() -> bool {
+    if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId) {
+        return false;
+    }
+
+    const auto before = this->activeGeometryElement->geometry();
+    if (!this->activeGeometryElement->removeVertex(this->activeGeometryVertex)) {
+        return false;
+    }
+
+    const auto after = this->activeGeometryElement->geometry();
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->activeGeometryElement, before, after, _("Delete geometry vertex")));
+    this->activeGeometryVertex = vn::geom::InvalidVertexId;
+    this->activeGeometryVertexMoved = false;
+    rebaseSelectionBounds();
+    this->contents->invalidateViewBuffer();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
 }
 
 void EditSelection::setEdgePan(bool pan) {

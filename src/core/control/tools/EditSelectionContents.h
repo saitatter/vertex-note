@@ -129,6 +129,7 @@ public:
                        CursorSelectionType type);
 
     void invalidateViewBuffer();
+    void rebaseBounds(vn::util::Rectangle<double> bounds, vn::util::Rectangle<double> snappedBounds);
 
 private:
     /**

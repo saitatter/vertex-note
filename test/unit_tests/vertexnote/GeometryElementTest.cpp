@@ -84,6 +84,24 @@ TEST(VertexNoteGeometryElement, movesIndividualVertex) {
     EXPECT_FALSE(element.setVertexPosition(999, Vec2{1.0, 1.0}));
 }
 
+TEST(VertexNoteGeometryElement, replacesGeometryStateAndInvalidatesBounds) {
+    GeometryElement element = makeLineElement();
+    static_cast<void>(element.getX());  // Populate cached bounds before replacing.
+
+    GeometryObject replacement(99);
+    const auto a = replacement.addVertex(Vec2{10.0, 10.0});
+    const auto b = replacement.addVertex(Vec2{16.0, 10.0});
+    replacement.addLine(a, b);
+
+    element.replaceGeometry(std::move(replacement));
+
+    EXPECT_EQ(element.geometry().objectId(), 99U);
+    EXPECT_DOUBLE_EQ(element.getX(), 9.0);
+    EXPECT_DOUBLE_EQ(element.getY(), 9.0);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 8.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 2.0);
+}
+
 TEST(VertexNoteGeometryElement, clonesGeometryState) {
     GeometryElement element = makeLineElement();
     auto clone = element.clone();

@@ -69,6 +69,11 @@ auto GeometryElement::makeStrokeFallback() const -> std::unique_ptr<Stroke> {
 
 void GeometryElement::assignNewObjectId() { this->object.setObjectId(GeometryIdGenerator::nextObjectId()); }
 
+void GeometryElement::replaceGeometry(GeometryObject object) {
+    this->object = std::move(object);
+    this->sizeCalculated = false;
+}
+
 auto GeometryElement::setVertexPosition(VertexId id, Vec2 position) -> bool {
     const bool changed = this->object.setVertexPosition(id, position);
     if (changed) {

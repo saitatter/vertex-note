@@ -174,6 +174,12 @@ auto VertexNoteView::onKeyPressEvent(const KeyEvent& event) -> bool {
             return true;
         }
 
+        if (keyval == GDK_KEY_Delete || keyval == GDK_KEY_BackSpace) {
+            if (selection->deleteActiveGeometryVertex()) {
+                return true;
+            }
+        }
+
         int d = REGULAR_MOVE_AMOUNT;
         if (state == GDK_MOD1_MASK) {
             d = SMALL_MOVE_AMOUNT;
