@@ -636,7 +636,6 @@ void EditSelection::mouseUp() {
                         this->activeGeometryVertexStart, this->activeGeometryVertexCurrent));
             }
             rebaseSelectionBounds();
-            this->contents->invalidateViewBuffer();
             this->view->getPage()->fireElementChanged(this->activeGeometryElement);
         }
 
@@ -1027,29 +1026,18 @@ void EditSelection::updateMatrix() {
 }
 
 void EditSelection::rebaseSelectionBounds() {
-    std::optional<Range> bounds;
-    std::optional<Range> snappingBounds;
-
-    for (const auto* element: this->contents->getElementsView()) {
-        if (!bounds) {
-            bounds = Range(element->boundingRect());
-            snappingBounds = Range(element->getSnappedBounds());
-            continue;
-        }
-
-        bounds = bounds->unite(Range(element->boundingRect()));
-        snappingBounds = snappingBounds->unite(Range(element->getSnappedBounds()));
-    }
-
-    if (!bounds || !snappingBounds) {
+    const auto& elements = getInsertionOrder();
+    if (elements.empty()) {
         return;
     }
 
-    this->x = bounds->minX - SELECTION_PADDING;
-    this->y = bounds->minY - SELECTION_PADDING;
-    this->width = bounds->getWidth() + 2 * SELECTION_PADDING;
-    this->height = bounds->getHeight() + 2 * SELECTION_PADDING;
-    this->snappedBounds = Rectangle<double>(*snappingBounds);
+    auto [bounds, snappingBounds] = SelectionFactory::computeBoxes(elements);
+
+    this->x = bounds.minX - SELECTION_PADDING;
+    this->y = bounds.minY - SELECTION_PADDING;
+    this->width = bounds.getWidth() + 2 * SELECTION_PADDING;
+    this->height = bounds.getHeight() + 2 * SELECTION_PADDING;
+    this->snappedBounds = Rectangle<double>(snappingBounds);
     this->contents->rebaseBounds(this->getRect(), this->snappedBounds);
     updateMatrix();
 }
@@ -1175,7 +1163,6 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     rebaseSelectionBounds();
-    this->contents->invalidateViewBuffer();
     this->view->getPage()->fireElementChanged(this->activeGeometryElement);
     this->view->getNoteView()->repaintSelection();
     return true;
@@ -1200,7 +1187,6 @@ auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
     setSingleGeometryVertexSelection(this->hoveredGeometryElement, *inserted, this->hoveredGeometryInsertPosition);
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     rebaseSelectionBounds();
-    this->contents->invalidateViewBuffer();
     this->view->getPage()->fireElementChanged(this->activeGeometryElement);
     this->view->getNoteView()->repaintSelection();
     return true;
