@@ -178,6 +178,9 @@ auto VertexNoteView::onKeyPressEvent(const KeyEvent& event) -> bool {
             if (selection->deleteActiveGeometryVertex()) {
                 return true;
             }
+            if (selection->deleteActiveGeometryEdge()) {
+                return true;
+            }
         }
 
         if (keyval == GDK_KEY_Insert || keyval == GDK_KEY_KP_Insert) {

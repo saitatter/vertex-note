@@ -314,6 +314,14 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_EDIT_FIXED_LENGTH> {
 };
 
 template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_RADIUS> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>R", nullptr};
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Radius);
+    }
+};
+
+template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PARALLEL> {
     static constexpr const char* accelerators[] = {"<Ctrl><Alt>P", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {

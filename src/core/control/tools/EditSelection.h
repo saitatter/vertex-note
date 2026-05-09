@@ -295,6 +295,7 @@ public:
 
     void copySelection();
     [[nodiscard]] auto deleteActiveGeometryVertex() -> bool;
+    [[nodiscard]] auto deleteActiveGeometryEdge() -> bool;
     [[nodiscard]] auto insertActiveGeometryVertexOnEdge() -> bool;
     [[nodiscard]] auto insertGeometryVertexAt(double x, double y, double zoom) -> bool;
     [[nodiscard]] auto applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bool;

@@ -34,6 +34,7 @@ constexpr const char* ACTION_NAMES[] = {  // Action to string conversion map
         "vertexnote-constraint-vertical",
         "vertexnote-constraint-fixed-length",
         "vertexnote-constraint-edit-fixed-length",
+        "vertexnote-constraint-radius",
         "vertexnote-constraint-parallel",
         "vertexnote-constraint-perpendicular",
         "vertexnote-constraint-delete",

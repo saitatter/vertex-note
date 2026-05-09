@@ -38,6 +38,13 @@ TEST(VertexNoteGeometryConstraintCatalog, exposesUiAndSolverMetadata) {
     EXPECT_TRUE(fixedLength->requiresValue);
     EXPECT_TRUE(isSolverSupported(ConstraintKind::FixedLength));
 
+    const auto* radius = descriptorFor(ConstraintKind::Radius);
+    ASSERT_NE(radius, nullptr);
+    EXPECT_EQ(stableIdFor(ConstraintKind::Radius), "radius");
+    EXPECT_EQ(displayNameFor(ConstraintKind::Radius), "Radius");
+    EXPECT_TRUE(radius->requiresValue);
+    EXPECT_TRUE(isSolverSupported(ConstraintKind::Radius));
+
     const auto* equalLength = descriptorFor(ConstraintKind::EqualLength);
     ASSERT_NE(equalLength, nullptr);
     EXPECT_FALSE(equalLength->solverSupported);

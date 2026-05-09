@@ -196,6 +196,19 @@ TEST(VertexNoteGeometryObject, removesVertexWithDependentEdgesAndConstraints) {
     EXPECT_TRUE(object.constraints().empty());
 }
 
+TEST(VertexNoteGeometryObject, removesEdgesAndCleansDanglingVertices) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    const auto edge = object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+    object.addConstraint(ConstraintKind::Radius, {}, {edge}, 5.0);
+
+    EXPECT_TRUE(object.removeEdge(edge));
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+    EXPECT_TRUE(object.constraints().empty());
+}
+
 TEST(VertexNoteGeometryObject, replacesAndRemovesConstraints) {
     GeometryObject object(42);
     auto a = object.addVertex({0.0, 0.0});

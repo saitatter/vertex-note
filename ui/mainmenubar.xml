@@ -189,6 +189,10 @@
        <attribute name="action">win.vertexnote-constraint-edit-fixed-length</attribute>
       </item>
       <item>
+       <attribute name="label" translatable="yes">Radius</attribute>
+       <attribute name="action">win.vertexnote-constraint-radius</attribute>
+      </item>
+      <item>
        <attribute name="label" translatable="yes">Parallel</attribute>
        <attribute name="action">win.vertexnote-constraint-parallel</attribute>
       </item>

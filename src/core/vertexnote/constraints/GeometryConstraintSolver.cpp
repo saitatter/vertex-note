@@ -73,6 +73,14 @@ auto alignEdgeToDirection(geom::GeometryObject& object, geom::EdgeId edgeId, geo
                        geom::Vec2{start->position.x + direction.x * length, start->position.y + direction.y * length});
 }
 
+auto normalizeDirection(geom::Vec2 direction) -> std::optional<geom::Vec2> {
+    const double length = std::hypot(direction.x, direction.y);
+    if (length <= EPSILON) {
+        return std::nullopt;
+    }
+    return geom::Vec2{direction.x / length, direction.y / length};
+}
+
 }  // namespace
 
 GeometryConstraintSolver::GeometryConstraintSolver(std::size_t maxIterations): maxIterations(std::max<std::size_t>(1U, maxIterations)) {}
@@ -114,9 +122,11 @@ auto GeometryConstraintSolver::applyOnce(geom::GeometryObject& object) const -> 
             case geom::ConstraintKind::FixedLength:
                 changed = applyFixedLength(object, constraint);
                 break;
+            case geom::ConstraintKind::Radius:
+                changed = applyRadius(object, constraint);
+                break;
             case geom::ConstraintKind::EqualLength:
             case geom::ConstraintKind::FixedAngle:
-            case geom::ConstraintKind::Radius:
             case geom::ConstraintKind::OnEdge:
                 break;
         }
@@ -192,6 +202,47 @@ auto GeometryConstraintSolver::applyFixedLength(geom::GeometryObject& object, co
     return setPosition(object, end->id,
                        geom::Vec2{start->position.x + direction.x / length * constraint.value,
                                   start->position.y + direction.y / length * constraint.value});
+}
+
+auto GeometryConstraintSolver::applyRadius(geom::GeometryObject& object, const geom::Constraint& constraint) const
+        -> bool {
+    if (constraint.edges.empty() || constraint.value <= EPSILON) {
+        return false;
+    }
+
+    const auto* edge = object.edge(constraint.edges.front());
+    if (!edge || (edge->kind != geom::EdgeKind::Arc && edge->kind != geom::EdgeKind::ConstructionCircle) ||
+        edge->controls.empty()) {
+        return false;
+    }
+
+    const auto* center = object.vertex(edge->controls.front());
+    const auto* start = object.vertex(edge->start);
+    const auto* end = object.vertex(edge->end);
+    if (!center || !start || !end) {
+        return false;
+    }
+
+    bool changed = false;
+    if (auto startDirection = normalizeDirection(
+                geom::Vec2{start->position.x - center->position.x, start->position.y - center->position.y})) {
+        changed = setPosition(object, start->id,
+                              geom::Vec2{center->position.x + startDirection->x * constraint.value,
+                                         center->position.y + startDirection->y * constraint.value}) ||
+                  changed;
+    }
+
+    if (edge->end != edge->start) {
+        if (auto endDirection = normalizeDirection(
+                    geom::Vec2{end->position.x - center->position.x, end->position.y - center->position.y})) {
+            changed = setPosition(object, end->id,
+                                  geom::Vec2{center->position.x + endDirection->x * constraint.value,
+                                             center->position.y + endDirection->y * constraint.value}) ||
+                      changed;
+        }
+    }
+
+    return changed;
 }
 
 auto GeometryConstraintSolver::applyParallel(geom::GeometryObject& object, const geom::Constraint& constraint) const

@@ -24,7 +24,7 @@ constexpr std::array<ConstraintDescriptor, 10> Descriptors{{
         {ConstraintKind::EqualLength, "equal-length", "Equal length", 0, 2, false, false},
         {ConstraintKind::FixedLength, "fixed-length", "Fixed length", 2, 0, true, true},
         {ConstraintKind::FixedAngle, "fixed-angle", "Fixed angle", 0, 1, true, false},
-        {ConstraintKind::Radius, "radius", "Radius", 0, 1, true, false},
+        {ConstraintKind::Radius, "radius", "Radius", 0, 1, true, true},
         {ConstraintKind::OnEdge, "on-edge", "On edge", 1, 1, false, false},
 }};
 

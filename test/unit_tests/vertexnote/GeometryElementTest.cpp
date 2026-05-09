@@ -62,6 +62,18 @@ auto makeConstructionLineElement() -> GeometryElement {
     return element;
 }
 
+auto makeConstructionCircleElement() -> GeometryElement {
+    GeometryObject object(45);
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(vn::geom::EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
 }  // namespace
 
 TEST(VertexNoteGeometryElement, exposesGeometryElementType) {
@@ -107,6 +119,13 @@ TEST(VertexNoteGeometryElement, intersectsAreaAlongInfiniteConstructionLine) {
 
     EXPECT_TRUE(element.intersectsArea(19.0, 1.0, 2.0, 2.0));
     EXPECT_FALSE(element.intersectsArea(19.0, 6.0, 2.0, 2.0));
+}
+
+TEST(VertexNoteGeometryElement, computesDistanceToConstructionCircle) {
+    GeometryElement element = makeConstructionCircleElement();
+
+    EXPECT_DOUBLE_EQ(element.distanceTo(14.0, 10.0), 0.0);
+    EXPECT_DOUBLE_EQ(element.distanceTo(10.0, 10.0), 3.0);
 }
 
 TEST(VertexNoteGeometryElement, movesGeometryAndCachedBounds) {

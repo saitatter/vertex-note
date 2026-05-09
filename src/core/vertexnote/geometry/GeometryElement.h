@@ -32,6 +32,7 @@ public:
     void replaceGeometry(GeometryObject object);
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
     [[nodiscard]] auto removeVertex(VertexId id) -> bool;
+    [[nodiscard]] auto removeEdge(EdgeId id) -> bool;
     [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
 
     void move(double dx, double dy) override;

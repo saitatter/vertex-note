@@ -94,6 +94,45 @@ static auto distanceToSegment(double px, double py, double ax, double ay, double
     return {std::hypot(px - projX, py - projY), t};
 }
 
+static auto distanceToInfiniteLine(double px, double py, double ax, double ay, double bx, double by)
+        -> std::pair<double, double> {
+    const double dx = bx - ax;
+    const double dy = by - ay;
+    const double lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared == 0.0) {
+        return {std::hypot(px - ax, py - ay), 0.0};
+    }
+
+    const double t = ((px - ax) * dx + (py - ay) * dy) / lengthSquared;
+    const double projX = ax + t * dx;
+    const double projY = ay + t * dy;
+    return {std::hypot(px - projX, py - projY), t};
+}
+
+static const double TAU = 2.0 * std::acos(-1.0);
+
+static auto normalizeAngle(double angle) -> double {
+    angle = std::fmod(angle, TAU);
+    if (angle < 0.0) {
+        angle += TAU;
+    }
+    return angle;
+}
+
+static auto angleWithinSweep(double angle, double startAngle, double endAngle) -> bool {
+    angle = normalizeAngle(angle);
+    startAngle = normalizeAngle(startAngle);
+    endAngle = normalizeAngle(endAngle);
+    if (endAngle <= startAngle) {
+        endAngle += TAU;
+    }
+    if (angle < startAngle) {
+        angle += TAU;
+    }
+    return angle >= startAngle && angle <= endAngle;
+}
+
 static auto edgeLength(const vn::geom::GeometryObject& object, const vn::geom::Constraint& constraint) -> double {
     if (constraint.vertices.size() < 2U) {
         return 0.0;
@@ -158,7 +197,7 @@ static auto constraintBadgeText(const vn::geom::Constraint& constraint) -> std::
         case ConstraintKind::FixedAngle:
             return "ANGLE";
         case ConstraintKind::Radius:
-            return "R";
+            return "R=" + formatConstraintValue(constraint.value);
         case ConstraintKind::OnEdge:
             return "ON";
     }
@@ -1168,6 +1207,36 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
     return true;
 }
 
+auto EditSelection::deleteActiveGeometryEdge() -> bool {
+    if (!this->activeGeometryElement || this->activeGeometryEdges.empty()) {
+        return false;
+    }
+
+    const auto before = this->activeGeometryElement->geometry();
+    auto after = before;
+    bool changed = false;
+    for (const auto edgeId: this->activeGeometryEdges) {
+        changed = after.removeEdge(edgeId) || changed;
+    }
+    changed = applyGeometryConstraints(after) || changed;
+
+    if (!changed) {
+        return false;
+    }
+
+    this->activeGeometryElement->replaceGeometry(after);
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->activeGeometryElement, before, after,
+            this->activeGeometryEdges.size() > 1U ? _("Delete geometry edges") : _("Delete geometry edge")));
+    clearGeometryVertexSelection();
+    this->hoveredGeometryElement = nullptr;
+    this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
+    rebaseSelectionBounds();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
+}
+
 auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
     if (!this->hoveredGeometryElement || this->hoveredGeometryEdge == vn::geom::InvalidEdgeId) {
         return false;
@@ -1244,13 +1313,42 @@ auto EditSelection::applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bo
                 if (this->activeGeometryEdges.size() != 2U) {
                     return false;
                 }
+                for (const auto edgeId: this->activeGeometryEdges) {
+                    const auto* edge = before.edge(edgeId);
+                    if (!edge || (edge->kind != vn::geom::EdgeKind::Line &&
+                                  edge->kind != vn::geom::EdgeKind::ConstructionLine)) {
+                        return false;
+                    }
+                }
                 after.addConstraint(kind, {}, {this->activeGeometryEdges[0], this->activeGeometryEdges[1]});
                 break;
             case vn::geom::ConstraintKind::EqualLength:
             case vn::geom::ConstraintKind::FixedAngle:
-            case vn::geom::ConstraintKind::Radius:
             case vn::geom::ConstraintKind::OnEdge:
                 return false;
+            case vn::geom::ConstraintKind::Radius: {
+                if (this->activeGeometryEdges.size() != 1U) {
+                    return false;
+                }
+                const auto* edge = before.edge(this->activeGeometryEdges.front());
+                if (!edge || (edge->kind != vn::geom::EdgeKind::Arc &&
+                              edge->kind != vn::geom::EdgeKind::ConstructionCircle) ||
+                    edge->controls.empty()) {
+                    return false;
+                }
+                const auto* center = before.vertex(edge->controls.front());
+                const auto* start = before.vertex(edge->start);
+                if (!center || !start) {
+                    return false;
+                }
+                const double radius =
+                        std::hypot(start->position.x - center->position.x, start->position.y - center->position.y);
+                if (radius <= 0.0) {
+                    return false;
+                }
+                after.addConstraint(kind, {}, {this->activeGeometryEdges.front()}, radius);
+                break;
+            }
         }
     } catch (const std::invalid_argument&) {
         return false;
@@ -1751,6 +1849,7 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
     cairo_save(cr);
     cairo_set_dash(cr, nullptr, 0, 0);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
     const auto& geometry = highlightedElement->geometry();
 
     auto drawEdge = [&](const vn::geom::Edge& edge, double alpha, double widthScale) {
@@ -1768,23 +1867,83 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
         GdkRGBA color = selectionColor;
         color.alpha *= alpha;
         cairo_set_line_width(cr, std::max(2.0, static_cast<double>(this->btnWidth) * widthScale));
-        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine ||
+            edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
             constexpr std::array<double, 2> dash{6.0, 4.0};
             cairo_set_dash(cr, dash.data(), static_cast<int>(dash.size()), 0.0);
         } else {
             cairo_set_dash(cr, nullptr, 0, 0);
         }
         gdk_cairo_set_source_rgba(cr, &color);
+
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            double clipMinX = 0.0;
+            double clipMinY = 0.0;
+            double clipMaxX = 0.0;
+            double clipMaxY = 0.0;
+            cairo_clip_extents(cr, &clipMinX, &clipMinY, &clipMaxX, &clipMaxY);
+
+            const double dx = endX - startX;
+            const double dy = endY - startY;
+            const double length = std::hypot(dx, dy);
+            if (length == 0.0) {
+                cairo_move_to(cr, startX * zoom, startY * zoom);
+                cairo_line_to(cr, endX * zoom, endY * zoom);
+                cairo_stroke(cr);
+                return;
+            }
+
+            const double extent = (std::hypot(clipMaxX - clipMinX, clipMaxY - clipMinY) / zoom) + length;
+            const double unitX = dx / length;
+            const double unitY = dy / length;
+            cairo_move_to(cr, (startX - unitX * extent) * zoom, (startY - unitY * extent) * zoom);
+            cairo_line_to(cr, (startX + unitX * extent) * zoom, (startY + unitY * extent) * zoom);
+            cairo_stroke(cr);
+            return;
+        }
+
+        if ((edge.kind == vn::geom::EdgeKind::Arc || edge.kind == vn::geom::EdgeKind::ConstructionCircle) &&
+            !edge.controls.empty()) {
+            const auto* center = geometry.vertex(edge.controls.front());
+            if (!center) {
+                return;
+            }
+
+            const double centerX =
+                    hasWidth ? x + (center->position.x - original.x) * fx : x + this->width / 2.0;
+            const double centerY =
+                    hasHeight ? y + (center->position.y - original.y) * fy : y + this->height / 2.0;
+            const double radius = std::hypot(startX - centerX, startY - centerY);
+            if (edge.start == edge.end) {
+                cairo_arc(cr, centerX * zoom, centerY * zoom, radius * zoom, 0.0, SelectionFactory::TAU);
+                cairo_stroke(cr);
+            } else {
+                const double startAngle = std::atan2(startY - centerY, startX - centerX);
+                double endAngle = std::atan2(endY - centerY, endX - centerX);
+                if (endAngle <= startAngle) {
+                    endAngle += SelectionFactory::TAU;
+                }
+                cairo_arc(cr, centerX * zoom, centerY * zoom, radius * zoom, startAngle, endAngle);
+                cairo_stroke(cr);
+            }
+
+            if (edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
+                const double helperExtent = radius * 0.6;
+                cairo_move_to(cr, (centerX - helperExtent) * zoom, centerY * zoom);
+                cairo_line_to(cr, (centerX + helperExtent) * zoom, centerY * zoom);
+                cairo_move_to(cr, centerX * zoom, (centerY - helperExtent) * zoom);
+                cairo_line_to(cr, centerX * zoom, (centerY + helperExtent) * zoom);
+                cairo_stroke(cr);
+            }
+            return;
+        }
+
         cairo_move_to(cr, startX * zoom, startY * zoom);
         cairo_line_to(cr, endX * zoom, endY * zoom);
         cairo_stroke(cr);
     };
 
     for (const auto& edge: geometry.edges()) {
-        if (edge.kind != vn::geom::EdgeKind::Line && edge.kind != vn::geom::EdgeKind::ConstructionLine) {
-            continue;
-        }
-
         const bool edgeHovered =
                 highlightedElement == this->hoveredGeometryElement && edge.id == this->hoveredGeometryEdge;
         const bool edgeSelected = isGeometryEdgeSelected(highlightedElement, edge.id);
@@ -1962,10 +2121,6 @@ bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
         }
 
         for (const auto& edge: geometry->geometry().edges()) {
-            if (edge.kind != vn::geom::EdgeKind::Line && edge.kind != vn::geom::EdgeKind::ConstructionLine) {
-                continue;
-            }
-
             const auto* start = geometry->geometry().vertex(edge.start);
             const auto* end = geometry->geometry().vertex(edge.end);
             if (!start || !end) {
@@ -1980,14 +2135,63 @@ bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
             const double endY =
                     hasHeight ? this->y + (end->position.y - original.y) * fy : this->y + this->height / 2.0;
 
-            const auto [distance, t] =
-                    SelectionFactory::distanceToSegment(x, y, startX * zoom, startY * zoom, endX * zoom, endY * zoom);
+            double distance = std::numeric_limits<double>::infinity();
+            double projectedX = 0.0;
+            double projectedY = 0.0;
+
+            if (edge.kind == vn::geom::EdgeKind::Line) {
+                const auto [edgeDistance, t] =
+                        SelectionFactory::distanceToSegment(x, y, startX * zoom, startY * zoom, endX * zoom, endY * zoom);
+                distance = edgeDistance;
+                projectedX = startX + (endX - startX) * t;
+                projectedY = startY + (endY - startY) * t;
+            } else if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+                const auto [edgeDistance, t] = SelectionFactory::distanceToInfiniteLine(x, y, startX * zoom, startY * zoom,
+                                                                                         endX * zoom, endY * zoom);
+                distance = edgeDistance;
+                projectedX = startX + (endX - startX) * t;
+                projectedY = startY + (endY - startY) * t;
+            } else if ((edge.kind == vn::geom::EdgeKind::Arc || edge.kind == vn::geom::EdgeKind::ConstructionCircle) &&
+                       !edge.controls.empty()) {
+                const auto* center = geometry->geometry().vertex(edge.controls.front());
+                if (!center) {
+                    continue;
+                }
+
+                const double centerX =
+                        hasWidth ? this->x + (center->position.x - original.x) * fx : this->x + this->width / 2.0;
+                const double centerY =
+                        hasHeight ? this->y + (center->position.y - original.y) * fy : this->y + this->height / 2.0;
+                const double queryX = x / zoom;
+                const double queryY = y / zoom;
+                const double radius = std::hypot(startX - centerX, startY - centerY);
+                const double queryRadius = std::hypot(queryX - centerX, queryY - centerY);
+                if (queryRadius == 0.0 || radius == 0.0) {
+                    continue;
+                }
+
+                const bool fullCircle = edge.start == edge.end;
+                const double queryAngle = std::atan2(queryY - centerY, queryX - centerX);
+                if (!fullCircle) {
+                    const double startAngle = std::atan2(startY - centerY, startX - centerX);
+                    const double endAngle = std::atan2(endY - centerY, endX - centerX);
+                    if (!SelectionFactory::angleWithinSweep(queryAngle, startAngle, endAngle)) {
+                        continue;
+                    }
+                }
+
+                distance = std::abs(queryRadius - radius) * zoom;
+                const double scale = radius / queryRadius;
+                projectedX = centerX + (queryX - centerX) * scale;
+                projectedY = centerY + (queryY - centerY) * scale;
+            } else {
+                continue;
+            }
+
             if (distance > hitRadius) {
                 continue;
             }
 
-            const double projectedX = startX + (endX - startX) * t;
-            const double projectedY = startY + (endY - startY) * t;
             this->hoveredGeometryElement = geometry;
             this->hoveredGeometryEdge = edge.id;
             this->hoveredGeometryInsertPosition = geometryVertexPreviewToModel(projectedX, projectedY);

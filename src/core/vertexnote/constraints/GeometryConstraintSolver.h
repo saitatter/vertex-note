@@ -30,6 +30,7 @@ private:
     [[nodiscard]] auto applyVertical(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
     [[nodiscard]] auto applyFixedLength(geom::GeometryObject& object, const geom::Constraint& constraint) const
             -> bool;
+    [[nodiscard]] auto applyRadius(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
     [[nodiscard]] auto applyParallel(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
     [[nodiscard]] auto applyPerpendicular(geom::GeometryObject& object, const geom::Constraint& constraint) const
             -> bool;

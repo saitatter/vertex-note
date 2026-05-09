@@ -329,6 +329,25 @@ auto GeometryObject::removeVertex(VertexId id) -> bool {
     return true;
 }
 
+auto GeometryObject::removeEdge(EdgeId id) -> bool {
+    const auto oldSize = this->edgeList.size();
+    this->edgeList.erase(std::remove_if(this->edgeList.begin(), this->edgeList.end(),
+                                        [id](const Edge& edge) { return edge.id == id; }),
+                         this->edgeList.end());
+    if (this->edgeList.size() == oldSize) {
+        return false;
+    }
+
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [id](const Constraint& constraint) {
+                               return std::ranges::find(constraint.edges, id) != constraint.edges.end();
+                           }),
+            this->constraintList.end());
+    cleanupDanglingVertices();
+    return true;
+}
+
 auto GeometryObject::insertVertexOnEdge(EdgeId edgeId, Vec2 position) -> std::optional<VertexId> {
     auto* target = edge(edgeId);
     if (!target || target->kind != EdgeKind::Line || !containsVertex(target->start) || !containsVertex(target->end)) {
@@ -411,6 +430,32 @@ void GeometryObject::rotate(double x0, double y0, double rotation) {
 auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(id) != nullptr; }
 
 auto GeometryObject::containsEdge(EdgeId id) const -> bool { return edge(id) != nullptr; }
+
+void GeometryObject::cleanupDanglingVertices() {
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [this](const Constraint& constraint) {
+                               return std::ranges::any_of(
+                                       constraint.vertices, [this](VertexId vertexId) { return !containsVertex(vertexId); });
+                           }),
+            this->constraintList.end());
+
+    this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
+                                          [this](const Vertex& vertex) {
+                                              const bool referencedByEdge =
+                                                      std::ranges::any_of(this->edgeList, [&vertex](const Edge& edge) {
+                                                          return edge.start == vertex.id || edge.end == vertex.id ||
+                                                                 std::ranges::find(edge.controls, vertex.id) != edge.controls.end();
+                                                      });
+                                              const bool referencedByConstraint =
+                                                      std::ranges::any_of(this->constraintList, [&vertex](const Constraint& constraint) {
+                                                          return std::ranges::find(constraint.vertices, vertex.id) !=
+                                                                 constraint.vertices.end();
+                                                      });
+                                              return !referencedByEdge && !referencedByConstraint;
+                                          }),
+                           this->vertexList.end());
+}
 
 auto GeometryObject::nextVertexId() -> VertexId { return this->nextLocalVertexId++; }
 
