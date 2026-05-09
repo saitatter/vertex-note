@@ -143,7 +143,7 @@ protected:
 public:
     mutable vn::view::Mask debugMask;
 
-    static void paintDebugRect(const xoj::util::Rectangle<double>& rect, char color, cairo_t* cr);
+    static void paintDebugRect(const vn::util::Rectangle<double>& rect, char color, cairo_t* cr);
 #endif
 
 public:

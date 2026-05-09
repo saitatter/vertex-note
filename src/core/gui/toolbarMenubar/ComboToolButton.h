@@ -30,10 +30,10 @@ public:
     struct Entry {
         template <typename T>
         Entry(std::string name, std::string icon, T t):
-                name(std::move(name)), icon(std::move(icon)), target(xoj::util::makeGVariantSPtr<T>(t)) {}
+                name(std::move(name)), icon(std::move(icon)), target(vn::util::makeGVariantSPtr<T>(t)) {}
         std::string name;
         std::string icon;
-        xoj::util::GVariantSPtr target;  /// Target value of the associated GSimpleAction corresponding to the entry
+        vn::util::GVariantSPtr target;  /// Target value of the associated GSimpleAction corresponding to the entry
     };
     using Entries = std::vector<Entry>;
     /**
@@ -51,7 +51,7 @@ public:
     std::string getToolDisplayName() const override;
 
 protected:
-    xoj::util::WidgetSPtr createItem(bool horizontal) override;
+    vn::util::WidgetSPtr createItem(bool horizontal) override;
 
     GtkWidget* getNewToolIcon() const override;
 

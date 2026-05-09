@@ -35,7 +35,7 @@ public:
     /**
      * Initialize a Pango layout
      */
-    static xoj::util::GObjectSPtr<PangoLayout> initPango(cairo_t* cr, const Text* t);
+    static vn::util::GObjectSPtr<PangoLayout> initPango(cairo_t* cr, const Text* t);
 
 private:
     const Text* text;

@@ -29,7 +29,7 @@
 #include "util/safe_casts.h"                  // for as_signed
 #include "util/utf8_view.h"                   // for utf8
 
-#include "LinkDestination.h"  // for XojLinkDest, DOCUMENT_L...
+#include "LinkDestination.h"  // for LinkDestObject, DOCUMENT_L...
 #include "NotePage.h"          // for NotePage
 #include "filesystem.h"       // for path
 
@@ -50,14 +50,14 @@ void Document::freeTreeContentModel() {
 
 auto Document::freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc)
         -> bool {
-    XojLinkDest* link = nullptr;
+    LinkDestObject* link = nullptr;
     gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
 
     if (link == nullptr) {
         return false;
     }
 
-    // The dispose function of XojLinkDest is not called, this workaround fixes the Memory Leak
+    // The dispose function of LinkDestObject is not called, this workaround fixes the Memory Leak
     delete link->dest;
     link->dest = nullptr;
 
@@ -225,7 +225,7 @@ void Document::buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* 
 
         PdfAction* action = iter->getAction();
         LinkDestination* dest = new LinkDestination(*action->getDestination());
-        XojLinkDest* link = link_dest_new();
+        LinkDestObject* link = link_dest_new();
         link->dest = dest;
 
         if (action->getTitle().empty()) {
@@ -287,7 +287,7 @@ void Document::buildContentsModel() {
 auto Document::getContentsModel() const -> GtkTreeModel* { return this->contentsModel.get(); }
 
 auto Document::fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc) -> bool {
-    XojLinkDest* link = nullptr;
+    LinkDestObject* link = nullptr;
     gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
 
     if (link == nullptr) {

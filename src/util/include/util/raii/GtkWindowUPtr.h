@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "util/NamespaceAliases.h"
+
 #include <memory>
 
 #include <gtk/gtk.h>

@@ -25,12 +25,12 @@ public:
     struct Entry {
         template <typename T>
         Entry(std::string name, std::string icon, T t):
-                name(std::move(name)), icon(std::move(icon)), target(xoj::util::makeGVariantSPtr<T>(t)) {}
+                name(std::move(name)), icon(std::move(icon)), target(vn::util::makeGVariantSPtr<T>(t)) {}
         template <typename T>
-        Entry(std::string name, T t): name(std::move(name)), target(xoj::util::makeGVariantSPtr<T>(t)) {}
+        Entry(std::string name, T t): name(std::move(name)), target(vn::util::makeGVariantSPtr<T>(t)) {}
         std::string name;
         std::string icon;
-        xoj::util::GVariantSPtr target;  /// Target value of the associated GSimpleAction corresponding to the entry
+        vn::util::GVariantSPtr target;  /// Target value of the associated GSimpleAction corresponding to the entry
     };
 
     /// @param styleAction The action activated when an entry in the popover is clicked

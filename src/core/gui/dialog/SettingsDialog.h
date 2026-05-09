@@ -91,7 +91,7 @@ private:
 #endif
 
     Builder builder;
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 
     std::unique_ptr<DeviceTestingArea> deviceTestingArea;
 

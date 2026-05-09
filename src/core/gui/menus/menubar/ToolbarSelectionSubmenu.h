@@ -32,7 +32,7 @@ public:
     void addToMenubar(Menubar& menubar) override;
 
 private:
-    xoj::util::GObjectSPtr<GMenu> stockConfigurationsSection;
-    xoj::util::GObjectSPtr<GMenu> customConfigurationsSection;
-    xoj::util::GObjectSPtr<GSimpleAction> gAction;
+    vn::util::GObjectSPtr<GMenu> stockConfigurationsSection;
+    vn::util::GObjectSPtr<GMenu> customConfigurationsSection;
+    vn::util::GObjectSPtr<GSimpleAction> gAction;
 };

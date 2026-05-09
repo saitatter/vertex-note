@@ -33,6 +33,10 @@ template <typename T>
 class Rectangle;
 };  // namespace vn::util
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 /**
  * @brief The Layout manager for the VertexNoteWidget
  *
@@ -82,7 +86,7 @@ public:
     /**
      * Returns the Rectangle which is currently visible - in pixel coordinates
      */
-    xoj::util::Rectangle<double> getVisibleRect();
+    vn::util::Rectangle<double> getVisibleRect();
 
 
     /// recalculate and resize Layout
@@ -119,16 +123,16 @@ public:
      *
      * @param ref The reference point, in pixel coordinates
      */
-    xoj::util::Point<int> getFixedPaddingBeforePoint(const xoj::util::Point<double>& ref) const;
+    vn::util::Point<int> getFixedPaddingBeforePoint(const vn::util::Point<double>& ref) const;
 
     /// Get the zoom-dependent padding, added to center the page when zoomed out
-    xoj::util::Point<int> getCenteringPadding() const;
+    vn::util::Point<int> getCenteringPadding() const;
 
     /// Returns a list of the indices of the visible pages
     std::vector<size_t> getVisiblePages() const;
 
-    xoj::util::Point<int> getPixelCoordinatesOfEntry(xoj::util::Point<int> gridCoords) const;
-    xoj::util::Point<int> getPixelCoordinatesOfEntry(size_t n) const;
+    vn::util::Point<int> getPixelCoordinatesOfEntry(vn::util::Point<int> gridCoords) const;
+    vn::util::Point<int> getPixelCoordinatesOfEntry(size_t n) const;
 
     /**
      * Execute the given function for each entry that intersects the range. entryIndex is the entry, intersection is the
@@ -136,14 +140,14 @@ public:
      */
     void forEachEntriesIntersectingRange(
             const Range& rg,
-            std::function<void(size_t entryIndex, const Range& intersection, xoj::util::Point<int> pixelPosition)> fun)
+            std::function<void(size_t entryIndex, const Range& intersection, vn::util::Point<int> pixelPosition)> fun)
             const;
 
 protected:
     /// Same as above but does not lock the mutex
-    xoj::util::Point<int> getPixelCoordinatesOfEntryUnsafe(xoj::util::Point<int> gridCoords) const;
+    vn::util::Point<int> getPixelCoordinatesOfEntryUnsafe(vn::util::Point<int> gridCoords) const;
     /// Same as above but does not lock the mutex
-    xoj::util::Point<int> getPixelCoordinatesOfEntryUnsafe(size_t n) const;
+    vn::util::Point<int> getPixelCoordinatesOfEntryUnsafe(size_t n) const;
 
     /// Same as above but does not lock the mutex
     int getTotalPixelWidthUnsafe() const;
@@ -157,7 +161,7 @@ protected:
     void recomputeCenteringPaddingUnsafe(int allocWidth, int allocHeight);
 
     /// Convert pixel-coordinates to the grid position containing them
-    GridPosition getGridPositionAtUnsafe(const xoj::util::Point<double>& p) const;
+    GridPosition getGridPositionAtUnsafe(const vn::util::Point<double>& p) const;
 
     // Todo(Fabian): move to ScrollHandling also it must not depend on Layout
     static void horizontalScrollChanged(GtkAdjustment* adjustment, Layout* layout);

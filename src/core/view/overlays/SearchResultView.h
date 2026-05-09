@@ -22,7 +22,7 @@ class SearchControl;
 namespace vn::view {
 class Repaintable;
 
-class SearchResultView final: public OverlayView, public xoj::util::Listener<SearchResultView> {
+class SearchResultView final: public OverlayView, public vn::util::Listener<SearchResultView> {
 
 public:
     SearchResultView(const SearchControl* searchControl, Repaintable* parent, Color frameColor,

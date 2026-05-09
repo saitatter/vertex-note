@@ -31,7 +31,7 @@ public:
     /**
      * inserts an image scaled to the given size
      */
-    void insertImageWithSize(PageRef page, const xoj::util::Rectangle<double>& space);
+    void insertImageWithSize(PageRef page, const vn::util::Rectangle<double>& space);
 
     /// Creates the image from the given file
     [[nodiscard]] static auto createImageFromFile(const fs::path& path) -> std::unique_ptr<Image>;

@@ -40,7 +40,7 @@ private:
     /**
      * The Glade resources
      */
-    xoj::util::GObjectSPtr<GtkBuilder> builder;
+    vn::util::GObjectSPtr<GtkBuilder> builder;
 
     /**
      * Our search paths

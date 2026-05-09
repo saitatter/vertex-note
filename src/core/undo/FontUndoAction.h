@@ -21,7 +21,7 @@
 class FontUndoActionEntry;
 class Layer;
 class Text;
-class XojFont;
+class NoteFont;
 class Control;
 
 class FontUndoAction: public UndoAction {
@@ -34,7 +34,7 @@ public:
     bool redo(Control* control) override;
     std::string getText() override;
 
-    void addStroke(Text* e, const XojFont& oldFont, const XojFont& newFont);
+    void addStroke(Text* e, const NoteFont& oldFont, const NoteFont& newFont);
 
 private:
     std::vector<FontUndoActionEntry*> data;

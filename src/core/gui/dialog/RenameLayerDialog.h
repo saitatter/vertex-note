@@ -31,6 +31,6 @@ private:
     UndoRedoHandler* undo;
     Layer* l;
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     GtkEntry* layerNameEntry;
 };

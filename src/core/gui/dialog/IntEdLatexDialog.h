@@ -42,7 +42,7 @@ public:
 
 private:
     // Text field
-    xoj::util::GObjectSPtr<GtkCssProvider> cssProvider;  ///< For tex code display font and size
+    vn::util::GObjectSPtr<GtkCssProvider> cssProvider;  ///< For tex code display font and size
     GtkWidget* texBox;
     GtkTextBuffer* textBuffer;
 

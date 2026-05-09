@@ -45,6 +45,6 @@ private:
      */
     std::array<GdkRGBA, LAST_BACKGROUND_COLOR_COUNT> lastBackgroundColors{};
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     std::function<void(Color)> callback;
 };

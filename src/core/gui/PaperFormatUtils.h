@@ -26,7 +26,7 @@ namespace PaperFormatUtils {
  * @details The variant facilitates adding options which can't be expressed as a GtkPaperSize (e.g. a custom option
  *      or a copy current page format option)
  */
-using PaperFormatMenuOptionVector = std::vector<std::variant<std::string, xoj::util::GtkPaperSizeUPtr>>;
+using PaperFormatMenuOptionVector = std::vector<std::variant<std::string, vn::util::GtkPaperSizeUPtr>>;
 
 /**
  * @brief Loads the default PaperSizes into the passed vector

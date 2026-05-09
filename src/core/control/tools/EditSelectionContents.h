@@ -37,11 +37,11 @@ class DeleteUndoAction;
 class LineStyle;
 class ObjectInputStream;
 class ObjectOutputStream;
-class XojFont;
+class NoteFont;
 
 class EditSelectionContents: public ElementContainer, public Serializable {
 public:
-    EditSelectionContents(xoj::util::Rectangle<double> bounds, xoj::util::Rectangle<double> snappedBounds,
+    EditSelectionContents(vn::util::Rectangle<double> bounds, vn::util::Rectangle<double> snappedBounds,
                           const PageRef& sourcePage, Layer* sourceLayer, PageView* sourceView);
     ~EditSelectionContents() override;
 
@@ -69,7 +69,7 @@ public:
      * Sets the font of all containing text elements, return an undo action
      * (or nullptr if there are no Text elements)
      */
-    UndoActionPtr setFont(const XojFont& font);
+    UndoActionPtr setFont(const NoteFont& font);
 
     /**
      * Fills the undo item if the selection is deleted
@@ -94,7 +94,7 @@ public:
     /**
      * Returns all containing elements of this selection
      */
-    auto getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>>;
+    auto getElementsView() const -> vn::util::PointerContainerView<std::vector<Element*>>;
 
     void forEachElement(std::function<void(const Element*)> f) const override;
     void forEachMutableElement(std::function<void(Element*)> f);
@@ -121,10 +121,10 @@ public:
     void paint(cairo_t* cr, double x, double y, double rotation, double width, double height, double zoom);
 
     /// Applies the transformation to the selected elements, empties the selection and return the modified elements
-    InsertionOrder makeMoveEffective(const xoj::util::Rectangle<double>& bounds,
-                                     const xoj::util::Rectangle<double>& snappedBounds, bool preserveAspectRatio);
+    InsertionOrder makeMoveEffective(const vn::util::Rectangle<double>& bounds,
+                                     const vn::util::Rectangle<double>& snappedBounds, bool preserveAspectRatio);
 
-    void updateContent(xoj::util::Rectangle<double> bounds, xoj::util::Rectangle<double> snappedBounds, double rotation,
+    void updateContent(vn::util::Rectangle<double> bounds, vn::util::Rectangle<double> snappedBounds, double rotation,
                        bool aspectRatio, Layer* layer, const PageRef& targetPage, UndoRedoHandler* undo,
                        CursorSelectionType type);
 
@@ -162,7 +162,7 @@ public:
     /**
      * Gets the complete original bounding box as rectangle
      */
-    auto getOriginalBounds() const -> xoj::util::Rectangle<double>;
+    auto getOriginalBounds() const -> vn::util::Rectangle<double>;
 
 public:
     // Serialize interface
@@ -174,9 +174,9 @@ private:
      * The original dimensions to calculate the zoom factor for rescaling the items and the offset for moving the
      * selection
      */
-    xoj::util::Rectangle<double> originalBounds;
-    xoj::util::Rectangle<double> lastBounds;
-    xoj::util::Rectangle<double> lastSnappedBounds;
+    vn::util::Rectangle<double> originalBounds;
+    vn::util::Rectangle<double> lastBounds;
+    vn::util::Rectangle<double> lastSnappedBounds;
 
     /**
      * The given rotation. Original rotation should always be zero (double)

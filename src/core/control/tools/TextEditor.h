@@ -30,7 +30,7 @@
 #include "util/raii/PangoSPtr.h"
 
 class Text;
-class XojFont;
+class NoteFont;
 class Control;
 class TextEditorCallbacks;
 struct KeyEvent;
@@ -39,6 +39,10 @@ namespace xoj::util {
 template <class T>
 class DispatchPool;
 };
+
+namespace vn {
+namespace util = xoj::util;
+}
 
 namespace vn::view {
 class TextEditionView;
@@ -67,12 +71,12 @@ public:
 
     bool bufferEmpty() const;
 
-    void setFont(XojFont font);
+    void setFont(NoteFont font);
     void setColor(Color color);
 
     PangoLayout* getUpToDateLayout() const;
 
-    const std::shared_ptr<xoj::util::DispatchPool<vn::view::TextEditionView>>& getViewPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<vn::view::TextEditionView>>& getViewPool() const;
 
     Color getSelectionColor() const;
 
@@ -165,17 +169,17 @@ private:
     std::unique_ptr<Text> textElement;
     Text* originalTextElement;
 
-    xoj::util::GObjectSPtr<GtkIMContext> imContext;
-    xoj::util::GObjectSPtr<GtkTextBuffer> buffer;
-    xoj::util::GObjectSPtr<PangoLayout> layout;
+    vn::util::GObjectSPtr<GtkIMContext> imContext;
+    vn::util::GObjectSPtr<GtkTextBuffer> buffer;
+    vn::util::GObjectSPtr<PangoLayout> layout;
 
     enum class LayoutStatus { UP_TO_DATE, NEEDS_ATTRIBUTES_UPDATE, NEEDS_COMPLETE_UPDATE };
     mutable LayoutStatus layoutStatus;
 
     // InputMethod preedit data
     int preeditCursor;
-    xoj::util::PangoAttrListSPtr preeditAttrList;
-    xoj::util::OwnedCString preeditString;
+    vn::util::PangoAttrListSPtr preeditAttrList;
+    vn::util::OwnedCString preeditString;
 
     /**
      * @brief Tracks the bounding box of the editor from the last render.
@@ -186,7 +190,7 @@ private:
     Range previousBoundingBox;
     Range cursorBox;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::TextEditionView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::TextEditionView>> viewPool;
 
     /**
      * @brief Coordinate of the virtual cursor, in Pango coordinates.
@@ -198,7 +202,7 @@ private:
     // cursor blinking timings. In millisecond.
     unsigned int cursorBlinkingTimeOn = 0;
     unsigned int cursorBlinkingTimeOff = 0;
-    xoj::util::GSourceURef blinkTimer;
+    vn::util::GSourceURef blinkTimer;
     bool cursorBlink = true;
 
     bool needImReset = false;

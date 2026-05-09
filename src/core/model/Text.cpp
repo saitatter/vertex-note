@@ -8,7 +8,7 @@
 
 #include "model/AudioElement.h"   // for AudioElement
 #include "model/Element.h"        // for ELEMENT_TEXT, Eleme...
-#include "model/Font.h"           // for XojFont
+#include "model/Font.h"           // for NoteFont
 #include "pdf/base/PdfPage.h"  // for PdfRectangle
 #include "util/Rectangle.h"       // for Rectangle
 #include "util/Stacktrace.h"      // for Stacktrace
@@ -45,10 +45,10 @@ auto Text::cloneText() const -> std::unique_ptr<Text> {
 
 auto Text::clone() const -> ElementPtr { return cloneText(); }
 
-auto Text::getFont() -> XojFont& { return font; }
-auto Text::getFont() const -> const XojFont& { return font; }
+auto Text::getFont() -> NoteFont& { return font; }
+auto Text::getFont() const -> const NoteFont& { return font; }
 
-void Text::setFont(const XojFont& font) {
+void Text::setFont(const NoteFont& font) {
     this->font = font;
     sizeCalculated = false;
 }

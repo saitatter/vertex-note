@@ -27,7 +27,7 @@ class ZoomControl;
 namespace vn::view {
 class Repaintable;
 
-class VerticalToolView final: public ToolView, public ZoomListener, public xoj::util::Listener<VerticalToolView> {
+class VerticalToolView final: public ToolView, public ZoomListener, public vn::util::Listener<VerticalToolView> {
 
 public:
     VerticalToolView(const VerticalToolHandler* handler, Repaintable* parent, ZoomControl* zoomControl,

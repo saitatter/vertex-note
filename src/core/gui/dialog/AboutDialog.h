@@ -24,6 +24,6 @@ public:
     inline GtkWindow* getWindow() const { return window.get(); }
 
 private:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 };
 };  // namespace vn::popup

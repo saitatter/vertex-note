@@ -58,7 +58,7 @@ public:
 private:
     struct NavState {
         PageRef page;
-        std::optional<xoj::util::Rectangle<double>> rect;
+        std::optional<vn::util::Rectangle<double>> rect;
     };
 
     NavState captureState() const;

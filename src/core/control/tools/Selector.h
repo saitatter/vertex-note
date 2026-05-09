@@ -31,7 +31,7 @@ public:
     Selector(bool multiLayer);
     ~Selector() override;
 
-    using BoundaryPoint = xoj::util::Point<double>;
+    using BoundaryPoint = vn::util::Point<double>;
 
 public:
     /**
@@ -49,7 +49,7 @@ public:
      */
     virtual void extendAtPageEdges() = 0;
 
-    inline auto getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<vn::view::SelectorView>>& {
+    inline auto getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<vn::view::SelectorView>>& {
         return viewPool;
     }
 
@@ -75,7 +75,7 @@ protected:
 
     Range bbox;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::SelectorView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::SelectorView>> viewPool;
 
     friend class EditSelection;
 };

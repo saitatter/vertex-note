@@ -64,9 +64,9 @@ public:
     double getElementWidth() const;
     double getElementHeight() const;
 
-    xoj::util::Rectangle<double> getSnappedBounds() const;
+    vn::util::Rectangle<double> getSnappedBounds() const;
 
-    xoj::util::Rectangle<double> boundingRect() const;
+    vn::util::Rectangle<double> boundingRect() const;
 
     virtual bool intersectsArea(const GdkRectangle* src) const;
     virtual bool intersectsArea(double x, double y, double width, double height) const;
@@ -102,7 +102,7 @@ protected:
     mutable double y = 0;
 
     // The position and dimensions on the screen used for snapping
-    mutable xoj::util::Rectangle<double> snappedBounds{};
+    mutable vn::util::Rectangle<double> snappedBounds{};
 
 private:
     /**

@@ -30,6 +30,10 @@ template <class T>
 class DispatchPool;
 };
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 
 namespace vn::view {
 class OverlayView;
@@ -49,7 +53,7 @@ public:
 
     auto createView(vn::view::Repaintable* parent) const -> std::unique_ptr<vn::view::OverlayView>;
 
-    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<vn::view::LaserPointerView>> {
+    inline auto getViewPool() const -> std::shared_ptr<vn::util::DispatchPool<vn::view::LaserPointerView>> {
         return viewPool;
     }
 
@@ -59,14 +63,14 @@ private:
 
 private:
     std::unique_ptr<TemporaryStrokeHandler> strokehandler;
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::LaserPointerView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::LaserPointerView>> viewPool;
 
     // Used only to pass on to (Temporary)StrokeHandler
     Control* ctrl;
     PageRef page;
     PageView* pageView;
 
-    xoj::util::GSourceURef fadeoutTimer;
+    vn::util::GSourceURef fadeoutTimer;
     uint8_t fadeoutAlpha = 255;
     const unsigned int fadeoutStartDelay;
     bool hasFinishedStrokes;

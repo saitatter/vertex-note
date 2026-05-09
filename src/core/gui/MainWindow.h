@@ -42,7 +42,7 @@ class GladeSearchpath;
 
 class Menubar;
 
-typedef std::array<xoj::util::WidgetSPtr, TOOLBAR_DEFINITIONS_LEN> ToolbarWidgetArray;
+typedef std::array<vn::util::WidgetSPtr, TOOLBAR_DEFINITIONS_LEN> ToolbarWidgetArray;
 
 class MainWindow: public GladeGui {
 public:
@@ -184,8 +184,8 @@ private:
     /// The last monitor the window has been moved to -- used for setting dpi
     GdkMonitor* lastMonitor = nullptr;
 
-    xoj::util::WidgetSPtr boxContainerWidget;
-    xoj::util::WidgetSPtr panedContainerWidget;
-    xoj::util::WidgetSPtr mainContentWidget;
-    xoj::util::WidgetSPtr sidebarWidget;
+    vn::util::WidgetSPtr boxContainerWidget;
+    vn::util::WidgetSPtr panedContainerWidget;
+    vn::util::WidgetSPtr mainContentWidget;
+    vn::util::WidgetSPtr sidebarWidget;
 };

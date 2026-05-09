@@ -821,7 +821,7 @@ struct ActionProperties<Action::FONT> {
     static std::string initialState(Control* ctrl) { return ctrl->getSettings()->getFont().asString(); }
     static void callback(GSimpleAction* ga, GVariant* p, Control* ctrl) {
         g_simple_action_set_state(ga, p);
-        ctrl->fontChanged(XojFont(g_variant_get_string(p, nullptr)));
+        ctrl->fontChanged(NoteFont(g_variant_get_string(p, nullptr)));
     }
 };
 

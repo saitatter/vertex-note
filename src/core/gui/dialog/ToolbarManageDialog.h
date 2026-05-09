@@ -49,12 +49,12 @@ private:
 
 private:
     ToolbarModel* tbModel;
-    xoj::util::GObjectSPtr<GtkListStore> model;
+    vn::util::GObjectSPtr<GtkListStore> model;
 
     GtkTreeView* tree;
     GtkWidget* copyButton;
     GtkWidget* deleteButton;
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     std::function<void()> callback;
 };

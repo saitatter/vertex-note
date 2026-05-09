@@ -56,7 +56,7 @@ public:
     [[nodiscard]] auto orientation() const -> PaperOrientation;
 
     // Constructors
-    explicit PaperSize(const xoj::util::GtkPaperSizeUPtr& gtkPaperSize);
+    explicit PaperSize(const vn::util::GtkPaperSizeUPtr& gtkPaperSize);
     explicit PaperSize(const PageTemplateSettings& model);
     PaperSize(double width, double height);
 };

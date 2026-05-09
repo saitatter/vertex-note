@@ -45,9 +45,9 @@ public:
     auto operator=(AbstractToolItem&&) -> AbstractToolItem& = delete;  // Implement if desired
 
 public:
-    virtual xoj::util::WidgetSPtr createItem(bool horizontal) = 0;
+    virtual vn::util::WidgetSPtr createItem(bool horizontal) = 0;
 
-    xoj::util::WidgetSPtr createToolItem(bool horizontal);
+    vn::util::WidgetSPtr createToolItem(bool horizontal);
 
     const std::string& getId() const;
     Category getCategory() const;

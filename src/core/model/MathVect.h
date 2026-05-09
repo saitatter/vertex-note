@@ -33,10 +33,10 @@ struct MathVect2 {
 
 MathVect2 operator*(const double c, const MathVect2& u);
 template <typename point_type>
-xoj::util::Point<double> operator+(const point_type& p, const MathVect2& v) {
+vn::util::Point<double> operator+(const point_type& p, const MathVect2& v) {
     return {p.x + v.dx, p.y + v.dy};
 }
 template <typename point_type>
-xoj::util::Point<double> operator-(const point_type& p, const MathVect2& v) {
+vn::util::Point<double> operator-(const point_type& p, const MathVect2& v) {
     return {p.x - v.dx, p.y - v.dy};
 }

@@ -54,7 +54,7 @@ private:
 
 private:
     GladeSearchpath* gladeSearchPath;  // For opening subdialogs as needed
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 
     Settings* settings;
     ToolMenuHandler* toolMenuHandler;

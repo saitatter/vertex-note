@@ -83,7 +83,7 @@ private:
     template <typename DPIInfoType>
     void constructorImpl(DPIInfoType dpiInfo, const Range& extent, double zoom, cairo_content_t contentType);
 
-    xoj::util::CairoSPtr cr;
+    vn::util::CairoSPtr cr;
     int xOffset = 0;
     int yOffset = 0;
     double zoom = 1.0;

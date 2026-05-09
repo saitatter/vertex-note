@@ -57,8 +57,8 @@ private:
     const char** values;
 };
 
-using c_string_utf8_view = xoj::util::utf8_view<const char*, xoj::util::CharSentinelClass<char>>;
-using string_utf8_view = xoj::util::utf8_view<const char*, const char*>;
+using c_string_utf8_view = vn::util::utf8_view<const char*, vn::util::CharSentinelClass<char>>;
+using string_utf8_view = vn::util::utf8_view<const char*, const char*>;
 
 // generic templates
 
@@ -161,7 +161,7 @@ template <typename>
 inline constexpr bool is_utf8_view_v = false;
 
 template <typename It, typename Sen>
-inline constexpr bool is_utf8_view_v<xoj::util::utf8_view<It, Sen>> = true;
+inline constexpr bool is_utf8_view_v<vn::util::utf8_view<It, Sen>> = true;
 
 
 template <typename T>
@@ -251,7 +251,7 @@ auto XmlParserHelper::getAttrib(std::u8string_view name, const AttributeMap& att
             if constexpr (std::is_constructible_v<T, const char*>) {
                 return T{*optionalCStr};  // Type is directly constructible from a C-string, e.g. std::string_view
             } else if constexpr (detail::has_names_v<T> && detail::has_value_enum_v<T>) {
-                return detail::parseEnum<T>(*optionalCStr | xoj::util::utf8);
+                return detail::parseEnum<T>(*optionalCStr | vn::util::utf8);
             } else if constexpr (std::is_arithmetic_v<T>) {
                 return detail::parseNumeric<T>(*optionalCStr);
             } else {

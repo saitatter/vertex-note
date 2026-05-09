@@ -14,7 +14,7 @@
 #include "control/jobs/ProgressListener.h"  // for ProgressListener
 #include "model/Document.h"                 // for Document
 #include "model/Layer.h"                    // for Layer
-#include "model/LinkDestination.h"          // for LinkDestination, XojLinkDest
+#include "model/LinkDestination.h"          // for LinkDestination, LinkDestObject
 #include "model/PageRef.h"                  // for PageRef
 #include "model/PageType.h"                 // for PageType
 #include "model/NotePage.h"                  // for NotePage
@@ -90,7 +90,7 @@ void CairoPdfExport::populatePdfOutline() {
         auto [iter, parentId] = nodeStack.top();
         nodeStack.pop();
         const int currentId = ++idCounter;
-        XojLinkDest* link = nullptr;
+        LinkDestObject* link = nullptr;
 
         gtk_tree_model_get(tocModel, &iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
         auto dest = link->dest;

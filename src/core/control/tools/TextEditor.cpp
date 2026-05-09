@@ -13,7 +13,7 @@
 #include "control/settings/Settings.h"
 #include "gui/VertexNoteCursor.h"  // for VertexNoteCursor
 #include "model/Document.h"       // for Document
-#include "model/Font.h"           // for XojFont
+#include "model/Font.h"           // for NoteFont
 #include "model/Text.h"           // for Text
 #include "model/NotePage.h"        // for NotePage
 #include "undo/DeleteUndoAction.h"
@@ -200,7 +200,7 @@ void TextEditor::setColor(Color color) {
     repaintEditor(false);
 }
 
-void TextEditor::setFont(XojFont font) {
+void TextEditor::setFont(NoteFont font) {
     this->textElement->setFont(font);
     afterFontChange();
 }
@@ -341,7 +341,7 @@ void TextEditor::toggleOverwrite() {
  * Improve that later on...
  */
 void TextEditor::decreaseFontSize() {
-    XojFont& font = textElement->getFont();
+    NoteFont& font = textElement->getFont();
     if (double size = font.getSize(); size > 1) {
         font.setSize(font.getSize() - 1);
         afterFontChange();
@@ -349,14 +349,14 @@ void TextEditor::decreaseFontSize() {
 }
 
 void TextEditor::increaseFontSize() {
-    XojFont& font = textElement->getFont();
+    NoteFont& font = textElement->getFont();
     font.setSize(font.getSize() + 1);
     afterFontChange();
 }
 
 void TextEditor::toggleBoldFace() {
     // get the current/used font
-    XojFont& font = textElement->getFont();
+    NoteFont& font = textElement->getFont();
     std::string fontName = font.getName();
 
     std::size_t found = fontName.find(" Bold");

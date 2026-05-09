@@ -63,7 +63,7 @@ public:
     Color getBackgroundColor() const;
 
     std::vector<Layer*>& getLayers();
-    xoj::util::PointerContainerView<std::vector<Layer*>> getLayersView() const;
+    vn::util::PointerContainerView<std::vector<Layer*>> getLayersView() const;
 
     Layer::Index getLayerCount() const;
     Layer::Index getSelectedLayerId();

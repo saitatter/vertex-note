@@ -22,6 +22,10 @@ template <class T>
 class Rectangle;
 }  // namespace xoj::util
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 class PageListener {
 public:
     PageListener();
@@ -31,7 +35,7 @@ public:
     void registerToHandler(std::shared_ptr<PageHandler> const& handler);
     void unregisterFromHandler();
 
-    virtual void rectChanged(xoj::util::Rectangle<double>& rect) {}
+    virtual void rectChanged(vn::util::Rectangle<double>& rect) {}
     virtual void rangeChanged(Range& range) {}
     virtual void elementChanged(const Element* elem) {}
     virtual void elementsChanged(const std::vector<const Element*>& elements, const Range& range) {}

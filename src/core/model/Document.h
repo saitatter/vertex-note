@@ -93,8 +93,8 @@ public:
 
     bool isAttachPdf() const;
 
-    xoj::util::CairoSurfaceSPtr getPreview() const;
-    void setPreview(xoj::util::CairoSurfaceSPtr preview);
+    vn::util::CairoSurfaceSPtr getPreview() const;
+    void setPreview(vn::util::CairoSurfaceSPtr preview);
 
     void lock();
     void unlock();
@@ -158,7 +158,7 @@ private:
     /**
      * The bookmark contents model
      */
-    xoj::util::GObjectSPtr<GtkTreeModel> contentsModel;
+    vn::util::GObjectSPtr<GtkTreeModel> contentsModel;
 
     /**
      *  create a backup before save
@@ -168,7 +168,7 @@ private:
     /**
      * The preview for the file
      */
-    xoj::util::CairoSurfaceSPtr preview;
+    vn::util::CairoSurfaceSPtr preview;
 
     /**
      * The lock of the document

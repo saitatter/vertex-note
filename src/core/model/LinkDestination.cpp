@@ -4,13 +4,13 @@
 
 #include "util/Util.h"  // for npos
 
-struct _LinkDestClass {
+struct _LinkDestObjectClass {
     GObjectClass base_class;
 };
 
-G_DEFINE_TYPE(XojLinkDest, link_dest, G_TYPE_OBJECT)  // @suppress("Unused static function")
+G_DEFINE_TYPE(LinkDestObject, link_dest, G_TYPE_OBJECT)  // @suppress("Unused static function")
 
-static void link_dest_init(XojLinkDest* linkAction) { linkAction->dest = nullptr; }
+static void link_dest_init(LinkDestObject* linkAction) { linkAction->dest = nullptr; }
 
 static gpointer parent_class = nullptr;
 
@@ -23,7 +23,7 @@ static void link_dest_finalize(GObject* object) {
 
 static void link_dest_dispose(GObject* object) { G_OBJECT_CLASS(parent_class)->dispose(object); }
 
-static void link_dest_class_init(XojLinkDestClass* linkClass) {
+static void link_dest_class_init(LinkDestObjectClass* linkClass) {
     GObjectClass* g_object_class = nullptr;
 
     parent_class = g_type_class_peek_parent(linkClass);
@@ -34,7 +34,7 @@ static void link_dest_class_init(XojLinkDestClass* linkClass) {
     g_object_class->finalize = link_dest_finalize;
 }
 
-auto link_dest_new() -> XojLinkDest* { return LINK_DEST(g_object_new(TYPE_LINK_DEST, nullptr)); }
+auto link_dest_new() -> LinkDestObject* { return LINK_DEST(g_object_new(TYPE_LINK_DEST, nullptr)); }
 
 LinkDestination::LinkDestination():
         page(npos),

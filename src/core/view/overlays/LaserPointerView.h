@@ -29,7 +29,7 @@ namespace vn::view {
 class Repaintable;
 class StrokeToolView;
 
-class LaserPointerView final: public OverlayView, public xoj::util::Listener<LaserPointerView> {
+class LaserPointerView final: public OverlayView, public vn::util::Listener<LaserPointerView> {
 
 public:
     LaserPointerView(const LaserPointerHandler* handler, Repaintable* parent);

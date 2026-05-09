@@ -17,6 +17,10 @@ template <typename T>
 struct Point;
 }
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 class ScrollHandling final {
 public:
     ScrollHandling(GtkAdjustment* adjHorizontal, GtkAdjustment* adjVertical);
@@ -26,7 +30,7 @@ public:
 public:
     GtkAdjustment* getHorizontal();
     GtkAdjustment* getVertical();
-    xoj::util::Point<double> getPosition() const;
+    vn::util::Point<double> getPosition() const;
 
 private:
     GtkAdjustment* adjHorizontal = nullptr;

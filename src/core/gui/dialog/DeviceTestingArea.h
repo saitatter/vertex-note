@@ -43,21 +43,21 @@ private:
     bool emulateTipContactOnButtonPress;
 
     std::unique_ptr<InputContext> inputContext;
-    xoj::util::WidgetSPtr drawingArea;
+    vn::util::WidgetSPtr drawingArea;
 
     /// Indicators for button status
-    std::array<xoj::util::WidgetSPtr, 6> mouseIndicators;   ///< 0=in-use, 1=left, 2=middle, 3=right, 4=4th, 5=5th
-    std::array<xoj::util::WidgetSPtr, 4> stylusIndicators;  ///< 0 = in use, 1 = tip, 2 = button-1, 3 = button-2
-    std::array<xoj::util::WidgetSPtr, 2> eraserIndicators;  ///< 0 = in use, 1 = tip
-    std::array<xoj::util::WidgetSPtr, 5> touchIndicators;
+    std::array<vn::util::WidgetSPtr, 6> mouseIndicators;   ///< 0=in-use, 1=left, 2=middle, 3=right, 4=4th, 5=5th
+    std::array<vn::util::WidgetSPtr, 4> stylusIndicators;  ///< 0 = in use, 1 = tip, 2 = button-1, 3 = button-2
+    std::array<vn::util::WidgetSPtr, 2> eraserIndicators;  ///< 0 = in use, 1 = tip
+    std::array<vn::util::WidgetSPtr, 5> touchIndicators;
 
     /// Mouse "in use" timer: the mouse stays in use 100ms after its last event
-    xoj::util::GSourceURef mouseInUseTimer;
-    xoj::util::GSourceURef stylusInUseTimer;
-    xoj::util::GSourceURef eraserInUseTimer;
+    vn::util::GSourceURef mouseInUseTimer;
+    vn::util::GSourceURef stylusInUseTimer;
+    vn::util::GSourceURef eraserInUseTimer;
 
     /// Used to disable kinetic scrolling in order to properly test touchscreens
-    xoj::util::WidgetSPtr ancestorScrolledWindow;
+    vn::util::WidgetSPtr ancestorScrolledWindow;
 
     /// Show and edit the configuration of the last device used
     std::unique_ptr<DeviceClassConfigGui> lastDeviceClassConfig;

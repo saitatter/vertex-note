@@ -21,6 +21,11 @@ namespace xoj::util {
 template <class T>
 class Rectangle;
 }  // namespace xoj::util
+
+namespace vn {
+namespace util = xoj::util;
+}
+
 struct _GtkVertexNote;
 struct _GtkVertexNoteClass;
 
@@ -89,6 +94,6 @@ void gtk_vertex_note_scroll_relative(GtkWidget* widget, double x, double y);
 /// The given area is in Layout pixel-coordinates
 void gtk_vertex_note_repaint_area(GtkWidget* widget, int x1, int y1, int x2, int y2);
 
-xoj::util::Rectangle<double>* gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p);
+vn::util::Rectangle<double>* gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p);
 
 G_END_DECLS

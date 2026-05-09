@@ -50,7 +50,7 @@ private:
      *
      * Most internals of VertexNote still use or accept std::string in
      * constructors. When that changes, you should directly retrieve
-     * xoj::util::utf8_view types or their aliases below from getAttrib<T>()
+     * vn::util::utf8_view types or their aliases below from getAttrib<T>()
      * functions instead of converting it after you already obtained a
      * std::string_view or similar, as shown in parseXournalTag().
      */

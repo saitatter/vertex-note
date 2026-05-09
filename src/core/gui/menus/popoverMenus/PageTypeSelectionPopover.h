@@ -61,14 +61,14 @@ private:
     std::optional<PaperSize> selectedPageSize;
 
     PaperOrientation selectedOrientation;
-    xoj::util::GObjectSPtr<GSimpleAction> orientationAction;
+    vn::util::GObjectSPtr<GSimpleAction> orientationAction;
 
     // By activating the comboBoxChangeSelectionAction the option selected by the page size comboBox is changed to the
     // specified index
-    xoj::util::GObjectSPtr<GSimpleAction> comboBoxChangeSelectionAction;
+    vn::util::GObjectSPtr<GSimpleAction> comboBoxChangeSelectionAction;
 
     // The pageSizeChangedAction is activated when the pageSize changed
-    xoj::util::GObjectSPtr<GSimpleAction> pageSizeChangedAction;
+    vn::util::GObjectSPtr<GSimpleAction> pageSizeChangedAction;
 
     PaperFormatUtils::PaperFormatMenuOptionVector paperSizeMenuOptions;
 

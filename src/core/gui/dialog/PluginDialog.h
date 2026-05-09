@@ -42,7 +42,7 @@ private:
     Settings* settings;
 
     std::vector<std::unique_ptr<PluginDialogEntry>> plugins;
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 };
 
 #endif

@@ -30,7 +30,7 @@ public:
     inline GtkWindow* getWindow() const { return window.get(); }
 
 private:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     GtkSpinButton* spinButton = nullptr;
 
     std::function<void(size_t)> callback;

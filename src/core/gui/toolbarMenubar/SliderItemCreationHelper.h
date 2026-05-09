@@ -34,7 +34,7 @@ public:
         g_action_change_state(G_ACTION(gAction), makeGVariant(state));
     }
 
-    static xoj::util::WidgetSPtr createItem(AbstractSliderItem* self, bool horizontal) {
+    static vn::util::WidgetSPtr createItem(AbstractSliderItem* self, bool horizontal) {
         GtkOrientation orientation = horizontal ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL;
         const double min = FinalSliderType::scaleFunction(self->range.min);
         const double max = FinalSliderType::scaleFunction(self->range.max);
@@ -53,7 +53,7 @@ public:
         gtk_widget_set_can_focus(GTK_WIDGET(slider), false);  // todo(gtk4) not necessary anymore
 
         // gAction does not own the return GVariant and it is not floating either!
-        xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(self->gAction.get())), xoj::util::adopt);
+        vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(self->gAction.get())), vn::util::adopt);
         gtk_range_set_value(slider, FinalSliderType::scaleFunction(getGVariantValue<double>(state.get())));
 
         g_signal_connect_object(slider, "value-changed", G_CALLBACK(valueChangedCb), self->gAction.get(),
@@ -62,7 +62,7 @@ public:
         g_signal_connect_object(
                 self->gAction.get(), "notify::state", G_CALLBACK(+[](GObject* action, GParamSpec*, gpointer slider) {
                     // action does not own the return GVariant and it is not floating either!
-                    xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), xoj::util::adopt);
+                    vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), vn::util::adopt);
                     xoj_assert(state);
                     g_signal_handlers_block_by_func(slider, (gpointer)valueChangedCb, action);
                     gtk_range_set_value(GTK_RANGE(slider),
@@ -83,6 +83,6 @@ public:
                     nullptr, nullptr);
         }
 
-        return xoj::util::WidgetSPtr(GTK_WIDGET(slider), xoj::util::adopt);
+        return vn::util::WidgetSPtr(GTK_WIDGET(slider), vn::util::adopt);
     }
 };

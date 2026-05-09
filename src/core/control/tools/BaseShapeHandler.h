@@ -33,6 +33,10 @@ template <class T>
 class DispatchPool;
 }
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class OverlayView;
 class Repaintable;
@@ -58,7 +62,7 @@ public:
 
     std::unique_ptr<vn::view::OverlayView> createView(vn::view::Repaintable* parent) const override;
 
-    const std::shared_ptr<xoj::util::DispatchPool<vn::view::ShapeToolView>>& getViewPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<vn::view::ShapeToolView>>& getViewPool() const;
 
     /**
      * @brief Get the shape's points.
@@ -114,5 +118,5 @@ protected:
     Point buttonDownPoint;  // used for tapSelect and filtering - never snapped to grid.
     Point startPoint;       // May be snapped to grid
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::ShapeToolView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::ShapeToolView>> viewPool;
 };

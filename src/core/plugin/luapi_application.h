@@ -193,8 +193,8 @@ static std::tuple<std::optional<std::string>,       // Error
  */
 static int applib_glib_rename(lua_State* L) {
     GError* err = nullptr;
-    xoj::util::GObjectSPtr<GFile> to(g_file_new_for_path(lua_tostring(L, -1)), xoj::util::adopt);
-    xoj::util::GObjectSPtr<GFile> from(g_file_new_for_path(lua_tostring(L, -2)), xoj::util::adopt);
+    vn::util::GObjectSPtr<GFile> to(g_file_new_for_path(lua_tostring(L, -1)), vn::util::adopt);
+    vn::util::GObjectSPtr<GFile> from(g_file_new_for_path(lua_tostring(L, -2)), vn::util::adopt);
 
     g_file_move(from.get(), to.get(), G_FILE_COPY_OVERWRITE, nullptr, nullptr, nullptr, &err);
     if (err) {
@@ -232,9 +232,9 @@ static int applib_saveAs(lua_State* L) {
     const char* filename = luaL_checkstring(L, -1);
 
     // Create a 'Save As' native dialog
-    xoj::util::GObjectSPtr<GtkFileChooserNative> native(
+    vn::util::GObjectSPtr<GtkFileChooserNative> native(
             gtk_file_chooser_native_new(_("Save file"), nullptr, GTK_FILE_CHOOSER_ACTION_SAVE, nullptr, nullptr),
-            xoj::util::adopt);
+            vn::util::adopt);
 
     // If user tries to overwrite a file, ask if it's OK
     gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(native.get()), TRUE);
@@ -321,9 +321,9 @@ static int applib_fileDialogSave(lua_State* L) {
  *   path = app.getFilePath({'*.bmp', '*.png'})
  */
 static int applib_getFilePath(lua_State* L) {
-    xoj::util::GObjectSPtr<GtkFileChooserNative> native(
+    vn::util::GObjectSPtr<GtkFileChooserNative> native(
             gtk_file_chooser_native_new(_("Open file"), nullptr, GTK_FILE_CHOOSER_ACTION_OPEN, nullptr, nullptr),
-            xoj::util::adopt);
+            vn::util::adopt);
     gint res;
     int args_returned = 0;  // change to 1 if user chooses file
     char* filename;
@@ -1502,7 +1502,7 @@ static int applib_addTexts(lua_State* L) {
     Tool& tool = toolHandler->getTool(TOOL_TEXT);
     Color default_color = tool.getColor();
     // default font
-    XojFont& default_font = settings->getFont();
+    NoteFont& default_font = settings->getFont();
 
     size_t numTexts = lua_rawlen(L, -1);
     for (size_t a = 1; a <= numTexts; a++) {
@@ -1549,7 +1549,7 @@ static int applib_addTexts(lua_State* L) {
         }
         text->setText(lua_tostring(L, -7));
 
-        XojFont font{};
+        NoteFont font{};
         font.setName(luaL_optstring(L, -5, default_font.getName().c_str()));
         font.setSize(luaL_optnumber(L, -4, default_font.getSize()));
         text->setFont(font);
@@ -2119,7 +2119,7 @@ static int applib_changeBackgroundPdfPageNr(lua_State* L) {
  * lua_setfield(L, -2, "rectangleTable");  // add rectangle table to other table
  * after this function
  */
-static void pushRectangleHelper(lua_State* L, xoj::util::Rectangle<double> rect) {
+static void pushRectangleHelper(lua_State* L, vn::util::Rectangle<double> rect) {
     lua_pushnumber(L, rect.width);
     lua_setfield(L, -2, "width");
     lua_pushnumber(L, rect.height);
@@ -2394,7 +2394,7 @@ static int applib_getToolInfo(lua_State* L) {
         lua_setfield(L, -2, "size");  // end of "size" table
     } else if (strcmp(mode, "text") == 0) {
         Settings* settings = control->getSettings();
-        XojFont& font = settings->getFont();
+        NoteFont& font = settings->getFont();
         std::string fontname = font.getName();
         double size = font.getSize();
 
@@ -3612,7 +3612,7 @@ static bool isFontDescriptionValid(const std::string& fontDescription) {
     }
 
     // Create a temporary Pango context
-    xoj::util::GObjectSPtr<PangoContext> context(pango_font_map_create_context(fontMap), xoj::util::adopt);
+    vn::util::GObjectSPtr<PangoContext> context(pango_font_map_create_context(fontMap), vn::util::adopt);
     if (!context) {
         return false;
     }
@@ -3634,8 +3634,8 @@ static bool isFontDescriptionValid(const std::string& fontDescription) {
     // Load the font to verify it can be resolved with the specified attributes
     bool result = false;
     if (familyValid) {
-        xoj::util::GObjectSPtr<PangoFont> font(pango_font_map_load_font(fontMap, context.get(), desc),
-                                               xoj::util::adopt);
+        vn::util::GObjectSPtr<PangoFont> font(pango_font_map_load_font(fontMap, context.get(), desc),
+                                               vn::util::adopt);
         result = (font != nullptr);
     }
 
@@ -3726,7 +3726,7 @@ static int applib_getFont(lua_State* L) {
     Control* control = plugin->getControl();
     Settings* settings = control->getSettings();
 
-    XojFont& currentFont = settings->getFont();
+    NoteFont& currentFont = settings->getFont();
 
     lua_newtable(L);
     lua_pushstring(L, currentFont.getName().c_str());
@@ -3762,7 +3762,7 @@ static int applib_setFont(lua_State* L) {
         return luaL_error(L, "setFont requires one argument (string or table)");
     }
 
-    XojFont newFont;
+    NoteFont newFont;
 
     // Parse font specification based on argument type
     if (lua_isstring(L, 1)) {
@@ -3774,9 +3774,9 @@ static int applib_setFont(lua_State* L) {
             return luaL_error(L, "Font description '%s' is not valid or not available on this system", fontDesc);
         }
 
-        newFont = XojFont(fontDesc);
+        newFont = NoteFont(fontDesc);
 
-        // XojFont constructor handles format validation for string input
+        // NoteFont constructor handles format validation for string input
         if (newFont.getName().empty() || newFont.getSize() <= 0) {
             return luaL_error(L, "Invalid font specification");
         }
@@ -3795,7 +3795,7 @@ static int applib_setFont(lua_State* L) {
         }
 
         // Get current font for partial updates
-        XojFont& currentFont = settings->getFont();
+        NoteFont& currentFont = settings->getFont();
         std::string currentName = currentFont.getName();
         double currentSize = currentFont.getSize();
 
@@ -3838,7 +3838,7 @@ static int applib_setFont(lua_State* L) {
 
         lua_pop(L, 2);
 
-        newFont = XojFont(name, size);
+        newFont = NoteFont(name, size);
     } else {
         return luaL_error(L, "Font must be either a string or a table with 'name' and/or 'size' fields");
     }

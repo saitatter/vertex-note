@@ -16,7 +16,7 @@ class RectangleByVerticesHandler;
 namespace vn::view {
 class Repaintable;
 
-class RectangleByVerticesView final: public ToolView, public xoj::util::Listener<RectangleByVerticesView> {
+class RectangleByVerticesView final: public ToolView, public vn::util::Listener<RectangleByVerticesView> {
 public:
     RectangleByVerticesView(const RectangleByVerticesHandler* handler, Repaintable* parent);
     ~RectangleByVerticesView() noexcept override;

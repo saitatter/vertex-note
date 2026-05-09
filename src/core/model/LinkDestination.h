@@ -19,11 +19,13 @@
 #include <glib-object.h>  // for G_TYPE_CHECK_INSTANCE_CAST, GObject, GType
 #include <glib.h>         // for G_GNUC_CONST
 
-struct _LinkDest;
+struct _LinkDestObject;
+struct _LinkDestObjectClass;
 
-
-typedef struct _LinkDest XojLinkDest;
-typedef struct _LinkDestClass XojLinkDestClass;
+using LinkDestObject = struct _LinkDestObject;
+using LinkDestObjectClass = struct _LinkDestObjectClass;
+using LinkDestObject = LinkDestObject;
+using LinkDestObjectClass = LinkDestObjectClass;
 
 class LinkDestination {
 public:
@@ -85,7 +87,7 @@ private:
     Type contents;
 };
 
-struct _LinkDest {
+struct _LinkDestObject {
     GObject base_instance;
     LinkDestination* dest;
 };
@@ -98,11 +100,11 @@ enum {
 };
 
 #define TYPE_LINK_DEST (link_dest_get_type())
-#define LINK_DEST(object) (G_TYPE_CHECK_INSTANCE_CAST((object), TYPE_LINK_DEST, XojLinkDest))
-#define LINK_DEST_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_LINK_DEST, XojLinkDestClass))
+#define LINK_DEST(object) (G_TYPE_CHECK_INSTANCE_CAST((object), TYPE_LINK_DEST, LinkDestObject))
+#define LINK_DEST_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), TYPE_LINK_DEST, LinkDestObjectClass))
 #define IS_LINK_DEST(object) (G_TYPE_CHECK_INSTANCE_TYPE((object), TYPE_LINK_DEST))
 #define IS_LINK_DEST_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), TYPE_LINK_DEST))
-#define LINK_DEST_GET_CLASS(object) (G_TYPE_INSTANCE_GET_CLASS((object), TYPE_LINK_DEST, XojLinkDestClass))
+#define LINK_DEST_GET_CLASS(object) (G_TYPE_INSTANCE_GET_CLASS((object), TYPE_LINK_DEST, LinkDestObjectClass))
 
 GType link_dest_get_type(void) G_GNUC_CONST;
-XojLinkDest* link_dest_new();
+LinkDestObject* link_dest_new();

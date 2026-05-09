@@ -66,7 +66,7 @@ private:
     int toolbarHeight = 0;
 
     /// Container box for the preview and the button
-    xoj::util::WidgetSPtr box;
+    vn::util::WidgetSPtr box;
 
     /// Visibility checkbox
     GtkWidget* cbVisible = nullptr;

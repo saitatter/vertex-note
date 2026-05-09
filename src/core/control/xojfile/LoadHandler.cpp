@@ -27,7 +27,7 @@
 #include "control/xojfile/XmlParser.h"  // for XmlParser
 #include "model/BackgroundImage.h"      // for BackgroundImage
 #include "model/Document.h"             // for Document
-#include "model/Font.h"                 // for XojFont
+#include "model/Font.h"                 // for NoteFont
 #include "model/Image.h"                // for Image
 #include "model/Layer.h"                // for Layer
 #include "model/PageType.h"             // for PageType, PageTypeFormat
@@ -380,7 +380,7 @@ void LoadHandler::addText(std::string font, double size, double x, double y, Col
     xoj_assert(!this->text);
     this->text = std::make_unique<Text>();
 
-    XojFont& f = this->text->getFont();
+    NoteFont& f = this->text->getFont();
     f.setName(std::move(font));
     f.setSize(size);
     this->text->setX(x);

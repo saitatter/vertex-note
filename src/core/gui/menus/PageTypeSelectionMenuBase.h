@@ -49,7 +49,7 @@ private:
 protected:
     std::optional<PageType> selectedPT;
 
-    xoj::util::GObjectSPtr<GSimpleAction> typeSelectionAction;
+    vn::util::GObjectSPtr<GSimpleAction> typeSelectionAction;
 
     PageTypeHandler* types;
 

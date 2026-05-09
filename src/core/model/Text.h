@@ -20,7 +20,7 @@
 #include "util/raii/GObjectSPtr.h"
 
 #include "AudioElement.h"  // for AudioElement
-#include "Font.h"          // for XojFont
+#include "Font.h"          // for NoteFont
 
 class Element;
 class ObjectInputStream;
@@ -33,9 +33,9 @@ public:
     ~Text() override;
 
 public:
-    void setFont(const XojFont& font);
-    XojFont& getFont();
-    const XojFont& getFont() const;
+    void setFont(const NoteFont& font);
+    NoteFont& getFont();
+    const NoteFont& getFont() const;
     double getFontSize() const;       // same result as getFont()->getSize(), but const
     std::string getFontName() const;  // same result as getFont()->getName(), but const
 
@@ -48,7 +48,7 @@ public:
     void setInEditing(bool inEditing);
     bool isInEditing() const;
 
-    xoj::util::GObjectSPtr<PangoLayout> createPangoLayout() const;
+    vn::util::GObjectSPtr<PangoLayout> createPangoLayout() const;
     void updatePangoFont(PangoLayout* layout) const;
 
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;
@@ -72,7 +72,7 @@ public:
     std::vector<PdfRectangle> findText(const std::string& search) const;
 
 private:
-    XojFont font;
+    NoteFont font;
 
     std::string text;
 

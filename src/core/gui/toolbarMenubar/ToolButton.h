@@ -35,7 +35,7 @@ public:
     void setPopoverFactory(const PopoverFactory* factory);
 
 protected:
-    xoj::util::WidgetSPtr createItem(bool horizontal) override;
+    vn::util::WidgetSPtr createItem(bool horizontal) override;
 
     GtkWidget* getNewToolIcon() const override;
 
@@ -46,7 +46,7 @@ protected:
     const PopoverFactory* popoverFactory = nullptr;
     Action action;
     /// @brief If set, the action target value the button corresponds to
-    xoj::util::GVariantSPtr target;
+    vn::util::GVariantSPtr target;
     /// @brief Whether or not the button is a ToggleButton.
     bool toggle;
 };

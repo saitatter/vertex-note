@@ -52,7 +52,7 @@ public:
 class PdfPage {
 public:
     struct TextSelection {
-        xoj::util::CairoRegionSPtr region;
+        vn::util::CairoRegionSPtr region;
         std::vector<PdfRectangle> rects;
     };
 

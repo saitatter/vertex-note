@@ -88,7 +88,7 @@ private:
      */
     int disableTimeout = 500;
 
-    xoj::util::GSourceURef timer;
+    vn::util::GSourceURef timer;
 
     /**
      * True if an X11 session is running

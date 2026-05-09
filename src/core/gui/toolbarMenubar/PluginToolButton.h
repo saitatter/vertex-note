@@ -27,7 +27,7 @@ public:
     std::string getToolDisplayName() const override;
 
 protected:
-    xoj::util::WidgetSPtr createItem(bool horizontal) override;
+    vn::util::WidgetSPtr createItem(bool horizontal) override;
     GtkWidget* getNewToolIcon() const override;
 
 private:

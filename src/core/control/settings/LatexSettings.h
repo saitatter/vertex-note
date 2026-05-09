@@ -39,7 +39,7 @@ public:
     /**
      * Font to be used by the editor.
      */
-    XojFont editorFont{"Monospace", 12};
+    NoteFont editorFont{"Monospace", 12};
     bool useCustomEditorFont{false};
 
     bool editorWordWrap{true};

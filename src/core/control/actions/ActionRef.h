@@ -12,4 +12,4 @@
 
 #include "util/raii/GObjectSPtr.h"
 
-using ActionRef = xoj::util::GObjectSPtr<GSimpleAction>;
+using ActionRef = vn::util::GObjectSPtr<GSimpleAction>;

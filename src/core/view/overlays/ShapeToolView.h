@@ -23,7 +23,7 @@ class Range;
 namespace vn::view {
 class Repaintable;
 
-class ShapeToolView final: public BaseShapeOrSplineToolView, public xoj::util::Listener<ShapeToolView> {
+class ShapeToolView final: public BaseShapeOrSplineToolView, public vn::util::Listener<ShapeToolView> {
 
 public:
     ShapeToolView(const BaseShapeHandler* handler, Repaintable* parent);

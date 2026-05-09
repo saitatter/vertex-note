@@ -45,6 +45,10 @@ template <class T>
 class DispatchPool;
 };  // namespace vn::util
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 /**
  * Handler class for the Vertical Spacing tool.
  */
@@ -86,7 +90,7 @@ public:
     inline Side getSide() const { return spacingSide; }
     double getPageWidth() const;
 
-    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<vn::view::VerticalToolView>> {
+    inline auto getViewPool() const -> std::shared_ptr<vn::util::DispatchPool<vn::view::VerticalToolView>> {
         return viewPool;
     }
 
@@ -133,5 +137,5 @@ private:
      */
     SnapToGridInputHandler snappingHandler;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::VerticalToolView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::VerticalToolView>> viewPool;
 };

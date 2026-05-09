@@ -16,7 +16,7 @@ class Range;
 namespace vn::view {
 class Repaintable;
 
-class LineByClicksView final: public ToolView, public xoj::util::Listener<LineByClicksView> {
+class LineByClicksView final: public ToolView, public vn::util::Listener<LineByClicksView> {
 public:
     LineByClicksView(const LineByClicksHandler* handler, Repaintable* parent);
     ~LineByClicksView() noexcept override;

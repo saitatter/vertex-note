@@ -5,7 +5,7 @@
 
 #include "control/Control.h"
 #include "model/Document.h"
-#include "model/Font.h"       // for XojFont
+#include "model/Font.h"       // for NoteFont
 #include "model/Text.h"       // for Text
 #include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
@@ -16,15 +16,15 @@ using vn::util::Rectangle;
 
 class FontUndoActionEntry {
 public:
-    FontUndoActionEntry(Text* e, const XojFont& oldFont, const XojFont& newFont) {
+    FontUndoActionEntry(Text* e, const NoteFont& oldFont, const NoteFont& newFont) {
         this->e = e;
         this->oldFont = oldFont;
         this->newFont = newFont;
     }
 
     Text* e;
-    XojFont oldFont;
-    XojFont newFont;
+    NoteFont oldFont;
+    NoteFont newFont;
 };
 
 FontUndoAction::FontUndoAction(const PageRef& page, Layer* layer): UndoAction("FontUndoAction") {
@@ -37,7 +37,7 @@ FontUndoAction::~FontUndoAction() {
     this->data.clear();
 }
 
-void FontUndoAction::addStroke(Text* e, const XojFont& oldFont, const XojFont& newFont) {
+void FontUndoAction::addStroke(Text* e, const NoteFont& oldFont, const NoteFont& newFont) {
     this->data.push_back(new FontUndoActionEntry(e, oldFont, newFont));
 }
 

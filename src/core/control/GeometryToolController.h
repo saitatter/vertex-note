@@ -37,14 +37,14 @@ public:
      * @brief translates the geometry tool in x- and y-direction
      * @param offset the translation vector (in document coordinates)
      */
-    void translate(const xoj::util::Point<double>& offset);
+    void translate(const vn::util::Point<double>& offset);
 
     /**
      * @brief rotates the geometry tool around then given rotation center
      * @param da the rotation angle
      * @param center the rotation center (in document coordinates
      */
-    void rotate(double da, const xoj::util::Point<double>& center);
+    void rotate(double da, const vn::util::Point<double>& center);
     /// Rotates around the tool's origin
     void rotate(double da);
 
@@ -53,7 +53,7 @@ public:
      * @param f the scaling factor
      * @param center the scaling center (in document coordinates)
      */
-    void scale(double f, const xoj::util::Point<double>& center);
+    void scale(double f, const vn::util::Point<double>& center);
     /// Rescales around the tools origin
     void scale(double f);
 

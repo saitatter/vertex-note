@@ -87,7 +87,7 @@ private:
     const std::vector<ColorToolItemDragData> colorItemData;
     static std::array<SeparatorData, 2> separators;
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     GtkNotebook* notebook;
     Palette palette;
 };

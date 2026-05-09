@@ -94,10 +94,10 @@ protected:
     std::mutex drawingMutex{};
 
     /// Buffer because of performance reasons
-    xoj::util::CairoSurfaceSPtr buffer;
+    vn::util::CairoSurfaceSPtr buffer;
 
     /// The main widget, containing the miniature
-    xoj::util::WidgetSPtr button;
+    vn::util::WidgetSPtr button;
 
     friend class PreviewJob;
 };

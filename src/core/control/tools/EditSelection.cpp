@@ -40,7 +40,7 @@
 
 #include "EditSelectionContents.h"  // for EditSelectionConte...
 
-class XojFont;
+class NoteFont;
 
 using std::vector;
 using vn::util::Rectangle;
@@ -421,7 +421,7 @@ auto EditSelection::setColor(Color color) -> UndoActionPtr { return this->conten
  * Sets the font of all containing text elements, return an undo action
  * (or nullptr if there are no Text elements)
  */
-auto EditSelection::setFont(const XojFont& font) -> UndoActionPtr { return this->contents->setFont(font); }
+auto EditSelection::setFont(const NoteFont& font) -> UndoActionPtr { return this->contents->setFont(font); }
 
 /**
  * Fills de undo item if the selection is deleted

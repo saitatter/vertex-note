@@ -17,7 +17,7 @@
 #include "control/latex/LatexGenerator.h"    // for LatexGenerator::GenError
 #include "control/settings/LatexSettings.h"  // for LatexSettings
 #include "gui/Builder.h"
-#include "model/Font.h"              // for XojFont
+#include "model/Font.h"              // for NoteFont
 #include "util/Color.h"              // for Color
 #include "util/PathUtil.h"           // for fromGFile, getTmpDir...
 #include "util/PlaceholderString.h"  // for PlaceholderString

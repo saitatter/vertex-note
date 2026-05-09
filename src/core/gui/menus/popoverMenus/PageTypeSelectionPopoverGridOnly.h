@@ -36,10 +36,10 @@ public:
     inline GtkWidget* getPopover() { return popover.get(); }
 
 private:
-    xoj::util::WidgetSPtr createPopover();
+    vn::util::WidgetSPtr createPopover();
     void entrySelected(const PageTypeInfo* info) override;
 
 private:
     vn::popup::PageTemplateDialog* parent;
-    xoj::util::WidgetSPtr popover;
+    vn::util::WidgetSPtr popover;
 };

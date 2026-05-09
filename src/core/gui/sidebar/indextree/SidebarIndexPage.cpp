@@ -8,7 +8,7 @@
 #include "control/Control.h"        // for Control
 #include "control/ScrollHandler.h"  // for ScrollHandler
 #include "model/Document.h"         // for Document
-#include "model/LinkDestination.h"  // for XojLinkDest
+#include "model/LinkDestination.h"  // for LinkDestObject
 #include "util/Assert.h"            // for xoj_assert
 #include "util/glib_casts.h"        // for wrap_v
 #include "util/gtk4_helper.h"       //
@@ -91,7 +91,7 @@ void SidebarIndexPage::treeBookmarkSelected(GtkTreeView* treeview, SidebarIndexP
         GtkTreeIter iter = {0};
 
         if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-            XojLinkDest* link = nullptr;
+            LinkDestObject* link = nullptr;
 
             gtk_tree_model_get(model, &iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
             if (link && link->dest) {
@@ -176,7 +176,7 @@ auto SidebarIndexPage::getWidget() -> GtkWidget* { return this->scrollBookmarks;
 
 auto SidebarIndexPage::expandOpenLinks(GtkTreeModel* model, GtkTreeIter* parent) -> int {
     GtkTreeIter iter = {0};
-    XojLinkDest* link = nullptr;
+    LinkDestObject* link = nullptr;
     if (model == nullptr) {
         return 0;
     }
@@ -226,7 +226,7 @@ auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* pa
         GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeViewBookmarks));
 
         if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-            XojLinkDest* link = nullptr;
+            LinkDestObject* link = nullptr;
 
             gtk_tree_model_get(model, &iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
 
@@ -250,7 +250,7 @@ auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* pa
     gboolean valid = gtk_tree_model_iter_children(model, &iter, parent);
 
     while (valid) {
-        XojLinkDest* link = nullptr;
+        LinkDestObject* link = nullptr;
 
         gtk_tree_model_get(model, &iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
 

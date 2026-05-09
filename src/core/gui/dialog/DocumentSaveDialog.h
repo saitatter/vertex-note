@@ -48,7 +48,7 @@ private:
     /// Closes the dialog and calls the callback on `path`
     void close(std::optional<fs::path> path);
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     std::function<void(std::optional<fs::path>)> callback;
     std::function<bool(fs::path&, const char* filterName)> pathValidation;
     gulong signalId{};

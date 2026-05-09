@@ -43,8 +43,8 @@ TEST(SettingsTest, testReadWrite) {
         settings.setBackgroundColor(Color(123, 45, 67));               // Color
         settings.setColorPaletteSetting("foo/bar€_palette");           // path
         settings.setEraserVisibility(ERASER_VISIBILITY_HOVER);         // enum
-        settings.setFont(XojFont{"myfontname italic 34"});             // Font
-        settings.latexSettings.editorFont = XojFont{"myfonttest 52"};  // Font
+        settings.setFont(NoteFont{"myfontname italic 34"});             // Font
+        settings.latexSettings.editorFont = NoteFont{"myfonttest 52"};  // Font
         settings.setPreloadPagesAfter(145);                            // unsigned int
         settings.setVertexNoteGeometrySnapEnabled(false);              // bool
         settings.setVertexNoteGridSnapEnabled(false);                  // bool

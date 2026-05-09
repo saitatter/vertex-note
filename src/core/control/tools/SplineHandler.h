@@ -35,6 +35,10 @@ template <class T>
 class DispatchPool;
 };
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class OverlayView;
 class Repaintable;
@@ -88,7 +92,7 @@ public:
     void zoomChanged() override;
 
 public:
-    const std::shared_ptr<xoj::util::DispatchPool<vn::view::SplineToolView>>& getViewPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<vn::view::SplineToolView>>& getViewPool() const;
 
     using Data = SplineHandlerData;
     std::optional<Data> getData() const;
@@ -126,7 +130,7 @@ private:
     bool inFirstKnotAttractionZone = false;
     SnapToGridInputHandler snappingHandler;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::SplineToolView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::SplineToolView>> viewPool;
 
     static constexpr double KNOTS_ATTRACTION_RADIUS_IN_PIXELS = 10.0;  // for circling the spline's knots
 };

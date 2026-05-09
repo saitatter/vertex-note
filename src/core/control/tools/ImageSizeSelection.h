@@ -28,9 +28,9 @@ public:
 
     void finalize();
 
-    auto getSelectedSpace() const -> xoj::util::Rectangle<double>;
+    auto getSelectedSpace() const -> vn::util::Rectangle<double>;
 
-    inline auto getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<ImageSizeSelectionView>>& {
+    inline auto getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<ImageSizeSelectionView>>& {
         return viewPool;
     }
 
@@ -40,5 +40,5 @@ private:
     double endX;
     double endY;
 
-    std::shared_ptr<xoj::util::DispatchPool<ImageSizeSelectionView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<ImageSizeSelectionView>> viewPool;
 };

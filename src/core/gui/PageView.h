@@ -92,7 +92,7 @@ public:
     double getHeight() const override;
     // End of Repaintable interface
 
-    xoj::util::Rectangle<double> toWidgetCoordinates(const xoj::util::Rectangle<double>& r) const override;
+    vn::util::Rectangle<double> toWidgetCoordinates(const vn::util::Rectangle<double>& r) const override;
 
 
     void setSelected(bool selected);
@@ -153,7 +153,7 @@ public:
     double getDisplayHeightDouble() const;
 
     /// Returns the position of the upper-left corner in Layout pixel-coordinates
-    xoj::util::Point<int> getPixelPosition() const;
+    vn::util::Point<int> getPixelPosition() const;
 
     const TexImage* getSelectedTex() const;
     const Text* getSelectedText() const;
@@ -181,11 +181,11 @@ public:  // event handler
 
     void deleteLaserPointerHandler();
 
-    void setGridCoordinates(xoj::util::Point<int> pos);
-    xoj::util::Point<int> getGridCoordinates() const;
+    void setGridCoordinates(vn::util::Point<int> pos);
+    vn::util::Point<int> getGridCoordinates() const;
 
 public:  // listener
-    void rectChanged(xoj::util::Rectangle<double>& rect) override;
+    void rectChanged(vn::util::Rectangle<double>& rect) override;
     void rangeChanged(Range& range) override;
     void pageChanged() override;
     void elementChanged(const Element* elem) override;
@@ -278,11 +278,11 @@ private:
     std::unique_ptr<SearchControl> search;
 
     std::mutex repaintRectMutex;
-    std::vector<xoj::util::Rectangle<double>> rerenderRects;
+    std::vector<vn::util::Rectangle<double>> rerenderRects;
     bool rerenderComplete = false;
     bool sizeChanged = false;
 
-    xoj::util::Point<int> gridCoordinates;  ///< Coordinates in the layout grid
+    vn::util::Point<int> gridCoordinates;  ///< Coordinates in the layout grid
 
 
     DeviceId currentSequenceDeviceId;

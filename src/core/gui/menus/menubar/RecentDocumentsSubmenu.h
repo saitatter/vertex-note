@@ -65,10 +65,10 @@ private:
      * </submenu>
      * and the section separator does not appear in this case...
      */
-    xoj::util::GObjectSPtr<GMenu> recentFilesSubmenu;
-    xoj::util::GObjectSPtr<GMenu> menuXoppFiles;
-    xoj::util::GObjectSPtr<GMenu> menuPdfFiles;
-    xoj::util::GObjectSPtr<GSimpleAction> openFileAction;
-    xoj::util::GObjectSPtr<GSimpleAction> clearListAction;
-    xoj::util::GObjectSPtr<GSimpleAction> removeFileAction;
+    vn::util::GObjectSPtr<GMenu> recentFilesSubmenu;
+    vn::util::GObjectSPtr<GMenu> menuXoppFiles;
+    vn::util::GObjectSPtr<GMenu> menuPdfFiles;
+    vn::util::GObjectSPtr<GSimpleAction> openFileAction;
+    vn::util::GObjectSPtr<GSimpleAction> clearListAction;
+    vn::util::GObjectSPtr<GSimpleAction> removeFileAction;
 };

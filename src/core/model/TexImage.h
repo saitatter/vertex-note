@@ -90,7 +90,7 @@ private:
     /**
      * Tex PDF Document, if rendered as PDF
      */
-    xoj::util::GObjectSPtr<PopplerDocument> pdf;
+    vn::util::GObjectSPtr<PopplerDocument> pdf;
 
     /**
      * Tex image, if rendered as image. Note: this is deprecated and subject to removal in a later version.

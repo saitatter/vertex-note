@@ -30,5 +30,5 @@ public:
     void addToMenubar(Menubar& menubar) override;
 
 private:
-    xoj::util::GObjectSPtr<GMenu> submenu;
+    vn::util::GObjectSPtr<GMenu> submenu;
 };

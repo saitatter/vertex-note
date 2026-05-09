@@ -41,7 +41,7 @@ protected:
     void layout();
 
 protected:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 
     Settings* settings = nullptr;
     GtkScrolledWindow* scrolledWindow = nullptr;

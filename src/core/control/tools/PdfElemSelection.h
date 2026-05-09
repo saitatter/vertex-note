@@ -74,7 +74,7 @@ public:
     /// Returns the selection style corresponding to the given tool type.
     static PdfPageSelectionStyle selectionStyleForToolType(ToolType type);
 
-    inline const std::shared_ptr<xoj::util::DispatchPool<vn::view::PdfElementSelectionView>>& getViewPool() const {
+    inline const std::shared_ptr<vn::util::DispatchPool<vn::view::PdfElementSelectionView>>& getViewPool() const {
         return viewPool;
     }
 
@@ -93,7 +93,7 @@ private:
     std::string selectedText;
 
     /// The area containing the selected text. Used for rendering.
-    xoj::util::CairoRegionSPtr selectedTextRegion;
+    vn::util::CairoRegionSPtr selectedTextRegion;
 
     /// The PDF selection tool used for the selection.
     ToolType toolType;
@@ -107,5 +107,5 @@ private:
 
     bool finalized;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::PdfElementSelectionView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::PdfElementSelectionView>> viewPool;
 };

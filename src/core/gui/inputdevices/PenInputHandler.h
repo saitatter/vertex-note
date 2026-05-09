@@ -56,12 +56,12 @@ protected:
     /**
      * Start position to reference scroll offset
      */
-    xoj::util::Point<double> scrollStartPosition{0., 0.};
+    vn::util::Point<double> scrollStartPosition{0., 0.};
 
     /**
      * The scroll offset vector
      */
-    xoj::util::Point<double> scrollOffsetVector{0., 0.};
+    vn::util::Point<double> scrollOffsetVector{0., 0.};
 
     /**
      * Flag whether pen is within the widget
@@ -78,7 +78,7 @@ protected:
      */
     guint32 lastActionEndTimeStamp = 0U;
     guint32 lastActionStartTimeStamp = 0U;
-    xoj::util::Point<double> sequenceStartPosition;
+    vn::util::Point<double> sequenceStartPosition;
 
 public:
     explicit PenInputHandler(InputContext* inputContext);

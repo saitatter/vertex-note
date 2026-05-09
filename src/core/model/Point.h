@@ -11,11 +11,14 @@
 
 #pragma once
 
-
 namespace xoj::util {
 template <class T>
 class Rectangle;
 }  // namespace xoj::util
+
+namespace vn {
+namespace util = xoj::util;
+}
 
 /**
  * @class Point
@@ -80,7 +83,7 @@ public:
      * @param rect The rectangle
      * @return True if the point is in rectangle, false otherwise
      */
-    bool isInside(const xoj::util::Rectangle<double>& rect) const;
+    bool isInside(const vn::util::Rectangle<double>& rect) const;
 
 public:
     /**
@@ -102,3 +105,6 @@ public:
 };
 
 #include "util/NamespaceAliases.h"
+
+
+

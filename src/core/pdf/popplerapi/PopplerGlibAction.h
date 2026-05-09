@@ -36,7 +36,7 @@ private:
     void linkFromDest(LinkDestination& link, PopplerDest* pDest);
 
 private:
-    xoj::util::raii::GObjectSPtr<PopplerDocument> document;
+    vn::util::raii::GObjectSPtr<PopplerDocument> document;
     std::shared_ptr<const LinkDestination> destination;
     std::string title;
 };

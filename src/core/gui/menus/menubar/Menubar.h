@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    xoj::util::GObjectSPtr<GtkBuilder> builder;
+    vn::util::GObjectSPtr<GtkBuilder> builder;
     GMenuModel* menu;  // owned by `builder`
 
     // Dynamically created submenus -- also add to forEachSubmenu() below

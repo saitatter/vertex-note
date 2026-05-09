@@ -57,7 +57,7 @@ struct MenuEntry final {
      */
     std::string accelerator{};
     /// Action activated when using the menu entry
-    xoj::util::GObjectSPtr<GSimpleAction> action;
+    vn::util::GObjectSPtr<GSimpleAction> action;
 };
 
 struct ToolbarButtonEntry final {
@@ -194,7 +194,7 @@ private:
     Control* control;                                      ///< The main controller
     std::unique_ptr<lua_State, LuaDeleter> lua{};          ///< Lua engine
     std::vector<MenuEntry> menuEntries;                    ///< All registered menu entries
-    xoj::util::GObjectSPtr<GMenu> menuSection;             ///< Menu section containing the menu entries
+    vn::util::GObjectSPtr<GMenu> menuSection;             ///< Menu section containing the menu entries
     std::vector<ToolbarButtonEntry> toolbarButtonEntries;  ///< All registered toolbar button entries
     std::unordered_map<std::string, std::unique_ptr<ToolbarPlaceholderEntry>>
             toolbarPlaceholderEntries;  ///< Storage for toolbar placeholder entries

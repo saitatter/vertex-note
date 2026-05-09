@@ -31,7 +31,7 @@ private:
     void setPreviewImage(int alpha);
 
 private:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     GtkImage* previewImage;
     GtkRange* alphaRange;
 

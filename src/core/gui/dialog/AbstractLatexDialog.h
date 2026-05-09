@@ -72,7 +72,7 @@ protected:
 
 protected:
     std::unique_ptr<LatexController> texCtrl;
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     GtkButton* btOk;
     GtkButton* btCancel;
 
@@ -83,7 +83,7 @@ protected:
     /**
      * Source page from which we render the preview.
      */
-    xoj::util::GObjectSPtr<PopplerPage> previewPdfPage;
+    vn::util::GObjectSPtr<PopplerPage> previewPdfPage;
 
     GtkLabel* texErrorLabel;
     GtkTextBuffer* compilationOutputTextBuffer;

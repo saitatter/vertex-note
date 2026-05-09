@@ -80,7 +80,7 @@ public:
      */
     auto getElements() -> std::vector<ElementPtr>&;
 
-    auto getElementsView() const -> xoj::util::PointerContainerView<std::vector<ElementPtr>>;
+    auto getElementsView() const -> vn::util::PointerContainerView<std::vector<ElementPtr>>;
 
     /**
      * Returns whether or not the Layer is empty

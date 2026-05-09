@@ -38,7 +38,7 @@ constexpr double rad(int n) { return rad(static_cast<double>(n)); }
 constexpr double deg(double a) { return a * 180.0 / M_PI; }
 inline double cathete(double h, double o) { return std::sqrt(std::pow(h, 2) - std::pow(o, 2)); }
 
-class GeometryToolView: public ToolView, public ZoomListener, public xoj::util::Listener<GeometryToolView> {
+class GeometryToolView: public ToolView, public ZoomListener, public vn::util::Listener<GeometryToolView> {
 
 public:
     GeometryToolView(const GeometryTool* geometryTool, Repaintable* parent, ZoomControl* zoomControl);

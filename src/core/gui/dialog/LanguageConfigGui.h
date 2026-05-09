@@ -31,7 +31,7 @@ public:
 private:
     std::vector<std::string> availableLocales;
 
-    xoj::util::WidgetSPtr comboBox;
+    vn::util::WidgetSPtr comboBox;
 
     Settings* settings;
 };

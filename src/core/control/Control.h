@@ -67,7 +67,7 @@ class TextEditor;
 class VertexNoteScheduler;
 class ZoomControl;
 class ToolMenuHandler;
-class XojFont;
+class NoteFont;
 class PdfRectangle;
 class Callback;
 class ActionDatabase;
@@ -175,8 +175,8 @@ public:
     void selectTool(ToolType type);
     void selectDefaultTool();
 
-    void setFontSelected(const XojFont& font);  ///< Modifies the Action state without triggering callbacks
-    void fontChanged(const XojFont& font);      ///< Set the font after the user selected a font
+    void setFontSelected(const NoteFont& font);  ///< Modifies the Action state without triggering callbacks
+    void fontChanged(const NoteFont& font);      ///< Set the font after the user selected a font
 
     void updatePageNumbers(size_t page, size_t pdfPage);
 

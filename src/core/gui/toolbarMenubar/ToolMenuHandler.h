@@ -138,5 +138,5 @@ private:
     std::unique_ptr<StylePopoverFactory> penLineStylePopover;
     std::unique_ptr<StylePopoverFactory> eraserTypePopover;
 
-    xoj::util::GObjectSPtr<GSimpleAction> gAction;
+    vn::util::GObjectSPtr<GSimpleAction> gAction;
 };

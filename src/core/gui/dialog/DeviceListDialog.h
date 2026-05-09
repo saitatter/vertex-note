@@ -33,5 +33,5 @@ private:
     Settings* settings;
     std::vector<DeviceClassConfigGui> deviceClassConfigs;
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 };

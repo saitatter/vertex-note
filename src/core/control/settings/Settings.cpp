@@ -2264,9 +2264,9 @@ void Settings::setBackgroundColor(Color color) {
     save();
 }
 
-auto Settings::getFont() -> XojFont& { return this->font; }
+auto Settings::getFont() -> NoteFont& { return this->font; }
 
-void Settings::setFont(const XojFont& font) {
+void Settings::setFont(const NoteFont& font) {
     this->font = font;
     save();
 }

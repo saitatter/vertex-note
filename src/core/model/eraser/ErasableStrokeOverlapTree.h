@@ -116,7 +116,7 @@ private:
          * @brief Get a rectangle from the box (minX, maxX, minY, maxY), with an additional padding
          * @param padding Padding added to the box (typically, half the stroke's width)
          */
-        xoj::util::Rectangle<double> toRectangle(double padding) const;
+        vn::util::Rectangle<double> toRectangle(double padding) const;
     };
 
     Node root;

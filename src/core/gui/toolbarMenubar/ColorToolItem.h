@@ -54,10 +54,10 @@ public:
      */
     void updateSecondaryColor(const std::optional<Recolor>& recolor);
 
-    xoj::util::WidgetSPtr createItem(bool horizontal) override;
+    vn::util::WidgetSPtr createItem(bool horizontal) override;
 
 private:
     NamedColor namedColor;
-    xoj::util::GVariantSPtr target;       ///< Contains the color in ARGB as a uint32_t
+    vn::util::GVariantSPtr target;       ///< Contains the color in ARGB as a uint32_t
     std::optional<Color> secondaryColor;  //< color for small disk when recoloring is active
 };

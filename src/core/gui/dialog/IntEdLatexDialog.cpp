@@ -30,7 +30,7 @@
 #include "control/LatexController.h"
 #include "control/settings/LatexSettings.h"  // for LatexSettings
 #include "gui/Builder.h"
-#include "model/Font.h"        // for XojFont
+#include "model/Font.h"        // for NoteFont
 #include "util/StringUtils.h"  // for replace_pair, StringUtils
 #include "util/raii/CStringWrapper.h"
 

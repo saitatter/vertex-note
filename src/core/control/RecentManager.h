@@ -51,7 +51,7 @@ public:
     // Todo(cpp20): replace with std:identity()
     constexpr static auto adopt = [](GtkRecentInfo* p) { return p; };
 };
-using GtkRecentInfoSPtr = xoj::util::CLibrariesSPtr<GtkRecentInfo, GtkRecentInfoHandler>;
+using GtkRecentInfoSPtr = vn::util::CLibrariesSPtr<GtkRecentInfo, GtkRecentInfoHandler>;
 
 /**
  * Returns the most recent xoj item from the underlying GtkRecentManager

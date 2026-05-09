@@ -23,7 +23,7 @@ class Range;
 namespace vn::view {
 class Repaintable;
 
-class ImageSizeSelectionView: public OverlayView, public xoj::util::Listener<ImageSizeSelectionView> {
+class ImageSizeSelectionView: public OverlayView, public vn::util::Listener<ImageSizeSelectionView> {
 public:
     ImageSizeSelectionView(const ImageSizeSelection* imageSizeSelection, Repaintable* parent, Color selectionColor);
     virtual ~ImageSizeSelectionView() noexcept;

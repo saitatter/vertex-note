@@ -103,20 +103,20 @@ private:
 
 protected:
     /// The scrollable area with the miniatures
-    xoj::util::WidgetSPtr scrollableBox;
+    vn::util::WidgetSPtr scrollableBox;
 
     /// Main box, containing the scrollable area and the toolbar.
-    xoj::util::WidgetSPtr mainBox;
+    vn::util::WidgetSPtr mainBox;
 
     /// The widget within the scrollable area with the page miniatures
-    xoj::util::GObjectSPtr<GtkFixed> miniaturesContainer;
+    vn::util::GObjectSPtr<GtkFixed> miniaturesContainer;
 
     /**
      * The context menu to display when a miniature is right-clicked.
      * This must be populated by the derived classes constructors.
      * It must be a GtkPopover parented (gtk_widget_set_parent()) by this->miniaturesContainer
      */
-    xoj::util::GObjectSPtr<GtkMenu> contextMenu;
+    vn::util::GObjectSPtr<GtkMenu> contextMenu;
 
     /**
      * The currently selected entry in the sidebar, starting from 0

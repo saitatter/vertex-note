@@ -19,16 +19,16 @@ class ObjectInputStream;
 class ObjectOutputStream;
 
 
-class XojFont: public Serializable {
+class NoteFont: public Serializable {
 public:
-    XojFont() = default;
-    XojFont(std::string name, double size);
-    XojFont(const XojFont&) = default;
-    XojFont(XojFont&&) = default;
-    ~XojFont() override = default;
+    NoteFont() = default;
+    NoteFont(std::string name, double size);
+    NoteFont(const NoteFont&) = default;
+    NoteFont(NoteFont&&) = default;
+    ~NoteFont() override = default;
 
-    XojFont& operator=(const XojFont&) = default;
-    XojFont& operator=(XojFont&&) = default;
+    NoteFont& operator=(const NoteFont&) = default;
+    NoteFont& operator=(NoteFont&&) = default;
 
     /**
      * Set this from a Pango-style font description.
@@ -38,8 +38,8 @@ public:
      *
      * @param description Pango-style font description.
      */
-    explicit XojFont(const char* description);
-    XojFont& operator=(const std::string& description);
+    explicit NoteFont(const char* description);
+    NoteFont& operator=(const std::string& description);
 
 public:
     const std::string& getName() const;
@@ -66,3 +66,5 @@ private:
     std::string name;
     double size = 0;
 };
+
+using NoteFont = NoteFont;

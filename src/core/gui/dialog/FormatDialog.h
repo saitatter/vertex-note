@@ -66,7 +66,7 @@ private:
     GtkToggleButton* landscapeButton;
     GtkToggleButton* portraitButton;
 
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
     std::function<void(double w, double h)> callbackFun;
 };
 };  // namespace vn::popup

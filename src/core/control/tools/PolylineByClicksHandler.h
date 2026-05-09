@@ -29,6 +29,10 @@ template <class T>
 class DispatchPool;
 }
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class OverlayView;
 class PolylineByClicksView;
@@ -59,7 +63,7 @@ public:
     [[nodiscard]] auto getStrokeColor() const -> Color;
 
     [[nodiscard]] auto getViewPool() const
-            -> const std::shared_ptr<xoj::util::DispatchPool<vn::view::PolylineByClicksView>>&;
+            -> const std::shared_ptr<vn::util::DispatchPool<vn::view::PolylineByClicksView>>&;
 
 private:
     [[nodiscard]] auto previewRange() const -> Range;
@@ -80,5 +84,5 @@ private:
     bool done = false;
     double strokeWidth = 1.0;
     Color strokeColor = Colors::black;
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::PolylineByClicksView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::PolylineByClicksView>> viewPool;
 };

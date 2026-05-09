@@ -30,6 +30,6 @@ GtkWidget* newGtkImage(Color color, int size = 22, bool circle = true,
 /**
  * @brief Create a new GdkPixbuf* with preview color
  */
-xoj::util::GObjectSPtr<GdkPixbuf> newGdkPixbuf(Color color, int size = 22, bool circle = true,
+vn::util::GObjectSPtr<GdkPixbuf> newGdkPixbuf(Color color, int size = 22, bool circle = true,
                                                std::optional<Color> secondaryColor = std::nullopt);
 };  // namespace ColorIcon

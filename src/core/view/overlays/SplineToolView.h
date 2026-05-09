@@ -30,7 +30,7 @@ class Repaintable;
 class SplineToolView:
         public BaseShapeOrSplineToolView,
         public ZoomListener,
-        public xoj::util::Listener<SplineToolView> {
+        public vn::util::Listener<SplineToolView> {
 
 public:
     SplineToolView(const SplineHandler* splineHandler, Repaintable* parent);

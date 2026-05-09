@@ -83,7 +83,7 @@ private:
     MainWindow* theMainWindow;
 
     /// The overlay that the toolbox should be displayed in.
-    xoj::util::GObjectSPtr<GtkOverlay> overlay;
+    vn::util::GObjectSPtr<GtkOverlay> overlay;
 
     std::unique_ptr<PdfElemSelection> pdfElemSelection;
 

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "util/NamespaceAliases.h"
+
 #include <pango/pango-attributes.h>  // for PangoAttrList, pango_attr_list_ref, pango_attr_list_unref
 
 #include "CLibrariesSPtr.h"

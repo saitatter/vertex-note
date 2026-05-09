@@ -24,13 +24,17 @@ template <class T>
 class Rectangle;
 }  // namespace xoj::util
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 class PageHandler {
 public:
     PageHandler();
     virtual ~PageHandler();
 
 public:
-    void fireRectChanged(xoj::util::Rectangle<double>& rect);
+    void fireRectChanged(vn::util::Rectangle<double>& rect);
     void fireRangeChanged(Range& range);
     void fireElementChanged(const Element* elem);
     /**

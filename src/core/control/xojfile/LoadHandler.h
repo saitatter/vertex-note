@@ -125,7 +125,7 @@ private:
      * @exception Throws a `std::runtime_error` if the file could not be opened
      *            or required contents could not be found.
      */
-    std::unique_ptr<xoj::util::InputStream> openFile(fs::path const& filepath);
+    std::unique_ptr<vn::util::InputStream> openFile(fs::path const& filepath);
 
     /** Reset `zipFp`, closing the zip archive if it is open. */
     void closeFile() noexcept;
@@ -138,7 +138,7 @@ private:
      * @exception Throws a `std::runtime_error` if the document is corrupted and
      *            cannot be loaded.
      */
-    void parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStream);
+    void parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStream);
 
     /**
      * Remove points of the current `stroke` that have an invalid pressure.

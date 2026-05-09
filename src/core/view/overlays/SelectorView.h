@@ -22,7 +22,7 @@ class Range;
 namespace vn::view {
 class Repaintable;
 
-class SelectorView: public OverlayView, public xoj::util::Listener<SelectorView> {
+class SelectorView: public OverlayView, public vn::util::Listener<SelectorView> {
 public:
     SelectorView(const Selector* selector, Repaintable* parent, Color selectorColor);
     virtual ~SelectorView() noexcept;

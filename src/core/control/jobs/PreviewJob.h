@@ -47,12 +47,12 @@ private:
     /**
      * Graphics buffer
      */
-    xoj::util::CairoSurfaceSPtr buffer;
+    vn::util::CairoSurfaceSPtr buffer;
 
     /**
      * Graphics drawing
      */
-    xoj::util::CairoSPtr cr;
+    vn::util::CairoSPtr cr;
 
     /**
      * Sidebar preview

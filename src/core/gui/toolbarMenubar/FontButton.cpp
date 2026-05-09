@@ -20,7 +20,7 @@ FontButton::FontButton(std::string id, ActionDatabase& db):
         AbstractToolItem(std::move(id), Category::TOOLS), gAction(db.getAction(Action::FONT)) {}
 
 static GtkWidget* makeChild(const char* desc) {
-    XojFont font(desc);
+    NoteFont font(desc);
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
     gtk_widget_set_margin_start(box, 4);
     gtk_widget_set_margin_end(box, 4);

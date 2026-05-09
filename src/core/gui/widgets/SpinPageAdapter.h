@@ -47,11 +47,11 @@ private:
     void firePageChanged();
 
 private:
-    xoj::util::WidgetSPtr widget;
+    vn::util::WidgetSPtr widget;
     gulong pageNrSpinChangedHandlerId = 0;
     size_t page = 0;
 
-    xoj::util::GSourceURef timeout;
+    vn::util::GSourceURef timeout;
     SpinPageListener* listener;
 
     size_t min = 0;

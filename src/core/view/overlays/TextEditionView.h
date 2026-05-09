@@ -24,10 +24,14 @@ template <typename T>
 class Rectangle;
 };
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class Repaintable;
 
-class TextEditionView final: public ToolView, public xoj::util::Listener<TextEditionView> {
+class TextEditionView final: public ToolView, public vn::util::Listener<TextEditionView> {
 
 public:
     TextEditionView(const TextEditor* handler, Repaintable* parent);
@@ -41,7 +45,7 @@ public:
 
     bool isViewOf(const OverlayBase* overlay) const override;
 
-    xoj::util::Rectangle<double> toWindowCoordinates(const xoj::util::Rectangle<double>& r) const;
+    vn::util::Rectangle<double> toWindowCoordinates(const vn::util::Rectangle<double>& r) const;
 
     /**
      * Listener interface

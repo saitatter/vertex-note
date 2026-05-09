@@ -33,6 +33,10 @@ template <class T>
 class DispatchPool;
 };
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class OverlayView;
 class Repaintable;
@@ -75,7 +79,7 @@ public:
 
     auto createView(vn::view::Repaintable* parent) const -> std::unique_ptr<vn::view::OverlayView> override;
 
-    const std::shared_ptr<xoj::util::DispatchPool<vn::view::StrokeToolView>>& getViewPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<vn::view::StrokeToolView>>& getViewPool() const;
 
 protected:
     /**
@@ -102,7 +106,7 @@ private:
      */
     std::unique_ptr<StrokeStabilizer::Base> stabilizer;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::StrokeToolView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::StrokeToolView>> viewPool;
 
     friend class StrokeStabilizer::Active;
 

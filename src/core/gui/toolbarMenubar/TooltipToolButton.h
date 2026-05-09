@@ -29,7 +29,7 @@ public:
                       std::function<std::string()> fetchTooltip);
     ~TooltipToolButton() override = default;
 
-    xoj::util::WidgetSPtr createItem(bool horizontal) override;
+    vn::util::WidgetSPtr createItem(bool horizontal) override;
 
 private:
     std::function<std::string()> fetchTooltip;

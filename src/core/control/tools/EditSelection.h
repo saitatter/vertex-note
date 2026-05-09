@@ -45,7 +45,7 @@ class DeleteUndoAction;
 class LineStyle;
 class ObjectInputStream;
 class ObjectOutputStream;
-class XojFont;
+class NoteFont;
 class Document;
 class EditSelection;
 
@@ -122,17 +122,17 @@ public:
     /**
      * Get the bounding rectangle in document coordinates (multiple with zoom)
      */
-    xoj::util::Rectangle<double> getRect() const;
+    vn::util::Rectangle<double> getRect() const;
 
     /**
      * gets the minimal bounding box containing all elements of the selection used for e.g. grid snapping
      */
-    xoj::util::Rectangle<double> getSnappedBounds() const;
+    vn::util::Rectangle<double> getSnappedBounds() const;
 
     /**
      * get the original bounding rectangle in document coordinates
      */
-    xoj::util::Rectangle<double> getOriginalBounds() const;
+    vn::util::Rectangle<double> getOriginalBounds() const;
 
     /**
      * Get the rotation angle of the selection
@@ -180,7 +180,7 @@ public:
      * Sets the font of all containing text elements, return an undo action
      * (or nullptr if there are no Text elements)
      */
-    UndoActionPtr setFont(const XojFont& font);
+    UndoActionPtr setFont(const NoteFont& font);
 
     /**
      * Fills the undo item if the selection is deleted
@@ -205,7 +205,7 @@ public:
     /**
      * Returns all containing elements of this selection
      */
-    auto getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>>;
+    auto getElementsView() const -> vn::util::PointerContainerView<std::vector<Element*>>;
 
     void forEachElement(std::function<void(const Element*)> f) const override;
 
@@ -261,7 +261,7 @@ public:
      * Gets the selection's bounding box in view coordinates. This takes document zoom
      * and selection rotation into account.
      */
-    auto getBoundingBoxInView() const -> xoj::util::Rectangle<double>;
+    auto getBoundingBoxInView() const -> vn::util::Rectangle<double>;
 
     /**
      * If the selection is outside the visible area correct the coordinates
@@ -390,7 +390,7 @@ private:  // DATA
     /**
      * The size and dimensions for snapping
      */
-    xoj::util::Rectangle<double> snappedBounds{};
+    vn::util::Rectangle<double> snappedBounds{};
 
 
     /**
@@ -463,7 +463,7 @@ private:  // HANDLER
     /**
      * Edge pan timer
      */
-    xoj::util::GSourceURef edgePanHandler;
+    vn::util::GSourceURef edgePanHandler;
 
     /**
      * Inhibit the next move event after edge panning finishes. This prevents

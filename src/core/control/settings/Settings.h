@@ -25,7 +25,7 @@
 #include <libxml/tree.h>  // for xmlNodePtr, xmlDocPtr
 
 #include "control/tools/StrokeStabilizerEnum.h"  // for AveragingMethod, Pre...
-#include "model/Font.h"                          // for XojFont
+#include "model/Font.h"                          // for NoteFont
 #include "util/Color.h"                          // for Color
 
 #include "LatexSettings.h"         // for LatexSettings
@@ -157,8 +157,8 @@ public:
     /**
      * The last used font
      */
-    XojFont& getFont();
-    void setFont(const XojFont& font);
+    NoteFont& getFont();
+    void setFont(const NoteFont& font);
 
     /**
      * The selected Toolbar
@@ -786,7 +786,7 @@ private:
     /**
      * The last used font
      */
-    XojFont font;
+    NoteFont font;
 
     /**
      * Base speed (as a percentage of visible canvas) of edge pan per

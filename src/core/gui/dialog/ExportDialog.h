@@ -57,7 +57,7 @@ private:
     static void onSuccessCallback(ExportDialog* self);
 
 private:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 
     size_t currentPage = 0;
     size_t pageCount = 0;

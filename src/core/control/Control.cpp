@@ -73,7 +73,7 @@
 #include "model/DocumentChangeType.h"                            // for DOCU...
 #include "model/DocumentListener.h"                              // for Docu...
 #include "model/Element.h"                                       // for Element
-#include "model/Font.h"                                          // for XojFont
+#include "model/Font.h"                                          // for NoteFont
 #include "model/Image.h"                                         // for Image
 #include "model/Layer.h"                                         // for Layer
 #include "model/LineStyle.h"                                     // for Line...
@@ -1191,7 +1191,7 @@ void Control::selectDefaultTool() {
     }
 }
 
-void Control::setFontSelected(const XojFont& font) {
+void Control::setFontSelected(const NoteFont& font) {
     this->actionDB->setActionState(Action::FONT, font.asString().c_str());
 }
 
@@ -2614,7 +2614,7 @@ void Control::setToolSize(ToolSize size) {
     this->toolHandler->setSize(size);
 }
 
-void Control::fontChanged(const XojFont& font) {
+void Control::fontChanged(const NoteFont& font) {
     settings->setFont(font);
 
     if (this->win) {

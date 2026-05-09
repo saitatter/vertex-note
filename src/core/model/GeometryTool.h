@@ -37,6 +37,10 @@ template <class T>
 class DispatchPool;
 }
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class GeometryToolView;
 };
@@ -60,16 +64,16 @@ public:
     double getHeight() const;
     void setRotation(double rotation);
     double getRotation() const;
-    const xoj::util::Point<double>& getOrigin() const;
-    void setOrigin(const xoj::util::Point<double>& o);
+    const vn::util::Point<double>& getOrigin() const;
+    void setOrigin(const vn::util::Point<double>& o);
 
     cairo_matrix_t getMatrix() const;
 
     Stroke* getStroke() const;
     void setStroke(Stroke* s);
 
-    const std::shared_ptr<xoj::util::DispatchPool<vn::view::GeometryToolView>>& getViewPool() const;
-    const std::shared_ptr<xoj::util::DispatchPool<GeometryToolInputHandler>>& getHandlerPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<vn::view::GeometryToolView>>& getViewPool() const;
+    const std::shared_ptr<vn::util::DispatchPool<GeometryToolInputHandler>>& getHandlerPool() const;
 
     virtual void notify(bool resetMask = false) const = 0;  // calls the update method of all observers
     /**
@@ -94,11 +98,11 @@ protected:
     /**
      * @brief the tool's origin
      */
-    xoj::util::Point<double> origin;
+    vn::util::Point<double> origin;
 
     Stroke* stroke = nullptr;
 
-    std::shared_ptr<xoj::util::DispatchPool<vn::view::GeometryToolView>> viewPool;
+    std::shared_ptr<vn::util::DispatchPool<vn::view::GeometryToolView>> viewPool;
 
     /**
      * @brief Bounding box of the geometry tool and stroke after its last update

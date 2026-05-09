@@ -28,7 +28,7 @@ class OverlayBase;
 namespace vn::view {
 class Repaintable;
 
-class StrokeToolView: public BaseStrokeToolView, public xoj::util::Listener<StrokeToolView> {
+class StrokeToolView: public BaseStrokeToolView, public vn::util::Listener<StrokeToolView> {
 public:
     StrokeToolView(const StrokeHandler* strokeHandler, const Stroke& stroke, Repaintable* parent);
     virtual ~StrokeToolView() noexcept;

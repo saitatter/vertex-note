@@ -22,7 +22,7 @@
 #include "model/BackgroundImage.h"             // for BackgroundImage
 #include "model/Document.h"                    // for Document
 #include "model/Element.h"                     // for Element, ELEMENT_IMAGE
-#include "model/Font.h"                        // for XojFont
+#include "model/Font.h"                        // for NoteFont
 #include "model/Image.h"                       // for Image
 #include "model/Layer.h"                       // for Layer
 #include "model/LineStyle.h"                   // for LineStyle
@@ -189,7 +189,7 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             auto* text = new XmlTextNode(TAG_NAMES[TagType::TEXT], t->getText());
             layer->addChild(text);
 
-            const XojFont& f = t->getFont();
+            const NoteFont& f = t->getFont();
 
             text->setAttrib(xoj::xml_attrs::FONT_STR, f.getName().c_str());
             text->setAttrib(xoj::xml_attrs::SIZE_STR, f.getSize());

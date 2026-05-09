@@ -23,7 +23,7 @@ class Range;
 namespace vn::view {
 class Repaintable;
 
-class PdfElementSelectionView final: public OverlayView, public xoj::util::Listener<PdfElementSelectionView> {
+class PdfElementSelectionView final: public OverlayView, public vn::util::Listener<PdfElementSelectionView> {
 
 public:
     PdfElementSelectionView(const PdfElemSelection* selection, Repaintable* parent, Color selectionColor);

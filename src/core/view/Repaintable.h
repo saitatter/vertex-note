@@ -20,6 +20,10 @@ template <typename T>
 class Rectangle;
 };
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 namespace vn::view {
 class OverlayView;
 class ToolView;
@@ -47,7 +51,7 @@ public:
     virtual double getHeight() const = 0;
 
     // Convert a rectangle from local coordinates to widget coordinates
-    virtual xoj::util::Rectangle<double> toWidgetCoordinates(const xoj::util::Rectangle<double>& r) const = 0;
+    virtual vn::util::Rectangle<double> toWidgetCoordinates(const vn::util::Rectangle<double>& r) const = 0;
 
     /**
      * @brief Flag a region as dirty. Dirty regions will get redrawn at the next screen refresh.

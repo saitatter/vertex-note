@@ -36,8 +36,8 @@ private:
 
     PageBackgroundChangeController* controller;
 
-    xoj::util::GObjectSPtr<GMenu> generatedPageTypesSection;
-    xoj::util::GObjectSPtr<GMenu> specialPageTypesSection;
-    xoj::util::GObjectSPtr<GMenu> applyToAllPagesSection;
-    xoj::util::GObjectSPtr<GSimpleAction> applyToAllPagesAction;
+    vn::util::GObjectSPtr<GMenu> generatedPageTypesSection;
+    vn::util::GObjectSPtr<GMenu> specialPageTypesSection;
+    vn::util::GObjectSPtr<GMenu> applyToAllPagesSection;
+    vn::util::GObjectSPtr<GSimpleAction> applyToAllPagesAction;
 };

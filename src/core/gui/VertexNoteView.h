@@ -46,6 +46,10 @@ template <class T>
 class Rectangle;
 }  // namespace xoj::util
 
+namespace vn {
+namespace util = xoj::util;
+}
+
 class VertexNoteView: public DocumentListener, public ZoomListener {
 public:
     VertexNoteView(GtkWidget* parent, Control* control, ScrollHandling* scrollHandling);
@@ -114,9 +118,9 @@ public:
 
 
     /// Return the rectangle (if any) which is visible on screen in page cooordinates
-    xoj::util::Rectangle<double>* getVisibleRect(size_t page) const;
+    vn::util::Rectangle<double>* getVisibleRect(size_t page) const;
     /// Return the rectangle (if any) which is visible on screen in page cooordinates
-    xoj::util::Rectangle<double>* getVisibleRect(const PageView* redrawable) const;
+    vn::util::Rectangle<double>* getVisibleRect(const PageView* redrawable) const;
 
     /**
      * Recreate the PDF cache, for example after the underlying PDF file has changed

@@ -12,6 +12,8 @@
 
 #include <glib-2.0/glib.h>
 
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 struct GSourceURef {
     GSourceURef(unsigned int id = 0): id(id) {}
