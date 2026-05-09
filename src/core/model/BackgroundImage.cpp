@@ -15,7 +15,7 @@
  * Internal impl object, dont move this to an external header/source file due this is the best way to reduce code
  * bloat and increase encapsulation. This object is only used in this source scope and is a RAII Container for the
  * GdkPixbuf*
- * No xournal memory leak tests necessary, because we use smart ptrs to ensure memory correctness
+ * No legacy memory leak tests are necessary, because we use smart ptrs to ensure memory correctness
  */
 
 struct BackgroundImage::Content {

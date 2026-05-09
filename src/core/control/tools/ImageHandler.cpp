@@ -89,9 +89,9 @@ bool ImageHandler::addImageToDocument(std::unique_ptr<Image> img, PageRef page, 
         control->getUndoRedoHandler()->addUndoAction(std::make_unique<InsertUndoAction>(page, layer, img.get()));
     }
 
-    VertexNoteView* xournal = control->getWindow()->getXournal();
-    auto pageNr = xournal->getCurrentPage();
-    auto* view = xournal->getViewFor(pageNr);
+    VertexNoteView* noteView = control->getWindow()->getNoteView();
+    auto pageNr = noteView->getCurrentPage();
+    auto* view = noteView->getViewFor(pageNr);
 
     if (view->getPage() != page) {
         g_warning("Active page changed while you selected the image. Aborting.");
@@ -99,7 +99,7 @@ bool ImageHandler::addImageToDocument(std::unique_ptr<Image> img, PageRef page, 
     }
 
     auto sel = SelectionFactory::createFromFloatingElement(control, page, layer, view, std::move(img));
-    control->getWindow()->getXournal()->setSelection(sel.release());
+    control->getWindow()->getNoteView()->setSelection(sel.release());
     return true;
 }
 

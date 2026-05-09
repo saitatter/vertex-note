@@ -26,7 +26,7 @@ auto MissingPdfUndoAction::undo(Control* control) -> bool {
     doc->setPdfAttributes(this->filepath, this->attachPdf);
     doc->unlock();
 
-    control->getWindow()->getXournal()->recreatePdfCache();
+    control->getWindow()->getNoteView()->recreatePdfCache();
 
     for (size_t p = 0; p < doc->getPageCount(); p++) {
         if (doc->getPage(p)->getBackgroundType().format == PageTypeFormat::Pdf) {
@@ -49,7 +49,7 @@ auto MissingPdfUndoAction::redo(Control* control) -> bool {
     doc->unlock();
 
     doc->readPdf(this->filepath, false, this->attachPdf);
-    control->getWindow()->getXournal()->recreatePdfCache();
+    control->getWindow()->getNoteView()->recreatePdfCache();
 
     for (size_t p = 0; p < doc->getPageCount(); p++) {
         if (doc->getPage(p)->getBackgroundType().format == PageTypeFormat::Pdf) {

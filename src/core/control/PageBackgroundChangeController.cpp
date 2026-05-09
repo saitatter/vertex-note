@@ -112,7 +112,7 @@ void PageBackgroundChangeController::changePdfPagesBackground(const fs::path& fi
         AppMessageBox::showErrorToUser(this->control->getGtkWindow(), msg);
         return;
     }
-    this->control->getWindow()->getXournal()->recreatePdfCache();
+    this->control->getWindow()->getNoteView()->recreatePdfCache();
 
     this->control->fireDocumentChanged(DOCUMENT_CHANGE_COMPLETE);
 

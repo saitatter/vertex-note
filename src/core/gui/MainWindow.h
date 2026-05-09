@@ -82,7 +82,6 @@ public:
     bool isDarkTheme() const;
 
     VertexNoteView* getNoteView() const;
-    VertexNoteView* getXournal() const;
 
     void setMenubarVisible(bool visible);
     void setSidebarVisible(bool visible);

@@ -140,7 +140,7 @@ auto FloatingToolbox::getOverlayPosition(GtkOverlay* overlay, GtkWidget* widget,
     }
 
     GtkWidget* scrolledWindow =
-            gtk_widget_get_ancestor(self->mainWindow->getXournal()->getWidget(), GTK_TYPE_SCROLLED_WINDOW);
+            gtk_widget_get_ancestor(self->mainWindow->getNoteView()->getWidget(), GTK_TYPE_SCROLLED_WINDOW);
 
     switch (self->floatingToolboxState) {
         case recalcSize:

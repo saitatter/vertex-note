@@ -138,7 +138,6 @@ public:
     const PageRef getPage() const;
 
     VertexNoteView* getNoteView() const;
-    VertexNoteView* getXournal() const;
 
     /**
      * Returns the width of this PageView as displayed

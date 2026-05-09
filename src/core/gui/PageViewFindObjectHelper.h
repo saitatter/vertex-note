@@ -40,7 +40,7 @@ public:
         this->x = x;
         this->y = y;
 
-        Control* ctrl = this->view->getXournal()->getControl();
+        Control* ctrl = this->view->getNoteView()->getControl();
 
         if (clearSelection) {
             ctrl->clearSelection();
@@ -82,7 +82,7 @@ public:
         findAt(x, y, multiLayer);
 
         if (match) {
-            Control* ctrl = view->getXournal()->getControl();
+            Control* ctrl = view->getNoteView()->getControl();
             auto sel = SelectionFactory::createFromElementOnActiveLayer(ctrl, view->getPage(), view, match, matchIndex);
             view->noteView->setSelection(sel.release());
             view->repaintPage();
@@ -93,14 +93,14 @@ public:
     }
 
     bool atAggregate(double x, double y) {
-        EditSelection* previousSelection = view->getXournal()->getSelection();
+        EditSelection* previousSelection = view->getNoteView()->getSelection();
         xoj_assert(previousSelection);
 
         findAt(x, y, false, false);
         if (match) {
-            auto sel = SelectionFactory::addElementFromActiveLayer(view->getXournal()->getControl(), previousSelection,
+            auto sel = SelectionFactory::addElementFromActiveLayer(view->getNoteView()->getControl(), previousSelection,
                                                                    match, matchIndex);
-            view->getXournal()->setSelection(sel.release());
+            view->getNoteView()->setSelection(sel.release());
             view->repaintPage();
 
             return true;
@@ -187,7 +187,7 @@ protected:
                 // Assume path exists
                 fn = path / fn;
             }
-            auto* audioController = view->getXournal()->getControl()->getAudioController();
+            auto* audioController = view->getNoteView()->getControl()->getAudioController();
             if (!audioController) {
                 g_warning("Audio has been disabled");
                 return false;

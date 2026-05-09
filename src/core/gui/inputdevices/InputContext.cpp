@@ -212,7 +212,7 @@ auto InputContext::handle(GdkEvent* sourceEvent) -> bool {
     return false;
 }
 
-auto InputContext::getXournal() const -> GtkVertexNote* { return GTK_VERTEX_NOTE(widget); }
+auto InputContext::getNoteWidget() const -> GtkVertexNote* { return GTK_VERTEX_NOTE(widget); }
 
 auto InputContext::getView() const -> VertexNoteView* { return view; }
 

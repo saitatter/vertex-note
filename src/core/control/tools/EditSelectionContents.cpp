@@ -54,7 +54,7 @@ EditSelectionContents::EditSelectionContents(Rectangle<double> bounds, Rectangle
         sourceView(sourceView) {
 
     this->restoreLineWidth =
-            this->getSourceView()->getXournal()->getControl()->getSettings()->getRestoreLineWidthEnabled();
+            this->getSourceView()->getNoteView()->getControl()->getSettings()->getRestoreLineWidthEnabled();
 }
 
 EditSelectionContents::~EditSelectionContents() {
@@ -152,7 +152,7 @@ auto EditSelectionContents::setSize(ToolSize size, const double* thicknessPen, c
 
     if (found) {
         this->deleteViewBuffer();
-        this->sourceView->getXournal()->repaintSelection();
+        this->sourceView->getNoteView()->repaintSelection();
 
         return undo;
     }
@@ -197,7 +197,7 @@ auto EditSelectionContents::setFill(int alphaPen, int alphaHighligther) -> UndoA
 
     if (found) {
         this->deleteViewBuffer();
-        this->sourceView->getXournal()->repaintSelection();
+        this->sourceView->getNoteView()->repaintSelection();
 
         return undo;
     }
@@ -249,7 +249,7 @@ auto EditSelectionContents::setFont(const NoteFont& font) -> UndoActionPtr {
 
     if (!std::isnan(x1)) {
         this->deleteViewBuffer();
-        this->sourceView->getXournal()->repaintSelection();
+        this->sourceView->getNoteView()->repaintSelection();
         return undo;
     }
 
@@ -278,7 +278,7 @@ auto EditSelectionContents::setLineStyle(LineStyle style) -> UndoActionPtr {
 
     if (found) {
         this->deleteViewBuffer();
-        this->sourceView->getXournal()->repaintSelection();
+        this->sourceView->getNoteView()->repaintSelection();
 
         return undo;
     }
@@ -307,7 +307,7 @@ auto EditSelectionContents::setColor(Color color) -> UndoActionPtr {
 
     if (found) {
         this->deleteViewBuffer();
-        this->sourceView->getXournal()->repaintSelection();
+        this->sourceView->getNoteView()->repaintSelection();
 
         return undo;
     }
@@ -336,7 +336,7 @@ void EditSelectionContents::fillUndoItem(DeleteUndoAction* undo) {
 auto EditSelectionContents::repaintSelection(EditSelectionContents* selection) -> bool {
     // delete the selection buffer, force a redraw
     selection->deleteViewBuffer();
-    selection->sourceView->getXournal()->repaintSelection();
+    selection->sourceView->getNoteView()->repaintSelection();
     selection->rescaleId = 0;
 
     return false;

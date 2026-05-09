@@ -78,7 +78,7 @@ void CompassController::updateOutlineStroke(double x) {
     angleMax = std::max(this->angleMax, x);
     angleMin = std::min(this->angleMin, x);
     stroke->deletePointsFrom(0);
-    const auto h = view->getXournal()->getControl()->getToolHandler();
+    const auto h = view->getNoteView()->getControl()->getToolHandler();
     const bool filled = (h->getFill() != -1);
     const vn::util::Point<double>& c = this->getGeometryTool()->getOrigin();
 

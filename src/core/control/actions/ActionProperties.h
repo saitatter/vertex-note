@@ -197,7 +197,7 @@ struct ActionProperties<Action::SELECT_ALL> {
 template <>
 struct ActionProperties<Action::DELETE> {
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
-        if (!ctrl->getWindow()->getXournal()->actionDelete()) {
+        if (!ctrl->getWindow()->getNoteView()->actionDelete()) {
             ctrl->deleteSelection();
         }
     }

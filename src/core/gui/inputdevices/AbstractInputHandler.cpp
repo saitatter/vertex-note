@@ -60,7 +60,7 @@ auto AbstractInputHandler::getPageAtCurrentPosition(InputEvent const& event) con
         return nullptr;
     }
 
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
 
     int x = round_cast<int>(event.relative.x);
     int y = round_cast<int>(event.relative.y);

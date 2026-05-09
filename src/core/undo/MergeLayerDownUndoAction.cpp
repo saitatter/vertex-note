@@ -113,6 +113,6 @@ void MergeLayerDownUndoAction::triggerUIUpdate(Control* control) {
      */
     MainWindow* win = control->getWindow();
     if (win) {
-        win->getXournal()->layerChanged(this->selectedPage);
+        win->getNoteView()->layerChanged(this->selectedPage);
     }
 }

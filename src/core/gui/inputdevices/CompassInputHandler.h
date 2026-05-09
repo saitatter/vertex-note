@@ -26,7 +26,7 @@ struct InputEvent;
 class CompassInputHandler: public GeometryToolInputHandler {
 
 public:
-    explicit CompassInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
+    explicit CompassInputHandler(VertexNoteView* noteView, GeometryToolController* controller);
     ~CompassInputHandler() noexcept override;
 
 private:

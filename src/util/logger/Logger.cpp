@@ -61,7 +61,7 @@ void Log::trace(const char* callType, const char* clazz, const char* function, l
     logfile << os.str();
 }
 
-void Log::initlog() { logfile.open("xournalCalls.log"); }
+void Log::initlog() { logfile.open("vertexnote-calls.log"); }
 
 void Log::closelog() { logfile.close(); }
 

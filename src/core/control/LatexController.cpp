@@ -102,7 +102,7 @@ void LatexController::findSelectedTexElement() {
     if (pageNr == npos) {
         return;
     }
-    this->view = this->control->getWindow()->getXournal()->getViewFor(pageNr);
+    this->view = this->control->getWindow()->getNoteView()->getViewFor(pageNr);
     if (view == nullptr) {
         return;
     }
@@ -117,7 +117,7 @@ void LatexController::findSelectedTexElement() {
 
     if (this->selectedElem) {
         // this will get the position of the Latex properly
-        EditSelection* theSelection = control->getWindow()->getXournal()->getSelection();
+        EditSelection* theSelection = control->getWindow()->getNoteView()->getSelection();
         vn::util::Rectangle<double> rect = theSelection->getSnappedBounds();
         this->posx = rect.x;
         this->posy = rect.y;
@@ -133,8 +133,8 @@ void LatexController::findSelectedTexElement() {
         this->imgheight = this->selectedElem->getElementHeight();
     } else {
         // This is a new latex object, so here we pick a convenient initial location
-        const double zoom = this->control->getWindow()->getXournal()->getZoom();
-        Layout* layout = this->control->getWindow()->getXournal()->getLayout();
+        const double zoom = this->control->getWindow()->getNoteView()->getZoom();
+        Layout* layout = this->control->getWindow()->getNoteView()->getLayout();
 
         // Calculate coordinates (screen) of the center of the visible area
         const auto visibleBounds = layout->getVisibleRect();
@@ -287,7 +287,7 @@ void LatexController::updateStatus() { this->dlg->setCompilationStatus(isValidTe
 void LatexController::deleteOldImage() {
     if (this->selectedElem) {
         auto sel = SelectionFactory::createFromElementOnActiveLayer(control, page, view, selectedElem);
-        this->view->getXournal()->deleteSelection(sel.release());
+        this->view->getNoteView()->deleteSelection(sel.release());
         this->selectedElem = nullptr;
     }
 }
@@ -346,7 +346,7 @@ void LatexController::insertTexImage() {
     // Select element
     auto selection =
             SelectionFactory::createFromFloatingElement(control, page, layer, view, std::move(this->temporaryRender));
-    view->getXournal()->setSelection(selection.release());
+    view->getNoteView()->setSelection(selection.release());
 }
 
 void LatexController::cancelEditing() {

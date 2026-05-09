@@ -1146,8 +1146,6 @@ auto PageView::getPage() const -> const PageRef { return page; }
 
 auto PageView::getNoteView() const -> VertexNoteView* { return this->noteView; }
 
-auto PageView::getXournal() const -> VertexNoteView* { return getNoteView(); }
-
 auto PageView::getDisplayWidth() const -> int {
     return round_cast<int>(this->page->getWidth() * this->noteView->getZoom());
 }

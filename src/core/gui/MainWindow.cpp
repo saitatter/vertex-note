@@ -633,8 +633,6 @@ auto MainWindow::isDarkTheme() const -> bool { return this->darkMode; }
 
 auto MainWindow::getNoteView() const -> VertexNoteView* { return noteView.get(); }
 
-auto MainWindow::getXournal() const -> VertexNoteView* { return getNoteView(); }
-
 auto MainWindow::windowMaximizedCallback(GObject* window, GParamSpec*, MainWindow* win) -> void {
     win->setMaximized(gtk_window_is_maximized(GTK_WINDOW(window)));
 }

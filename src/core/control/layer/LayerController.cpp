@@ -80,7 +80,7 @@ void LayerController::fireLayerVisibilityChanged() {
     for (LayerCtrlListener* l: this->listener) { l->layerVisibilityChanged(); }
 
     // Rerenders the page - Todo: make this another listener
-    control->getWindow()->getXournal()->layerChanged(selectedPage);
+    control->getWindow()->getNoteView()->layerChanged(selectedPage);
 }
 
 void LayerController::fireSelectedLayerChanged() {
@@ -147,7 +147,7 @@ void LayerController::deleteCurrentLayer() {
 
     MainWindow* win = control->getWindow();
     if (win) {
-        win->getXournal()->layerChanged(pId);
+        win->getNoteView()->layerChanged(pId);
     }
 
     control->getUndoRedoHandler()->addUndoAction(std::make_unique<RemoveLayerUndoAction>(this, p, l, lId - 1));
@@ -191,7 +191,7 @@ void LayerController::moveCurrentLayer(bool up) {
 
     MainWindow* win = control->getWindow();
     if (win) {
-        win->getXournal()->layerChanged(pId);
+        win->getNoteView()->layerChanged(pId);
     }
 
     control->getUndoRedoHandler()->addUndoAction(
@@ -267,7 +267,7 @@ void LayerController::copyCurrentLayer() {
 
     MainWindow* win = control->getWindow();
     if (win) {
-        win->getXournal()->layerChanged(pId);
+        win->getNoteView()->layerChanged(pId);
     }
 
     control->getUndoRedoHandler()->addUndoAction(std::make_unique<InsertLayerUndoAction>(this, p, cloned, lId));

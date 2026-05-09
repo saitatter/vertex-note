@@ -497,7 +497,7 @@ void on_startup(GApplication* application, XMPtr app_data) {
 
                 // There is a timing issue with the layout
                 // This fixes it, see #405
-                Util::execInUiThread([ctrl]() { ctrl->getWindow()->getXournal()->layoutPages(); });
+                Util::execInUiThread([ctrl]() { ctrl->getWindow()->getNoteView()->layoutPages(); });
                 gtk_application_add_window(app, ctrl->getGtkWindow());
             });
 }
@@ -567,7 +567,7 @@ auto on_handle_local_options(GApplication*, GVariantDict*, XMPtr app_data) -> gi
 
 void on_shutdown(GApplication*, XMPtr app_data) {
     app_data->control->saveSettings();
-    app_data->win->getXournal()->clearSelection();
+    app_data->win->getNoteView()->clearSelection();
     app_data->control->getScheduler()->stop();
 }
 

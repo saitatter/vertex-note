@@ -26,7 +26,7 @@ struct InputEvent;
 class SetsquareInputHandler: public GeometryToolInputHandler {
 
 public:
-    explicit SetsquareInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
+    explicit SetsquareInputHandler(VertexNoteView* noteView, GeometryToolController* controller);
     ~SetsquareInputHandler() noexcept override;
 
 private:

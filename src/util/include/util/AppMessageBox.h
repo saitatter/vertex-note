@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Xournal util functions
+ * VertexNote utility dialogs
  *
  * @author VertexNote Team
  * https://github.com/saitatter/vertex-note
@@ -25,15 +25,15 @@ class AppMessageBox final {
 public:
     enum CallbackPolicy { IMMEDIATE, POSTPONED };
     AppMessageBox(
-            GtkDialog* dialog, xoj::util::move_only_function<void(int)> callback = [](int) {},
+            GtkDialog* dialog, vn::util::move_only_function<void(int)> callback = [](int) {},
             CallbackPolicy pol = POSTPONED);
     ~AppMessageBox() = default;
 
     inline GtkWindow* getWindow() const { return window.get(); }
 
 private:
-    xoj::util::GtkWindowUPtr window;
-    xoj::util::move_only_function<void(int)> callback;  ///< The parameter is the dialog's response ID
+    vn::util::GtkWindowUPtr window;
+    vn::util::move_only_function<void(int)> callback;  ///< The parameter is the dialog's response ID
     gulong signalId;
     /**
      * If POSTPONED, the callback is called after the dialog has been closed. This is necessary when the callback can
@@ -56,13 +56,13 @@ public:
     static void setDefaultWindow(GtkWindow* win);
 
     static void askQuestion(GtkWindow* win, const std::string& maintext, const std::string& secondarytext,
-                            const std::vector<Button>& buttons, xoj::util::move_only_function<void(int)> callback);
+                            const std::vector<Button>& buttons, vn::util::move_only_function<void(int)> callback);
     /**
      * @brief same as askQuestion() but the string maintext is not escaped for Pango markups
      */
     static void askQuestionWithMarkup(GtkWindow* win, std::string_view maintext, const std::string& secondarytext,
                                       const std::vector<Button>& buttons,
-                                      xoj::util::move_only_function<void(int)> callback);
+                                      vn::util::move_only_function<void(int)> callback);
 
     /**
      * @brief Shows a message with title markupTitle and message content msg.
@@ -91,5 +91,5 @@ public:
      * "Overwrite" to a popup dialog.
      */
     static void replaceFileQuestion(GtkWindow* win, fs::path file,
-                                    xoj::util::move_only_function<void(const fs::path&)> writeToFile);
+                                    vn::util::move_only_function<void(const fs::path&)> writeToFile);
 };

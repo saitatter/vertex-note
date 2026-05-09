@@ -99,7 +99,7 @@ auto TouchDrawingInputHandler::handleImpl(InputEvent const& event) -> bool {
     // let an alternate handler (e.g. TouchInputHandler) decide
     // what to do...
     if (this->deviceClassPressed && event.type == MOTION_EVENT && toolHandler->getToolType() != TOOL_HAND) {
-        GtkVertexNote* noteWidget = inputContext->getXournal();
+        GtkVertexNote* noteWidget = inputContext->getNoteWidget();
 
         this->inputContext->getView()->getCursor()->setRotationAngle(event.relative.x);
 

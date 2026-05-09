@@ -44,7 +44,7 @@ auto InsertLayerUndoAction::redo(Control* control) -> bool {
     layerController->insertLayer(this->page, this->layer, layerPosition);
     auto id = doc->indexOf(this->page);
     doc->unlock();
-    control->getWindow()->getXournal()->layerChanged(id);
+    control->getWindow()->getNoteView()->layerChanged(id);
 
     this->undone = false;
 

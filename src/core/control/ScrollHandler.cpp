@@ -23,13 +23,13 @@ ScrollHandler::~ScrollHandler() = default;
 
 void ScrollHandler::goToPreviousPage() {
     if (this->control->getWindow()) {
-        scrollToPage(this->control->getWindow()->getXournal()->getCurrentPage() - 1);
+        scrollToPage(this->control->getWindow()->getNoteView()->getCurrentPage() - 1);
     }
 }
 
 void ScrollHandler::goToNextPage() {
     if (this->control->getWindow()) {
-        scrollToPage(this->control->getWindow()->getXournal()->getCurrentPage() + 1);
+        scrollToPage(this->control->getWindow()->getNoteView()->getCurrentPage() + 1);
     }
 }
 
@@ -71,7 +71,7 @@ void ScrollHandler::scrollToPage(size_t page, PdfRectangle rect) {
         return;
     }
 
-    win->getXournal()->scrollTo(page, rect);
+    win->getNoteView()->scrollTo(page, rect);
 }
 
 void ScrollHandler::jumpToPage(const PageRef& page, PdfRectangle rect) {
@@ -139,7 +139,7 @@ auto ScrollHandler::isPageVisible(size_t page, int* visibleHeight) -> bool {
         return false;
     }
 
-    return this->control->getWindow()->getXournal()->isPageVisible(page, visibleHeight);
+    return this->control->getWindow()->getNoteView()->isPageVisible(page, visibleHeight);
 }
 
 void ScrollHandler::pageChanged(size_t page) {

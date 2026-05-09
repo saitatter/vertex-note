@@ -50,7 +50,7 @@ class TextEditionView;
 
 class TextEditor: public OverlayBase {
 public:
-    TextEditor(Control* control, const PageRef& page, GtkWidget* xournalWidget, double x, double y);
+    TextEditor(Control* control, const PageRef& page, GtkWidget* noteWidget, double x, double y);
     virtual ~TextEditor();
 
     /** Represents the different kinds of text selection */
@@ -161,7 +161,7 @@ private:
     /**
      * @brief Pointer to the main window's widget. Used for fetching settings and clipboards, and ringing the bell.
      */
-    GtkWidget* xournalWidget;
+    GtkWidget* noteWidget;
 
     /**
      * @brief Text element under edition, clone of the original Text element (if any)

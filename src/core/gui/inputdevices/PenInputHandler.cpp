@@ -53,7 +53,7 @@ void PenInputHandler::updateLastEvent(InputEvent const& event) {
 }
 
 void PenInputHandler::handleScrollEvent(InputEvent const& event) {
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
     // use root coordinates as reference point because
     // scrolling changes window relative coordinates
     // see github Gnome/evince@1adce5486b10e763bed869
@@ -110,7 +110,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
 
     this->penInWidget = true;
 
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
 
     VertexNoteCursor* cursor = noteWidget->view->getCursor();
     cursor->setMouseDown(true);
@@ -287,7 +287,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
 
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
     ToolHandler* toolHandler = this->inputContext->getToolHandler();
 
     this->changeTool(event);
@@ -401,7 +401,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
 }
 
 auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
-    GtkVertexNote* noteWidget = inputContext->getXournal();
+    GtkVertexNote* noteWidget = inputContext->getNoteWidget();
     VertexNoteCursor* cursor = noteWidget->view->getCursor();
     ToolHandler* toolHandler = inputContext->getToolHandler();
     EditSelection* selection = noteWidget->view->getSelection();
@@ -561,7 +561,7 @@ void PenInputHandler::actionLeaveWindow(InputEvent const& event) {
 
             while (!this->penInWidget) {
                 Util::execInUiThread([&]() {
-                    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+                    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
                     noteWidget->layout->scrollRelative(offsetX, offsetY);
                 });
 

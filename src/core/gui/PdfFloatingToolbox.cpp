@@ -92,7 +92,7 @@ auto PdfFloatingToolbox::getOverlayPosition(GtkOverlay* overlay, GtkWidget* widg
         // If the toolbox will go out of the window, then we'll flip the corresponding directions.
 
         GtkWidget* scrolledWindow =
-                gtk_widget_get_ancestor(self->theMainWindow->getXournal()->getWidget(), GTK_TYPE_SCROLLED_WINDOW);
+                gtk_widget_get_ancestor(self->theMainWindow->getNoteView()->getWidget(), GTK_TYPE_SCROLLED_WINDOW);
 
         bool rightOK = self->position.x + allocation->width + gap <= gtk_widget_get_allocated_width(scrolledWindow);
         bool bottomOK = self->position.y + allocation->height + gap <= gtk_widget_get_allocated_height(scrolledWindow);
@@ -149,7 +149,7 @@ void PdfFloatingToolbox::copyTextToClipboard() {
 
 void PdfFloatingToolbox::createStrokes(PdfMarkerStyle position, PdfMarkerStyle width, int markerOpacity) {
     const size_t pdfPageNo = this->pdfElemSelection->getSelectionPageNr();
-    const size_t currentPage = theMainWindow->getXournal()->getCurrentPage();
+    const size_t currentPage = theMainWindow->getNoteView()->getCurrentPage();
 
     // Get the PDF page that the current page corresponds to.
     // It should be the same as the PDF page of the selection.
@@ -173,7 +173,7 @@ void PdfFloatingToolbox::createStrokes(PdfMarkerStyle position, PdfMarkerStyle w
     PageRef page = control->getCurrentPage();
     Layer* layer = page->getSelectedLayer();
 
-    auto color = theMainWindow->getXournal()->getControl()->getToolHandler()->getColor();
+    auto color = theMainWindow->getNoteView()->getControl()->getToolHandler()->getColor();
 
     Range dirtyRange;
     std::vector<ElementPtr> strokes;

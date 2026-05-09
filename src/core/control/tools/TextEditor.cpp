@@ -121,10 +121,10 @@ static auto cloneWithInsertToStdString(GtkTextBuffer* buf, std::string_view inse
     return res;
 }
 
-TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournalWidget, double x, double y):
+TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* noteWidget, double x, double y):
         control(control),
         page(page),
-        xournalWidget(xournalWidget),
+        noteWidget(noteWidget),
         imContext(gtk_im_multicontext_new(), vn::util::adopt),
         buffer(gtk_text_buffer_new(nullptr), vn::util::adopt),
         viewPool(std::make_shared<vn::util::DispatchPool<vn::view::TextEditionView>>()) {
@@ -136,7 +136,7 @@ TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournal
     g_signal_connect(this->buffer.get(), "paste-done", G_CALLBACK(bufferPasteDoneCallback), this);
 
     {  // Get cursor blinking settings
-        GtkSettings* settings = gtk_widget_get_settings(this->xournalWidget);
+        GtkSettings* settings = gtk_widget_get_settings(this->noteWidget);
         g_object_get(settings, "gtk-cursor-blink", &this->cursorBlink, nullptr);
         if (this->cursorBlink) {
             int tmp = 0;
@@ -148,7 +148,7 @@ TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournal
         }
     }
 
-    gtk_im_context_set_client_widget(this->imContext.get(), this->xournalWidget);
+    gtk_im_context_set_client_widget(this->imContext.get(), this->noteWidget);
     gtk_im_context_focus_in(this->imContext.get());
 
     g_signal_connect(this->imContext.get(), "commit", G_CALLBACK(iMCommitCallback), this);
@@ -169,7 +169,7 @@ TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournal
 TextEditor::~TextEditor() {
     gtk_im_context_focus_out(this->imContext.get());
 
-    this->xournalWidget = nullptr;
+    this->noteWidget = nullptr;
     control->setCopyCutEnabled(false);
 
     this->contentsChanged(true);
@@ -219,7 +219,7 @@ void TextEditor::iMCommitCallback(GtkIMContext* context, const gchar* str, TextE
 
     if (!strcmp(str, "\n")) {
         if (!gtk_text_buffer_insert_interactive_at_cursor(te->buffer.get(), "\n", 1, true)) {
-            gtk_widget_error_bell(te->xournalWidget);
+            gtk_widget_error_bell(te->noteWidget);
         } else {
             te->contentsChanged(true);
         }
@@ -232,7 +232,7 @@ void TextEditor::iMCommitCallback(GtkIMContext* context, const gchar* str, TextE
         }
 
         if (!gtk_text_buffer_insert_interactive_at_cursor(te->buffer.get(), str, -1, true)) {
-            gtk_widget_error_bell(te->xournalWidget);
+            gtk_widget_error_bell(te->noteWidget);
         }
     }
 
@@ -261,7 +261,7 @@ void TextEditor::iMPreeditChangedCallback(GtkIMContext* context, TextEditor* te)
          * not editable; so beep here if it's multi-key input sequence, input
          * method will be reset in key-press-event handler.
          */
-        gtk_widget_error_bell(te->xournalWidget);
+        gtk_widget_error_bell(te->noteWidget);
         return;
     }
 
@@ -535,7 +535,7 @@ void TextEditor::moveCursor(GtkMovementStep step, int count, bool extendSelectio
     }
 
     if (gtk_text_iter_equal(&insert, &newplace)) {
-        gtk_widget_error_bell(this->xournalWidget);
+        gtk_widget_error_bell(this->noteWidget);
     }
 }
 
@@ -782,12 +782,12 @@ void TextEditor::deleteFromCursor(GtkDeleteType type, int count) {
         gtk_text_buffer_begin_user_action(this->buffer.get());
 
         if (!gtk_text_buffer_delete_interactive(this->buffer.get(), &start, &end, true)) {
-            gtk_widget_error_bell(this->xournalWidget);
+            gtk_widget_error_bell(this->noteWidget);
         }
 
         gtk_text_buffer_end_user_action(this->buffer.get());
     } else {
-        gtk_widget_error_bell(this->xournalWidget);
+        gtk_widget_error_bell(this->noteWidget);
     }
 
     this->contentsChanged();
@@ -811,7 +811,7 @@ void TextEditor::backspace() {
         this->contentsChanged();
         this->repaintEditor();
     } else {
-        gtk_widget_error_bell(this->xournalWidget);
+        gtk_widget_error_bell(this->noteWidget);
     }
 }
 
@@ -837,12 +837,12 @@ void TextEditor::tabulation() {
 
 
 void TextEditor::copyToClipboard() const {
-    auto* clipboard = gtk_widget_get_clipboard(this->xournalWidget);
+    auto* clipboard = gtk_widget_get_clipboard(this->noteWidget);
     gtk_text_buffer_copy_clipboard(this->buffer.get(), clipboard);
 }
 
 void TextEditor::cutToClipboard() {
-    auto* clipboard = gtk_widget_get_clipboard(this->xournalWidget);
+    auto* clipboard = gtk_widget_get_clipboard(this->noteWidget);
     gtk_text_buffer_cut_clipboard(this->buffer.get(), clipboard, true);
 
     this->contentsChanged(true);
@@ -850,7 +850,7 @@ void TextEditor::cutToClipboard() {
 }
 
 void TextEditor::pasteFromClipboard() {
-    auto* clipboard = gtk_widget_get_clipboard(this->xournalWidget);
+    auto* clipboard = gtk_widget_get_clipboard(this->noteWidget);
     gtk_text_buffer_paste_clipboard(this->buffer.get(), clipboard, nullptr, true);
 }
 

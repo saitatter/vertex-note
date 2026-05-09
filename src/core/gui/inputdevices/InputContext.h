@@ -96,7 +96,7 @@ public:
     void connect(GtkWidget* widget, bool connectKeyboardHandler = true,
                  std::optional<std::function<void(GdkEvent*)>> logfunction = std::nullopt);
 
-    GtkVertexNote* getXournal() const;
+    GtkVertexNote* getNoteWidget() const;
     VertexNoteView* getView() const;
     ToolHandler* getToolHandler() const;
     Settings* getSettings() const;

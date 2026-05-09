@@ -24,7 +24,7 @@ MouseInputHandler::~MouseInputHandler() = default;
 
 auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
     // Only handle events when there is no active gesture
-    GtkVertexNote* noteWidget = inputContext->getXournal();
+    GtkVertexNote* noteWidget = inputContext->getNoteWidget();
 
     // Determine the pressed states of devices and associate them to the current event
     setPressedState(event);
@@ -92,7 +92,7 @@ auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
 
 void MouseInputHandler::setPressedState(InputEvent const& event) {
     PageView* currentPage = getPageAtCurrentPosition(event);
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
     noteWidget->view->getCursor()->setInsidePage(currentPage != nullptr);
 
     if (event.type == BUTTON_PRESS_EVENT)  // mouse button pressed or pen touching surface
@@ -163,7 +163,7 @@ void MouseInputHandler::setPressedState(InputEvent const& event) {
 auto MouseInputHandler::changeTool(InputEvent const& event) -> bool {
     Settings* settings = this->inputContext->getSettings();
     ToolHandler* toolHandler = this->inputContext->getToolHandler();
-    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getNoteWidget();
     bool isClickOnSelection = noteWidget->selection;
     bool toolChanged = false;
 

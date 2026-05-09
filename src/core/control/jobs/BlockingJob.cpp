@@ -18,7 +18,7 @@ void BlockingJob::execute() {
 
     Util::execInUiThread([control = this->control]() {
         control->unblock();
-        control->getWindow()->getXournal()->requestFocus();
+        control->getWindow()->getNoteView()->requestFocus();
     });
 }
 
