@@ -68,6 +68,10 @@ public:
     [[nodiscard]] auto performUndo() -> bool;
     [[nodiscard]] auto performRedo() -> bool;
 
+    // Page navigation
+    [[nodiscard]] auto currentPageIndex() const -> std::size_t;
+    void scrollToPage(std::size_t pageIndex);
+
     // Content renderer (shared for sidebar thumbnails / export)
     [[nodiscard]] auto contentRenderer() const -> vn::view::render::PageContentRenderer*;
 

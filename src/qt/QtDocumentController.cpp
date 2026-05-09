@@ -1044,6 +1044,143 @@ auto QtDocumentController::isElementSelected(const Element* e) const -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Element operations (delete, select all, clipboard)
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::deleteSelectedElements() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        this->document->unlock();
+        return false;
+    }
+
+    InsertionOrder removedElements;
+    for (const auto* elem: this->currentSelection->elements) {
+        for (auto* layer: page->getLayers()) {
+            if (!layer) {
+                continue;
+            }
+            auto removed = layer->removeElement(elem);
+            if (removed.e) {
+                removedElements.push_back(std::move(removed));
+                break;
+            }
+        }
+    }
+    this->document->unlock();
+
+    if (removedElements.empty()) {
+        return false;
+    }
+
+    std::vector<const Element*> ptrs;
+    ptrs.reserve(removedElements.size());
+    for (const auto& ip: removedElements) {
+        ptrs.push_back(ip.e.get());
+    }
+
+    pushHistory(QtHistoryEntry{
+            .data = QtDeleteHistoryEntry{.pageIndex = pageIndex,
+                                         .removedElements = std::move(removedElements),
+                                         .elementPtrs = std::move(ptrs),
+                                         .text = "Delete selection"}});
+    clearElementSelection();
+    rebuildPageSnapshots();
+    return true;
+}
+
+void QtDocumentController::selectAllElements(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return;
+    }
+
+    std::vector<const Element*> allElements;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (element) {
+                allElements.push_back(element);
+            }
+        }
+    }
+
+    if (allElements.empty()) {
+        this->currentSelection.reset();
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(allElements)};
+    }
+}
+
+auto QtDocumentController::copySelectedElements() -> std::vector<ElementPtr> {
+    std::vector<ElementPtr> clones;
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return clones;
+    }
+
+    clones.reserve(this->currentSelection->elements.size());
+    for (const auto* elem: this->currentSelection->elements) {
+        if (elem) {
+            clones.push_back(elem->clone());
+        }
+    }
+    return clones;
+}
+
+auto QtDocumentController::cutSelectedElements() -> std::vector<ElementPtr> {
+    auto clones = copySelectedElements();
+    if (!clones.empty()) {
+        (void)deleteSelectedElements();
+    }
+    return clones;
+}
+
+auto QtDocumentController::pasteElements(std::size_t pageIndex, std::vector<ElementPtr> elements, double offsetX,
+                                         double offsetY) -> bool {
+    if (elements.empty() || !this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return false;
+    }
+
+    std::vector<const Element*> pastedPtrs;
+    pastedPtrs.reserve(elements.size());
+    for (auto& elem: elements) {
+        elem->move(offsetX, offsetY);
+        pastedPtrs.push_back(elem.get());
+        layer->addElement(std::move(elem));
+    }
+    this->document->unlock();
+
+    // Select pasted elements
+    this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(pastedPtrs)};
+    rebuildPageSnapshots();
+    return true;
+}
+
+// ---------------------------------------------------------------------------
 // Element move
 // ---------------------------------------------------------------------------
 
@@ -1305,6 +1442,83 @@ void QtDocumentController::moveLayerDown(std::size_t pageIndex, std::size_t laye
     rebuildPageSnapshots();
 }
 
+void QtDocumentController::copyLayer(std::size_t pageIndex, std::size_t layerIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (page) {
+        auto& layers = page->getLayers();
+        if (layerIndex < layers.size()) {
+            Layer* cloned = layers[layerIndex]->clone();
+            layers.insert(layers.begin() + static_cast<std::ptrdiff_t>(layerIndex) + 1, cloned);
+            page->setSelectedLayerId(static_cast<Layer::Index>(layerIndex + 1));
+        }
+    }
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::mergeLayerDown(std::size_t pageIndex, std::size_t layerIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    if (layerIndex == 0) {
+        return;  // Can't merge bottom layer down
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (page) {
+        auto& layers = page->getLayers();
+        if (layerIndex < layers.size()) {
+            Layer* srcLayer = layers[layerIndex];
+            Layer* dstLayer = layers[layerIndex - 1];
+            // Move all elements from source into destination
+            auto elements = srcLayer->clearNoFree();
+            for (auto& elem: elements) {
+                dstLayer->addElement(std::move(elem));
+            }
+            // Remove empty source layer
+            delete srcLayer;
+            layers.erase(layers.begin() + static_cast<std::ptrdiff_t>(layerIndex));
+            page->setSelectedLayerId(static_cast<Layer::Index>(layerIndex - 1));
+        }
+    }
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::showAllLayers(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    auto page = this->document->getPage(pageIndex);
+    if (page) {
+        for (auto* layer: page->getLayers()) {
+            if (layer) {
+                layer->setVisible(true);
+            }
+        }
+    }
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::hideAllLayers(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    auto page = this->document->getPage(pageIndex);
+    if (page) {
+        for (auto* layer: page->getLayers()) {
+            if (layer) {
+                layer->setVisible(false);
+            }
+        }
+    }
+    rebuildPageSnapshots();
+}
+
 // ---------------------------------------------------------------------------
 // Page background
 // ---------------------------------------------------------------------------
@@ -1477,6 +1691,53 @@ void QtDocumentController::deletePage(std::size_t pageIndex) {
     }
     this->document->lock();
     this->document->deletePage(pageIndex);
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::addPageBefore(std::size_t beforePageIndex) {
+    if (!this->document) {
+        return;
+    }
+    this->document->lock();
+    double width = 595.0;
+    double height = 842.0;
+    if (beforePageIndex < this->document->getPageCount()) {
+        auto ref = this->document->getPage(beforePageIndex);
+        if (ref) {
+            width = ref->getWidth();
+            height = ref->getHeight();
+        }
+    }
+    auto newPage = std::make_shared<NotePage>(width, height);
+    const auto insertPos = std::min(beforePageIndex, this->document->getPageCount());
+    this->document->insertPage(newPage, insertPos);
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::movePageTowards(std::size_t pageIndex, int direction) {
+    if (!this->document) {
+        return;
+    }
+    const auto count = this->document->getPageCount();
+    if (pageIndex >= count) {
+        return;
+    }
+    const auto target = static_cast<std::ptrdiff_t>(pageIndex) + direction;
+    if (target < 0 || static_cast<std::size_t>(target) >= count) {
+        return;
+    }
+    this->document->lock();
+    // Swap pages in document
+    auto pageA = this->document->getPage(pageIndex);
+    auto pageB = this->document->getPage(static_cast<std::size_t>(target));
+    if (pageA && pageB) {
+        // Remove both and re-insert in swapped positions
+        // Use a simpler approach: just swap in the document's page vector
+        this->document->deletePage(pageIndex);
+        this->document->insertPage(pageA, static_cast<std::size_t>(target));
+    }
     this->document->unlock();
     rebuildPageSnapshots();
 }
@@ -1742,6 +2003,28 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     }
                     this->document->unlock();
                     return false;
+                } else if constexpr (std::is_same_v<T, QtDeleteHistoryEntry>) {
+                    // Delete undo: re-insert all removed elements
+                    if (e.removedElements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    std::sort(e.removedElements.begin(), e.removedElements.end());
+                    e.elementPtrs.clear();
+                    for (auto& ip: e.removedElements) {
+                        e.elementPtrs.push_back(ip.e.get());
+                        layer->insertElement(std::move(ip.e), ip.pos);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);
@@ -1862,6 +2145,37 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtDeleteHistoryEntry>) {
+                    // Delete redo: remove elements again using saved raw pointers
+                    if (e.elementPtrs.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    e.removedElements.clear();
+                    for (auto* layer: page->getLayers()) {
+                        if (!layer) {
+                            continue;
+                        }
+                        for (const auto* ptr: e.elementPtrs) {
+                            auto removed = layer->removeElement(ptr);
+                            if (removed.e) {
+                                e.removedElements.push_back(std::move(removed));
+                            }
+                        }
+                    }
+                    e.elementPtrs.clear();
+                    this->document->unlock();
+                    if (!e.removedElements.empty()) {
+                        rebuildPageSnapshots();
+                        return true;
+                    }
+                    return false;
                 }
             },
             entry.data);

@@ -112,9 +112,16 @@ struct QtTextHistoryEntry {
     std::string text;
 };
 
+struct QtDeleteHistoryEntry {
+    std::size_t pageIndex = 0U;
+    InsertionOrder removedElements;
+    std::vector<const Element*> elementPtrs;
+    std::string text;
+};
+
 struct QtHistoryEntry {
     std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtSegmentEraseHistoryEntry,
-                 QtMoveHistoryEntry, QtTextHistoryEntry>
+                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry>
             data;
     [[nodiscard]] auto text() const -> std::string;
 };
@@ -231,6 +238,14 @@ public:
     [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
     [[nodiscard]] auto isElementSelected(const Element* e) const -> bool;
 
+    // Element operations
+    [[nodiscard]] auto deleteSelectedElements() -> bool;
+    void selectAllElements(std::size_t pageIndex);
+    [[nodiscard]] auto copySelectedElements() -> std::vector<ElementPtr>;
+    [[nodiscard]] auto cutSelectedElements() -> std::vector<ElementPtr>;
+    auto pasteElements(std::size_t pageIndex, std::vector<ElementPtr> elements, double offsetX = 10.0,
+                       double offsetY = 10.0) -> bool;
+
     // Element move
     auto beginMoveSelection(double pageX, double pageY) -> bool;
     auto updateMoveSelection(double pageX, double pageY) -> bool;
@@ -249,6 +264,10 @@ public:
     void renameLayer(std::size_t pageIndex, std::size_t layerIndex, const std::string& name);
     void moveLayerUp(std::size_t pageIndex, std::size_t layerIndex);
     void moveLayerDown(std::size_t pageIndex, std::size_t layerIndex);
+    void copyLayer(std::size_t pageIndex, std::size_t layerIndex);
+    void mergeLayerDown(std::size_t pageIndex, std::size_t layerIndex);
+    void showAllLayers(std::size_t pageIndex);
+    void hideAllLayers(std::size_t pageIndex);
 
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);
@@ -260,8 +279,10 @@ public:
 
     // Page management
     void addPageAfter(std::size_t afterPageIndex);
+    void addPageBefore(std::size_t beforePageIndex);
     void duplicatePage(std::size_t pageIndex);
     void deletePage(std::size_t pageIndex);
+    void movePageTowards(std::size_t pageIndex, int direction);
 
     // Document save
     auto saveDocument(const std::filesystem::path& path, std::string* errorMessage = nullptr) -> bool;

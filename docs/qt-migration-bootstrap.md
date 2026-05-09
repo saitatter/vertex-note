@@ -169,3 +169,33 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
     (`constraint.*`) wired in menus. `updateToolCommandStates` extended for all new tools.
 28. ✓ Constraint value editing — `editFixedLengthConstraint()` with `QInputDialog` for setting
     FixedLength/Radius constraint values.
+
+### Phase 7 — Clipboard & element operations ✓
+
+29. ✓ Delete selection — `deleteSelectedElements()` removes selected elements from layer with
+    full undo/redo via `QtDeleteHistoryEntry`.
+30. ✓ Select all — `selectAllElements(pageIndex)` selects all visible elements on a page.
+31. ✓ Copy/Cut/Paste — `copySelectedElements()` clones via `Element::clone()`,
+    `cutSelectedElements()` copies then deletes, `pasteElements()` inserts clones with offset.
+    In-memory clipboard in `QtAppShell::elementClipboard`, supports repeated paste.
+
+### Phase 8 — Page navigation ✓
+
+32. ✓ Current page tracking — `QtCanvas::currentPageIndex()` determines the most visible page
+    from viewport center position.
+33. ✓ Scroll to page — `QtCanvas::scrollToPage(pageIndex)` scrolls viewport to target page.
+34. ✓ Navigation commands — First (Home), Last (End), Next (PgDown), Previous (PgUp),
+    Go to Page dialog (Ctrl+G) with `QInputDialog::getInt`.
+
+### Phase 9 — Layer operations ✓
+
+35. ✓ Copy layer — `copyLayer()` deep-clones via `Layer::clone()`, inserts above current.
+36. ✓ Merge layer down — `mergeLayerDown()` moves all elements to layer below, removes source.
+37. ✓ Show/Hide all layers — batch visibility toggle for all layers on current page.
+38. ✓ Rename layer — `renameLayerDialog()` with `QInputDialog::getText`.
+
+### Phase 10 — Page management ✓
+
+39. ✓ Add page before — `addPageBefore(pageIndex)` inserts blank page before current.
+40. ✓ Move page up/down — `movePageTowards(pageIndex, direction)` reorders pages in document,
+    scrolls to new position after move.

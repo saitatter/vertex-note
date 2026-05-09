@@ -230,6 +230,43 @@ void QtCanvas::panBy(double dx, double dy) {
     emitViewportUpdate();
 }
 
+auto QtCanvas::currentPageIndex() const -> std::size_t {
+    // Determine which page is most visible in the viewport center
+    const QPointF center(width() / 2.0, height() / 2.0);
+    const QPointF scenePt = screenToScene(center);
+    const auto rects = pageRects();
+    if (rects.empty()) {
+        return 0;
+    }
+    // Check which page contains the center point
+    for (std::size_t i = 0; i < rects.size(); ++i) {
+        if (rects[i].contains(scenePt)) {
+            return i;
+        }
+    }
+    // Fallback: closest page by vertical distance
+    double bestDist = std::numeric_limits<double>::max();
+    std::size_t bestIdx = 0;
+    for (std::size_t i = 0; i < rects.size(); ++i) {
+        const double dist = std::abs(rects[i].center().y() - scenePt.y());
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = i;
+        }
+    }
+    return bestIdx;
+}
+
+void QtCanvas::scrollToPage(std::size_t pageIndex) {
+    const auto rects = pageRects();
+    if (pageIndex >= rects.size()) {
+        return;
+    }
+    this->scrollX = rects[pageIndex].left() - 40.0;
+    this->scrollY = rects[pageIndex].top() - 20.0;
+    emitViewportUpdate();
+}
+
 void QtCanvas::setGeometrySnapEnabled(bool enabled) {
     this->geometrySnapEnabled = enabled;
     update();

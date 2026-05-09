@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QShortcut>
 #include <QStatusBar>
@@ -536,6 +537,146 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Edit the value of a fixed-length or radius constraint",
              .menu = "Tools"},
             [this]() { editFixedLengthConstraint(); });
+
+    // ---- Phase 7: Clipboard & element operations ----
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.delete",
+             .text = "Delete",
+             .tooltip = "Delete selected elements",
+             .shortcut = "Delete",
+             .menu = "Edit"},
+            [this]() { deleteSelection(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.select-all",
+             .text = "Select All",
+             .tooltip = "Select all elements on the current page",
+             .shortcut = "Ctrl+A",
+             .menu = "Edit"},
+            [this]() { selectAll(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.copy",
+             .text = "Copy",
+             .tooltip = "Copy selected elements to clipboard",
+             .shortcut = "Ctrl+C",
+             .menu = "Edit"},
+            [this]() { copySelection(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.cut",
+             .text = "Cut",
+             .tooltip = "Cut selected elements to clipboard",
+             .shortcut = "Ctrl+X",
+             .menu = "Edit"},
+            [this]() { cutSelection(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.paste",
+             .text = "Paste",
+             .tooltip = "Paste elements from clipboard",
+             .shortcut = "Ctrl+V",
+             .menu = "Edit"},
+            [this]() { pasteClipboard(); });
+
+    // ---- Phase 8: Page navigation ----
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.first-page",
+             .text = "First Page",
+             .tooltip = "Go to the first page",
+             .shortcut = "Home",
+             .menu = "View"},
+            [this]() { goToFirstPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.last-page",
+             .text = "Last Page",
+             .tooltip = "Go to the last page",
+             .shortcut = "End",
+             .menu = "View"},
+            [this]() { goToLastPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.next-page",
+             .text = "Next Page",
+             .tooltip = "Go to the next page",
+             .shortcut = "PgDown",
+             .menu = "View"},
+            [this]() { goToNextPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.prev-page",
+             .text = "Previous Page",
+             .tooltip = "Go to the previous page",
+             .shortcut = "PgUp",
+             .menu = "View"},
+            [this]() { goToPreviousPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.goto-page",
+             .text = "Go to Page...",
+             .tooltip = "Jump to a specific page number",
+             .shortcut = "Ctrl+G",
+             .menu = "View"},
+            [this]() { goToPageDialog(); });
+
+    // ---- Phase 9: Layer operations ----
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.copy",
+             .text = "Copy Layer",
+             .tooltip = "Duplicate the current layer",
+             .menu = "Edit"},
+            [this]() { copyLayer(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.merge-down",
+             .text = "Merge Layer Down",
+             .tooltip = "Merge the current layer into the one below",
+             .menu = "Edit"},
+            [this]() { mergeLayerDown(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.show-all",
+             .text = "Show All Layers",
+             .tooltip = "Make all layers visible",
+             .menu = "View"},
+            [this]() { showAllLayers(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.hide-all",
+             .text = "Hide All Layers",
+             .tooltip = "Hide all layers",
+             .menu = "View"},
+            [this]() { hideAllLayers(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.rename",
+             .text = "Rename Layer...",
+             .tooltip = "Rename the current layer",
+             .menu = "Edit"},
+            [this]() { renameLayerDialog(); });
+
+    // ---- Phase 10: Page operations ----
+    this->window.commandHost()->registerCommand(
+            {.id = "page.add-before",
+             .text = "Add Page Before",
+             .tooltip = "Add a blank page before the current page",
+             .menu = "Edit"},
+            [this]() { addPageBefore(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.move-up",
+             .text = "Move Page Up",
+             .tooltip = "Move the current page towards the beginning",
+             .menu = "Edit"},
+            [this]() { movePageUp(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.move-down",
+             .text = "Move Page Down",
+             .tooltip = "Move the current page towards the end",
+             .menu = "Edit"},
+            [this]() { movePageDown(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -1163,4 +1304,266 @@ void QtAppShell::editFixedLengthConstraint() {
     this->window.canvas()->update();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Constraint value updated"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7: Clipboard & element operations
+// ---------------------------------------------------------------------------
+
+void QtAppShell::deleteSelection() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    if (this->documentController.deleteSelectedElements()) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Selection deleted"), 3000);
+    }
+}
+
+void QtAppShell::selectAll() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    this->documentController.selectAllElements(pageIndex);
+    this->window.canvas()->update();
+    this->window.statusBar()->showMessage(QStringLiteral("All elements selected"), 3000);
+}
+
+void QtAppShell::copySelection() {
+    auto clones = this->documentController.copySelectedElements();
+    if (clones.empty()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Nothing to copy"), 3000);
+        return;
+    }
+    this->elementClipboard = std::move(clones);
+    this->window.statusBar()->showMessage(
+            QStringLiteral("Copied %1 element(s)").arg(this->elementClipboard.size()), 3000);
+}
+
+void QtAppShell::cutSelection() {
+    auto clones = this->documentController.cutSelectedElements();
+    if (clones.empty()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Nothing to cut"), 3000);
+        return;
+    }
+    this->elementClipboard = std::move(clones);
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(
+            QStringLiteral("Cut %1 element(s)").arg(this->elementClipboard.size()), 3000);
+}
+
+void QtAppShell::pasteClipboard() {
+    if (this->elementClipboard.empty()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Clipboard is empty"), 3000);
+        return;
+    }
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    // Clone clipboard contents so the clipboard survives for repeated paste
+    std::vector<ElementPtr> clones;
+    clones.reserve(this->elementClipboard.size());
+    for (const auto& elem: this->elementClipboard) {
+        clones.push_back(elem->clone());
+    }
+
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    if (this->documentController.pasteElements(pageIndex, std::move(clones))) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Pasted %1 element(s)").arg(this->elementClipboard.size()), 3000);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8: Page navigation
+// ---------------------------------------------------------------------------
+
+void QtAppShell::goToPage(std::size_t pageIndex) {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    if (pageIndex >= this->documentController.pageCount()) {
+        return;
+    }
+    this->window.canvas()->scrollToPage(pageIndex);
+    this->window.canvas()->update();
+    this->window.statusBar()->showMessage(
+            QStringLiteral("Page %1 of %2").arg(pageIndex + 1).arg(this->documentController.pageCount()), 3000);
+}
+
+void QtAppShell::goToFirstPage() { goToPage(0); }
+
+void QtAppShell::goToLastPage() {
+    if (this->documentController.hasDocument() && this->documentController.pageCount() > 0) {
+        goToPage(this->documentController.pageCount() - 1);
+    }
+}
+
+void QtAppShell::goToNextPage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto current = this->window.canvas()->currentPageIndex();
+    if (current + 1 < this->documentController.pageCount()) {
+        goToPage(current + 1);
+    }
+}
+
+void QtAppShell::goToPreviousPage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto current = this->window.canvas()->currentPageIndex();
+    if (current > 0) {
+        goToPage(current - 1);
+    }
+}
+
+void QtAppShell::goToPageDialog() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    bool ok = false;
+    const int pageNum = QInputDialog::getInt(&this->window, QStringLiteral("Go to Page"),
+                                             QStringLiteral("Page number (1-%1):").arg(this->documentController.pageCount()),
+                                             static_cast<int>(this->window.canvas()->currentPageIndex()) + 1, 1,
+                                             static_cast<int>(this->documentController.pageCount()), 1, &ok);
+    if (ok) {
+        goToPage(static_cast<std::size_t>(pageNum - 1));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 9: Layer operations
+// ---------------------------------------------------------------------------
+
+void QtAppShell::copyLayer() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    const auto layerIndex = this->documentController.selectedLayerIndex(pageIndex);
+    this->documentController.copyLayer(pageIndex, layerIndex);
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Layer copied"), 3000);
+}
+
+void QtAppShell::mergeLayerDown() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    const auto layerIndex = this->documentController.selectedLayerIndex(pageIndex);
+    if (layerIndex == 0) {
+        this->window.statusBar()->showMessage(QStringLiteral("Cannot merge bottom layer"), 3000);
+        return;
+    }
+    this->documentController.mergeLayerDown(pageIndex, layerIndex);
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Layer merged down"), 3000);
+}
+
+void QtAppShell::showAllLayers() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    this->documentController.showAllLayers(pageIndex);
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    this->window.statusBar()->showMessage(QStringLiteral("All layers visible"), 3000);
+}
+
+void QtAppShell::hideAllLayers() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    this->documentController.hideAllLayers(pageIndex);
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    this->window.statusBar()->showMessage(QStringLiteral("All layers hidden"), 3000);
+}
+
+void QtAppShell::renameLayerDialog() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    const auto layerIndex = this->documentController.selectedLayerIndex(pageIndex);
+    const auto infos = this->documentController.layerInfos(pageIndex);
+    if (layerIndex >= infos.size()) {
+        return;
+    }
+
+    bool ok = false;
+    const QString newName = QInputDialog::getText(
+            &this->window, QStringLiteral("Rename Layer"), QStringLiteral("Layer name:"),
+            QLineEdit::Normal, QString::fromStdString(infos[layerIndex].name), &ok);
+    if (ok && !newName.isEmpty()) {
+        this->documentController.renameLayer(pageIndex, layerIndex, newName.toStdString());
+        this->window.layerPanel()->refresh();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Layer renamed"), 3000);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10: Page operations
+// ---------------------------------------------------------------------------
+
+void QtAppShell::addPageBefore() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    this->documentController.addPageBefore(pageIndex);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page added before"), 3000);
+}
+
+void QtAppShell::movePageUp() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    if (pageIndex == 0) {
+        this->window.statusBar()->showMessage(QStringLiteral("Already at the first page"), 3000);
+        return;
+    }
+    this->documentController.movePageTowards(pageIndex, -1);
+    this->window.canvas()->scrollToPage(pageIndex - 1);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page moved up"), 3000);
+}
+
+void QtAppShell::movePageDown() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    if (pageIndex + 1 >= this->documentController.pageCount()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Already at the last page"), 3000);
+        return;
+    }
+    this->documentController.movePageTowards(pageIndex, 1);
+    this->window.canvas()->scrollToPage(pageIndex + 1);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page moved down"), 3000);
 }

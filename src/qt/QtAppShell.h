@@ -68,6 +68,33 @@ private:
     void deleteConstraints();
     void editFixedLengthConstraint();
 
+    // Phase 7: Clipboard & element operations
+    void deleteSelection();
+    void selectAll();
+    void copySelection();
+    void cutSelection();
+    void pasteClipboard();
+
+    // Phase 8: Page navigation
+    void goToPage(std::size_t pageIndex);
+    void goToFirstPage();
+    void goToLastPage();
+    void goToNextPage();
+    void goToPreviousPage();
+    void goToPageDialog();
+
+    // Phase 9: Layer operations
+    void copyLayer();
+    void mergeLayerDown();
+    void showAllLayers();
+    void hideAllLayers();
+    void renameLayerDialog();
+
+    // Phase 10: Page operations
+    void addPageBefore();
+    void movePageUp();
+    void movePageDown();
+
 private:
     QtMainWindow window;
     QtClipboardService clipboard;
@@ -81,4 +108,5 @@ private:
     bool suppressDirtyTracking = false;
     bool presentationMode = false;
     QtSettings currentSettings;
+    std::vector<ElementPtr> elementClipboard;
 };
