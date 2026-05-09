@@ -679,6 +679,7 @@ void EditSelection::mouseUp() {
         }
 
         this->activeGeometryVertexMoved = false;
+        this->activeGeometryBeforeDrag.reset();
         this->mouseDownType = CURSOR_SELECTION_NONE;
         clearGeometrySnapState();
         this->view->getNoteView()->repaintSelection();
