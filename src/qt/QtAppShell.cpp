@@ -268,6 +268,16 @@ void QtAppShell::registerBootstrapCommands() {
              .checkable = true,
              .checked = this->window.canvas()->activeTool() == QtToolType::Highlighter},
             [this]() { selectTool(QtToolType::Highlighter); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.select",
+             .text = "Select",
+             .tooltip = "Select elements with click or rubber-band rectangle",
+             .shortcut = "S",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::SelectRect},
+            [this]() { selectTool(QtToolType::SelectRect); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -292,7 +302,7 @@ void QtAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
-    const std::array<std::string_view, 17> commandIds = {"app.new",
+    const std::array<std::string_view, 18> commandIds = {"app.new",
                                                           "app.open",
                                                           "app.save-as",
                                                           "edit.undo-geometry",
@@ -301,6 +311,7 @@ void QtAppShell::rebuildToolbar() {
                                                           "tool.pen",
                                                           "tool.eraser",
                                                           "tool.highlighter",
+                                                          "tool.select",
                                                           "edit.insert-vertex",
                                                           "edit.delete-geometry",
                                                           "view.zoom-in",
@@ -313,7 +324,7 @@ void QtAppShell::rebuildToolbar() {
     for (const auto id: commandIds) {
         if (auto* action = this->window.commandHost()->actionForCommand(id)) {
             toolBar->addAction(action);
-            if (id == "edit.delete-geometry" || id == "view.fit-page" || id == "tool.highlighter") {
+            if (id == "edit.delete-geometry" || id == "view.fit-page" || id == "tool.select") {
                 toolBar->addSeparator();
             }
         }
@@ -447,4 +458,5 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.pen", active == QtToolType::Pen);
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
+    this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
 }

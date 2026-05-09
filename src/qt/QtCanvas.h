@@ -15,6 +15,7 @@
 #include "QtDocumentController.h"
 #include "QtDocumentSession.h"
 #include "QtInputAdapter.h"
+#include "QtPageContentRenderer.h"
 #include "QtToolState.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
@@ -112,6 +113,19 @@ private:
     void finalizeErase();
     void cancelErase();
 
+    // Selection helpers
+    void selectElementAtScreen(const QPointF& screenPoint, bool additive);
+    void beginRubberBand(const QPointF& screenPoint);
+    void updateRubberBand(const QPointF& screenPoint);
+    void finalizeRubberBand();
+    void cancelRubberBand();
+    void beginMoveSelectionAtScreen(const QPointF& screenPoint);
+    void updateMoveSelectionAtScreen(const QPointF& screenPoint);
+    void finalizeMoveSelection();
+    void cancelMoveSelection();
+    void drawSelectionOverlay(QPainter& painter) const;
+    void drawRubberBand(QPainter& painter) const;
+
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     std::unique_ptr<vn::view::render::BackgroundRenderer> backgroundRenderer;
@@ -119,6 +133,7 @@ private:
     std::unique_ptr<vn::view::render::StrokeRenderer> strokeRenderer;
     std::unique_ptr<vn::view::render::TextRenderer> textRenderer;
     std::unique_ptr<vn::view::render::ImageRenderer> imageRenderer;
+    std::unique_ptr<vn::view::render::PageContentRenderer> pageContentRenderer;
     QString lastEventSummary;
     QtDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;
@@ -130,6 +145,10 @@ private:
     bool panning = false;
     bool drawing = false;
     bool erasing = false;
+    bool rubberBanding = false;
+    bool movingSelection = false;
     QPointF lastPanScreenPosition;
+    QPointF rubberBandOrigin;
+    QPointF rubberBandCurrent;
     QtToolState currentToolState;
 };

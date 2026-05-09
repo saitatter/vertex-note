@@ -758,6 +758,207 @@ auto QtDocumentController::cancelErase() -> void { this->pendingErase.reset(); }
 auto QtDocumentController::isErasing() const -> bool { return this->pendingErase.has_value(); }
 
 // ---------------------------------------------------------------------------
+// Element selection
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::hitTestElement(std::size_t pageIndex, double pageX, double pageY,
+                                          double maxDistance) const -> const Element* {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+
+    const Element* best = nullptr;
+    double bestDist = maxDistance;
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return nullptr;
+    }
+
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (!element) {
+                continue;
+            }
+            const double dist = element->distanceTo(pageX, pageY);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = element;
+            }
+        }
+    }
+    return best;
+}
+
+void QtDocumentController::selectElementAt(std::size_t pageIndex, double pageX, double pageY, double maxDistance,
+                                           bool additive) {
+    const Element* hit = hitTestElement(pageIndex, pageX, pageY, maxDistance);
+    if (!hit) {
+        if (!additive) {
+            clearElementSelection();
+        }
+        return;
+    }
+
+    if (additive && this->currentSelection && this->currentSelection->pageIndex == pageIndex) {
+        // Toggle: if already selected, deselect; otherwise add
+        auto& elems = this->currentSelection->elements;
+        auto it = std::find(elems.begin(), elems.end(), hit);
+        if (it != elems.end()) {
+            elems.erase(it);
+            if (elems.empty()) {
+                this->currentSelection.reset();
+            }
+        } else {
+            elems.push_back(hit);
+        }
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = {hit}};
+    }
+}
+
+void QtDocumentController::selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return;
+    }
+
+    std::vector<const Element*> hits;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (!element) {
+                continue;
+            }
+            if (element->intersectsArea(x, y, w, h)) {
+                hits.push_back(element);
+            }
+        }
+    }
+
+    if (hits.empty()) {
+        this->currentSelection.reset();
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(hits)};
+    }
+}
+
+void QtDocumentController::clearElementSelection() { this->currentSelection.reset(); }
+
+auto QtDocumentController::elementSelection() const -> const std::optional<QtElementSelection>& {
+    return this->currentSelection;
+}
+
+auto QtDocumentController::isElementSelected(const Element* e) const -> bool {
+    if (!this->currentSelection || !e) {
+        return false;
+    }
+    const auto& elems = this->currentSelection->elements;
+    return std::find(elems.begin(), elems.end(), e) != elems.end();
+}
+
+// ---------------------------------------------------------------------------
+// Element move
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::beginMoveSelection(double pageX, double pageY) -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return false;
+    }
+
+    this->moveState = QtMoveState{.startX = pageX,
+                                  .startY = pageY,
+                                  .currentDx = 0.0,
+                                  .currentDy = 0.0,
+                                  .elements = this->currentSelection->elements,
+                                  .pageIndex = this->currentSelection->pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateMoveSelection(double pageX, double pageY) -> bool {
+    if (!this->moveState || !this->document) {
+        return false;
+    }
+
+    const double newDx = pageX - this->moveState->startX;
+    const double newDy = pageY - this->moveState->startY;
+    const double deltaDx = newDx - this->moveState->currentDx;
+    const double deltaDy = newDy - this->moveState->currentDy;
+
+    if (std::abs(deltaDx) < 1e-6 && std::abs(deltaDy) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->moveState->elements) {
+        // const_cast is needed because the selection stores const pointers
+        // but Element::move is a non-const operation on the same objects we own
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->move(deltaDx, deltaDy);
+    }
+    this->document->unlock();
+
+    this->moveState->currentDx = newDx;
+    this->moveState->currentDy = newDy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endMoveSelection() -> bool {
+    if (!this->moveState) {
+        return false;
+    }
+
+    const double dx = this->moveState->currentDx;
+    const double dy = this->moveState->currentDy;
+
+    if (std::abs(dx) < 1e-6 && std::abs(dy) < 1e-6) {
+        this->moveState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtMoveHistoryEntry{.pageIndex = this->moveState->pageIndex,
+                                                   .elements = this->moveState->elements,
+                                                   .dx = dx,
+                                                   .dy = dy,
+                                                   .text = "Move elements"}});
+    this->moveState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelMoveSelection() -> void {
+    if (!this->moveState || !this->document) {
+        this->moveState.reset();
+        return;
+    }
+
+    // Undo the partial move
+    const double dx = this->moveState->currentDx;
+    const double dy = this->moveState->currentDy;
+    if (std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->moveState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->move(-dx, -dy);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+    this->moveState.reset();
+}
+
+auto QtDocumentController::isMovingSelection() const -> bool { return this->moveState.has_value(); }
+
+// ---------------------------------------------------------------------------
 // Unified undo/redo
 // ---------------------------------------------------------------------------
 
@@ -830,6 +1031,20 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtMoveHistoryEntry>) {
+                    // Move undo: move elements back by -dx, -dy
+                    if (e.elements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    for (const auto* elem: e.elements) {
+                        auto* mutableElem = const_cast<Element*>(elem);
+                        mutableElem->move(-e.dx, -e.dy);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);
@@ -886,6 +1101,20 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                         return true;
                     }
                     return false;
+                } else if constexpr (std::is_same_v<T, QtMoveHistoryEntry>) {
+                    // Move redo: move elements by dx, dy again
+                    if (e.elements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    for (const auto* elem: e.elements) {
+                        auto* mutableElem = const_cast<Element*>(elem);
+                        mutableElem->move(e.dx, e.dy);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);

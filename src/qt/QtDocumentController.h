@@ -81,9 +81,31 @@ struct QtEraseHistoryEntry {
     std::string text;
 };
 
+struct QtMoveHistoryEntry {
+    std::size_t pageIndex = 0U;
+    std::vector<const Element*> elements;
+    double dx = 0.0;
+    double dy = 0.0;
+    std::string text;
+};
+
 struct QtHistoryEntry {
-    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry> data;
+    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtMoveHistoryEntry> data;
     [[nodiscard]] auto text() const -> std::string;
+};
+
+struct QtElementSelection {
+    std::size_t pageIndex = 0U;
+    std::vector<const Element*> elements;
+};
+
+struct QtMoveState {
+    double startX = 0.0;
+    double startY = 0.0;
+    double currentDx = 0.0;
+    double currentDy = 0.0;
+    std::vector<const Element*> elements;
+    std::size_t pageIndex = 0U;
 };
 
 struct QtActiveStroke {
@@ -142,6 +164,22 @@ public:
     auto cancelErase() -> void;
     [[nodiscard]] auto isErasing() const -> bool;
 
+    // Element selection
+    [[nodiscard]] auto hitTestElement(std::size_t pageIndex, double pageX, double pageY, double maxDistance) const
+            -> const Element*;
+    void selectElementAt(std::size_t pageIndex, double pageX, double pageY, double maxDistance, bool additive = false);
+    void selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h);
+    void clearElementSelection();
+    [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
+    [[nodiscard]] auto isElementSelected(const Element* e) const -> bool;
+
+    // Element move
+    auto beginMoveSelection(double pageX, double pageY) -> bool;
+    auto updateMoveSelection(double pageX, double pageY) -> bool;
+    auto endMoveSelection() -> bool;
+    auto cancelMoveSelection() -> void;
+    [[nodiscard]] auto isMovingSelection() const -> bool;
+
     // Unified undo/redo
     [[nodiscard]] auto canUndo() const -> bool;
     [[nodiscard]] auto canRedo() const -> bool;
@@ -178,6 +216,8 @@ private:
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
     std::optional<QtActiveStroke> currentStroke;
     std::optional<QtEraseHistoryEntry> pendingErase;
+    std::optional<QtElementSelection> currentSelection;
+    std::optional<QtMoveState> moveState;
     std::deque<QtHistoryEntry> undoHistory;
     std::deque<QtHistoryEntry> redoHistory;
 };

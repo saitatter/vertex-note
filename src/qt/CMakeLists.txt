@@ -35,6 +35,8 @@ set(vertexnote_qt_sources
         QtUpdatePresentationService.cpp
         QtInputAdapter.h
         QtInputAdapter.cpp
+        QtPageContentRenderer.h
+        QtPageContentRenderer.cpp
 )
 
 add_executable(vertexnote-qt-shell ${vertexnote_qt_sources})

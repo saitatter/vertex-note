@@ -32,7 +32,9 @@
 #include "QtPreviewImageRenderer.h"
 #include "QtPreviewStrokeRenderer.h"
 #include "QtPreviewTextRenderer.h"
+#include "QtPageContentRenderer.h"
 #include "view/render/QtPainterRenderContext.h"
+#include "view/render/StrokeRenderModelFactory.h"
 
 namespace {
 
@@ -133,6 +135,9 @@ QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
     this->imageRenderer = std::make_unique<vn::view::render::QtPreviewImageRenderer>();
     this->strokeRenderer = std::make_unique<vn::view::render::QtPreviewStrokeRenderer>();
     this->textRenderer = std::make_unique<vn::view::render::QtPreviewTextRenderer>();
+    this->pageContentRenderer = std::make_unique<vn::view::render::PageContentRenderer>(
+            this->strokeRenderer.get(), this->textRenderer.get(), this->imageRenderer.get(),
+            this->backgroundRenderer.get(), this->geometryRenderer.get());
     newBlankDocument();
 }
 
@@ -344,6 +349,8 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     }
 
     drawActiveStroke(painter);
+    drawSelectionOverlay(painter);
+    drawRubberBand(painter);
 
     painter.resetTransform();
     painter.setPen(QColor(52, 64, 84));
@@ -383,6 +390,30 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         }
         if (tool == QtToolType::Eraser) {
             beginEraseAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (tool == QtToolType::SelectRect) {
+            // Check if clicking on an already-selected element to start a move
+            if (this->documentController && this->documentController->elementSelection()) {
+                const auto& sel = *this->documentController->elementSelection();
+                const QPointF scenePoint = screenToScene(event->position());
+                const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+                if (pageIdx && *pageIdx == sel.pageIndex) {
+                    const auto rects = pageRects();
+                    const double pageX = scenePoint.x() - rects[*pageIdx].x();
+                    const double pageY = scenePoint.y() - rects[*pageIdx].y();
+                    const double hitRadius = 10.0 / this->zoomFactor;
+                    const Element* hit = this->documentController->hitTestElement(*pageIdx, pageX, pageY, hitRadius);
+                    if (hit && this->documentController->isElementSelected(hit)) {
+                        beginMoveSelectionAtScreen(event->position());
+                        event->accept();
+                        return;
+                    }
+                }
+            }
+            // Start rubber band selection or single-click select
+            beginRubberBand(event->position());
             event->accept();
             return;
         }
@@ -430,6 +461,16 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->movingSelection) {
+        finalizeMoveSelection();
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && this->rubberBanding) {
+        finalizeRubberBand();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->documentController && this->documentController->activeGeometryDrag()) {
         const bool changed = this->documentController->endGeometryVertexDrag();
         if (!this->spaceHeld) {
@@ -464,6 +505,16 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
     if (this->erasing) {
         eraseAtScreen(event->position());
+        event->accept();
+        return;
+    }
+    if (this->movingSelection) {
+        updateMoveSelectionAtScreen(event->position());
+        event->accept();
+        return;
+    }
+    if (this->rubberBanding) {
+        updateRubberBand(event->position());
         event->accept();
         return;
     }
@@ -557,6 +608,13 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         event->accept();
         return;
     } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Escape && this->documentController) {
+        if (this->rubberBanding) {
+            cancelRubberBand();
+        }
+        if (this->movingSelection) {
+            cancelMoveSelection();
+        }
+        this->documentController->clearElementSelection();
         this->documentController->clearInteractiveGeometryState();
         updateDebugOverlay(QStringLiteral("selection cleared"));
         if (!this->spaceHeld && !this->panning) {
@@ -652,7 +710,7 @@ auto QtCanvas::documentSceneBounds() const -> QRectF {
 
 void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
                                 const vn::view::render::PageRenderSnapshot& pageInfo, std::size_t pageIndex) const {
-    if (this->backgroundRenderer) {
+    if (this->pageContentRenderer) {
         vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
         const vn::view::render::RenderRect renderRect{
                 .x = rect.x(),
@@ -660,31 +718,7 @@ void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
                 .width = rect.width(),
                 .height = rect.height(),
         };
-        this->backgroundRenderer->draw(pageInfo.background, renderRect, renderContext);
-        for (const auto& drawable: pageInfo.drawables) {
-            std::visit(
-                    [this, &renderContext](const auto& model) {
-                        using Model = std::decay_t<decltype(model)>;
-                        if constexpr (std::is_same_v<Model, vn::view::render::StrokeRenderModel>) {
-                            if (this->strokeRenderer) {
-                                this->strokeRenderer->draw(model, renderContext);
-                            }
-                        } else if constexpr (std::is_same_v<Model, vn::view::render::TextRenderModel>) {
-                            if (this->textRenderer) {
-                                this->textRenderer->draw(model, renderContext);
-                            }
-                        } else if constexpr (std::is_same_v<Model, vn::view::render::ImageRenderModel>) {
-                            if (this->imageRenderer) {
-                                this->imageRenderer->draw(model, renderContext);
-                            }
-                        } else if constexpr (std::is_same_v<Model, vn::view::render::GeometryRenderModel>) {
-                            if (this->geometryRenderer) {
-                                this->geometryRenderer->draw(model, renderContext);
-                            }
-                        }
-                    },
-                    drawable);
-        }
+        this->pageContentRenderer->drawPage(pageInfo, renderRect, renderContext);
         drawGeometryInteractionOverlay(painter, rect, pageInfo, pageIndex);
     }
 
@@ -1135,7 +1169,7 @@ void QtCanvas::cancelActiveStroke() {
 
 void QtCanvas::drawActiveStroke(QPainter& painter) const {
     const auto* active = this->documentController ? this->documentController->activeStroke() : nullptr;
-    if (!active || !active->stroke) {
+    if (!active || !active->stroke || !this->pageContentRenderer) {
         return;
     }
 
@@ -1148,98 +1182,13 @@ void QtCanvas::drawActiveStroke(QPainter& painter) const {
     painter.save();
     painter.setClipRect(pageRect);
 
-    const auto& points = active->stroke->getPointVector();
-    if (points.size() < 2) {
-        painter.restore();
-        return;
-    }
+    // Translate so the stroke renderer draws at page position
+    painter.translate(pageRect.x(), pageRect.y());
 
-    const auto color = active->stroke->getColor();
-    QColor qColor(static_cast<int>(color.red), static_cast<int>(color.green), static_cast<int>(color.blue),
-                  static_cast<int>(color.alpha));
-    const double strokeWidth = active->stroke->getWidth();
+    auto model = vn::view::render::StrokeRenderModelFactory::fromStroke(*active->stroke);
+    vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
+    this->pageContentRenderer->drawStroke(model, renderContext);
 
-    if (active->hasPressure) {
-        // Variable-width outline using per-point pressure
-        const auto n = points.size();
-        std::vector<QPointF> leftSide(n);
-        std::vector<QPointF> rightSide(n);
-
-        // Compute per-segment normals
-        struct Vec2 { double x, y; };
-        std::vector<Vec2> segNormals(n - 1);
-        for (std::size_t i = 0; i + 1 < n; ++i) {
-            const double dx = points[i + 1].x - points[i].x;
-            const double dy = points[i + 1].y - points[i].y;
-            const double len = std::hypot(dx, dy);
-            segNormals[i] = len > 1e-9 ? Vec2{-dy / len, dx / len} : Vec2{0.0, 1.0};
-        }
-
-        // Per-point normals (averaged)
-        std::vector<Vec2> normals(n);
-        normals[0] = segNormals[0];
-        normals[n - 1] = segNormals[n - 2];
-        for (std::size_t i = 1; i + 1 < n; ++i) {
-            double nx = segNormals[i - 1].x + segNormals[i].x;
-            double ny = segNormals[i - 1].y + segNormals[i].y;
-            double len = std::hypot(nx, ny);
-            normals[i] = len > 1e-9 ? Vec2{nx / len, ny / len} : segNormals[i];
-        }
-
-        for (std::size_t i = 0; i < n; ++i) {
-            const double hw = (points[i].z > 0.0 ? points[i].z : strokeWidth) * 0.5;
-            const double px = pageRect.x() + points[i].x;
-            const double py = pageRect.y() + points[i].y;
-            leftSide[i] = QPointF(px + normals[i].x * hw, py + normals[i].y * hw);
-            rightSide[i] = QPointF(px - normals[i].x * hw, py - normals[i].y * hw);
-        }
-
-        QPainterPath outline;
-        outline.moveTo(leftSide[0]);
-        for (std::size_t i = 1; i < n; ++i) {
-            outline.lineTo(leftSide[i]);
-        }
-
-        // End cap
-        {
-            const double r = (points[n - 1].z > 0.0 ? points[n - 1].z : strokeWidth) * 0.5;
-            const double cx = pageRect.x() + points[n - 1].x;
-            const double cy = pageRect.y() + points[n - 1].y;
-            const double angle = std::atan2(normals[n - 1].y, normals[n - 1].x) * 180.0 / M_PI;
-            outline.arcTo(QRectF(cx - r, cy - r, 2.0 * r, 2.0 * r), angle, -180.0);
-        }
-
-        for (std::size_t i = n - 1; i > 0; --i) {
-            outline.lineTo(rightSide[i - 1]);
-        }
-
-        // Start cap
-        {
-            const double r = (points[0].z > 0.0 ? points[0].z : strokeWidth) * 0.5;
-            const double cx = pageRect.x() + points[0].x;
-            const double cy = pageRect.y() + points[0].y;
-            const double angle = std::atan2(-normals[0].y, -normals[0].x) * 180.0 / M_PI;
-            outline.arcTo(QRectF(cx - r, cy - r, 2.0 * r, 2.0 * r), angle, -180.0);
-        }
-
-        outline.closeSubpath();
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(QBrush(qColor));
-        painter.drawPath(outline);
-    } else {
-        // Constant-width stroke
-        QPen pen(qColor, strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
-        pen.setCosmetic(false);
-        painter.setPen(pen);
-        painter.setBrush(Qt::NoBrush);
-
-        QPainterPath path;
-        path.moveTo(pageRect.x() + points[0].x, pageRect.y() + points[0].y);
-        for (std::size_t i = 1; i < points.size(); ++i) {
-            path.lineTo(pageRect.x() + points[i].x, pageRect.y() + points[i].y);
-        }
-        painter.drawPath(path);
-    }
     painter.restore();
 }
 
@@ -1320,4 +1269,249 @@ void QtCanvas::cancelErase() {
         this->documentController->cancelErase();
     }
     this->erasing = false;
+}
+
+// ---------------------------------------------------------------------------
+// Element selection (SelectRect tool)
+// ---------------------------------------------------------------------------
+
+void QtCanvas::selectElementAtScreen(const QPointF& screenPoint, bool additive) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        if (!additive) {
+            this->documentController->clearElementSelection();
+        }
+        update();
+        return;
+    }
+
+    const auto rects = pageRects();
+    const double pageX = scenePoint.x() - rects[*pageIdx].x();
+    const double pageY = scenePoint.y() - rects[*pageIdx].y();
+    const double hitRadius = 10.0 / this->zoomFactor;
+
+    this->documentController->selectElementAt(*pageIdx, pageX, pageY, hitRadius, additive);
+    const auto& sel = this->documentController->elementSelection();
+    if (sel) {
+        updateDebugOverlay(QStringLiteral("selected %1 element(s)").arg(static_cast<int>(sel->elements.size())));
+    } else {
+        updateDebugOverlay(QStringLiteral("selection cleared"));
+    }
+    update();
+}
+
+void QtCanvas::beginRubberBand(const QPointF& screenPoint) {
+    this->rubberBanding = true;
+    this->rubberBandOrigin = screenPoint;
+    this->rubberBandCurrent = screenPoint;
+}
+
+void QtCanvas::updateRubberBand(const QPointF& screenPoint) {
+    this->rubberBandCurrent = screenPoint;
+    update();
+}
+
+void QtCanvas::finalizeRubberBand() {
+    if (!this->rubberBanding) {
+        return;
+    }
+
+    const QPointF delta = this->rubberBandCurrent - this->rubberBandOrigin;
+    const bool isClick = std::abs(delta.x()) < 4.0 && std::abs(delta.y()) < 4.0;
+
+    if (isClick) {
+        // Single-click select
+        selectElementAtScreen(this->rubberBandOrigin, false);
+    } else if (this->documentController) {
+        // Rubber-band rectangle select
+        const QPointF sceneOrigin = screenToScene(this->rubberBandOrigin);
+        const QPointF sceneCurrent = screenToScene(this->rubberBandCurrent);
+        const double x = std::min(sceneOrigin.x(), sceneCurrent.x());
+        const double y = std::min(sceneOrigin.y(), sceneCurrent.y());
+        const double w = std::abs(sceneCurrent.x() - sceneOrigin.x());
+        const double h = std::abs(sceneCurrent.y() - sceneOrigin.y());
+
+        // Find which page the rubber band falls on
+        const auto rects = pageRects();
+        const QRectF bandRect(x, y, w, h);
+        for (std::size_t i = 0; i < rects.size(); ++i) {
+            if (rects[i].intersects(bandRect)) {
+                const double pageX = x - rects[i].x();
+                const double pageY = y - rects[i].y();
+                const double pageW = w;
+                const double pageH = h;
+                this->documentController->selectElementsInRect(i, pageX, pageY, pageW, pageH);
+                break;
+            }
+        }
+
+        const auto& sel = this->documentController->elementSelection();
+        if (sel) {
+            updateDebugOverlay(
+                    QStringLiteral("rect-selected %1 element(s)").arg(static_cast<int>(sel->elements.size())));
+        } else {
+            updateDebugOverlay(QStringLiteral("selection cleared"));
+        }
+    }
+
+    this->rubberBanding = false;
+    update();
+}
+
+void QtCanvas::cancelRubberBand() {
+    this->rubberBanding = false;
+    update();
+}
+
+void QtCanvas::beginMoveSelectionAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto& sel = this->documentController->elementSelection();
+    if (!sel) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (sel->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const double pageX = scenePoint.x() - rects[sel->pageIndex].x();
+    const double pageY = scenePoint.y() - rects[sel->pageIndex].y();
+
+    if (this->documentController->beginMoveSelection(pageX, pageY)) {
+        this->movingSelection = true;
+        setCursor(Qt::ClosedHandCursor);
+    }
+}
+
+void QtCanvas::updateMoveSelectionAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->movingSelection) {
+        return;
+    }
+
+    const auto& sel = this->documentController->elementSelection();
+    if (!sel) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (sel->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const double pageX = scenePoint.x() - rects[sel->pageIndex].x();
+    const double pageY = scenePoint.y() - rects[sel->pageIndex].y();
+
+    if (this->documentController->updateMoveSelection(pageX, pageY)) {
+        update();
+    }
+}
+
+void QtCanvas::finalizeMoveSelection() {
+    if (!this->documentController) {
+        this->movingSelection = false;
+        return;
+    }
+
+    const bool changed = this->documentController->endMoveSelection();
+    this->movingSelection = false;
+    setCursor(Qt::ArrowCursor);
+    update();
+    if (changed) {
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::cancelMoveSelection() {
+    if (this->documentController) {
+        this->documentController->cancelMoveSelection();
+    }
+    this->movingSelection = false;
+    setCursor(Qt::ArrowCursor);
+    update();
+}
+
+void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
+    if (!this->documentController) {
+        return;
+    }
+
+    const auto& sel = this->documentController->elementSelection();
+    if (!sel || sel->elements.empty()) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (sel->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[sel->pageIndex];
+    painter.save();
+
+    // Compute union bounding box of all selected elements
+    double minX = 1e18, minY = 1e18, maxX = -1e18, maxY = -1e18;
+    for (const auto* elem: sel->elements) {
+        if (!elem) {
+            continue;
+        }
+        auto bounds = elem->boundingRect();
+        minX = std::min(minX, bounds.x);
+        minY = std::min(minY, bounds.y);
+        maxX = std::max(maxX, bounds.x + bounds.width);
+        maxY = std::max(maxY, bounds.y + bounds.height);
+    }
+
+    const QRectF selRect(pageRect.x() + minX, pageRect.y() + minY, maxX - minX, maxY - minY);
+    const double handleSize = 6.0 / this->zoomFactor;
+    const double margin = 4.0 / this->zoomFactor;
+    const QRectF outerRect = selRect.adjusted(-margin, -margin, margin, margin);
+
+    // Draw selection rectangle
+    QPen dashPen(QColor(0, 120, 255, 200), 1.2 / this->zoomFactor);
+    dashPen.setStyle(Qt::DashLine);
+    dashPen.setCosmetic(false);
+    painter.setPen(dashPen);
+    painter.setBrush(QColor(0, 120, 255, 20));
+    painter.drawRect(outerRect);
+
+    // Draw corner handles
+    painter.setPen(QPen(QColor(0, 120, 255), 1.0 / this->zoomFactor));
+    painter.setBrush(QColor(255, 255, 255, 230));
+    const QPointF corners[] = {outerRect.topLeft(), outerRect.topRight(), outerRect.bottomLeft(),
+                               outerRect.bottomRight()};
+    for (const auto& corner: corners) {
+        painter.drawRect(QRectF(corner.x() - handleSize / 2.0, corner.y() - handleSize / 2.0, handleSize, handleSize));
+    }
+
+    painter.restore();
+}
+
+void QtCanvas::drawRubberBand(QPainter& painter) const {
+    if (!this->rubberBanding) {
+        return;
+    }
+
+    // Draw in screen coordinates
+    painter.save();
+    painter.resetTransform();
+
+    const QRectF bandRect = QRectF(this->rubberBandOrigin, this->rubberBandCurrent).normalized();
+    QPen pen(QColor(0, 120, 255, 180), 1.0);
+    pen.setStyle(Qt::DashLine);
+    painter.setPen(pen);
+    painter.setBrush(QColor(0, 120, 255, 30));
+    painter.drawRect(bandRect);
+
+    painter.restore();
 }
