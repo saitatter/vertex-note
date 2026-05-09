@@ -21,6 +21,7 @@ This document tracks the first executable slices of the Qt migration.
   - shared-core page stack preview driven by `Document` and `NotePage`
   - first background preview renderer wired through the backend-neutral render seam
   - GTK page-type previews now consume the same background render model seam through a Cairo preview renderer
+  - experimental Qt canvas now renders cached stroke and text snapshots from real documents
 
 ## Build
 
@@ -45,7 +46,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 - The shipping GTK application remains the primary shell.
 - The experimental Qt target now opens real core documents, but it does not yet host `Control`, editing tools, or full `.xopp` workflow parity.
-- The canvas now renders the real notebook page stack shape and page background metadata, but not page contents or overlays from the production renderer yet.
+- The canvas now renders the real notebook page stack shape plus early stroke/text content snapshots, but it still does not share the production Cairo notebook renderer yet.
 - The render seam is still early; background preview now routes through a renderer contract, while Cairo remains the active production renderer.
 
 ## Next Slices

@@ -72,6 +72,8 @@ private:
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     std::unique_ptr<vn::view::render::BackgroundRenderer> backgroundRenderer;
+    std::unique_ptr<vn::view::render::StrokeRenderer> strokeRenderer;
+    std::unique_ptr<vn::view::render::TextRenderer> textRenderer;
     QString lastEventSummary;
     const QtExperimentalDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;

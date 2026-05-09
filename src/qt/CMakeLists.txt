@@ -20,6 +20,10 @@ set(vertexnote_qt_sources
         QtExperimentalPluginUiBridge.cpp
         QtPreviewBackgroundRenderer.h
         QtPreviewBackgroundRenderer.cpp
+        QtPreviewStrokeRenderer.h
+        QtPreviewStrokeRenderer.cpp
+        QtPreviewTextRenderer.h
+        QtPreviewTextRenderer.cpp
         QtExperimentalRecentFilesService.h
         QtExperimentalRecentFilesService.cpp
         QtExperimentalUpdatePresentationService.h

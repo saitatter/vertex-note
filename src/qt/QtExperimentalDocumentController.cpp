@@ -13,6 +13,8 @@
 #include "model/Document.h"
 #include "model/NotePage.h"
 #include "view/render/PageBackgroundRenderModelFactory.h"
+#include "view/render/StrokeRenderModelFactory.h"
+#include "view/render/TextRenderModelFactory.h"
 
 QtExperimentalDocumentController::QtExperimentalDocumentController() { newBlankDocument(); }
 
@@ -22,6 +24,7 @@ void QtExperimentalDocumentController::newBlankDocument() {
     this->document->addPage(std::make_shared<NotePage>(595.0, 842.0));
     this->document->unlock();
     this->loadedPath.reset();
+    rebuildPageSnapshots();
 }
 
 auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& path, std::string* errorMessage) -> bool {
@@ -37,6 +40,7 @@ auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& pat
             loaded->setFilepath(path);
             this->document = std::move(loaded);
             this->loadedPath = path;
+            rebuildPageSnapshots();
             return true;
         }
 
@@ -44,6 +48,7 @@ auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& pat
         auto loaded = loader.loadDocument(path);
         this->document = std::move(loaded);
         this->loadedPath = path;
+        rebuildPageSnapshots();
         return true;
     } catch (const std::exception& e) {
         if (errorMessage) {
@@ -65,27 +70,8 @@ auto QtExperimentalDocumentController::pageCount() const -> std::size_t {
     return count;
 }
 
-auto QtExperimentalDocumentController::snapshotPages() const -> std::vector<QtExperimentalPageInfo> {
-    std::vector<QtExperimentalPageInfo> pages;
-    if (!this->document) {
-        return pages;
-    }
-
-    this->document->lock_shared();
-    const auto count = this->document->getPageCount();
-    pages.reserve(count);
-    for (std::size_t index = 0; index < count; ++index) {
-        auto page = this->document->getPage(index);
-        if (!page) {
-            continue;
-        }
-
-        pages.push_back({.width = page->getWidth(),
-                         .height = page->getHeight(),
-                         .background = vn::view::render::PageBackgroundRenderModelFactory::fromPage(page)});
-    }
-    this->document->unlock_shared();
-    return pages;
+auto QtExperimentalDocumentController::snapshotPages() const -> const std::vector<QtExperimentalPageInfo>& {
+    return this->pageSnapshots;
 }
 
 auto QtExperimentalDocumentController::sourcePath() const -> const std::optional<std::filesystem::path>& {
@@ -108,4 +94,28 @@ auto QtExperimentalDocumentController::normalizeExtension(const std::filesystem:
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return extension;
+}
+
+void QtExperimentalDocumentController::rebuildPageSnapshots() {
+    this->pageSnapshots.clear();
+    if (!this->document) {
+        return;
+    }
+
+    this->document->lock_shared();
+    const auto count = this->document->getPageCount();
+    this->pageSnapshots.reserve(count);
+    for (std::size_t index = 0; index < count; ++index) {
+        auto page = this->document->getPage(index);
+        if (!page) {
+            continue;
+        }
+
+        this->pageSnapshots.push_back({.width = page->getWidth(),
+                                       .height = page->getHeight(),
+                                       .background = vn::view::render::PageBackgroundRenderModelFactory::fromPage(page),
+                                       .strokes = vn::view::render::StrokeRenderModelFactory::fromPage(page),
+                                       .texts = vn::view::render::TextRenderModelFactory::fromPage(page)});
+    }
+    this->document->unlock_shared();
 }

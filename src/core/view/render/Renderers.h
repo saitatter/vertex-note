@@ -8,12 +8,14 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 
+#include "model/Point.h"
 #include "model/PageType.h"
+#include "util/Color.h"
 #include "RenderContext.h"
 
 class Image;
-class Stroke;
 class Text;
 
 namespace vn::view {
@@ -38,16 +40,37 @@ struct PageBackgroundRenderModel {
     std::size_t pdfPageNumber = 0;
 };
 
+struct StrokeRenderModel {
+    std::vector<Point> points;
+    Color color{};
+    double width = 0.0;
+    std::vector<double> dashPattern;
+    int fill = -1;
+    bool highlighter = false;
+    bool pressureSensitive = false;
+    int capStyle = 0;
+};
+
+struct TextRenderModel {
+    std::string content;
+    std::string fontName;
+    double fontSize = 0.0;
+    Color color{};
+    double x = 0.0;
+    double y = 0.0;
+    bool inEditing = false;
+};
+
 class StrokeRenderer {
 public:
     virtual ~StrokeRenderer() = default;
-    virtual void draw(const Stroke& stroke, RenderContext& context) const = 0;
+    virtual void draw(const StrokeRenderModel& stroke, RenderContext& context) const = 0;
 };
 
 class TextRenderer {
 public:
     virtual ~TextRenderer() = default;
-    virtual void draw(const Text& text, RenderContext& context) const = 0;
+    virtual void draw(const TextRenderModel& text, RenderContext& context) const = 0;
 };
 
 class ImageRenderer {
