@@ -10,7 +10,21 @@
 
 #include "util/Color.h"
 
-enum class QtToolType { Hand, Pen, Eraser, Highlighter, Text, SelectRect };
+enum class QtToolType {
+    Hand,
+    Pen,
+    Eraser,
+    Highlighter,
+    Text,
+    SelectRect,
+    DrawLine,
+    DrawRectangle,
+    DrawCircle,
+    DrawArc,
+    DrawPolyline,
+    DrawConstructionLine,
+    DrawConstructionCircle,
+};
 enum class QtEraserMode { WholeStroke, Segment };
 
 struct QtToolState {
@@ -31,7 +45,29 @@ struct QtToolState {
             case QtToolType::Highlighter: return "Highlighter";
             case QtToolType::Text: return "Text";
             case QtToolType::SelectRect: return "Select";
+            case QtToolType::DrawLine: return "Line";
+            case QtToolType::DrawRectangle: return "Rectangle";
+            case QtToolType::DrawCircle: return "Circle";
+            case QtToolType::DrawArc: return "Arc";
+            case QtToolType::DrawPolyline: return "Polyline";
+            case QtToolType::DrawConstructionLine: return "Construction Line";
+            case QtToolType::DrawConstructionCircle: return "Construction Circle";
         }
         return "Unknown";
+    }
+
+    [[nodiscard]] auto isShapeDrawingTool() const -> bool {
+        switch (activeTool) {
+            case QtToolType::DrawLine:
+            case QtToolType::DrawRectangle:
+            case QtToolType::DrawCircle:
+            case QtToolType::DrawArc:
+            case QtToolType::DrawPolyline:
+            case QtToolType::DrawConstructionLine:
+            case QtToolType::DrawConstructionCircle:
+                return true;
+            default:
+                return false;
+        }
     }
 };

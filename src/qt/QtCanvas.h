@@ -135,6 +135,15 @@ private:
     void drawSelectionOverlay(QPainter& painter) const;
     void drawRubberBand(QPainter& painter) const;
 
+    // Shape drawing helpers
+    void beginShapeAtScreen(const QPointF& screenPoint);
+    void updateShapeAtScreen(const QPointF& screenPoint);
+    void addShapeClickAtScreen(const QPointF& screenPoint);
+    void finalizeShape();
+    void cancelShape();
+    void drawShapePreview(QPainter& painter) const;
+    [[nodiscard]] auto isMultiClickShapeTool() const -> bool;
+
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     std::unique_ptr<vn::view::render::BackgroundRenderer> backgroundRenderer;
@@ -156,9 +165,14 @@ private:
     bool erasing = false;
     bool rubberBanding = false;
     bool movingSelection = false;
+    bool shapeDrawing = false;
     QPointF lastPanScreenPosition;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
+    QPointF shapeStartScene;
+    QPointF shapeCurrentScene;
+    std::vector<QPointF> shapeClickPoints;  // For multi-click tools (polyline, arc)
+    std::size_t shapePageIndex = 0U;
     QtToolState currentToolState;
     QtTextEditor* textEditor = nullptr;
 };

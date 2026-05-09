@@ -151,3 +151,21 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 20. ✓ Print — `QPrinter` + `QPrintDialog` with per-page sizing and high-resolution DPI scaling.
 21. ✓ Settings dialog — tabbed preferences for tool defaults, page dimensions, eraser mode, snap toggles.
 22. ✓ Text tool command — `tool.text` (T) wired in toolbar and menu alongside other tools.
+
+### Phase 6 — Geometry constraints & shape drawing tools ✓
+
+23. ✓ Constraint engine integration — `applyConstraint(ConstraintKind)` in `QtDocumentController` with
+    full validation for all solver-supported kinds (Coincident, Horizontal, Vertical, FixedLength, Radius,
+    Parallel, Perpendicular). Edge ID tracking added alongside vertex selection.
+24. ✓ Constraint management — `deleteSelectedConstraints()`, `selectedFixedLengthConstraint()`,
+    `updateFixedLengthConstraint(double)` for removing/editing constraints on selection.
+25. ✓ Shape creation methods — `createLine`, `createRectangle`, `createCircle`, `createArc`,
+    `createPolyline`, `createConstructionLine`, `createConstructionCircle` in `QtDocumentController`,
+    each with undo support via `QtStrokeHistoryEntry`.
+26. ✓ Shape tool interactions — 7 new `QtToolType` values, `QtCanvas` mouse dispatch with
+    2-click tools (Line, Rectangle, Circle, ConstructionLine, ConstructionCircle), 3-click Arc,
+    multi-click Polyline (double-click to finalize). Dashed-line preview with vertex handles.
+27. ✓ AppShell commands — 7 shape tool commands (`tool.draw-*`) and 9 constraint commands
+    (`constraint.*`) wired in menus. `updateToolCommandStates` extended for all new tools.
+28. ✓ Constraint value editing — `editFixedLengthConstraint()` with `QInputDialog` for setting
+    FixedLength/Radius constraint values.

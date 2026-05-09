@@ -351,6 +351,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawActiveStroke(painter);
     drawSelectionOverlay(painter);
     drawRubberBand(painter);
+    drawShapePreview(painter);
 
     painter.resetTransform();
     painter.setPen(QColor(52, 64, 84));
@@ -422,6 +423,15 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
             event->accept();
             return;
         }
+        if (this->currentToolState.isShapeDrawingTool()) {
+            if (this->shapeDrawing) {
+                addShapeClickAtScreen(event->position());
+            } else {
+                beginShapeAtScreen(event->position());
+            }
+            event->accept();
+            return;
+        }
         updateGeometryHover(event->position());
         selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
         if (this->documentController && this->documentController->selectedGeometry() &&
@@ -439,6 +449,12 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
 void QtCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (event->button() == Qt::LeftButton) {
+        // Double-click finalizes multi-click shape tools
+        if (this->shapeDrawing && isMultiClickShapeTool()) {
+            finalizeShape();
+            event->accept();
+            return;
+        }
         updateGeometryHover(event->position());
         selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
         if (insertVertexOnSelectedEdge()) {
@@ -473,6 +489,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton && this->rubberBanding) {
         finalizeRubberBand();
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && this->shapeDrawing && !isMultiClickShapeTool()) {
+        finalizeShape();
         event->accept();
         return;
     }
@@ -520,6 +541,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
     if (this->rubberBanding) {
         updateRubberBand(event->position());
+        event->accept();
+        return;
+    }
+    if (this->shapeDrawing) {
+        updateShapeAtScreen(event->position());
         event->accept();
         return;
     }
@@ -1030,6 +1056,13 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::Pen:
         case QtToolType::Highlighter:
         case QtToolType::Eraser:
+        case QtToolType::DrawLine:
+        case QtToolType::DrawRectangle:
+        case QtToolType::DrawCircle:
+        case QtToolType::DrawArc:
+        case QtToolType::DrawPolyline:
+        case QtToolType::DrawConstructionLine:
+        case QtToolType::DrawConstructionCircle:
             setCursor(Qt::CrossCursor);
             break;
         case QtToolType::Hand:
@@ -1599,4 +1632,206 @@ void QtCanvas::drawRubberBand(QPainter& painter) const {
     painter.drawRect(bandRect);
 
     painter.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Shape drawing
+// ---------------------------------------------------------------------------
+
+void QtCanvas::beginShapeAtScreen(const QPointF& screenPoint) {
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    this->shapePageIndex = *pageIdx;
+    this->shapeStartScene = QPointF(scenePoint.x() - rects[*pageIdx].x(), scenePoint.y() - rects[*pageIdx].y());
+    this->shapeCurrentScene = this->shapeStartScene;
+    this->shapeClickPoints.clear();
+    this->shapeClickPoints.push_back(this->shapeStartScene);
+    this->shapeDrawing = true;
+    setCursor(Qt::CrossCursor);
+    update();
+}
+
+void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto rects = pageRects();
+    if (this->shapePageIndex < rects.size()) {
+        this->shapeCurrentScene =
+                QPointF(scenePoint.x() - rects[this->shapePageIndex].x(),
+                        scenePoint.y() - rects[this->shapePageIndex].y());
+    }
+    update();
+}
+
+void QtCanvas::addShapeClickAtScreen(const QPointF& screenPoint) {
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto rects = pageRects();
+    if (this->shapePageIndex < rects.size()) {
+        QPointF pagePoint(scenePoint.x() - rects[this->shapePageIndex].x(),
+                          scenePoint.y() - rects[this->shapePageIndex].y());
+        this->shapeClickPoints.push_back(pagePoint);
+        this->shapeCurrentScene = pagePoint;
+    }
+
+    // For arc: finalize after 3 clicks (center, start, end)
+    if (this->currentToolState.activeTool == QtToolType::DrawArc && this->shapeClickPoints.size() >= 3U) {
+        finalizeShape();
+        return;
+    }
+    update();
+}
+
+void QtCanvas::finalizeShape() {
+    if (!this->documentController || !this->shapeDrawing) {
+        cancelShape();
+        return;
+    }
+
+    const Color color = this->currentToolState.penColor;
+    const double width = this->currentToolState.penWidth;
+    const Element* created = nullptr;
+
+    switch (this->currentToolState.activeTool) {
+        case QtToolType::DrawLine:
+            created = this->documentController->createLine(this->shapePageIndex, this->shapeStartScene.x(),
+                                                           this->shapeStartScene.y(), this->shapeCurrentScene.x(),
+                                                           this->shapeCurrentScene.y(), color, width);
+            break;
+        case QtToolType::DrawRectangle:
+            created = this->documentController->createRectangle(this->shapePageIndex, this->shapeStartScene.x(),
+                                                                this->shapeStartScene.y(), this->shapeCurrentScene.x(),
+                                                                this->shapeCurrentScene.y(), color, width);
+            break;
+        case QtToolType::DrawCircle:
+            created = this->documentController->createCircle(this->shapePageIndex, this->shapeStartScene.x(),
+                                                             this->shapeStartScene.y(), this->shapeCurrentScene.x(),
+                                                             this->shapeCurrentScene.y(), color, width);
+            break;
+        case QtToolType::DrawArc:
+            if (this->shapeClickPoints.size() >= 3U) {
+                created = this->documentController->createArc(
+                        this->shapePageIndex, this->shapeClickPoints[0].x(), this->shapeClickPoints[0].y(),
+                        this->shapeClickPoints[1].x(), this->shapeClickPoints[1].y(),
+                        this->shapeClickPoints[2].x(), this->shapeClickPoints[2].y(), color, width);
+            }
+            break;
+        case QtToolType::DrawPolyline: {
+            std::vector<std::pair<double, double>> points;
+            points.reserve(this->shapeClickPoints.size());
+            for (const auto& pt: this->shapeClickPoints) {
+                points.emplace_back(pt.x(), pt.y());
+            }
+            created = this->documentController->createPolyline(this->shapePageIndex, points, color, width);
+            break;
+        }
+        case QtToolType::DrawConstructionLine:
+            created = this->documentController->createConstructionLine(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width);
+            break;
+        case QtToolType::DrawConstructionCircle:
+            created = this->documentController->createConstructionCircle(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width);
+            break;
+        default:
+            break;
+    }
+
+    this->shapeDrawing = false;
+    this->shapeClickPoints.clear();
+    setCursor(Qt::ArrowCursor);
+
+    if (created) {
+        Q_EMIT documentEdited();
+    }
+    update();
+}
+
+void QtCanvas::cancelShape() {
+    this->shapeDrawing = false;
+    this->shapeClickPoints.clear();
+    setCursor(Qt::ArrowCursor);
+    update();
+}
+
+void QtCanvas::drawShapePreview(QPainter& painter) const {
+    if (!this->shapeDrawing) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (this->shapePageIndex >= rects.size()) {
+        return;
+    }
+
+    painter.save();
+    const auto& pageRect = rects[this->shapePageIndex];
+    painter.translate(pageRect.x(), pageRect.y());
+
+    QPen pen(QColor(this->currentToolState.penColor.red, this->currentToolState.penColor.green,
+                    this->currentToolState.penColor.blue, 180),
+             this->currentToolState.penWidth);
+    pen.setStyle(Qt::DashLine);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    const QPointF start = this->shapeStartScene;
+    const QPointF current = this->shapeCurrentScene;
+
+    switch (this->currentToolState.activeTool) {
+        case QtToolType::DrawLine:
+        case QtToolType::DrawConstructionLine:
+            painter.drawLine(start, current);
+            break;
+        case QtToolType::DrawRectangle:
+            painter.drawRect(QRectF(start, current).normalized());
+            break;
+        case QtToolType::DrawCircle:
+        case QtToolType::DrawConstructionCircle: {
+            const double radius = std::hypot(current.x() - start.x(), current.y() - start.y());
+            painter.drawEllipse(start, radius, radius);
+            break;
+        }
+        case QtToolType::DrawArc:
+            if (this->shapeClickPoints.size() == 1U) {
+                painter.drawLine(this->shapeClickPoints[0], current);
+            } else if (this->shapeClickPoints.size() >= 2U) {
+                const QPointF& center = this->shapeClickPoints[0];
+                const QPointF& arcStart = this->shapeClickPoints[1];
+                const double radius = std::hypot(arcStart.x() - center.x(), arcStart.y() - center.y());
+                painter.drawEllipse(center, radius, radius);
+                painter.drawLine(center, current);
+            }
+            break;
+        case QtToolType::DrawPolyline:
+            for (std::size_t i = 1; i < this->shapeClickPoints.size(); ++i) {
+                painter.drawLine(this->shapeClickPoints[i - 1], this->shapeClickPoints[i]);
+            }
+            if (!this->shapeClickPoints.empty()) {
+                painter.drawLine(this->shapeClickPoints.back(), current);
+            }
+            break;
+        default:
+            break;
+    }
+
+    // Draw vertex handles
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0, 120, 255, 200));
+    const double handleRadius = 3.0 / painter.transform().m11();
+    for (const auto& pt: this->shapeClickPoints) {
+        painter.drawEllipse(pt, handleRadius, handleRadius);
+    }
+
+    painter.restore();
+}
+
+auto QtCanvas::isMultiClickShapeTool() const -> bool {
+    return this->currentToolState.activeTool == QtToolType::DrawPolyline ||
+           this->currentToolState.activeTool == QtToolType::DrawArc;
 }

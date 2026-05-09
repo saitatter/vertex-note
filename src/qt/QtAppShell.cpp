@@ -405,6 +405,137 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Open the settings dialog",
              .menu = "Edit"},
             [this]() { showSettingsDialog(); });
+
+    // ---- Shape drawing tools ----
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-line",
+             .text = "Line",
+             .tooltip = "Draw a straight line (click start, release at end)",
+             .shortcut = "L",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
+            [this]() { selectTool(QtToolType::DrawLine); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-rectangle",
+             .text = "Rectangle",
+             .tooltip = "Draw a rectangle (click corner, release at opposite corner)",
+             .shortcut = "R",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
+            [this]() { selectTool(QtToolType::DrawRectangle); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-circle",
+             .text = "Circle",
+             .tooltip = "Draw a circle (click centre, release at edge)",
+             .shortcut = "C",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
+            [this]() { selectTool(QtToolType::DrawCircle); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-arc",
+             .text = "Arc",
+             .tooltip = "Draw an arc (click center, click start, click end)",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
+            [this]() { selectTool(QtToolType::DrawArc); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-polyline",
+             .text = "Polyline",
+             .tooltip = "Draw a polyline (click to add points, double-click to finish)",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
+            [this]() { selectTool(QtToolType::DrawPolyline); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-construction-line",
+             .text = "Construction Line",
+             .tooltip = "Draw a construction line (non-printing guide)",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
+            [this]() { selectTool(QtToolType::DrawConstructionLine); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.draw-construction-circle",
+             .text = "Construction Circle",
+             .tooltip = "Draw a construction circle (non-printing guide)",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
+            [this]() { selectTool(QtToolType::DrawConstructionCircle); });
+
+    // ---- Geometry constraints ----
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.coincident",
+             .text = "Coincident Constraint",
+             .tooltip = "Merge selected vertices to the same point",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Coincident); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.horizontal",
+             .text = "Horizontal Constraint",
+             .tooltip = "Force an edge or vertex pair to be horizontal",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Horizontal); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.vertical",
+             .text = "Vertical Constraint",
+             .tooltip = "Force an edge or vertex pair to be vertical",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Vertical); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.fixed-length",
+             .text = "Fixed Length Constraint",
+             .tooltip = "Set a fixed length on an edge",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::FixedLength); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.radius",
+             .text = "Radius Constraint",
+             .tooltip = "Set a fixed radius on a circle or arc",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Radius); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.parallel",
+             .text = "Parallel Constraint",
+             .tooltip = "Force two line edges to be parallel",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Parallel); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.perpendicular",
+             .text = "Perpendicular Constraint",
+             .tooltip = "Force two line edges to be perpendicular",
+             .menu = "Tools"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Perpendicular); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.delete",
+             .text = "Delete Constraints",
+             .tooltip = "Remove constraints touching selected geometry",
+             .menu = "Tools"},
+            [this]() { deleteConstraints(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "constraint.edit-length",
+             .text = "Edit Constraint Value...",
+             .tooltip = "Edit the value of a fixed-length or radius constraint",
+             .menu = "Tools"},
+            [this]() { editFixedLengthConstraint(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -663,6 +794,13 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
     this->window.commandHost()->setCommandChecked("tool.text", active == QtToolType::Text);
+    this->window.commandHost()->setCommandChecked("tool.draw-line", active == QtToolType::DrawLine);
+    this->window.commandHost()->setCommandChecked("tool.draw-rectangle", active == QtToolType::DrawRectangle);
+    this->window.commandHost()->setCommandChecked("tool.draw-circle", active == QtToolType::DrawCircle);
+    this->window.commandHost()->setCommandChecked("tool.draw-arc", active == QtToolType::DrawArc);
+    this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
+    this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
+    this->window.commandHost()->setCommandChecked("tool.draw-construction-circle", active == QtToolType::DrawConstructionCircle);
 }
 
 void QtAppShell::showBackgroundDialog() {
@@ -978,4 +1116,51 @@ void QtAppShell::showSettingsDialog() {
 
     this->window.toolPalette()->syncFromToolState(ts);
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
+}
+
+void QtAppShell::applyConstraint(vn::geom::ConstraintKind kind) {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    if (this->documentController.applyConstraint(kind)) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Constraint applied"), 3000);
+    } else {
+        this->window.statusBar()->showMessage(QStringLiteral("Cannot apply constraint — check selection"), 3000);
+    }
+}
+
+void QtAppShell::deleteConstraints() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    (void)this->documentController.deleteSelectedConstraints();
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Constraints deleted"), 3000);
+}
+
+void QtAppShell::editFixedLengthConstraint() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+    const auto existing = this->documentController.selectedFixedLengthConstraint();
+    if (!existing) {
+        this->window.statusBar()->showMessage(
+                QStringLiteral("No fixed-length or radius constraint on selection"), 3000);
+        return;
+    }
+
+    bool ok = false;
+    const double newValue = QInputDialog::getDouble(&this->window, QStringLiteral("Edit Constraint Value"),
+                                                    QStringLiteral("Value:"), existing->value, 0.01, 100000.0, 2, &ok);
+    if (!ok) {
+        return;
+    }
+
+    (void)this->documentController.updateFixedLengthConstraint(newValue);
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Constraint value updated"), 3000);
 }

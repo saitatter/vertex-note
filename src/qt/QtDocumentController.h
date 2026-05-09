@@ -24,6 +24,8 @@
 #include "model/Stroke.h"
 #include "model/Text.h"
 #include "util/Color.h"
+#include "vertexnote/constraints/GeometryConstraintCatalog.h"
+#include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryObject.h"
 #include "vertexnote/geometry/GeometryTypes.h"
 #include "vertexnote/snapping/ISnapProvider.h"
@@ -166,6 +168,7 @@ public:
     [[nodiscard]] auto hoveredGeometry() const -> const std::optional<QtGeometryHit>&;
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtGeometryHit>&;
     [[nodiscard]] auto selectedVertexIds() const -> const std::vector<vn::geom::VertexId>&;
+    [[nodiscard]] auto selectedEdgeIds() const -> const std::vector<vn::geom::EdgeId>&;
     [[nodiscard]] auto beginGeometryVertexDrag(const QtGeometryHit& hit) -> bool;
     [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom,
                                                 const QtSnapOptions& options) -> bool;
@@ -173,6 +176,29 @@ public:
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtGeometryDragState>&;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
+
+    // Geometry constraints
+    [[nodiscard]] auto applyConstraint(vn::geom::ConstraintKind kind) -> bool;
+    [[nodiscard]] auto deleteSelectedConstraints() -> bool;
+    [[nodiscard]] auto selectedFixedLengthConstraint() -> std::optional<vn::geom::Constraint>;
+    [[nodiscard]] auto updateFixedLengthConstraint(double value) -> bool;
+
+    // Shape creation (geometry-based)
+    auto createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
+            -> const Element*;
+    auto createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
+            -> const Element*;
+    auto createCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color, double width)
+            -> const Element*;
+    auto createArc(std::size_t pageIndex, double cx, double cy, double sx, double sy, double ex, double ey, Color color,
+                   double width) -> const Element*;
+    auto createPolyline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
+                        double width) -> const Element*;
+    auto createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
+                                double width) -> const Element*;
+    auto createConstructionCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color,
+                                  double width) -> const Element*;
+
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
     [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
     [[nodiscard]] auto undoGeometryEdit() -> bool;
@@ -286,6 +312,7 @@ private:
     std::optional<QtGeometryHit> hoveredGeometryHit;
     std::optional<QtGeometryHit> selectedGeometryHit;
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;
+    std::vector<vn::geom::EdgeId> selectedGeometryEdgeIds;
     std::optional<QtGeometryDragState> geometryDragState;
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;

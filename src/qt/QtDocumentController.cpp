@@ -24,6 +24,7 @@
 #include "util/SmallVector.h"
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
 #include "vertexnote/snapping/GridSnapProvider.h"
 #include "vertexnote/snapping/ISnapProvider.h"
@@ -137,23 +138,39 @@ void QtDocumentController::setHoveredGeometry(std::optional<QtGeometryHit> hit) 
 }
 
 void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit, bool additive) {
-    if (!additive || !hit || hit->hit.type != vn::view::render::GeometryHitType::Vertex || !this->selectedGeometryHit ||
+    if (!additive || !hit || !this->selectedGeometryHit ||
         this->selectedGeometryHit->pageIndex != hit->pageIndex ||
         this->selectedGeometryHit->hit.objectId != hit->hit.objectId) {
         this->selectedGeometryHit = std::move(hit);
         this->selectedGeometryVertexIds.clear();
-        if (this->selectedGeometryHit && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
-            this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
-            this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+        this->selectedGeometryEdgeIds.clear();
+        if (this->selectedGeometryHit) {
+            if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+                this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+                this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+            }
+            if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
+                this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
+                this->selectedGeometryEdgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
+            }
         }
         return;
     }
 
     this->selectedGeometryHit = std::move(hit);
-    if (this->selectedGeometryHit && this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId &&
-        std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
-                  this->selectedGeometryHit->hit.vertexId) == this->selectedGeometryVertexIds.end()) {
-        this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+    if (this->selectedGeometryHit) {
+        if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+            this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId &&
+            std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
+                      this->selectedGeometryHit->hit.vertexId) == this->selectedGeometryVertexIds.end()) {
+            this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+        }
+        if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
+            this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId &&
+            std::find(this->selectedGeometryEdgeIds.begin(), this->selectedGeometryEdgeIds.end(),
+                      this->selectedGeometryHit->hit.edgeId) == this->selectedGeometryEdgeIds.end()) {
+            this->selectedGeometryEdgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
+        }
     }
 }
 
@@ -161,6 +178,7 @@ void QtDocumentController::clearInteractiveGeometryState() {
     this->hoveredGeometryHit.reset();
     this->selectedGeometryHit.reset();
     this->selectedGeometryVertexIds.clear();
+    this->selectedGeometryEdgeIds.clear();
     this->geometryDragState.reset();
 }
 
@@ -174,6 +192,10 @@ auto QtDocumentController::selectedGeometry() const -> const std::optional<QtGeo
 
 auto QtDocumentController::selectedVertexIds() const -> const std::vector<vn::geom::VertexId>& {
     return this->selectedGeometryVertexIds;
+}
+
+auto QtDocumentController::selectedEdgeIds() const -> const std::vector<vn::geom::EdgeId>& {
+    return this->selectedGeometryEdgeIds;
 }
 
 auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> bool {
@@ -1904,4 +1926,446 @@ auto QtDocumentController::redo() -> bool {
         return false;
     }
     return redoGeometryEdit();
+}
+
+// ---------------------------------------------------------------------------
+// Geometry constraints
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::applyConstraint(vn::geom::ConstraintKind kind) -> bool {
+    if (!this->selectedGeometryHit) {
+        return false;
+    }
+
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex,
+                                                this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        return false;
+    }
+
+    auto before = geometry->geometry();
+    auto after = before;
+
+    try {
+        switch (kind) {
+            case vn::geom::ConstraintKind::Coincident:
+                if (this->selectedGeometryVertexIds.size() < 2U) {
+                    return false;
+                }
+                after.addConstraint(kind, this->selectedGeometryVertexIds);
+                break;
+            case vn::geom::ConstraintKind::Horizontal:
+            case vn::geom::ConstraintKind::Vertical:
+                if (this->selectedGeometryVertexIds.size() != 2U) {
+                    return false;
+                }
+                after.addConstraint(kind, {this->selectedGeometryVertexIds[0], this->selectedGeometryVertexIds[1]});
+                break;
+            case vn::geom::ConstraintKind::FixedLength: {
+                if (this->selectedGeometryVertexIds.size() != 2U) {
+                    return false;
+                }
+                const auto* v0 = before.vertex(this->selectedGeometryVertexIds[0]);
+                const auto* v1 = before.vertex(this->selectedGeometryVertexIds[1]);
+                if (!v0 || !v1) {
+                    return false;
+                }
+                const double length =
+                        std::hypot(v1->position.x - v0->position.x, v1->position.y - v0->position.y);
+                if (length <= 0.0) {
+                    return false;
+                }
+                after.addConstraint(kind, {this->selectedGeometryVertexIds[0], this->selectedGeometryVertexIds[1]}, {},
+                                    length);
+                break;
+            }
+            case vn::geom::ConstraintKind::Parallel:
+            case vn::geom::ConstraintKind::Perpendicular:
+                if (this->selectedGeometryEdgeIds.size() != 2U) {
+                    return false;
+                }
+                for (const auto edgeId: this->selectedGeometryEdgeIds) {
+                    const auto* edge = before.edge(edgeId);
+                    if (!edge || (edge->kind != vn::geom::EdgeKind::Line &&
+                                  edge->kind != vn::geom::EdgeKind::ConstructionLine)) {
+                        return false;
+                    }
+                }
+                after.addConstraint(kind, {}, {this->selectedGeometryEdgeIds[0], this->selectedGeometryEdgeIds[1]});
+                break;
+            case vn::geom::ConstraintKind::Radius: {
+                if (this->selectedGeometryEdgeIds.size() != 1U) {
+                    return false;
+                }
+                const auto* edge = before.edge(this->selectedGeometryEdgeIds.front());
+                if (!edge || (edge->kind != vn::geom::EdgeKind::Arc &&
+                              edge->kind != vn::geom::EdgeKind::ConstructionCircle) ||
+                    edge->controls.empty()) {
+                    return false;
+                }
+                const auto* center = before.vertex(edge->controls.front());
+                const auto* start = before.vertex(edge->start);
+                if (!center || !start) {
+                    return false;
+                }
+                const double radius =
+                        std::hypot(start->position.x - center->position.x, start->position.y - center->position.y);
+                if (radius <= 0.0) {
+                    return false;
+                }
+                after.addConstraint(kind, {}, {this->selectedGeometryEdgeIds.front()}, radius);
+                break;
+            }
+            case vn::geom::ConstraintKind::EqualLength:
+            case vn::geom::ConstraintKind::FixedAngle:
+            case vn::geom::ConstraintKind::OnEdge:
+                return false;
+        }
+    } catch (const std::invalid_argument&) {
+        return false;
+    }
+
+    // Run the constraint solver
+    vn::constraints::GeometryConstraintSolver solver;
+    (void)solver.apply(after);
+
+    geometry->replaceGeometry(after);
+    pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                         .objectId = this->selectedGeometryHit->hit.objectId,
+                         .before = std::move(before),
+                         .after = geometry->geometry(),
+                         .text = "Apply constraint"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::deleteSelectedConstraints() -> bool {
+    if (!this->selectedGeometryHit) {
+        return false;
+    }
+
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex,
+                                                this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        return false;
+    }
+
+    if (this->selectedGeometryVertexIds.empty() && this->selectedGeometryEdgeIds.empty()) {
+        return false;
+    }
+
+    const auto before = geometry->geometry();
+    auto after = before;
+    std::vector<vn::geom::ConstraintId> removedIds;
+
+    for (const auto& constraint: before.constraints()) {
+        bool intersects = false;
+        for (const auto& vid: constraint.vertices) {
+            if (std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(), vid) !=
+                this->selectedGeometryVertexIds.end()) {
+                intersects = true;
+                break;
+            }
+        }
+        if (!intersects) {
+            for (const auto& eid: constraint.edges) {
+                if (std::find(this->selectedGeometryEdgeIds.begin(), this->selectedGeometryEdgeIds.end(), eid) !=
+                    this->selectedGeometryEdgeIds.end()) {
+                    intersects = true;
+                    break;
+                }
+            }
+        }
+        if (intersects) {
+            removedIds.push_back(constraint.id);
+        }
+    }
+
+    if (removedIds.empty()) {
+        return false;
+    }
+
+    for (const auto id: removedIds) {
+        (void)after.removeConstraint(id);
+    }
+
+    geometry->replaceGeometry(after);
+    pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                         .objectId = this->selectedGeometryHit->hit.objectId,
+                         .before = std::move(before),
+                         .after = geometry->geometry(),
+                         .text = "Delete constraint"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::selectedFixedLengthConstraint() -> std::optional<vn::geom::Constraint> {
+    if (!this->selectedGeometryHit) {
+        return std::nullopt;
+    }
+    const auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex,
+                                                     this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        return std::nullopt;
+    }
+
+    for (const auto& constraint: geometry->geometry().constraints()) {
+        if (constraint.kind != vn::geom::ConstraintKind::FixedLength &&
+            constraint.kind != vn::geom::ConstraintKind::Radius) {
+            continue;
+        }
+        // Check if any selected vertex/edge is part of this constraint
+        for (const auto& vid: constraint.vertices) {
+            if (std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(), vid) !=
+                this->selectedGeometryVertexIds.end()) {
+                return constraint;
+            }
+        }
+        for (const auto& eid: constraint.edges) {
+            if (std::find(this->selectedGeometryEdgeIds.begin(), this->selectedGeometryEdgeIds.end(), eid) !=
+                this->selectedGeometryEdgeIds.end()) {
+                return constraint;
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+auto QtDocumentController::updateFixedLengthConstraint(double value) -> bool {
+    if (!this->selectedGeometryHit || value <= 0.0) {
+        return false;
+    }
+
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex,
+                                                this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        return false;
+    }
+
+    auto constraint = selectedFixedLengthConstraint();
+    if (!constraint) {
+        return false;
+    }
+
+    auto before = geometry->geometry();
+    auto after = before;
+
+    auto updatedConstraint = *constraint;
+    updatedConstraint.value = value;
+    (void)after.replaceConstraint(updatedConstraint);
+
+    vn::constraints::GeometryConstraintSolver solver;
+    (void)solver.apply(after);
+
+    geometry->replaceGeometry(after);
+    pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                         .objectId = this->selectedGeometryHit->hit.objectId,
+                         .before = std::move(before),
+                         .after = geometry->geometry(),
+                         .text = "Edit constraint value"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Shape creation (geometry-based)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+auto insertGeometryOnPage(Document* doc, std::size_t pageIndex,
+                          std::unique_ptr<vn::geom::GeometryElement> geometry) -> const Element* {
+    if (!doc || pageIndex >= doc->getPageCount()) {
+        return nullptr;
+    }
+    doc->lock();
+    auto page = doc->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        doc->unlock();
+        return nullptr;
+    }
+    const auto* ptr = geometry.get();
+    layer->addElement(std::move(geometry));
+    doc->unlock();
+    return ptr;
+}
+
+}  // namespace
+
+auto QtDocumentController::createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
+                                      double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto start = object.addVertex({x1, y1});
+    auto end = object.addVertex({x2, y2});
+    object.addLine(start, end);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw line";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2,
+                                           Color color, double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto topLeft = object.addVertex({x1, y1});
+    auto topRight = object.addVertex({x2, y1});
+    auto bottomRight = object.addVertex({x2, y2});
+    auto bottomLeft = object.addVertex({x1, y2});
+    object.addLine(topLeft, topRight);
+    object.addLine(topRight, bottomRight);
+    object.addLine(bottomRight, bottomLeft);
+    object.addLine(bottomLeft, topLeft);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw rectangle";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color,
+                                        double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto center = object.addVertex({cx, cy});
+    auto radiusPoint = object.addVertex({rx, ry});
+    object.addEdge(vn::geom::EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw circle";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createArc(std::size_t pageIndex, double cx, double cy, double sx, double sy, double ex,
+                                     double ey, Color color, double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto center = object.addVertex({cx, cy});
+    auto start = object.addVertex({sx, sy});
+    auto end = object.addVertex({ex, ey});
+    object.addEdge(vn::geom::EdgeKind::Arc, start, end, {center});
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw arc";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createPolyline(std::size_t pageIndex,
+                                          const std::vector<std::pair<double, double>>& points, Color color,
+                                          double width) -> const Element* {
+    if (points.size() < 2U) {
+        return nullptr;
+    }
+
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    std::vector<vn::geom::VertexId> vertices;
+    vertices.reserve(points.size());
+    for (const auto& [x, y]: points) {
+        vertices.push_back(object.addVertex({x, y}));
+    }
+    for (auto it = std::next(vertices.begin()); it != vertices.end(); ++it) {
+        object.addLine(*std::prev(it), *it);
+    }
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw polyline";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2,
+                                                  Color color, double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto start = object.addVertex({x1, y1});
+    auto end = object.addVertex({x2, y2});
+    object.addEdge(vn::geom::EdgeKind::ConstructionLine, start, end);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw construction line";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createConstructionCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry,
+                                                    Color color, double width) -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    auto center = object.addVertex({cx, cy});
+    auto radiusPoint = object.addVertex({rx, ry});
+    object.addEdge(vn::geom::EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (ptr) {
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = "Draw construction circle";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
 }

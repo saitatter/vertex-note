@@ -64,6 +64,9 @@ private:
     void findText();
     void insertImage();
     void showSettingsDialog();
+    void applyConstraint(vn::geom::ConstraintKind kind);
+    void deleteConstraints();
+    void editFixedLengthConstraint();
 
 private:
     QtMainWindow window;
