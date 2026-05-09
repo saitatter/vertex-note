@@ -10,6 +10,7 @@
 
 #include <QWidget>
 
+#include "QtExperimentalDocumentController.h"
 #include "QtExperimentalDocumentSession.h"
 #include "QtInputAdapter.h"
 #include "ui/common/ICanvasHost.h"
@@ -29,6 +30,7 @@ public:
     void handlePointerEvent(const vn::ui::input::PointerEvent& event) override;
     void handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) override;
     void handleTouchEvent(const vn::ui::input::TouchEvent& event) override;
+    void setDocumentController(const QtExperimentalDocumentController* documentController);
     void newBlankDocument();
     void setViewportState(double zoom, double scrollX, double scrollY);
     [[nodiscard]] auto sessionViewportState() const -> QtExperimentalViewportState;
@@ -49,7 +51,7 @@ protected:
     void keyReleaseEvent(QKeyEvent* event) override;
     bool event(QEvent* event) override;
 
-signals:
+Q_SIGNALS:
     void viewportStateChanged();
     void statusHintChanged(const QString& text);
     void documentEdited();
@@ -58,13 +60,17 @@ private:
     void updateDebugOverlay(QString summary);
     void emitViewportUpdate(bool edited = true);
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
-    [[nodiscard]] auto pageRect() const -> QRectF;
+    [[nodiscard]] auto pageRects() const -> std::vector<QRectF>;
+    [[nodiscard]] auto documentSceneBounds() const -> QRectF;
+    void drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
+                          std::size_t pageIndex) const;
     void beginPan(const QPointF& position);
     void endPan();
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     QString lastEventSummary;
+    const QtExperimentalDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;
     double scrollX = 0.0;
     double scrollY = 0.0;

@@ -1,6 +1,6 @@
 # Qt Migration Bootstrap
 
-This document tracks the first executable slice of the Qt migration.
+This document tracks the first executable slices of the Qt migration.
 
 ## Current Scope
 
@@ -9,14 +9,16 @@ This document tracks the first executable slice of the Qt migration.
 - `src/core/view/render/` now contains the first backend-neutral interactive render contracts.
 - The Qt shell now also carries a minimal `QtPainterRenderContext` wrapper beside the Cairo wrapper.
 - `ENABLE_QT_EXPERIMENTAL` adds an optional `Qt Widgets` bootstrap target.
-- The experimental target now builds a runnable session shell:
+- The experimental target now builds a runnable Qt shell:
   - `QApplication`
   - `QMainWindow`
   - command host bootstrap
   - clipboard / dialogs / recent files / updater / plugin UI bridge stubs
   - canvas viewport with translated mouse, pen, wheel, key, and touch input
   - pan / zoom / fit-page interactions
-  - experimental `.vnsession` open/save flow for viewport state
+  - real document loading for `.xopp`, `.xoj`, `.xopt`, and `.pdf`
+  - experimental `.vnsession` open/save flow as a viewport sidecar linked to a document path
+  - shared-core page stack preview driven by `Document` and `NotePage`
 
 ## Build
 
@@ -40,12 +42,12 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 ## Intentional Limits
 
 - The shipping GTK application remains the primary shell.
-- The experimental Qt target does not yet host `Control`, `.xopp` workflows, or full rendering parity.
-- The canvas is now a viewport/session shell, but not yet the real notebook/page stack.
+- The experimental Qt target now opens real core documents, but it does not yet host `Control`, editing tools, or full `.xopp` workflow parity.
+- The canvas now renders the real notebook page stack shape and page background metadata, but not page contents or overlays from the production renderer yet.
 - The render seam is scaffolded only; Cairo remains the active production renderer.
 
 ## Next Slices
 
 1. Map `Control` entrypoints to the neutral shell interfaces.
-2. Replace the experimental session viewport with a real document/page controller.
-3. Route interactive GTK painting through the new render contracts, then add a Qt painter backend beside it.
+2. Route interactive notebook painting through the new render contracts so GTK and Qt can share page rendering logic.
+3. Replace the page-preview canvas with real renderers for strokes, text, backgrounds, overlays, and selection state.

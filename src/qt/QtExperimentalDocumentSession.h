@@ -16,11 +16,16 @@ struct QtExperimentalViewportState {
     double scrollY = 0.0;
 };
 
+struct QtExperimentalSessionState {
+    QtExperimentalViewportState viewport;
+    std::optional<std::filesystem::path> linkedDocumentPath;
+};
+
 class QtExperimentalDocumentSession {
 public:
     void newDocument();
-    auto openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalViewportState>;
-    auto saveAs(const std::filesystem::path& path, const QtExperimentalViewportState& viewport) -> bool;
+    auto openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalSessionState>;
+    auto saveAs(const std::filesystem::path& path, const QtExperimentalSessionState& sessionState) -> bool;
     void markDirty(bool dirty);
 
     [[nodiscard]] auto isDirty() const -> bool;

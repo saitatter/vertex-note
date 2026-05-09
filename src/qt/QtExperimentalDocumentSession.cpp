@@ -22,7 +22,7 @@ void QtExperimentalDocumentSession::newDocument() {
     this->dirty = false;
 }
 
-auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalViewportState> {
+auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalSessionState> {
     std::ifstream stream(path);
     if (!stream.is_open()) {
         return std::nullopt;
@@ -37,7 +37,7 @@ auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) 
         return std::nullopt;
     }
 
-    QtExperimentalViewportState viewport;
+    QtExperimentalSessionState sessionState;
     while (std::getline(stream, line)) {
         trim(line);
         if (line.empty()) {
@@ -56,25 +56,29 @@ auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) 
 
         if (key == "zoom") {
             if (auto parsed = parseDouble(value)) {
-                viewport.zoom = *parsed;
+                sessionState.viewport.zoom = *parsed;
             }
         } else if (key == "scroll_x") {
             if (auto parsed = parseDouble(value)) {
-                viewport.scrollX = *parsed;
+                sessionState.viewport.scrollX = *parsed;
             }
         } else if (key == "scroll_y") {
             if (auto parsed = parseDouble(value)) {
-                viewport.scrollY = *parsed;
+                sessionState.viewport.scrollY = *parsed;
             }
+        } else if (key == "document_path" && !value.empty()) {
+            sessionState.linkedDocumentPath = std::filesystem::path(value);
+        } else if (key == "document_path_relative" && !value.empty()) {
+            sessionState.linkedDocumentPath = path.parent_path() / std::filesystem::path(value);
         }
     }
 
     this->path = path;
     this->dirty = false;
-    return viewport;
+    return sessionState;
 }
 
-auto QtExperimentalDocumentSession::saveAs(const std::filesystem::path& path, const QtExperimentalViewportState& viewport)
+auto QtExperimentalDocumentSession::saveAs(const std::filesystem::path& path, const QtExperimentalSessionState& sessionState)
         -> bool {
     std::ofstream stream(path, std::ios::trunc);
     if (!stream.is_open()) {
@@ -82,9 +86,18 @@ auto QtExperimentalDocumentSession::saveAs(const std::filesystem::path& path, co
     }
 
     stream << SESSION_HEADER << '\n';
-    stream << "zoom=" << viewport.zoom << '\n';
-    stream << "scroll_x=" << viewport.scrollX << '\n';
-    stream << "scroll_y=" << viewport.scrollY << '\n';
+    stream << "zoom=" << sessionState.viewport.zoom << '\n';
+    stream << "scroll_x=" << sessionState.viewport.scrollX << '\n';
+    stream << "scroll_y=" << sessionState.viewport.scrollY << '\n';
+    if (sessionState.linkedDocumentPath) {
+        std::error_code error;
+        const auto relative = std::filesystem::relative(*sessionState.linkedDocumentPath, path.parent_path(), error);
+        if (!error) {
+            stream << "document_path_relative=" << relative.string() << '\n';
+        } else {
+            stream << "document_path=" << sessionState.linkedDocumentPath->string() << '\n';
+        }
+    }
 
     if (!stream.good()) {
         return false;

@@ -23,7 +23,6 @@
 #include <QTransform>
 #include <QWheelEvent>
 
-#include "QtInputAdapter.h"
 #include "view/render/QtPainterRenderContext.h"
 
 namespace {
@@ -31,6 +30,9 @@ namespace {
 constexpr double MIN_ZOOM = 0.1;
 constexpr double MAX_ZOOM = 8.0;
 constexpr double ZOOM_STEP = 1.15;
+constexpr double PAGE_STACK_X = 120.0;
+constexpr double PAGE_STACK_Y = 100.0;
+constexpr double PAGE_STACK_GAP = 56.0;
 
 auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
     using vn::ui::common::CanvasCursor;
@@ -54,6 +56,10 @@ auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
 }
 
 auto clampZoom(double zoom) -> double { return std::clamp(zoom, MIN_ZOOM, MAX_ZOOM); }
+
+auto penWidthForZoom(double baseWidth, double zoomFactor) -> double {
+    return std::max(baseWidth / std::max(zoomFactor, 0.001), 0.35);
+}
 
 }  // namespace
 
@@ -105,12 +111,17 @@ void QtExperimentalCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& eve
     updateDebugOverlay(QStringLiteral("touch points=%1").arg(static_cast<int>(event.points.size())));
 }
 
+void QtExperimentalCanvas::setDocumentController(const QtExperimentalDocumentController* documentController) {
+    this->documentController = documentController;
+    fitPage(false);
+}
+
 void QtExperimentalCanvas::newBlankDocument() {
     this->zoomFactor = 1.0;
     this->scrollX = 0.0;
     this->scrollY = 0.0;
     fitPage(false);
-    updateDebugOverlay(QStringLiteral("new experimental session"));
+    updateDebugOverlay(QStringLiteral("new experimental document"));
 }
 
 void QtExperimentalCanvas::setViewportState(double zoom, double scrollX, double scrollY) {
@@ -134,16 +145,18 @@ void QtExperimentalCanvas::resetViewport() {
 }
 
 void QtExperimentalCanvas::fitPage(bool edited) {
-    const QRectF page = pageRect();
+    const QRectF documentBounds = documentSceneBounds();
     const double padding = 40.0;
     const double availableWidth = std::max(1.0, width() - 2.0 * padding);
     const double availableHeight = std::max(1.0, height() - 2.0 * padding);
-    this->zoomFactor = clampZoom(std::min(availableWidth / page.width(), availableHeight / page.height()));
+    this->zoomFactor =
+            clampZoom(std::min(availableWidth / std::max(documentBounds.width(), 1.0),
+                               availableHeight / std::max(documentBounds.height(), 1.0)));
 
     const double visibleWorldWidth = width() / this->zoomFactor;
     const double visibleWorldHeight = height() / this->zoomFactor;
-    this->scrollX = page.left() - (visibleWorldWidth - page.width()) / 2.0;
-    this->scrollY = page.top() - (visibleWorldHeight - page.height()) / 2.0;
+    this->scrollX = documentBounds.left() - (visibleWorldWidth - documentBounds.width()) / 2.0;
+    this->scrollY = documentBounds.top() - (visibleWorldHeight - documentBounds.height()) / 2.0;
     emitViewportUpdate(edited);
 }
 
@@ -160,7 +173,6 @@ void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
     vn::view::render::QtPainterRenderContext renderContext(&painter, devicePixelRatioF());
     painter.fillRect(rect(), palette().window());
 
-    const QRectF page = pageRect();
     QTransform viewTransform;
     viewTransform.translate(-this->scrollX * this->zoomFactor, -this->scrollY * this->zoomFactor);
     viewTransform.scale(this->zoomFactor, this->zoomFactor);
@@ -185,36 +197,25 @@ void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
     }
 
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(0, 0, 0, 18));
-    painter.drawRoundedRect(page.translated(8.0, 8.0), 6.0, 6.0);
-    painter.setBrush(Qt::white);
-    painter.drawRoundedRect(page, 6.0, 6.0);
-
-    const QColor ruling(134, 177, 255);
-    const QColor margin(255, 79, 129);
-    painter.setPen(QPen(margin, 1.2 / this->zoomFactor));
-    painter.drawLine(QPointF(page.left() + 72.0, page.top() + 16.0), QPointF(page.left() + 72.0, page.bottom() - 16.0));
-    painter.setPen(QPen(ruling, 1.0 / this->zoomFactor));
-    for (double y = page.top() + 112.0; y < page.bottom() - 24.0; y += 48.0) {
-        painter.drawLine(QPointF(page.left() + 18.0, y), QPointF(page.right() - 18.0, y));
+    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+    const auto rects = pageRects();
+    for (std::size_t index = 0; index < rects.size(); ++index) {
+        drawPageContents(painter, rects[index], index < pages.size() ? pages[index] : QtExperimentalPageInfo{}, index);
     }
-
-    painter.setPen(QColor(61, 74, 89));
-    painter.drawText(QRectF(page.left() + 108.0, page.top() + 60.0, page.width() - 150.0, 50.0), Qt::AlignLeft | Qt::AlignVCenter,
-                     QStringLiteral("VertexNote Qt session canvas"));
 
     painter.resetTransform();
     painter.setPen(QColor(52, 64, 84));
     painter.drawText(QRect(20, 18, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
                      QStringLiteral("VertexNote Qt Experimental Shell"));
     painter.setPen(QColor(102, 112, 133));
+    const auto pageCount = this->documentController ? this->documentController->pageCount() : rects.size();
     painter.drawText(QRect(20, 52, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("render backend=QtPainter scale=%1  zoom=%2%  scroll=(%3, %4)")
+                     QStringLiteral("render backend=QtPainter scale=%1  zoom=%2%  scroll=(%3, %4)  pages=%5")
                              .arg(renderContext.scaleFactor(), 0, 'f', 2)
                              .arg(this->zoomFactor * 100.0, 0, 'f', 0)
                              .arg(this->scrollX, 0, 'f', 1)
-                             .arg(this->scrollY, 0, 'f', 1));
+                             .arg(this->scrollY, 0, 'f', 1)
+                             .arg(static_cast<int>(pageCount)));
     painter.drawText(QRect(20, 78, width() - 40, 40), Qt::AlignLeft | Qt::AlignTop, this->lastEventSummary);
 
     if (event) {
@@ -312,13 +313,13 @@ void QtExperimentalCanvas::updateDebugOverlay(QString summary) {
 
 void QtExperimentalCanvas::emitViewportUpdate(bool edited) {
     update();
-    emit viewportStateChanged();
-    emit statusHintChanged(QStringLiteral("Zoom %1% | Scroll (%2, %3)")
-                                   .arg(this->zoomFactor * 100.0, 0, 'f', 0)
-                                   .arg(this->scrollX, 0, 'f', 1)
-                                   .arg(this->scrollY, 0, 'f', 1));
+    Q_EMIT viewportStateChanged();
+    Q_EMIT statusHintChanged(QStringLiteral("Zoom %1% | Scroll (%2, %3)")
+                                     .arg(this->zoomFactor * 100.0, 0, 'f', 0)
+                                     .arg(this->scrollX, 0, 'f', 1)
+                                     .arg(this->scrollY, 0, 'f', 1));
     if (edited) {
-        emit documentEdited();
+        Q_EMIT documentEdited();
     }
 }
 
@@ -337,7 +338,128 @@ void QtExperimentalCanvas::zoomAroundScreenPoint(double factor, const QPointF& s
     emitViewportUpdate();
 }
 
-auto QtExperimentalCanvas::pageRect() const -> QRectF { return QRectF(120.0, 100.0, 1100.0, 1500.0); }
+auto QtExperimentalCanvas::pageRects() const -> std::vector<QRectF> {
+    std::vector<QRectF> rects;
+    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+    if (pages.empty()) {
+        rects.emplace_back(PAGE_STACK_X, PAGE_STACK_Y, 1100.0, 1500.0);
+        return rects;
+    }
+
+    rects.reserve(pages.size());
+    double currentY = PAGE_STACK_Y;
+    for (const auto& page: pages) {
+        rects.emplace_back(PAGE_STACK_X, currentY, std::max(page.width, 1.0), std::max(page.height, 1.0));
+        currentY += std::max(page.height, 1.0) + PAGE_STACK_GAP;
+    }
+    return rects;
+}
+
+auto QtExperimentalCanvas::documentSceneBounds() const -> QRectF {
+    const auto rects = pageRects();
+    QRectF bounds = rects.front();
+    for (std::size_t i = 1; i < rects.size(); ++i) {
+        bounds = bounds.united(rects[i]);
+    }
+    return bounds.adjusted(-80.0, -80.0, 80.0, 80.0);
+}
+
+void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
+                                            std::size_t pageIndex) const {
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0, 0, 0, 18));
+    painter.drawRoundedRect(rect.translated(8.0, 8.0), 6.0, 6.0);
+    painter.setBrush(Qt::white);
+    painter.drawRoundedRect(rect, 6.0, 6.0);
+
+    const double zoom = std::max(this->zoomFactor, 0.001);
+    const QColor ruling(134, 177, 255);
+    const QColor margin(255, 79, 129);
+
+    switch (pageInfo.backgroundFormat) {
+        case PageTypeFormat::Graph:
+        case PageTypeFormat::IsoGraph: {
+            painter.setPen(QPen(QColor(184, 208, 248), penWidthForZoom(0.9, zoom)));
+            for (double x = rect.left() + 24.0; x < rect.right() - 20.0; x += 28.0) {
+                painter.drawLine(QPointF(x, rect.top() + 20.0), QPointF(x, rect.bottom() - 20.0));
+            }
+            for (double y = rect.top() + 24.0; y < rect.bottom() - 20.0; y += 28.0) {
+                painter.drawLine(QPointF(rect.left() + 20.0, y), QPointF(rect.right() - 20.0, y));
+            }
+            break;
+        }
+        case PageTypeFormat::Dotted:
+        case PageTypeFormat::IsoDotted: {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(180, 198, 221));
+            for (double y = rect.top() + 32.0; y < rect.bottom() - 24.0; y += 28.0) {
+                for (double x = rect.left() + 28.0; x < rect.right() - 24.0; x += 28.0) {
+                    painter.drawEllipse(QPointF(x, y), penWidthForZoom(1.6, zoom), penWidthForZoom(1.6, zoom));
+                }
+            }
+            break;
+        }
+        case PageTypeFormat::Staves: {
+            painter.setPen(QPen(ruling, penWidthForZoom(1.0, zoom)));
+            for (double bandTop = rect.top() + 52.0; bandTop < rect.bottom() - 60.0; bandTop += 132.0) {
+                for (int line = 0; line < 5; ++line) {
+                    const double y = bandTop + line * 12.0;
+                    painter.drawLine(QPointF(rect.left() + 24.0, y), QPointF(rect.right() - 24.0, y));
+                }
+            }
+            break;
+        }
+        case PageTypeFormat::Pdf: {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(232, 238, 247));
+            painter.drawRoundedRect(QRectF(rect.left() + 20.0, rect.top() + 20.0, rect.width() - 40.0, 54.0), 4.0, 4.0);
+            painter.setPen(QColor(82, 97, 118));
+            painter.drawText(QRectF(rect.left() + 34.0, rect.top() + 22.0, rect.width() - 68.0, 50.0), Qt::AlignLeft | Qt::AlignVCenter,
+                             QStringLiteral("PDF background page %1").arg(static_cast<int>(pageInfo.pdfPageNumber + 1)));
+            break;
+        }
+        case PageTypeFormat::Image: {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(227, 246, 236));
+            painter.drawRoundedRect(QRectF(rect.left() + 20.0, rect.top() + 20.0, rect.width() - 40.0, 54.0), 4.0, 4.0);
+            painter.setPen(QColor(58, 108, 81));
+            painter.drawText(QRectF(rect.left() + 34.0, rect.top() + 22.0, rect.width() - 68.0, 50.0), Qt::AlignLeft | Qt::AlignVCenter,
+                             QStringLiteral("Image background"));
+            break;
+        }
+        case PageTypeFormat::Plain:
+            break;
+        case PageTypeFormat::Ruled:
+        case PageTypeFormat::Lined:
+        default: {
+            painter.setPen(QPen(margin, penWidthForZoom(1.2, zoom)));
+            painter.drawLine(QPointF(rect.left() + 72.0, rect.top() + 16.0), QPointF(rect.left() + 72.0, rect.bottom() - 16.0));
+            painter.setPen(QPen(ruling, penWidthForZoom(1.0, zoom)));
+            for (double y = rect.top() + 112.0; y < rect.bottom() - 24.0; y += 48.0) {
+                painter.drawLine(QPointF(rect.left() + 18.0, y), QPointF(rect.right() - 18.0, y));
+            }
+            break;
+        }
+    }
+
+    painter.setPen(QColor(61, 74, 89));
+    painter.drawText(QRectF(rect.left() + 26.0, rect.top() + 18.0, rect.width() - 52.0, 30.0), Qt::AlignLeft | Qt::AlignVCenter,
+                     QStringLiteral("Page %1").arg(static_cast<int>(pageIndex + 1)));
+
+    if (pageInfo.hasBackgroundName) {
+        painter.setPen(QColor(120, 131, 146));
+        painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 48.0, rect.width() - 52.0, 24.0),
+                         Qt::AlignLeft | Qt::AlignVCenter,
+                         QString::fromStdString(pageInfo.backgroundName));
+    }
+
+    painter.setPen(QColor(102, 112, 133));
+    painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 74.0, rect.width() - 52.0, 24.0),
+                     Qt::AlignLeft | Qt::AlignVCenter,
+                     QStringLiteral("Layers %1  |  Annotated %2")
+                             .arg(static_cast<int>(pageInfo.layerCount))
+                             .arg(pageInfo.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
+}
 
 void QtExperimentalCanvas::beginPan(const QPointF& position) {
     this->panning = true;

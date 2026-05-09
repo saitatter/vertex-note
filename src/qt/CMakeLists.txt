@@ -10,6 +10,8 @@ set(vertexnote_qt_sources
         QtExperimentalCommandHost.cpp
         QtExperimentalDialogService.h
         QtExperimentalDialogService.cpp
+        QtExperimentalDocumentController.h
+        QtExperimentalDocumentController.cpp
         QtExperimentalDocumentSession.h
         QtExperimentalDocumentSession.cpp
         QtExperimentalMainWindow.h
@@ -25,7 +27,8 @@ set(vertexnote_qt_sources
 )
 
 add_executable(vertexnote-qt-experimental ${vertexnote_qt_sources})
-target_link_libraries(vertexnote-qt-experimental PRIVATE Qt6::Widgets vertexnote::defaults vertexnote::util)
+target_compile_definitions(vertexnote-qt-experimental PRIVATE QT_NO_KEYWORDS)
+target_link_libraries(vertexnote-qt-experimental PRIVATE Qt6::Widgets vertexnote::defaults vertexnote::util vertexnote::core)
 target_include_directories(vertexnote-qt-experimental PRIVATE
         "${PROJECT_SOURCE_DIR}/src/core"
         "${PROJECT_SOURCE_DIR}/src"

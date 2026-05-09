@@ -8,6 +8,7 @@
 
 #include "QtExperimentalClipboardService.h"
 #include "QtExperimentalDialogService.h"
+#include "QtExperimentalDocumentController.h"
 #include "QtExperimentalDocumentSession.h"
 #include "QtExperimentalMainWindow.h"
 #include "QtExperimentalPluginUiBridge.h"
@@ -50,6 +51,7 @@ private:
     QtExperimentalRecentFilesService recentFiles;
     QtExperimentalUpdatePresentationService updates;
     QtExperimentalPluginUiBridge plugins;
+    QtExperimentalDocumentController documentController;
     QtExperimentalDocumentSession session;
     bool suppressDirtyTracking = false;
 };

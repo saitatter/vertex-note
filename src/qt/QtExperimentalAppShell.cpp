@@ -19,8 +19,11 @@ namespace {
 
 const std::vector<vn::ui::common::FileDialogFilter> SESSION_FILTERS = {
         {.label = "VertexNote Qt Session", .patterns = {"*.vnsession"}},
+        {.label = "VertexNote Documents", .patterns = {"*.xopp", "*.xoj", "*.xopt", "*.pdf"}},
         {.label = "All Files", .patterns = {"*"}},
 };
+
+auto isSessionFile(const std::filesystem::path& path) -> bool { return path.extension() == ".vnsession"; }
 
 }  // namespace
 
@@ -29,6 +32,7 @@ QtExperimentalAppShell::QtExperimentalAppShell():
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost()) {
     this->session.newDocument();
+    this->window.canvas()->setDocumentController(&this->documentController);
     registerBootstrapCommands();
     wireWindowState();
     rebuildToolbar();
@@ -76,7 +80,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.open",
              .text = "Open...",
-             .tooltip = "Open an experimental Qt session",
+             .tooltip = "Open an experimental Qt session or a VertexNote document",
              .shortcut = "Ctrl+O",
              .menu = "File"},
             [this]() { openSession(); });
@@ -84,7 +88,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.save-as",
              .text = "Save As...",
-             .tooltip = "Save the current experimental Qt session",
+             .tooltip = "Save the current Qt viewport session sidecar",
              .shortcut = "Ctrl+Shift+S",
              .menu = "File"},
             [this]() { saveSessionAs(); });
@@ -116,7 +120,8 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
                 this->dialogs.showInfo("VertexNote Qt Experimental Shell",
                                        "Qt shell bootstrap is active.\n\n"
                                        "Current slice includes neutral UI services, input translation, a Qt painter "
-                                       "render seam, and an experimental session viewport with pan/zoom.");
+                                       "render seam, real document-backed page previews, and an experimental "
+                                       "viewport session flow with pan/zoom.");
             });
 
     this->window.commandHost()->registerCommand(
@@ -186,16 +191,18 @@ void QtExperimentalAppShell::rebuildToolbar() {
 }
 
 void QtExperimentalAppShell::updateWindowTitle() {
-    const auto title = std::string("VertexNote - ") + this->session.titleText();
+    const auto title = std::string("VertexNote - ") + this->documentController.titleText() +
+                       (this->session.isDirty() ? " *" : "");
     setMainWindowTitle(title);
 }
 
 void QtExperimentalAppShell::newSession() {
     this->session.newDocument();
+    this->documentController.newBlankDocument();
     this->suppressDirtyTracking = true;
     this->window.canvas()->newBlankDocument();
     this->suppressDirtyTracking = false;
-    this->updates.showUpToDate("blank Qt session");
+    this->window.statusBar()->showMessage(QStringLiteral("Created a blank experimental document"), 3000);
     updateWindowTitle();
 }
 
@@ -205,17 +212,46 @@ void QtExperimentalAppShell::openSession() {
         return;
     }
 
-    const auto viewport = this->session.openFrom(*path);
-    if (!viewport) {
-        this->dialogs.showError("Open Failed", "VertexNote could not parse this experimental Qt session file.");
+    if (isSessionFile(*path)) {
+        const auto sessionState = this->session.openFrom(*path);
+        if (!sessionState) {
+            this->dialogs.showError("Open Failed", "VertexNote could not parse this experimental Qt session file.");
+            return;
+        }
+
+        if (sessionState->linkedDocumentPath) {
+            std::string error;
+            if (!this->documentController.loadFrom(*sessionState->linkedDocumentPath, &error)) {
+                this->dialogs.showError("Open Failed", error.empty() ? "VertexNote could not open the linked document."
+                                                                     : error);
+                return;
+            }
+        } else {
+            this->documentController.newBlankDocument();
+        }
+
+        this->suppressDirtyTracking = true;
+        this->window.canvas()->setViewportState(sessionState->viewport.zoom, sessionState->viewport.scrollX,
+                                                sessionState->viewport.scrollY);
+        this->suppressDirtyTracking = false;
+        this->recentFiles.addRecentFile(*path);
+        this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path->filename().string()), 4000);
+        updateWindowTitle();
         return;
     }
 
+    std::string error;
+    if (!this->documentController.loadFrom(*path, &error)) {
+        this->dialogs.showError("Open Failed", error.empty() ? "VertexNote could not open this document." : error);
+        return;
+    }
+
+    this->session.newDocument();
     this->suppressDirtyTracking = true;
-    this->window.canvas()->setViewportState(viewport->zoom, viewport->scrollX, viewport->scrollY);
+    this->window.canvas()->fitPage(false);
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(*path);
-    this->window.statusBar()->showMessage(QString::fromStdString("Opened " + path->filename().string()), 4000);
+    this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path->filename().string()), 4000);
     updateWindowTitle();
 }
 
@@ -226,7 +262,9 @@ void QtExperimentalAppShell::saveSessionAs() {
         return;
     }
 
-    if (!this->session.saveAs(*path, this->window.canvas()->sessionViewportState())) {
+    const QtExperimentalSessionState sessionState{.viewport = this->window.canvas()->sessionViewportState(),
+                                                  .linkedDocumentPath = this->documentController.sourcePath()};
+    if (!this->session.saveAs(*path, sessionState)) {
         this->dialogs.showError("Save Failed", "VertexNote could not save the experimental Qt session file.");
         return;
     }
