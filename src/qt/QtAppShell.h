@@ -95,6 +95,30 @@ private:
     void movePageUp();
     void movePageDown();
 
+    // Phase 11: Z-order & zoom
+    void bringToFront();
+    void sendToBack();
+    void bringForward();
+    void sendBackward();
+
+    // Phase 12: Pen styling
+    void setPenLineStyle(const std::string& style);
+    void setStrokeFill(int fillOpacity);
+    void selectFont();
+
+    // Phase 13: Navigation history & layer navigation
+    void navigateBack();
+    void navigateForward();
+    void gotoNextLayer();
+    void gotoPrevLayer();
+    void gotoTopLayer();
+    void addLayerAbove();
+    void addLayerBelow();
+
+    // Phase 14: Annotated page navigation
+    void gotoNextAnnotatedPage();
+    void gotoPrevAnnotatedPage();
+
 private:
     QtMainWindow window;
     QtClipboardService clipboard;
@@ -109,4 +133,15 @@ private:
     bool presentationMode = false;
     QtSettings currentSettings;
     std::vector<ElementPtr> elementClipboard;
+
+    // Navigation history
+    struct NavPoint {
+        std::size_t pageIndex = 0U;
+        double scrollX = 0.0;
+        double scrollY = 0.0;
+        double zoom = 1.0;
+    };
+    std::vector<NavPoint> navHistory;
+    std::size_t navHistoryIndex = 0U;
+    void recordNavPoint();
 };

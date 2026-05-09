@@ -36,6 +36,11 @@ struct QtToolState {
     double eraserWidth = 8.50;
     bool pressureSensitive = true;
     QtEraserMode eraserMode = QtEraserMode::WholeStroke;
+    std::string penLineStyle = "plain";
+    bool fillEnabled = false;
+    int fillOpacity = 128;
+    std::string fontName = "Sans";
+    double fontSize = 12.0;
 
     [[nodiscard]] auto activeToolName() const -> std::string {
         switch (activeTool) {

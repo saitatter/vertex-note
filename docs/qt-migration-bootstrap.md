@@ -199,3 +199,33 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 39. ✓ Add page before — `addPageBefore(pageIndex)` inserts blank page before current.
 40. ✓ Move page up/down — `movePageTowards(pageIndex, direction)` reorders pages in document,
     scrolls to new position after move.
+
+### Phase 11 — Z-order & zoom ✓
+
+41. ✓ Bring to front / send to back / bring forward / send backward — z-order commands
+    via `Layer::removeElement` + `insertElement`/`addElement`.
+42. ✓ Fit width — `fitWidth()` zooms so the widest page fills the viewport.
+43. ✓ Zoom to 100% — `zoomToActualSize()` resets zoom factor to 1.0.
+
+### Phase 12 — Pen styling & font ✓
+
+44. ✓ Pen line style — `setPenLineStyle(style)` sets `penLineStyle` in `QtToolState`,
+    applied to strokes via `StrokeStyle::parseStyle` in `beginStroke`.
+45. ✓ Stroke fill — `setStrokeFill(opacity)` toggles fill on pen strokes,
+    passed through `beginStroke` to `Stroke::setFill`.
+46. ✓ Font selection — `selectFont()` uses `QFontDialog` to set `fontName`/`fontSize`
+    in `QtToolState`.
+
+### Phase 13 — Navigation history & layer navigation ✓
+
+47. ✓ Navigate back/forward — `NavPoint` history vector in `QtAppShell`, records position
+    on page jumps, Alt+Left / Alt+Right to traverse.
+48. ✓ Layer navigation — `gotoNextLayer`, `gotoPrevLayer`, `gotoTopLayer` switch selected
+    layer via `QtDocumentController::selectLayer`.
+49. ✓ Add layer above/below — `addLayerAbove`/`addLayerBelow` create new layers relative
+    to the current selection.
+
+### Phase 14 — Annotated page navigation ✓
+
+50. ✓ Next/previous annotated page — `gotoNextAnnotatedPage`/`gotoPrevAnnotatedPage`
+    iterate pages checking `isPageAnnotated()`, records nav point before jumping.

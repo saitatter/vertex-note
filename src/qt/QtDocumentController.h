@@ -215,7 +215,8 @@ public:
 
     // Stroke input
     auto beginStroke(std::size_t pageIndex, double x, double y, double pressure, Color color, double width,
-                     StrokeTool::Value toolType, bool pressureSensitive) -> bool;
+                     StrokeTool::Value toolType, bool pressureSensitive, const std::string& lineStyle = "plain",
+                     int fill = -1) -> bool;
     auto updateStroke(double x, double y, double pressure) -> bool;
     auto finalizeStroke() -> bool;
     auto cancelStroke() -> void;
@@ -246,6 +247,12 @@ public:
     auto pasteElements(std::size_t pageIndex, std::vector<ElementPtr> elements, double offsetX = 10.0,
                        double offsetY = 10.0) -> bool;
 
+    // Z-order operations
+    auto bringSelectionToFront() -> bool;
+    auto sendSelectionToBack() -> bool;
+    auto bringSelectionForward() -> bool;
+    auto sendSelectionBackward() -> bool;
+
     // Element move
     auto beginMoveSelection(double pageX, double pageY) -> bool;
     auto updateMoveSelection(double pageX, double pageY) -> bool;
@@ -268,6 +275,9 @@ public:
     void mergeLayerDown(std::size_t pageIndex, std::size_t layerIndex);
     void showAllLayers(std::size_t pageIndex);
     void hideAllLayers(std::size_t pageIndex);
+
+    // Annotated page query
+    [[nodiscard]] auto isPageAnnotated(std::size_t pageIndex) const -> bool;
 
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);

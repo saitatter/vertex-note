@@ -7,12 +7,14 @@
 #include "QtAppShell.h"
 
 #include <array>
+#include <cmath>
 #include <vector>
 
 #include <QApplication>
 #include <QAction>
 #include <QFile>
 #include <QFileDialog>
+#include <QFontDialog>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -677,6 +679,175 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Move the current page towards the end",
              .menu = "Edit"},
             [this]() { movePageDown(); });
+
+    // ---- Phase 11: Z-order & zoom ----
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.bring-to-front",
+             .text = "Bring to Front",
+             .tooltip = "Bring selected elements to the front",
+             .shortcut = "Ctrl+Shift+F",
+             .menu = "Edit"},
+            [this]() { bringToFront(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.send-to-back",
+             .text = "Send to Back",
+             .tooltip = "Send selected elements to the back",
+             .shortcut = "Ctrl+Shift+B",
+             .menu = "Edit"},
+            [this]() { sendToBack(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.bring-forward",
+             .text = "Bring Forward",
+             .tooltip = "Move selected elements forward one step",
+             .menu = "Edit"},
+            [this]() { bringForward(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.send-backward",
+             .text = "Send Backward",
+             .tooltip = "Move selected elements backward one step",
+             .menu = "Edit"},
+            [this]() { sendBackward(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.fit-width",
+             .text = "Fit Width",
+             .tooltip = "Zoom to fit the page width in the viewport",
+             .shortcut = "Ctrl+8",
+             .menu = "View"},
+            [this]() { this->window.canvas()->fitWidth(); this->window.canvas()->update(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.zoom-100",
+             .text = "Actual Size",
+             .tooltip = "Zoom to 100% (actual size)",
+             .shortcut = "Ctrl+1",
+             .menu = "View"},
+            [this]() { this->window.canvas()->zoomToActualSize(); this->window.canvas()->update(); });
+
+    // ---- Phase 12: Pen styling ----
+    this->window.commandHost()->registerCommand(
+            {.id = "pen.line-solid",
+             .text = "Solid Line",
+             .tooltip = "Set pen line style to solid",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = true},
+            [this]() { setPenLineStyle("plain"); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "pen.line-dash",
+             .text = "Dashed Line",
+             .tooltip = "Set pen line style to dashed",
+             .menu = "Tools",
+             .checkable = true},
+            [this]() { setPenLineStyle("dash"); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "pen.line-dashdot",
+             .text = "Dash-Dot Line",
+             .tooltip = "Set pen line style to dash-dot",
+             .menu = "Tools",
+             .checkable = true},
+            [this]() { setPenLineStyle("dashdot"); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "pen.line-dot",
+             .text = "Dotted Line",
+             .tooltip = "Set pen line style to dotted",
+             .menu = "Tools",
+             .checkable = true},
+            [this]() { setPenLineStyle("dot"); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "pen.fill-toggle",
+             .text = "Toggle Fill",
+             .tooltip = "Toggle stroke fill on/off",
+             .menu = "Tools"},
+            [this]() {
+                auto& ts = this->window.canvas()->toolState();
+                ts.fillEnabled = !ts.fillEnabled;
+                this->window.commandHost()->setCommandChecked("pen.fill-toggle", ts.fillEnabled);
+                this->window.statusBar()->showMessage(
+                        ts.fillEnabled ? QStringLiteral("Fill enabled") : QStringLiteral("Fill disabled"), 3000);
+            });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.select-font",
+             .text = "Font...",
+             .tooltip = "Select font for text tool",
+             .menu = "Edit"},
+            [this]() { selectFont(); });
+
+    // Phase 13: Navigation history
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.back",
+             .text = "Navigate Back",
+             .tooltip = "Go back in navigation history",
+             .shortcut = "Alt+Left",
+             .menu = "Navigate"},
+            [this]() { navigateBack(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.forward",
+             .text = "Navigate Forward",
+             .tooltip = "Go forward in navigation history",
+             .shortcut = "Alt+Right",
+             .menu = "Navigate"},
+            [this]() { navigateForward(); });
+
+    // Phase 13: Layer navigation
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.goto-next",
+             .text = "Next Layer",
+             .tooltip = "Switch to the layer above current",
+             .menu = "Layer"},
+            [this]() { gotoNextLayer(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.goto-prev",
+             .text = "Previous Layer",
+             .tooltip = "Switch to the layer below current",
+             .menu = "Layer"},
+            [this]() { gotoPrevLayer(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.goto-top",
+             .text = "Top Layer",
+             .tooltip = "Switch to the topmost layer",
+             .menu = "Layer"},
+            [this]() { gotoTopLayer(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.add-above",
+             .text = "New Layer Above",
+             .tooltip = "Add a new layer above the current layer",
+             .menu = "Layer"},
+            [this]() { addLayerAbove(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "layer.add-below",
+             .text = "New Layer Below",
+             .tooltip = "Add a new layer below the current layer",
+             .menu = "Layer"},
+            [this]() { addLayerBelow(); });
+
+    // Phase 14: Annotated page navigation
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.next-annotated",
+             .text = "Next Annotated Page",
+             .tooltip = "Jump to next page with annotations",
+             .menu = "Navigate"},
+            [this]() { gotoNextAnnotatedPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "nav.prev-annotated",
+             .text = "Previous Annotated Page",
+             .tooltip = "Jump to previous page with annotations",
+             .menu = "Navigate"},
+            [this]() { gotoPrevAnnotatedPage(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -1391,6 +1562,7 @@ void QtAppShell::goToPage(std::size_t pageIndex) {
     if (pageIndex >= this->documentController.pageCount()) {
         return;
     }
+    recordNavPoint();
     this->window.canvas()->scrollToPage(pageIndex);
     this->window.canvas()->update();
     this->window.statusBar()->showMessage(
@@ -1566,4 +1738,244 @@ void QtAppShell::movePageDown() {
     this->window.pageSidebar()->refresh();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page moved down"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 11: Z-order operations
+// ---------------------------------------------------------------------------
+
+void QtAppShell::bringToFront() {
+    if (this->documentController.bringSelectionToFront()) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Brought to front"), 3000);
+    }
+}
+
+void QtAppShell::sendToBack() {
+    if (this->documentController.sendSelectionToBack()) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Sent to back"), 3000);
+    }
+}
+
+void QtAppShell::bringForward() {
+    if (this->documentController.bringSelectionForward()) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Brought forward"), 3000);
+    }
+}
+
+void QtAppShell::sendBackward() {
+    if (this->documentController.sendSelectionBackward()) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        this->window.statusBar()->showMessage(QStringLiteral("Sent backward"), 3000);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 12: Pen styling & font
+// ---------------------------------------------------------------------------
+
+void QtAppShell::setPenLineStyle(const std::string& style) {
+    auto& ts = this->window.canvas()->toolState();
+    ts.penLineStyle = style;
+    this->window.commandHost()->setCommandChecked("pen.line-solid", style == "plain");
+    this->window.commandHost()->setCommandChecked("pen.line-dash", style == "dash");
+    this->window.commandHost()->setCommandChecked("pen.line-dashdot", style == "dashdot");
+    this->window.commandHost()->setCommandChecked("pen.line-dot", style == "dot");
+    this->window.statusBar()->showMessage(
+            QStringLiteral("Line style: %1").arg(QString::fromStdString(style)), 3000);
+}
+
+void QtAppShell::setStrokeFill(int fillOpacity) {
+    auto& ts = this->window.canvas()->toolState();
+    ts.fillOpacity = fillOpacity;
+    ts.fillEnabled = fillOpacity > 0;
+}
+
+void QtAppShell::selectFont() {
+    auto& ts = this->window.canvas()->toolState();
+
+    bool ok = false;
+    QFont current;
+    current.setFamily(QString::fromStdString(ts.fontName));
+    current.setPointSizeF(ts.fontSize);
+
+    QFont selected = QFontDialog::getFont(&ok, current, &this->window, QStringLiteral("Select Font"));
+    if (ok) {
+        ts.fontName = selected.family().toStdString();
+        ts.fontSize = selected.pointSizeF();
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Font: %1 %2pt").arg(selected.family()).arg(selected.pointSizeF()), 3000);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 13: Navigation history
+// ---------------------------------------------------------------------------
+
+void QtAppShell::recordNavPoint() {
+    auto* canvas = this->window.canvas();
+    const auto state = canvas->sessionViewportState();
+    NavPoint point{.pageIndex = canvas->currentPageIndex(),
+                   .scrollX = state.scrollX,
+                   .scrollY = state.scrollY,
+                   .zoom = state.zoom};
+
+    // Trim forward history when recording a new point
+    if (this->navHistoryIndex < this->navHistory.size()) {
+        this->navHistory.resize(this->navHistoryIndex);
+    }
+
+    // Don't record duplicate consecutive positions
+    if (!this->navHistory.empty()) {
+        const auto& last = this->navHistory.back();
+        if (last.pageIndex == point.pageIndex && std::abs(last.scrollX - point.scrollX) < 1.0 &&
+            std::abs(last.scrollY - point.scrollY) < 1.0) {
+            return;
+        }
+    }
+
+    this->navHistory.push_back(point);
+    this->navHistoryIndex = this->navHistory.size();
+
+    // Limit history size
+    if (this->navHistory.size() > 100) {
+        this->navHistory.erase(this->navHistory.begin());
+        this->navHistoryIndex--;
+    }
+}
+
+void QtAppShell::navigateBack() {
+    if (this->navHistoryIndex == 0 || this->navHistory.empty()) {
+        this->window.statusBar()->showMessage(QStringLiteral("No previous position"), 3000);
+        return;
+    }
+
+    // Save current position if we're at the end
+    if (this->navHistoryIndex == this->navHistory.size()) {
+        recordNavPoint();
+        this->navHistoryIndex--;  // Step back past the just-recorded point
+    }
+
+    this->navHistoryIndex--;
+    const auto& point = this->navHistory[this->navHistoryIndex];
+    this->window.canvas()->setViewportState(point.zoom, point.scrollX, point.scrollY);
+    this->window.canvas()->update();
+}
+
+void QtAppShell::navigateForward() {
+    if (this->navHistoryIndex + 1 >= this->navHistory.size()) {
+        this->window.statusBar()->showMessage(QStringLiteral("No next position"), 3000);
+        return;
+    }
+
+    this->navHistoryIndex++;
+    const auto& point = this->navHistory[this->navHistoryIndex];
+    this->window.canvas()->setViewportState(point.zoom, point.scrollX, point.scrollY);
+    this->window.canvas()->update();
+}
+
+// ---------------------------------------------------------------------------
+// Phase 13: Layer navigation
+// ---------------------------------------------------------------------------
+
+void QtAppShell::gotoNextLayer() {
+    auto pageIdx = this->window.canvas()->currentPageIndex();
+    auto current = this->documentController.selectedLayerIndex(pageIdx);
+    auto count = this->documentController.layerCount(pageIdx);
+    if (current + 1 < count) {
+        this->documentController.selectLayer(pageIdx, current + 1);
+        this->window.canvas()->update();
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Layer %1 / %2").arg(current + 2).arg(count), 3000);
+    }
+}
+
+void QtAppShell::gotoPrevLayer() {
+    auto pageIdx = this->window.canvas()->currentPageIndex();
+    auto current = this->documentController.selectedLayerIndex(pageIdx);
+    if (current > 0) {
+        this->documentController.selectLayer(pageIdx, current - 1);
+        this->window.canvas()->update();
+        auto count = this->documentController.layerCount(pageIdx);
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Layer %1 / %2").arg(current).arg(count), 3000);
+    }
+}
+
+void QtAppShell::gotoTopLayer() {
+    auto pageIdx = this->window.canvas()->currentPageIndex();
+    auto count = this->documentController.layerCount(pageIdx);
+    if (count > 0) {
+        this->documentController.selectLayer(pageIdx, count - 1);
+        this->window.canvas()->update();
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Top layer (%1 / %2)").arg(count).arg(count), 3000);
+    }
+}
+
+void QtAppShell::addLayerAbove() {
+    auto pageIdx = this->window.canvas()->currentPageIndex();
+    this->documentController.addLayer(pageIdx);
+    auto count = this->documentController.layerCount(pageIdx);
+    // Select the newly added layer (top)
+    this->documentController.selectLayer(pageIdx, count - 1);
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Added layer above"), 3000);
+}
+
+void QtAppShell::addLayerBelow() {
+    auto pageIdx = this->window.canvas()->currentPageIndex();
+    auto current = this->documentController.selectedLayerIndex(pageIdx);
+    this->documentController.addLayer(pageIdx);
+    // addLayer adds at top; keep selection on the same layer (shifted up by one)
+    this->documentController.selectLayer(pageIdx, current);
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Added layer below"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 14: Annotated page navigation
+// ---------------------------------------------------------------------------
+
+void QtAppShell::gotoNextAnnotatedPage() {
+    auto current = this->window.canvas()->currentPageIndex();
+    auto count = this->documentController.pageCount();
+    for (std::size_t i = current + 1; i < count; ++i) {
+        if (this->documentController.isPageAnnotated(i)) {
+            recordNavPoint();
+            this->window.canvas()->scrollToPage(i);
+            this->window.canvas()->update();
+            this->window.statusBar()->showMessage(
+                    QStringLiteral("Annotated page %1").arg(i + 1), 3000);
+            return;
+        }
+    }
+    this->window.statusBar()->showMessage(QStringLiteral("No more annotated pages"), 3000);
+}
+
+void QtAppShell::gotoPrevAnnotatedPage() {
+    auto current = this->window.canvas()->currentPageIndex();
+    if (current == 0) {
+        this->window.statusBar()->showMessage(QStringLiteral("No previous annotated pages"), 3000);
+        return;
+    }
+    for (std::size_t i = current; i > 0; --i) {
+        if (this->documentController.isPageAnnotated(i - 1)) {
+            recordNavPoint();
+            this->window.canvas()->scrollToPage(i - 1);
+            this->window.canvas()->update();
+            this->window.statusBar()->showMessage(
+                    QStringLiteral("Annotated page %1").arg(i), 3000);
+            return;
+        }
+    }
+    this->window.statusBar()->showMessage(QStringLiteral("No previous annotated pages"), 3000);
 }

@@ -71,6 +71,8 @@ public:
     // Page navigation
     [[nodiscard]] auto currentPageIndex() const -> std::size_t;
     void scrollToPage(std::size_t pageIndex);
+    void fitWidth();
+    void zoomToActualSize();
 
     // Content renderer (shared for sidebar thumbnails / export)
     [[nodiscard]] auto contentRenderer() const -> vn::view::render::PageContentRenderer*;

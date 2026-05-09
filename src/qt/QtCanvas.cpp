@@ -267,6 +267,29 @@ void QtCanvas::scrollToPage(std::size_t pageIndex) {
     emitViewportUpdate();
 }
 
+void QtCanvas::fitWidth() {
+    const auto rects = pageRects();
+    if (rects.empty()) {
+        return;
+    }
+    // Find the widest page
+    double maxWidth = 0.0;
+    for (const auto& r: rects) {
+        maxWidth = std::max(maxWidth, r.width());
+    }
+    const double padding = 40.0;
+    const double availableWidth = std::max(1.0, width() - 2.0 * padding);
+    this->zoomFactor = clampZoom(availableWidth / std::max(maxWidth, 1.0));
+    const double visibleWorldWidth = width() / this->zoomFactor;
+    this->scrollX = rects[0].left() - (visibleWorldWidth - maxWidth) / 2.0;
+    emitViewportUpdate();
+}
+
+void QtCanvas::zoomToActualSize() {
+    this->zoomFactor = 1.0;
+    emitViewportUpdate();
+}
+
 void QtCanvas::setGeometrySnapEnabled(bool enabled) {
     this->geometrySnapEnabled = enabled;
     update();
@@ -1194,7 +1217,11 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
     }
 
     if (this->documentController->beginStroke(*pageIdx, pageX, pageY, pressure, color, width, toolType,
-                                               this->currentToolState.pressureSensitive)) {
+                                               this->currentToolState.pressureSensitive,
+                                               this->currentToolState.penLineStyle,
+                                               this->currentToolState.fillEnabled
+                                                       ? this->currentToolState.fillOpacity
+                                                       : -1)) {
         this->drawing = true;
         update();
     }
