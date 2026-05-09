@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <QLabel>
 #include <QMainWindow>
 
 #include "QtCanvas.h"
@@ -26,6 +27,9 @@ public:
     [[nodiscard]] auto layerPanel() -> QtLayerPanel*;
     [[nodiscard]] auto pageSidebar() -> QtPageSidebar*;
     [[nodiscard]] auto toolPalette() -> QtToolPalette*;
+    [[nodiscard]] auto pageStatusLabel() -> QLabel*;
+    [[nodiscard]] auto layerStatusLabel() -> QLabel*;
+    [[nodiscard]] auto zoomStatusLabel() -> QLabel*;
 
 private:
     QtCanvas* canvasWidget = nullptr;
@@ -34,4 +38,7 @@ private:
     QtPageSidebar* pageSidebarWidget = nullptr;
     QtToolPalette* toolPaletteWidget = nullptr;
     QtCommandHost commandRegistry;
+    QLabel* pageLabel = nullptr;
+    QLabel* layerLabel = nullptr;
+    QLabel* zoomLabel = nullptr;
 };

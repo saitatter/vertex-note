@@ -373,39 +373,23 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
 
     QPainter painter(this);
     vn::view::render::QtPainterRenderContext renderContext(&painter, devicePixelRatioF());
-    painter.fillRect(rect(), palette().window());
+    painter.fillRect(rect(), QColor(0xdc, 0xda, 0xd5));
 
     QTransform viewTransform;
     viewTransform.translate(-this->scrollX * this->zoomFactor, -this->scrollY * this->zoomFactor);
     viewTransform.scale(this->zoomFactor, this->zoomFactor);
     painter.setTransform(viewTransform);
 
-    painter.setRenderHint(QPainter::Antialiasing, false);
-    const QColor sceneGridMinor(214, 223, 235);
-    const QColor sceneGridMajor(188, 200, 216);
-    constexpr int sceneStep = 48;
-    const QRectF visibleScene(this->scrollX, this->scrollY, width() / this->zoomFactor, height() / this->zoomFactor);
-    const int startX = static_cast<int>(std::floor(visibleScene.left() / sceneStep)) * sceneStep;
-    const int endX = static_cast<int>(std::ceil(visibleScene.right() / sceneStep)) * sceneStep;
-    const int startY = static_cast<int>(std::floor(visibleScene.top() / sceneStep)) * sceneStep;
-    const int endY = static_cast<int>(std::ceil(visibleScene.bottom() / sceneStep)) * sceneStep;
-    for (int x = startX, index = 0; x <= endX; x += sceneStep, ++index) {
-        painter.setPen((index % 4) == 0 ? sceneGridMajor : sceneGridMinor);
-        painter.drawLine(QPointF(x, visibleScene.top()), QPointF(x, visibleScene.bottom()));
-    }
-    for (int y = startY, index = 0; y <= endY; y += sceneStep, ++index) {
-        painter.setPen((index % 4) == 0 ? sceneGridMajor : sceneGridMinor);
-        painter.drawLine(QPointF(visibleScene.left(), y), QPointF(visibleScene.right(), y));
-    }
-
     painter.setRenderHint(QPainter::Antialiasing, true);
     const auto pages =
             this->documentController ? this->documentController->snapshotPages()
                                      : std::vector<vn::view::render::PageRenderSnapshot>{};
     const auto rects = pageRects();
+    const auto currentPage = currentPageIndex();
     for (std::size_t index = 0; index < rects.size(); ++index) {
         drawPageContents(painter, rects[index],
-                         index < pages.size() ? pages[index] : vn::view::render::PageRenderSnapshot{}, index);
+                         index < pages.size() ? pages[index] : vn::view::render::PageRenderSnapshot{}, index,
+                         index == currentPage);
     }
 
     drawActiveStroke(painter);
@@ -414,21 +398,6 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawShapePreview(painter);
 
     painter.resetTransform();
-    painter.setPen(QColor(52, 64, 84));
-    painter.drawText(QRect(20, 18, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("VertexNote Qt Shell"));
-    painter.setPen(QColor(102, 112, 133));
-    const auto pageCount = this->documentController ? this->documentController->pageCount() : rects.size();
-    painter.drawText(QRect(20, 52, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("render backend=QtPainter scale=%1  zoom=%2%  scroll=(%3, %4)  pages=%5  tool=%6")
-                             .arg(renderContext.scaleFactor(), 0, 'f', 2)
-                             .arg(this->zoomFactor * 100.0, 0, 'f', 0)
-                             .arg(this->scrollX, 0, 'f', 1)
-                             .arg(this->scrollY, 0, 'f', 1)
-                             .arg(static_cast<int>(pageCount))
-                             .arg(QString::fromStdString(this->currentToolState.activeToolName())));
-    painter.drawText(QRect(20, 78, width() - 40, 40), Qt::AlignLeft | Qt::AlignTop, this->lastEventSummary);
-    drawOverlayHud(painter);
 
     if (event) {
         event->accept();
@@ -800,7 +769,8 @@ auto QtCanvas::documentSceneBounds() const -> QRectF {
 }
 
 void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
-                                const vn::view::render::PageRenderSnapshot& pageInfo, std::size_t pageIndex) const {
+                                const vn::view::render::PageRenderSnapshot& pageInfo, std::size_t pageIndex,
+                                bool selected) const {
     if (this->pageContentRenderer) {
         vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
         const vn::view::render::RenderRect renderRect{
@@ -813,23 +783,13 @@ void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
         drawGeometryInteractionOverlay(painter, rect, pageInfo, pageIndex);
     }
 
-    painter.setPen(QColor(61, 74, 89));
-    painter.drawText(QRectF(rect.left() + 26.0, rect.top() + 18.0, rect.width() - 52.0, 30.0), Qt::AlignLeft | Qt::AlignVCenter,
-                     QStringLiteral("Page %1").arg(static_cast<int>(pageIndex + 1)));
-
-    if (pageInfo.background.hasBackgroundName) {
-        painter.setPen(QColor(120, 131, 146));
-        painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 48.0, rect.width() - 52.0, 24.0),
-                         Qt::AlignLeft | Qt::AlignVCenter,
-                         QString::fromStdString(pageInfo.background.backgroundName));
+    // Selected page border (red, 2px) matching GTK style
+    if (selected) {
+        painter.setPen(QPen(QColor(0xff, 0x00, 0x00), 2.0 / this->zoomFactor));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(rect.adjusted(-1.0 / this->zoomFactor, -1.0 / this->zoomFactor,
+                                        1.0 / this->zoomFactor, 1.0 / this->zoomFactor));
     }
-
-    painter.setPen(QColor(102, 112, 133));
-    painter.drawText(QRectF(rect.left() + 26.0, rect.top() + rect.height() - 74.0, rect.width() - 52.0, 24.0),
-                     Qt::AlignLeft | Qt::AlignVCenter,
-                     QStringLiteral("Layers %1  |  Annotated %2")
-                             .arg(static_cast<int>(pageInfo.background.layerCount))
-                             .arg(pageInfo.background.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
 }
 
 void QtCanvas::drawOverlayHud(QPainter& painter) const {

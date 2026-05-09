@@ -42,6 +42,7 @@ private:
     void wireWindowState();
     void rebuildToolbar();
     void updateWindowTitle();
+    void updateStatusBarLabels();
     void newSession();
     void openSession();
     void saveSessionAs();

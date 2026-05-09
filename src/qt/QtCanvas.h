@@ -101,7 +101,7 @@ private:
     [[nodiscard]] auto pageRects() const -> std::vector<QRectF>;
     [[nodiscard]] auto documentSceneBounds() const -> QRectF;
     void drawPageContents(QPainter& painter, const QRectF& rect, const vn::view::render::PageRenderSnapshot& pageInfo,
-                          std::size_t pageIndex) const;
+                          std::size_t pageIndex, bool selected) const;
     void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
                                         const vn::view::render::PageRenderSnapshot& pageInfo,
                                         std::size_t pageIndex) const;

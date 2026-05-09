@@ -88,14 +88,16 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
 
     const QRectF pageRect(rect.x, rect.y, rect.width, rect.height);
 
-    // Drop shadow
+    // Drop shadow — asymmetric like GTK: thin top-left, thicker bottom-right
     painter->setPen(Qt::NoPen);
-    painter->setBrush(QColor(0, 0, 0, 18));
-    painter->drawRoundedRect(pageRect.translated(8.0, 8.0), 6.0, 6.0);
+    painter->setBrush(QColor(0, 0, 0, 40));
+    painter->drawRect(pageRect.adjusted(3.0, 3.0, 6.0, 6.0));
+    painter->setBrush(QColor(0, 0, 0, 20));
+    painter->drawRect(pageRect.adjusted(1.0, 1.0, 3.0, 3.0));
 
-    // Page fill with background color
+    // Page fill with background color — sharp corners
     painter->setBrush(toQColor(page.backgroundColor));
-    painter->drawRoundedRect(pageRect, 6.0, 6.0);
+    painter->drawRect(pageRect);
 
     const bool dark = isDarkBackground(page.backgroundColor);
 

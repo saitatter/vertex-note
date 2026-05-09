@@ -21,6 +21,7 @@
 #include <QShortcut>
 #include <QStatusBar>
 #include <QString>
+#include <QStyle>
 #include <QToolBar>
 
 #include "QtBackgroundDialog.h"
@@ -56,6 +57,7 @@ QtAppShell::QtAppShell():
     wireWindowState();
     rebuildToolbar();
     this->window.canvas()->newBlankDocument();
+    this->window.canvas()->fitWidth();
     sidebar->refresh();
     updateWindowTitle();
 }
@@ -855,7 +857,10 @@ void QtAppShell::wireWindowState() {
                      [this](const QString& text) { this->window.statusBar()->showMessage(text); });
 
     QObject::connect(this->window.canvas(), &QtCanvas::viewportStateChanged, &this->window,
-                     [this]() { updateWindowTitle(); });
+                     [this]() {
+                         updateWindowTitle();
+                         updateStatusBarLabels();
+                     });
 
     QObject::connect(this->window.canvas(), &QtCanvas::documentEdited, &this->window,
                      [this]() {
@@ -865,6 +870,7 @@ void QtAppShell::wireWindowState() {
                          updateEditCommandStates();
                          this->window.layerPanel()->refresh();
                          this->window.pageSidebar()->refresh();
+                         updateStatusBarLabels();
                      });
 
     QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
@@ -937,6 +943,41 @@ void QtAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
+    // Map command IDs to Qt standard pixmap icons
+    const auto setIcon = [&](std::string_view id, QStyle::StandardPixmap sp) {
+        if (auto* action = this->window.commandHost()->actionForCommand(id)) {
+            action->setIcon(this->window.style()->standardIcon(sp));
+        }
+    };
+    setIcon("app.new", QStyle::SP_FileIcon);
+    setIcon("app.open", QStyle::SP_DialogOpenButton);
+    setIcon("app.save-as", QStyle::SP_DialogSaveButton);
+    setIcon("edit.undo-geometry", QStyle::SP_ArrowBack);
+    setIcon("edit.redo-geometry", QStyle::SP_ArrowForward);
+    setIcon("view.zoom-in", QStyle::SP_TitleBarMaxButton);
+    setIcon("view.zoom-out", QStyle::SP_TitleBarMinButton);
+    setIcon("view.zoom-reset", QStyle::SP_BrowserReload);
+    setIcon("view.fit-page", QStyle::SP_DesktopIcon);
+    setIcon("edit.delete-geometry", QStyle::SP_TrashIcon);
+    setIcon("edit.insert-vertex", QStyle::SP_FileDialogDetailedView);
+
+    // Tool icons — use theme names with empty fallback (shows text if missing)
+    const auto setThemeIcon = [&](std::string_view id, const QString& themeName) {
+        if (auto* action = this->window.commandHost()->actionForCommand(id)) {
+            auto icon = QIcon::fromTheme(themeName);
+            if (!icon.isNull()) {
+                action->setIcon(icon);
+            }
+        }
+    };
+    setThemeIcon("tool.hand", QStringLiteral("transform-move"));
+    setThemeIcon("tool.pen", QStringLiteral("draw-freehand"));
+    setThemeIcon("tool.eraser", QStringLiteral("draw-eraser"));
+    setThemeIcon("tool.highlighter", QStringLiteral("draw-highlight"));
+    setThemeIcon("tool.select", QStringLiteral("edit-select"));
+    setThemeIcon("view.toggle-geometry-snap", QStringLiteral("snap-nodes-cusp"));
+    setThemeIcon("view.toggle-grid-snap", QStringLiteral("snap-to-grid"));
+
     const std::array<std::string_view, 18> commandIds = {"app.new",
                                                           "app.open",
                                                           "app.save-as",
@@ -976,11 +1017,29 @@ void QtAppShell::updateWindowTitle() {
     setMainWindowTitle(title);
 }
 
+void QtAppShell::updateStatusBarLabels() {
+    const auto pageIdx = this->window.canvas()->currentPageIndex();
+    const auto pageCount = this->documentController.pageCount();
+    this->window.pageStatusLabel()->setText(
+            QStringLiteral("Page %1 of %2").arg(pageIdx + 1).arg(pageCount > 0 ? pageCount : 1));
+
+    if (pageCount > 0) {
+        const auto layerIdx = this->documentController.selectedLayerIndex(pageIdx);
+        const auto layerCount = this->documentController.layerCount(pageIdx);
+        this->window.layerStatusLabel()->setText(
+                QStringLiteral("Layer %1 / %2").arg(layerIdx + 1).arg(layerCount));
+    }
+
+    const auto zoom = this->window.canvas()->sessionViewportState().zoom;
+    this->window.zoomStatusLabel()->setText(QStringLiteral("%1%").arg(zoom * 100.0, 0, 'f', 0));
+}
+
 void QtAppShell::newSession() {
     this->session.newDocument();
     this->documentController.newBlankDocument();
     this->suppressDirtyTracking = true;
     this->window.canvas()->newBlankDocument();
+    this->window.canvas()->fitWidth();
     this->suppressDirtyTracking = false;
     updateEditCommandStates();
     this->window.layerPanel()->refresh();
@@ -1034,7 +1093,7 @@ void QtAppShell::openSession() {
 
     this->session.newDocument();
     this->suppressDirtyTracking = true;
-    this->window.canvas()->fitPage(false);
+    this->window.canvas()->fitWidth();
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(*path);
     updateEditCommandStates();
