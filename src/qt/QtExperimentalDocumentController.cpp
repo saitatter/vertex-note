@@ -140,13 +140,31 @@ void QtExperimentalDocumentController::setHoveredGeometry(std::optional<QtExperi
     this->hoveredGeometryHit = std::move(hit);
 }
 
-void QtExperimentalDocumentController::setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit) {
+void QtExperimentalDocumentController::setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit, bool additive) {
+    if (!additive || !hit || hit->hit.type != vn::view::render::GeometryHitType::Vertex || !this->selectedGeometryHit ||
+        this->selectedGeometryHit->pageIndex != hit->pageIndex ||
+        this->selectedGeometryHit->hit.objectId != hit->hit.objectId) {
+        this->selectedGeometryHit = std::move(hit);
+        this->selectedGeometryVertexIds.clear();
+        if (this->selectedGeometryHit && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+            this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+            this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+        }
+        return;
+    }
+
     this->selectedGeometryHit = std::move(hit);
+    if (this->selectedGeometryHit && this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId &&
+        std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
+                  this->selectedGeometryHit->hit.vertexId) == this->selectedGeometryVertexIds.end()) {
+        this->selectedGeometryVertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+    }
 }
 
 void QtExperimentalDocumentController::clearInteractiveGeometryState() {
     this->hoveredGeometryHit.reset();
     this->selectedGeometryHit.reset();
+    this->selectedGeometryVertexIds.clear();
     this->geometryDragState.reset();
 }
 
@@ -158,16 +176,28 @@ auto QtExperimentalDocumentController::selectedGeometry() const -> const std::op
     return this->selectedGeometryHit;
 }
 
+auto QtExperimentalDocumentController::selectedVertexIds() const -> const std::vector<vn::geom::VertexId>& {
+    return this->selectedGeometryVertexIds;
+}
+
 auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimentalGeometryHit& hit) -> bool {
     if (hit.hit.type != vn::view::render::GeometryHitType::Vertex) {
         return false;
     }
 
-    this->selectedGeometryHit = hit;
+    const bool preserveSelection = this->selectedGeometryHit && this->selectedGeometryHit->pageIndex == hit.pageIndex &&
+                                   this->selectedGeometryHit->hit.objectId == hit.hit.objectId &&
+                                   std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
+                                             hit.hit.vertexId) != this->selectedGeometryVertexIds.end();
+    if (!preserveSelection) {
+        setSelectedGeometry(hit);
+    }
     this->geometryDragState = QtExperimentalGeometryDragState{
             .pageIndex = hit.pageIndex,
             .objectId = hit.hit.objectId,
             .vertexId = hit.hit.vertexId,
+            .vertexIds = this->selectedGeometryVertexIds.empty() ? std::vector<vn::geom::VertexId>{hit.hit.vertexId}
+                                                                 : this->selectedGeometryVertexIds,
             .originalPosition = {hit.hit.point.x, hit.hit.point.y},
             .currentPosition = {hit.hit.point.x, hit.hit.point.y},
             .beforeGeometry = vn::geom::GeometryObject{},
@@ -177,6 +207,14 @@ auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimen
     this->document->lock();
     if (auto* geometry = findMutableGeometryElement(hit.pageIndex, hit.hit.objectId)) {
         this->geometryDragState->beforeGeometry = geometry->geometry();
+        this->geometryDragState->originalPositions.reserve(this->geometryDragState->vertexIds.size());
+        this->geometryDragState->currentPositions.reserve(this->geometryDragState->vertexIds.size());
+        for (auto vertexId: this->geometryDragState->vertexIds) {
+            if (const auto* vertex = geometry->geometry().vertex(vertexId)) {
+                this->geometryDragState->originalPositions.push_back(vertex->position);
+                this->geometryDragState->currentPositions.push_back(vertex->position);
+            }
+        }
     }
     this->document->unlock();
     return true;
@@ -234,7 +272,19 @@ auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, do
         }
     }
 
-    changed = geometry->setVertexPosition(this->geometryDragState->vertexId, target);
+    if (this->geometryDragState->vertexIds.size() <= 1U) {
+        changed = geometry->setVertexPosition(this->geometryDragState->vertexId, target);
+    } else {
+        const vn::geom::Vec2 delta{target.x - this->geometryDragState->originalPosition.x,
+                                   target.y - this->geometryDragState->originalPosition.y};
+        for (std::size_t index = 0; index < this->geometryDragState->vertexIds.size() &&
+                                     index < this->geometryDragState->originalPositions.size();
+             ++index) {
+            const auto position = vn::geom::Vec2{this->geometryDragState->originalPositions[index].x + delta.x,
+                                                 this->geometryDragState->originalPositions[index].y + delta.y};
+            changed = geometry->setVertexPosition(this->geometryDragState->vertexIds[index], position) || changed;
+        }
+    }
     if (!geometry->geometry().constraints().empty()) {
         const vn::constraints::GeometryConstraintSolver solver;
         changed = solver.apply(geometry->geometry()).changed || changed;
@@ -252,6 +302,12 @@ auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, do
         if (this->hoveredGeometryHit && this->hoveredGeometryHit->hit.objectId == this->geometryDragState->objectId &&
             this->hoveredGeometryHit->hit.vertexId == this->geometryDragState->vertexId) {
             this->hoveredGeometryHit->hit.point = Point(vertex->position.x, vertex->position.y);
+        }
+    }
+    this->geometryDragState->currentPositions.clear();
+    for (auto vertexId: this->geometryDragState->vertexIds) {
+        if (const auto* vertex = geometry->geometry().vertex(vertexId)) {
+            this->geometryDragState->currentPositions.push_back(vertex->position);
         }
     }
     this->document->unlock();
@@ -272,7 +328,8 @@ auto QtExperimentalDocumentController::endGeometryVertexDrag() -> bool {
                                  .objectId = this->geometryDragState->objectId,
                                  .before = this->geometryDragState->beforeGeometry,
                                  .after = geometry->geometry(),
-                                 .text = "Move geometry vertex"});
+                                 .text = this->geometryDragState->vertexIds.size() > 1U ? "Move geometry vertices"
+                                                                                         : "Move geometry vertex"});
         }
         this->document->unlock();
     }
@@ -303,8 +360,15 @@ auto QtExperimentalDocumentController::deleteSelectedGeometry() -> bool {
 
     if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
         this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
-        changed = geometry->removeVertex(this->selectedGeometryHit->hit.vertexId);
-        actionText = "Delete geometry vertex";
+        if (this->selectedGeometryVertexIds.size() > 1U) {
+            for (auto vertexId: this->selectedGeometryVertexIds) {
+                changed = geometry->removeVertex(vertexId) || changed;
+            }
+            actionText = "Delete geometry vertices";
+        } else {
+            changed = geometry->removeVertex(this->selectedGeometryHit->hit.vertexId);
+            actionText = "Delete geometry vertex";
+        }
     } else if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
                this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
         changed = geometry->removeEdge(this->selectedGeometryHit->hit.edgeId);

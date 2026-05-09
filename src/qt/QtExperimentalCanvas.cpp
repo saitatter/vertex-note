@@ -369,7 +369,7 @@ void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton) {
         updateGeometryHover(event->position());
-        selectHoveredGeometry();
+        selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
         if (this->documentController && this->documentController->selectedGeometry() &&
             this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
             if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
@@ -386,7 +386,7 @@ void QtExperimentalCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (event->button() == Qt::LeftButton) {
         updateGeometryHover(event->position());
-        selectHoveredGeometry();
+        selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
         if (insertVertexOnSelectedEdge()) {
             event->accept();
             return;
@@ -725,19 +725,20 @@ void QtExperimentalCanvas::clearGeometryHover() {
     update();
 }
 
-void QtExperimentalCanvas::selectHoveredGeometry() {
+void QtExperimentalCanvas::selectHoveredGeometry(bool additive) {
     if (!this->documentController) {
         return;
     }
 
-    this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry());
+    this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry(), additive);
     if (!this->documentController->selectedGeometry()) {
         updateDebugOverlay(QStringLiteral("selection cleared"));
     } else {
         const auto& hit = *this->documentController->selectedGeometry();
-        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2")
+        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2 vertices=%3")
                                    .arg(static_cast<int>(hit.pageIndex + 1))
-                                   .arg(static_cast<qulonglong>(hit.hit.objectId)));
+                                   .arg(static_cast<qulonglong>(hit.hit.objectId))
+                                   .arg(static_cast<int>(this->documentController->selectedVertexIds().size())));
     }
     update();
 }
@@ -752,6 +753,7 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
     vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
     const auto& hovered = this->documentController->hoveredGeometry();
     const auto& selected = this->documentController->selectedGeometry();
+    const auto& selectedVertexIds = this->documentController->selectedVertexIds();
     const auto& drag = this->documentController->activeGeometryDrag();
 
     const auto drawEdgeOverlay = [&](const QtExperimentalGeometryHit& geometryHit, const QColor& color, double extraWidth) {
@@ -809,9 +811,9 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
         }
 
         for (const auto& vertex: geometry->vertices) {
-            const bool isSelected = selected && selected->pageIndex == pageIndex &&
-                                    selected->hit.type == vn::view::render::GeometryHitType::Vertex &&
-                                    selected->hit.objectId == geometry->objectId && selected->hit.vertexId == vertex.id;
+            const bool isSelected = selected && selected->pageIndex == pageIndex && selected->hit.objectId == geometry->objectId &&
+                                    std::find(selectedVertexIds.begin(), selectedVertexIds.end(), vertex.id) !=
+                                            selectedVertexIds.end();
             const bool isHovered = hovered && hovered->pageIndex == pageIndex &&
                                    hovered->hit.type == vn::view::render::GeometryHitType::Vertex &&
                                    hovered->hit.objectId == geometry->objectId && hovered->hit.vertexId == vertex.id;

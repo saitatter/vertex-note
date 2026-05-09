@@ -85,7 +85,7 @@ private:
     [[nodiscard]] auto pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t>;
     void updateGeometryHover(const QPointF& screenPoint);
     void clearGeometryHover();
-    void selectHoveredGeometry();
+    void selectHoveredGeometry(bool additive = false);
     void beginPan(const QPointF& position);
     void endPan();
 

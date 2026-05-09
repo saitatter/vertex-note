@@ -42,8 +42,11 @@ struct QtExperimentalGeometryDragState {
     std::size_t pageIndex = 0U;
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
     vn::geom::VertexId vertexId = vn::geom::InvalidVertexId;
+    std::vector<vn::geom::VertexId> vertexIds;
     vn::geom::Vec2 originalPosition;
+    std::vector<vn::geom::Vec2> originalPositions;
     vn::geom::Vec2 currentPosition;
+    std::vector<vn::geom::Vec2> currentPositions;
     vn::geom::GeometryObject beforeGeometry;
     std::optional<vn::snap::SnapKind> snapKind;
     vn::geom::Vec2 snapPoint;
@@ -79,10 +82,11 @@ public:
     [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                        double maxScreenDistance = 8.0) const -> std::optional<QtExperimentalGeometryHit>;
     void setHoveredGeometry(std::optional<QtExperimentalGeometryHit> hit);
-    void setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit);
+    void setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit, bool additive = false);
     void clearInteractiveGeometryState();
     [[nodiscard]] auto hoveredGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
+    [[nodiscard]] auto selectedVertexIds() const -> const std::vector<vn::geom::VertexId>&;
     [[nodiscard]] auto beginGeometryVertexDrag(const QtExperimentalGeometryHit& hit) -> bool;
     [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom,
                                                 const QtExperimentalSnapOptions& options) -> bool;
@@ -115,6 +119,7 @@ private:
     std::vector<QtExperimentalPageInfo> pageSnapshots;
     std::optional<QtExperimentalGeometryHit> hoveredGeometryHit;
     std::optional<QtExperimentalGeometryHit> selectedGeometryHit;
+    std::vector<vn::geom::VertexId> selectedGeometryVertexIds;
     std::optional<QtExperimentalGeometryDragState> geometryDragState;
     std::deque<QtExperimentalGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtExperimentalGeometryHistoryEntry> geometryRedoHistory;
