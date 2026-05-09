@@ -66,12 +66,14 @@ private:
     [[nodiscard]] auto documentSceneBounds() const -> QRectF;
     void drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
                           std::size_t pageIndex) const;
+    void drawOverlayHud(QPainter& painter) const;
     void beginPan(const QPointF& position);
     void endPan();
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     std::unique_ptr<vn::view::render::BackgroundRenderer> backgroundRenderer;
+    std::unique_ptr<vn::view::render::GeometryRenderer> geometryRenderer;
     std::unique_ptr<vn::view::render::StrokeRenderer> strokeRenderer;
     std::unique_ptr<vn::view::render::TextRenderer> textRenderer;
     std::unique_ptr<vn::view::render::ImageRenderer> imageRenderer;

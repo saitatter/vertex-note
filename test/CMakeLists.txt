@@ -51,7 +51,7 @@ configure_file (
 ###############################################################################
 
 # Get all unit test source files
-file (GLOB_RECURSE test-units-sources
+file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
   unit_tests/*.cpp
   main.cpp
 )
@@ -67,7 +67,7 @@ target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 ###############################################################################
 
 # Get all test-gtk test source files
-file (GLOB_RECURSE test-gtk-sources
+file (GLOB_RECURSE test-gtk-sources CONFIGURE_DEPENDS
         gtk_tests/*.cpp
         )
 
@@ -102,7 +102,7 @@ gtest_discover_tests(test-gtk-integration
 # Define benchmarks: gtest-like app with benchmark units - not added to CTest or the `test` target
 ###############################################################################
 
-file (GLOB_RECURSE benchmarks-sources benchmarks/*.cpp)
+file (GLOB_RECURSE benchmarks-sources CONFIGURE_DEPENDS benchmarks/*.cpp)
 add_executable (benchmarks EXCLUDE_FROM_ALL ${benchmarks-sources})
 target_link_libraries (benchmarks vertexnote::core vertexnote::util gtest_main gtest)
 target_include_directories(benchmarks PRIVATE "${PROJECT_BINARY_DIR}/test")

@@ -18,8 +18,10 @@
 #include "model/NotePage.h"
 #include "model/Text.h"
 #include "model/Stroke.h"
+#include "vertexnote/geometry/GeometryElement.h"
 #include "util/raii/GObjectSPtr.h"
 #include "util/raii/CairoWrappers.h"
+#include "view/render/GeometryRenderModelFactory.h"
 #include "view/render/PageBackgroundRenderModelFactory.h"
 #include "view/render/ImageRenderModelFactory.h"
 #include "view/render/StrokeRenderModelFactory.h"
@@ -224,6 +226,13 @@ void QtExperimentalDocumentController::rebuildPageSnapshots() {
                         const auto* image = dynamic_cast<const Image*>(element);
                         if (image && image->hasData()) {
                             drawables.emplace_back(vn::view::render::ImageRenderModelFactory::fromImage(*image));
+                        }
+                        break;
+                    }
+                    case ELEMENT_GEOMETRY: {
+                        const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
+                        if (geometry) {
+                            drawables.emplace_back(vn::view::render::GeometryRenderModelFactory::fromGeometryElement(*geometry));
                         }
                         break;
                     }

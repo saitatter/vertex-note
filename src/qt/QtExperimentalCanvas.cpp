@@ -12,6 +12,7 @@
 
 #include <QCursor>
 #include <QEvent>
+#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPaintEvent>
@@ -22,9 +23,11 @@
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QTransform>
+#include <QStringList>
 #include <QWheelEvent>
 
 #include "QtPreviewBackgroundRenderer.h"
+#include "QtPreviewGeometryRenderer.h"
 #include "QtPreviewImageRenderer.h"
 #include "QtPreviewStrokeRenderer.h"
 #include "QtPreviewTextRenderer.h"
@@ -76,6 +79,7 @@ QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
     setPalette(palette);
     this->inputAdapter = std::make_unique<QtInputAdapter>(this);
     this->backgroundRenderer = std::make_unique<vn::view::render::QtPreviewBackgroundRenderer>();
+    this->geometryRenderer = std::make_unique<vn::view::render::QtPreviewGeometryRenderer>();
     this->imageRenderer = std::make_unique<vn::view::render::QtPreviewImageRenderer>();
     this->strokeRenderer = std::make_unique<vn::view::render::QtPreviewStrokeRenderer>();
     this->textRenderer = std::make_unique<vn::view::render::QtPreviewTextRenderer>();
@@ -222,6 +226,7 @@ void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
                              .arg(this->scrollY, 0, 'f', 1)
                              .arg(static_cast<int>(pageCount)));
     painter.drawText(QRect(20, 78, width() - 40, 40), Qt::AlignLeft | Qt::AlignTop, this->lastEventSummary);
+    drawOverlayHud(painter);
 
     if (event) {
         event->accept();
@@ -396,6 +401,10 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                             if (this->imageRenderer) {
                                 this->imageRenderer->draw(model, renderContext);
                             }
+                        } else if constexpr (std::is_same_v<Model, vn::view::render::GeometryRenderModel>) {
+                            if (this->geometryRenderer) {
+                                this->geometryRenderer->draw(model, renderContext);
+                            }
                         }
                     },
                     drawable);
@@ -419,6 +428,43 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                      QStringLiteral("Layers %1  |  Annotated %2")
                              .arg(static_cast<int>(pageInfo.background.layerCount))
                              .arg(pageInfo.background.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
+}
+
+void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
+    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+    std::size_t geometryCount = 0;
+    std::size_t drawableCount = 0;
+    for (const auto& page: pages) {
+        drawableCount += page.drawables.size();
+        for (const auto& drawable: page.drawables) {
+            if (std::holds_alternative<vn::view::render::GeometryRenderModel>(drawable)) {
+                ++geometryCount;
+            }
+        }
+    }
+
+    const QStringList badges = {
+            QStringLiteral("Qt experimental"),
+            QStringLiteral("pages %1").arg(static_cast<int>(pages.size())),
+            QStringLiteral("drawables %1").arg(static_cast<int>(drawableCount)),
+            QStringLiteral("geometry %1").arg(static_cast<int>(geometryCount)),
+    };
+
+    constexpr int badgeHeight = 28;
+    constexpr int badgeSpacing = 8;
+    int right = width() - 20;
+    const int top = 18;
+    QFontMetrics metrics(painter.font());
+    for (auto it = badges.crbegin(); it != badges.crend(); ++it) {
+        const int badgeWidth = metrics.horizontalAdvance(*it) + 22;
+        const QRect badgeRect(right - badgeWidth, top, badgeWidth, badgeHeight);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(23, 31, 44, 220));
+        painter.drawRoundedRect(badgeRect, 8.0, 8.0);
+        painter.setPen(QColor(232, 237, 243));
+        painter.drawText(badgeRect.adjusted(10, 0, -10, 0), Qt::AlignCenter, *it);
+        right = badgeRect.left() - badgeSpacing;
+    }
 }
 
 void QtExperimentalCanvas::beginPan(const QPointF& position) {

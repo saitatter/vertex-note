@@ -15,6 +15,7 @@
 #include "model/PageType.h"
 #include "util/Color.h"
 #include "RenderContext.h"
+#include "vertexnote/geometry/GeometryTypes.h"
 
 class Image;
 class Text;
@@ -71,7 +72,21 @@ struct ImageRenderModel {
     double height = 0.0;
 };
 
-using PageDrawableRenderModel = std::variant<StrokeRenderModel, TextRenderModel, ImageRenderModel>;
+struct GeometryEdgeRenderModel {
+    vn::geom::EdgeKind kind = vn::geom::EdgeKind::Line;
+    Point start;
+    Point end;
+    std::vector<Point> controls;
+    bool closedLoop = false;
+};
+
+struct GeometryRenderModel {
+    std::vector<GeometryEdgeRenderModel> edges;
+    Color color{};
+    double strokeWidth = 1.0;
+};
+
+using PageDrawableRenderModel = std::variant<StrokeRenderModel, TextRenderModel, ImageRenderModel, GeometryRenderModel>;
 
 class StrokeRenderer {
 public:
@@ -95,6 +110,12 @@ class BackgroundRenderer {
 public:
     virtual ~BackgroundRenderer() = default;
     virtual void draw(const PageBackgroundRenderModel& page, const RenderRect& rect, RenderContext& context) const = 0;
+};
+
+class GeometryRenderer {
+public:
+    virtual ~GeometryRenderer() = default;
+    virtual void draw(const GeometryRenderModel& geometry, RenderContext& context) const = 0;
 };
 
 class OverlayRenderer {
