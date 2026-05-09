@@ -49,12 +49,12 @@ add_custom_target (desktop-install-thumbnailer
   COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" install
 
   COMMENT "Install vertex-note-thumbnailer as xoj file thumbnail generator"
-  SOURCES vertexnote-thumbnailer vertex-note-thumbnailer-xoj.schemas desktop-install.sh
+  SOURCES vertex-note-thumbnailer.cpp vertex-note-thumbnailer-xoj.schemas desktop-install.sh
 )
 
 add_custom_target (desktop-uninstall-thumbnailer
   COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" uninstall
 
   COMMENT "Uninstall vertex-note-thumbnailer as xoj file thumbnail generator"
-  SOURCES vertexnote-thumbnailer vertex-note-thumbnailer-xoj.schemas desktop-install.sh
+  SOURCES vertex-note-thumbnailer.cpp vertex-note-thumbnailer-xoj.schemas desktop-install.sh
 )
