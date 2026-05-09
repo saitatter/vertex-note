@@ -55,6 +55,7 @@
 #include "gui/dialog/SettingsDialog.h"                           // for Sett...
 #include "gui/dialog/ToolbarManageDialog.h"                      // for Tool...
 #include "gui/dialog/UpdateDialog.h"                             // for UpdateDialog
+#include "gui/dialog/FixedLengthConstraintDialog.h"
 #include "gui/dialog/DocumentOpenDialog.h"                               // for XojO...
 #include "gui/dialog/DocumentSaveDialog.h"                               // for XojS...
 #include "gui/dialog/toolbarCustomize/ToolbarDragDropHandler.h"  // for Tool...
@@ -574,6 +575,26 @@ bool Control::deleteSelectedGeometryConstraints() {
         return selection->removeSelectedGeometryConstraints();
     }
     return false;
+}
+
+bool Control::editSelectedFixedLengthConstraint() {
+    EditSelection* selection = this->win->getNoteView()->getSelection();
+    if (!selection) {
+        return false;
+    }
+
+    const auto fixedLength = selection->selectedFixedLengthConstraint();
+    if (!fixedLength) {
+        return false;
+    }
+
+    vn::popup::FixedLengthConstraintDialog::show(
+            this->getGtkWindow(), fixedLength->value,
+            [selection](double value) {
+                const bool updated = selection->updateSelectedFixedLengthConstraint(value);
+                (void) updated;
+            });
+    return true;
 }
 
 /**

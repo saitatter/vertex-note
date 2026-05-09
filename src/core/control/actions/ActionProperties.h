@@ -304,6 +304,11 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_FIXED_LENGTH> {
 };
 
 template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_EDIT_FIXED_LENGTH> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->editSelectedFixedLengthConstraint(); }
+};
+
+template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PARALLEL> {
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Parallel);

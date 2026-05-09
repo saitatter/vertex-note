@@ -279,6 +279,7 @@ public:
     void reorderSelection(EditSelection::OrderChange change);
     bool applyGeometryConstraint(vn::geom::ConstraintKind kind);
     bool deleteSelectedGeometryConstraints();
+    bool editSelectedFixedLengthConstraint();
 
     void setToolSize(ToolSize size);
 

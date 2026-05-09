@@ -1317,6 +1317,56 @@ auto EditSelection::removeSelectedGeometryConstraints() -> bool {
     return true;
 }
 
+auto EditSelection::selectedFixedLengthConstraint() const -> std::optional<vn::geom::Constraint> {
+    const auto constraints = selectedGeometryConstraints();
+    const auto it = std::find_if(constraints.begin(), constraints.end(), [](const auto& constraint) {
+        return constraint.kind == vn::geom::ConstraintKind::FixedLength;
+    });
+
+    if (it == constraints.end()) {
+        return std::nullopt;
+    }
+
+    const auto next = std::find_if(std::next(it), constraints.end(), [](const auto& constraint) {
+        return constraint.kind == vn::geom::ConstraintKind::FixedLength;
+    });
+    if (next != constraints.end()) {
+        return std::nullopt;
+    }
+
+    return *it;
+}
+
+auto EditSelection::updateSelectedFixedLengthConstraint(double value) -> bool {
+    if (!this->activeGeometryElement || value <= 0.0) {
+        return false;
+    }
+
+    const auto selected = selectedFixedLengthConstraint();
+    if (!selected) {
+        return false;
+    }
+
+    const auto before = this->activeGeometryElement->geometry();
+    auto after = before;
+    auto updated = *selected;
+    updated.value = value;
+    if (!after.replaceConstraint(updated)) {
+        return false;
+    }
+
+    const bool solverChanged = applyGeometryConstraints(after);
+    (void) solverChanged;
+
+    this->activeGeometryElement->replaceGeometry(after);
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->activeGeometryElement, before, after, _("Edit fixed length constraint")));
+    this->contents->invalidateViewBuffer();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
+}
+
 void EditSelection::setEdgePan(bool pan) {
     if (pan && !this->edgePanHandler) {
         this->edgePanHandler =

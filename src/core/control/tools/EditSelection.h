@@ -299,6 +299,8 @@ public:
     [[nodiscard]] auto insertGeometryVertexAt(double x, double y, double zoom) -> bool;
     [[nodiscard]] auto applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bool;
     [[nodiscard]] auto removeSelectedGeometryConstraints() -> bool;
+    [[nodiscard]] auto selectedFixedLengthConstraint() const -> std::optional<vn::geom::Constraint>;
+    [[nodiscard]] auto updateSelectedFixedLengthConstraint(double value) -> bool;
 
 public:
     PageView* getView();
