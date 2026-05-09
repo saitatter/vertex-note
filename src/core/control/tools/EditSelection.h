@@ -32,6 +32,7 @@
 #include "util/raii/GSourceURef.h"           // for GSourceURef
 #include "util/serializing/Serializable.h"   // for Serializable
 #include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/snapping/SnapEngine.h"
 
 #include "CursorSelectionType.h"     // for CursorSelectionType, CURS...
 #include "SnapToGridInputHandler.h"  // for SnapToGridInputHandler
@@ -48,6 +49,9 @@ class ObjectOutputStream;
 class NoteFont;
 class Document;
 class EditSelection;
+namespace vn::snap {
+class GeometrySnapProvider;
+}
 
 namespace SelectionFactory {
 auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr e)
@@ -328,10 +332,15 @@ private:
      */
     void drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, double zoom) const;
     void drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const;
-    void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const;
+    void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool selected, bool hovered) const;
+    void drawGeometrySnapIndicator(cairo_t* cr, double zoom, const cairo_matrix_t& baseMatrix) const;
     bool selectGeometryVertexHandleAt(double x, double y, double zoom);
     bool selectGeometryEdgeAt(double x, double y, double zoom);
     [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
+    [[nodiscard]] auto snapGeometryVertexDragPosition(vn::geom::Vec2 modelPosition, bool alt, double zoom)
+            -> vn::geom::Vec2;
+    void rebuildGeometrySnapEngine();
+    void clearGeometrySnapState();
     void clearGeometryVertexSelection();
     void setSingleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
                                           vn::geom::Vec2 position);
@@ -431,6 +440,10 @@ private:  // DATA
     vn::geom::GeometryElement* hoveredGeometryElement = nullptr;
     vn::geom::EdgeId hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     vn::geom::Vec2 hoveredGeometryInsertPosition;
+    std::optional<vn::snap::SnapKind> activeGeometrySnapKind;
+    vn::geom::Vec2 activeGeometrySnapPoint;
+    std::shared_ptr<vn::snap::GeometrySnapProvider> geometrySnapProvider;
+    vn::snap::SnapEngine geometrySnapEngine;
 
     /**
      * If both scale axes should have the same scale factor, e.g. for Text

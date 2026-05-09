@@ -39,6 +39,9 @@
 #include "util/i18n.h"                            // for _
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
+#include "view/overlays/SnapIndicatorViewHelper.h"
+#include "vertexnote/snapping/GeometrySnapProvider.h"
+#include "vertexnote/snapping/PageGeometryCollector.h"
 
 #include "EditSelectionContents.h"  // for EditSelectionConte...
 
@@ -57,6 +60,7 @@ constexpr double SELECTION_PADDING = 12.;
 
 /// Number of times to trigger edge pan timer per second
 constexpr unsigned int PAN_TIMER_RATE = 30;
+constexpr double GEOMETRY_SNAP_RADIUS_PIXELS = 8.0;
 
 namespace SelectionFactory {
 /// @return Bounds and SnappingBounds
@@ -553,6 +557,7 @@ void EditSelection::mouseUp() {
 
         this->activeGeometryVertexMoved = false;
         this->mouseDownType = CURSOR_SELECTION_NONE;
+        clearGeometrySnapState();
         this->view->getNoteView()->repaintSelection();
         return;
     }
@@ -582,7 +587,7 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
     double zoom = this->view->getNoteView()->getZoom();
 
     this->mouseDownType = type;
-    if (type != CURSOR_SELECTION_GEOMETRY_VERTEX) {
+    if (type != CURSOR_SELECTION_GEOMETRY_VERTEX && type != CURSOR_SELECTION_GEOMETRY_EDGE) {
         clearGeometryVertexSelection();
         this->hoveredGeometryElement = nullptr;
         this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
@@ -603,7 +608,10 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
                 this->activeGeometryVertexCurrent = this->activeGeometryVertexCurrentPositions[*index];
             }
             this->activeGeometryVertexMoved = false;
+            rebuildGeometrySnapEngine();
         }
+    } else if (type == CURSOR_SELECTION_GEOMETRY_EDGE) {
+        clearGeometrySnapState();
     }
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is not modified
@@ -630,9 +638,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
         double transformedY = mouseY;
         cairo_matrix_transform_point(&this->cmatrix, &transformedX, &transformedY);
         auto modelPosition = geometryVertexPreviewToModel(transformedX / zoom, transformedY / zoom);
-        Point snapped(modelPosition.x, modelPosition.y);
-        snapped = snappingHandler.snapToGrid(snapped, alt);
-        modelPosition = {snapped.x, snapped.y};
+        modelPosition = snapGeometryVertexDragPosition(modelPosition, alt, zoom);
 
         const vn::geom::Vec2 delta{modelPosition.x - this->activeGeometryVertexStart.x,
                                    modelPosition.y - this->activeGeometryVertexStart.y};
@@ -939,6 +945,66 @@ void EditSelection::rebaseSelectionBounds() {
     updateMatrix();
 }
 
+void EditSelection::clearGeometrySnapState() {
+    this->activeGeometrySnapKind.reset();
+    this->activeGeometrySnapPoint = {};
+}
+
+void EditSelection::rebuildGeometrySnapEngine() {
+    clearGeometrySnapState();
+    this->geometrySnapProvider.reset();
+    this->geometrySnapEngine.clearProviders();
+
+    const auto* settings = this->view->getNoteView()->getControl()->getSettings();
+    if (!settings->isVertexNoteGeometrySnapEnabled() || !this->sourcePage || !this->activeGeometryElement) {
+        return;
+    }
+
+    auto objects = vn::snap::collectGeometryObjects(this->sourcePage);
+    const auto activeObjectId = this->activeGeometryElement->geometry().objectId();
+    objects.erase(std::remove_if(objects.begin(), objects.end(),
+                                 [activeObjectId](const vn::geom::GeometryObject* object) {
+                                     return !object || object->objectId() == activeObjectId;
+                                 }),
+                  objects.end());
+
+    if (objects.empty()) {
+        return;
+    }
+
+    this->geometrySnapProvider = std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects));
+    this->geometrySnapEngine.addProvider(this->geometrySnapProvider);
+}
+
+auto EditSelection::snapGeometryVertexDragPosition(vn::geom::Vec2 modelPosition, bool alt, double zoom)
+        -> vn::geom::Vec2 {
+    clearGeometrySnapState();
+
+    if (this->geometrySnapProvider) {
+        const auto geometrySnap =
+                this->geometrySnapEngine.snap(vn::snap::SnapQuery{modelPosition, zoom, GEOMETRY_SNAP_RADIUS_PIXELS});
+        if (geometrySnap.snapped()) {
+            this->activeGeometrySnapKind = geometrySnap.candidate->kind;
+            this->activeGeometrySnapPoint = geometrySnap.pagePoint;
+            return geometrySnap.pagePoint;
+        }
+    }
+
+    const auto* settings = this->view->getNoteView()->getControl()->getSettings();
+    if (!settings->isVertexNoteGridSnapEnabled()) {
+        return modelPosition;
+    }
+
+    Point snapped(modelPosition.x, modelPosition.y);
+    snapped = this->snappingHandler.snapToGrid(snapped, alt);
+    if (snapped.x != modelPosition.x || snapped.y != modelPosition.y) {
+        this->activeGeometrySnapKind = vn::snap::SnapKind::Grid;
+        this->activeGeometrySnapPoint = {snapped.x, snapped.y};
+    }
+
+    return {snapped.x, snapped.y};
+}
+
 void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
     this->x += dx;
     this->y += dy;
@@ -1192,7 +1258,7 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
     this->hoveredGeometryVertexElement = nullptr;
     this->hoveredGeometryVertex = vn::geom::InvalidVertexId;
     if (selectGeometryEdgeAt(x, y, zoom)) {
-        return CURSOR_SELECTION_MOVE;
+        return CURSOR_SELECTION_GEOMETRY_EDGE;
     }
     this->hoveredGeometryVertexElement = nullptr;
     this->hoveredGeometryVertex = vn::geom::InvalidVertexId;
@@ -1267,6 +1333,8 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
 void EditSelection::paint(cairo_t* cr, double zoom) {
     double x = this->x;
     double y = this->y;
+    cairo_matrix_t baseMatrix{};
+    cairo_get_matrix(cr, &baseMatrix);
 
 
     if (std::abs(this->rotation) > std::numeric_limits<double>::epsilon()) {
@@ -1346,6 +1414,7 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
 
     drawGeometryEdgeHighlight(cr, x, y, zoom);
     drawGeometryVertexHandles(cr, x, y, zoom);
+    drawGeometrySnapIndicator(cr, zoom, baseMatrix);
 }
 
 void EditSelection::drawAnchorRotation(cairo_t* cr, double x, double y, double zoom) {
@@ -1395,15 +1464,17 @@ void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, d
         for (const auto& vertex: geometry->geometry().vertices()) {
             const double handleX = hasWidth ? x + (vertex.position.x - original.x) * fx : x + this->width / 2.0;
             const double handleY = hasHeight ? y + (vertex.position.y - original.y) * fy : y + this->height / 2.0;
-            const bool active = isGeometryVertexSelected(geometry, vertex.id) ||
-                                (geometry == this->hoveredGeometryVertexElement && vertex.id == this->hoveredGeometryVertex);
-            drawGeometryVertexHandle(cr, handleX, handleY, zoom, active);
+            const bool selected = isGeometryVertexSelected(geometry, vertex.id);
+            const bool hovered =
+                    geometry == this->hoveredGeometryVertexElement && vertex.id == this->hoveredGeometryVertex;
+            drawGeometryVertexHandle(cr, handleX, handleY, zoom, selected, hovered);
         }
     }
 }
 
 void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, double zoom) const {
-    if (!this->hoveredGeometryElement || this->hoveredGeometryEdge == vn::geom::InvalidEdgeId) {
+    const auto* highlightedElement = this->hoveredGeometryElement ? this->hoveredGeometryElement : this->activeGeometryElement;
+    if (!highlightedElement) {
         return;
     }
 
@@ -1417,56 +1488,89 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
     const double fx = hasWidth ? this->width / original.width : 0.0;
     const double fy = hasHeight ? this->height / original.height : 0.0;
 
-    const auto& geometry = this->hoveredGeometryElement->geometry();
-    const auto* edge = geometry.edge(this->hoveredGeometryEdge);
-    if (!edge) {
-        return;
-    }
-
-    const auto* start = geometry.vertex(edge->start);
-    const auto* end = geometry.vertex(edge->end);
-    if (!start || !end) {
-        return;
-    }
-
-    const double startX = hasWidth ? x + (start->position.x - original.x) * fx : x + this->width / 2.0;
-    const double startY = hasHeight ? y + (start->position.y - original.y) * fy : y + this->height / 2.0;
-    const double endX = hasWidth ? x + (end->position.x - original.x) * fx : x + this->width / 2.0;
-    const double endY = hasHeight ? y + (end->position.y - original.y) * fy : y + this->height / 2.0;
-
     GdkRGBA selectionColor = view->getSelectionColor();
     cairo_save(cr);
     cairo_set_dash(cr, nullptr, 0, 0);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-    cairo_set_line_width(cr, std::max(3.0, static_cast<double>(this->btnWidth) * 0.45));
-    gdk_cairo_set_source_rgba(cr, &selectionColor);
-    cairo_move_to(cr, startX * zoom, startY * zoom);
-    cairo_line_to(cr, endX * zoom, endY * zoom);
-    cairo_stroke(cr);
+    const auto& geometry = highlightedElement->geometry();
+
+    auto drawEdge = [&](const vn::geom::Edge& edge, double alpha, double widthScale) {
+        const auto* start = geometry.vertex(edge.start);
+        const auto* end = geometry.vertex(edge.end);
+        if (!start || !end) {
+            return;
+        }
+
+        const double startX = hasWidth ? x + (start->position.x - original.x) * fx : x + this->width / 2.0;
+        const double startY = hasHeight ? y + (start->position.y - original.y) * fy : y + this->height / 2.0;
+        const double endX = hasWidth ? x + (end->position.x - original.x) * fx : x + this->width / 2.0;
+        const double endY = hasHeight ? y + (end->position.y - original.y) * fy : y + this->height / 2.0;
+
+        GdkRGBA color = selectionColor;
+        color.alpha *= alpha;
+        cairo_set_line_width(cr, std::max(2.0, static_cast<double>(this->btnWidth) * widthScale));
+        gdk_cairo_set_source_rgba(cr, &color);
+        cairo_move_to(cr, startX * zoom, startY * zoom);
+        cairo_line_to(cr, endX * zoom, endY * zoom);
+        cairo_stroke(cr);
+    };
+
+    for (const auto& edge: geometry.edges()) {
+        if (edge.kind != vn::geom::EdgeKind::Line) {
+            continue;
+        }
+
+        const bool edgeHovered = highlightedElement == this->hoveredGeometryElement && edge.id == this->hoveredGeometryEdge;
+        drawEdge(edge, edgeHovered ? 1.0 : 0.45, edgeHovered ? 0.5 : 0.28);
+    }
     cairo_restore(cr);
 }
 
-void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const {
+void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool selected,
+                                             bool hovered) const {
     GdkRGBA selectionColor = view->getSelectionColor();
     const double baseSize = std::max(5.0, static_cast<double>(this->btnWidth) * 0.65);
-    const double size = active ? baseSize * 1.25 : baseSize;
+    const double size = hovered ? baseSize * 1.3 : selected ? baseSize * 1.2 : baseSize;
     const double px = x * zoom;
     const double py = y * zoom;
 
     cairo_save(cr);
     cairo_set_dash(cr, nullptr, 0, 0);
-    cairo_set_line_width(cr, active ? 2.1 : 1.5);
+    cairo_set_line_width(cr, hovered ? 2.2 : selected ? 2.0 : 1.5);
     cairo_rectangle(cr, px - size / 2.0, py - size / 2.0, size, size);
-    cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.95);
+    if (selected) {
+        gdk_cairo_set_source_rgba(cr, &selectionColor);
+    } else {
+        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, hovered ? 0.98 : 0.95);
+    }
     cairo_fill_preserve(cr);
     gdk_cairo_set_source_rgba(cr, &selectionColor);
     cairo_stroke(cr);
 
-    if (active) {
+    if (selected || hovered) {
         cairo_arc(cr, px, py, size * 0.22, 0.0, 2.0 * M_PI);
-        gdk_cairo_set_source_rgba(cr, &selectionColor);
+        if (selected && !hovered) {
+            cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.98);
+        } else {
+            gdk_cairo_set_source_rgba(cr, &selectionColor);
+        }
         cairo_fill(cr);
     }
+    cairo_restore(cr);
+}
+
+void EditSelection::drawGeometrySnapIndicator(cairo_t* cr, double zoom, const cairo_matrix_t& baseMatrix) const {
+    if (this->mouseDownType != CURSOR_SELECTION_GEOMETRY_VERTEX || !this->activeGeometrySnapKind) {
+        return;
+    }
+
+    double indicatorX = this->activeGeometrySnapPoint.x * zoom;
+    double indicatorY = this->activeGeometrySnapPoint.y * zoom;
+    cairo_matrix_transform_point(&this->cmatrix, &indicatorX, &indicatorY);
+
+    cairo_save(cr);
+    cairo_set_matrix(cr, &baseMatrix);
+    vn::view::drawSnapIndicator(cr, Point(indicatorX, indicatorY), this->activeGeometrySnapKind);
     cairo_restore(cr);
 }
 
@@ -1593,6 +1697,9 @@ auto EditSelection::geometryVertexPreviewToModel(double x, double y) const -> vn
 }
 
 void EditSelection::clearGeometryVertexSelection() {
+    clearGeometrySnapState();
+    this->geometrySnapProvider.reset();
+    this->geometrySnapEngine.clearProviders();
     this->activeGeometryElement = nullptr;
     this->activeGeometryVertex = vn::geom::InvalidVertexId;
     this->activeGeometryVertexStart = {};

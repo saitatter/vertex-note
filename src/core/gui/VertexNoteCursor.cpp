@@ -270,6 +270,13 @@ void VertexNoteCursor::updateCursor() {
                 case CURSOR_SELECTION_DELETE:
                     setCursor(CRSR_PIRATE);
                     break;
+                case CURSOR_SELECTION_GEOMETRY_EDGE:
+                    if (this->mouseDown) {
+                        setCursor(CRSR_MOVING);
+                    } else {
+                        setCursor(CRSR_MOVE);
+                    }
+                    break;
                 case CURSOR_SELECTION_GEOMETRY_VERTEX:
                     setCursor(CRSR_MOVE);
                     break;
