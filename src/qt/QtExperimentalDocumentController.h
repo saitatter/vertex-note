@@ -7,6 +7,7 @@
 #pragma once
 
 #include <filesystem>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,7 +15,9 @@
 
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
+#include "vertexnote/geometry/GeometryObject.h"
 #include "vertexnote/geometry/GeometryTypes.h"
+#include "vertexnote/snapping/ISnapProvider.h"
 #include "vertexnote/snapping/SnapTypes.h"
 #include "view/render/GeometryHitTest.h"
 #include "view/render/Renderers.h"
@@ -41,9 +44,23 @@ struct QtExperimentalGeometryDragState {
     vn::geom::VertexId vertexId = vn::geom::InvalidVertexId;
     vn::geom::Vec2 originalPosition;
     vn::geom::Vec2 currentPosition;
+    vn::geom::GeometryObject beforeGeometry;
     std::optional<vn::snap::SnapKind> snapKind;
     vn::geom::Vec2 snapPoint;
     bool changed = false;
+};
+
+struct QtExperimentalSnapOptions {
+    bool geometryEnabled = true;
+    bool gridEnabled = false;
+};
+
+struct QtExperimentalGeometryHistoryEntry {
+    std::size_t pageIndex = 0U;
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    vn::geom::GeometryObject before;
+    vn::geom::GeometryObject after;
+    std::string text;
 };
 
 class QtExperimentalDocumentController {
@@ -67,16 +84,28 @@ public:
     [[nodiscard]] auto hoveredGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
     [[nodiscard]] auto beginGeometryVertexDrag(const QtExperimentalGeometryHit& hit) -> bool;
-    [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom) -> bool;
+    [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom,
+                                                const QtExperimentalSnapOptions& options) -> bool;
     [[nodiscard]] auto endGeometryVertexDrag() -> bool;
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtExperimentalGeometryDragState>&;
+    [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
+    [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
+    [[nodiscard]] auto undoGeometryEdit() -> bool;
+    [[nodiscard]] auto redoGeometryEdit() -> bool;
+    [[nodiscard]] auto undoGeometryEditText() const -> std::string;
+    [[nodiscard]] auto redoGeometryEditText() const -> std::string;
 
 private:
     static auto isPdfPath(const std::filesystem::path& path) -> bool;
     static auto normalizeExtension(const std::filesystem::path& path) -> std::string;
     void rebuildPageSnapshots();
+    void clearGeometryHistory();
+    void pushGeometryHistory(QtExperimentalGeometryHistoryEntry entry);
+    [[nodiscard]] auto applyGeometryHistoryEntry(const QtExperimentalGeometryHistoryEntry& entry, bool useAfterState) -> bool;
     [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> vn::geom::GeometryElement*;
+    [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format) -> std::shared_ptr<const vn::snap::ISnapProvider>;
 
 private:
     DocumentHandler documentHandler;
@@ -86,4 +115,6 @@ private:
     std::optional<QtExperimentalGeometryHit> hoveredGeometryHit;
     std::optional<QtExperimentalGeometryHit> selectedGeometryHit;
     std::optional<QtExperimentalGeometryDragState> geometryDragState;
+    std::deque<QtExperimentalGeometryHistoryEntry> geometryUndoHistory;
+    std::deque<QtExperimentalGeometryHistoryEntry> geometryRedoHistory;
 };

@@ -22,6 +22,8 @@
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
+#include "vertexnote/snapping/GridSnapProvider.h"
+#include "vertexnote/snapping/ISnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 #include "vertexnote/snapping/SnapEngine.h"
 #include "util/raii/GObjectSPtr.h"
@@ -40,6 +42,7 @@ void QtExperimentalDocumentController::newBlankDocument() {
     this->document->addPage(std::make_shared<NotePage>(595.0, 842.0));
     this->document->unlock();
     this->loadedPath.reset();
+    clearGeometryHistory();
     clearInteractiveGeometryState();
     rebuildPageSnapshots();
 }
@@ -57,6 +60,7 @@ auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& pat
             loaded->setFilepath(path);
             this->document = std::move(loaded);
             this->loadedPath = path;
+            clearGeometryHistory();
             clearInteractiveGeometryState();
             rebuildPageSnapshots();
             return true;
@@ -66,6 +70,7 @@ auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& pat
         auto loaded = loader.loadDocument(path);
         this->document = std::move(loaded);
         this->loadedPath = path;
+        clearGeometryHistory();
         clearInteractiveGeometryState();
         rebuildPageSnapshots();
         return true;
@@ -165,12 +170,20 @@ auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimen
             .vertexId = hit.hit.vertexId,
             .originalPosition = {hit.hit.point.x, hit.hit.point.y},
             .currentPosition = {hit.hit.point.x, hit.hit.point.y},
+            .beforeGeometry = vn::geom::GeometryObject{},
             .snapPoint = {hit.hit.point.x, hit.hit.point.y},
     };
+
+    this->document->lock();
+    if (auto* geometry = findMutableGeometryElement(hit.pageIndex, hit.hit.objectId)) {
+        this->geometryDragState->beforeGeometry = geometry->geometry();
+    }
+    this->document->unlock();
     return true;
 }
 
-auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom) -> bool {
+auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom,
+                                                               const QtExperimentalSnapOptions& options) -> bool {
     if (!this->geometryDragState || !this->document) {
         return false;
     }
@@ -188,20 +201,35 @@ auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, do
     this->geometryDragState->snapKind.reset();
     this->geometryDragState->snapPoint = target;
 
-    auto objects = vn::snap::collectGeometryObjects(page);
-    objects.erase(std::remove_if(objects.begin(), objects.end(),
-                                 [&](const vn::geom::GeometryObject* object) {
-                                     return !object || object->objectId() == this->geometryDragState->objectId;
-                                 }),
-                  objects.end());
+    vn::snap::SnapEngine engine;
+    bool hasSnapProviders = false;
+    if (options.geometryEnabled) {
+        auto objects = vn::snap::collectGeometryObjects(page);
+        objects.erase(std::remove_if(objects.begin(), objects.end(),
+                                     [&](const vn::geom::GeometryObject* object) {
+                                         return !object || object->objectId() == this->geometryDragState->objectId;
+                                     }),
+                      objects.end());
 
-    if (!objects.empty()) {
-        vn::snap::SnapEngine engine;
-        engine.addProvider(std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects)));
+        if (!objects.empty()) {
+            engine.addProvider(std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects)));
+            hasSnapProviders = true;
+        }
+    }
+
+    if (options.gridEnabled) {
+        if (auto provider = gridSnapProviderFor(page->getBackgroundType().format)) {
+            engine.addProvider(std::move(provider));
+            hasSnapProviders = true;
+        }
+    }
+
+    if (hasSnapProviders) {
         const auto snapResult = engine.snap(vn::snap::SnapQuery{target, zoom, 8.0});
         if (snapResult.snapped()) {
             target = snapResult.pagePoint;
-            this->geometryDragState->snapKind = snapResult.candidate->kind;
+            this->geometryDragState->snapKind =
+                    snapResult.candidate ? std::optional<vn::snap::SnapKind>(snapResult.candidate->kind) : std::nullopt;
             this->geometryDragState->snapPoint = snapResult.pagePoint;
         }
     }
@@ -236,12 +264,112 @@ auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, do
 
 auto QtExperimentalDocumentController::endGeometryVertexDrag() -> bool {
     const bool changed = this->geometryDragState && this->geometryDragState->changed;
+    if (changed && this->document && this->geometryDragState) {
+        this->document->lock();
+        if (auto* geometry =
+                    findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId)) {
+            pushGeometryHistory({.pageIndex = this->geometryDragState->pageIndex,
+                                 .objectId = this->geometryDragState->objectId,
+                                 .before = this->geometryDragState->beforeGeometry,
+                                 .after = geometry->geometry(),
+                                 .text = "Move geometry vertex"});
+        }
+        this->document->unlock();
+    }
     this->geometryDragState.reset();
     return changed;
 }
 
 auto QtExperimentalDocumentController::activeGeometryDrag() const -> const std::optional<QtExperimentalGeometryDragState>& {
     return this->geometryDragState;
+}
+
+auto QtExperimentalDocumentController::deleteSelectedGeometry() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    bool changed = false;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    std::string actionText = "Edit geometry topology";
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+    beforeGeometry = geometry->geometry();
+
+    if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+        this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+        changed = geometry->removeVertex(this->selectedGeometryHit->hit.vertexId);
+        actionText = "Delete geometry vertex";
+    } else if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
+               this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
+        changed = geometry->removeEdge(this->selectedGeometryHit->hit.edgeId);
+        actionText = "Delete geometry edge";
+    }
+    if (changed) {
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (changed) {
+        pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                             .objectId = this->selectedGeometryHit->hit.objectId,
+                             .before = std::move(*beforeGeometry),
+                             .after = std::move(*afterGeometry),
+                             .text = std::move(actionText)});
+        clearInteractiveGeometryState();
+        rebuildPageSnapshots();
+    }
+
+    return changed;
+}
+
+auto QtExperimentalDocumentController::canUndoGeometryEdit() const -> bool { return !this->geometryUndoHistory.empty(); }
+
+auto QtExperimentalDocumentController::canRedoGeometryEdit() const -> bool { return !this->geometryRedoHistory.empty(); }
+
+auto QtExperimentalDocumentController::undoGeometryEditText() const -> std::string {
+    return this->geometryUndoHistory.empty() ? std::string{} : this->geometryUndoHistory.back().text;
+}
+
+auto QtExperimentalDocumentController::redoGeometryEditText() const -> std::string {
+    return this->geometryRedoHistory.empty() ? std::string{} : this->geometryRedoHistory.back().text;
+}
+
+auto QtExperimentalDocumentController::undoGeometryEdit() -> bool {
+    if (this->geometryUndoHistory.empty()) {
+        return false;
+    }
+
+    auto entry = std::move(this->geometryUndoHistory.back());
+    this->geometryUndoHistory.pop_back();
+    const bool changed = applyGeometryHistoryEntry(entry, false);
+    if (changed) {
+        this->geometryRedoHistory.push_back(std::move(entry));
+    } else {
+        this->geometryUndoHistory.push_back(std::move(entry));
+    }
+    return changed;
+}
+
+auto QtExperimentalDocumentController::redoGeometryEdit() -> bool {
+    if (this->geometryRedoHistory.empty()) {
+        return false;
+    }
+
+    auto entry = std::move(this->geometryRedoHistory.back());
+    this->geometryRedoHistory.pop_back();
+    const bool changed = applyGeometryHistoryEntry(entry, true);
+    if (changed) {
+        this->geometryUndoHistory.push_back(std::move(entry));
+    } else {
+        this->geometryRedoHistory.push_back(std::move(entry));
+    }
+    return changed;
 }
 
 auto QtExperimentalDocumentController::isPdfPath(const std::filesystem::path& path) -> bool {
@@ -398,6 +526,37 @@ void QtExperimentalDocumentController::rebuildPageSnapshots() {
     this->document->unlock_shared();
 }
 
+void QtExperimentalDocumentController::clearGeometryHistory() {
+    this->geometryUndoHistory.clear();
+    this->geometryRedoHistory.clear();
+}
+
+void QtExperimentalDocumentController::pushGeometryHistory(QtExperimentalGeometryHistoryEntry entry) {
+    this->geometryRedoHistory.clear();
+    this->geometryUndoHistory.push_back(std::move(entry));
+}
+
+auto QtExperimentalDocumentController::applyGeometryHistoryEntry(const QtExperimentalGeometryHistoryEntry& entry, bool useAfterState)
+        -> bool {
+    if (!this->document) {
+        return false;
+    }
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(entry.pageIndex, entry.objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    geometry->replaceGeometry(useAfterState ? entry.after : entry.before);
+    this->document->unlock();
+
+    clearInteractiveGeometryState();
+    rebuildPageSnapshots();
+    return true;
+}
+
 auto QtExperimentalDocumentController::findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
         -> vn::geom::GeometryElement* {
     if (!this->document || pageIndex >= this->document->getPageCount()) {
@@ -423,4 +582,17 @@ auto QtExperimentalDocumentController::findMutableGeometryElement(std::size_t pa
     }
 
     return nullptr;
+}
+
+auto QtExperimentalDocumentController::gridSnapProviderFor(PageTypeFormat format)
+        -> std::shared_ptr<const vn::snap::ISnapProvider> {
+    switch (format) {
+        case PageTypeFormat::Graph:
+        case PageTypeFormat::Dotted:
+        case PageTypeFormat::IsoDotted:
+        case PageTypeFormat::IsoGraph:
+            return std::make_shared<vn::snap::GridSnapProvider>(28.0, 28.0, 0.35);
+        default:
+            return nullptr;
+    }
 }

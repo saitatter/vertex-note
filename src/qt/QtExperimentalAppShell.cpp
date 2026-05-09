@@ -155,6 +155,65 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
              .shortcut = "Ctrl+9",
              .menu = "View"},
             [this]() { this->window.canvas()->fitPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.undo-geometry",
+             .text = "Undo Geometry Edit",
+             .tooltip = "Undo the last experimental Qt geometry edit",
+             .shortcut = "Ctrl+Z",
+             .menu = "Edit",
+             .enabled = this->window.canvas()->canUndoGeometryEdit()},
+            [this]() {
+                if (this->window.canvas()->undoGeometryEdit()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Undid geometry edit"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.redo-geometry",
+             .text = "Redo Geometry Edit",
+             .tooltip = "Redo the last experimental Qt geometry edit",
+             .shortcut = "Ctrl+Y",
+             .menu = "Edit",
+             .enabled = this->window.canvas()->canRedoGeometryEdit()},
+            [this]() {
+                if (this->window.canvas()->redoGeometryEdit()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Redid geometry edit"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.delete-geometry",
+             .text = "Delete Selected Geometry",
+             .tooltip = "Delete the selected experimental Qt geometry vertex or edge",
+             .shortcut = "Delete",
+             .menu = "Edit"},
+            [this]() {
+                if (this->window.canvas()->deleteSelectedGeometry()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Deleted selected geometry"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.toggle-geometry-snap",
+             .text = "Geometry Snap",
+             .tooltip = "Toggle geometry snapping in the experimental Qt shell",
+             .menu = "View",
+             .checkable = true,
+             .checked = this->window.canvas()->isGeometrySnapEnabled()},
+            [this]() { setGeometrySnapEnabled(!this->window.canvas()->isGeometrySnapEnabled()); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "view.toggle-grid-snap",
+             .text = "Grid Snap",
+             .tooltip = "Toggle grid snapping in the experimental Qt shell",
+             .menu = "View",
+             .checkable = true,
+             .checked = this->window.canvas()->isGridSnapEnabled()},
+            [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
 }
 
 void QtExperimentalAppShell::wireWindowState() {
@@ -169,21 +228,33 @@ void QtExperimentalAppShell::wireWindowState() {
                          if (!this->suppressDirtyTracking) {
                              markSessionDirty();
                          }
+                         updateEditCommandStates();
                      });
+
+    updateEditCommandStates();
 }
 
 void QtExperimentalAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
-    const std::array<std::string_view, 7> commandIds = {"app.new",       "app.open",      "app.save-as",
-                                                         "view.zoom-in",  "view.zoom-out",  "view.zoom-reset",
-                                                         "view.fit-page"};
+    const std::array<std::string_view, 12> commandIds = {"app.new",
+                                                          "app.open",
+                                                          "app.save-as",
+                                                          "edit.undo-geometry",
+                                                          "edit.redo-geometry",
+                                                          "edit.delete-geometry",
+                                                          "view.zoom-in",
+                                                          "view.zoom-out",
+                                                          "view.zoom-reset",
+                                                          "view.fit-page",
+                                                          "view.toggle-geometry-snap",
+                                                          "view.toggle-grid-snap"};
 
     for (const auto id: commandIds) {
         if (auto* action = this->window.commandHost()->actionForCommand(id)) {
             toolBar->addAction(action);
-            if (id == "app.save-as" || id == "view.zoom-out") {
+            if (id == "edit.delete-geometry" || id == "view.fit-page") {
                 toolBar->addSeparator();
             }
         }
@@ -202,6 +273,7 @@ void QtExperimentalAppShell::newSession() {
     this->suppressDirtyTracking = true;
     this->window.canvas()->newBlankDocument();
     this->suppressDirtyTracking = false;
+    updateEditCommandStates();
     this->window.statusBar()->showMessage(QStringLiteral("Created a blank experimental document"), 3000);
     updateWindowTitle();
 }
@@ -235,6 +307,7 @@ void QtExperimentalAppShell::openSession() {
                                                 sessionState->viewport.scrollY);
         this->suppressDirtyTracking = false;
         this->recentFiles.addRecentFile(*path);
+        updateEditCommandStates();
         this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path->filename().string()), 4000);
         updateWindowTitle();
         return;
@@ -251,6 +324,7 @@ void QtExperimentalAppShell::openSession() {
     this->window.canvas()->fitPage(false);
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(*path);
+    updateEditCommandStates();
     this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path->filename().string()), 4000);
     updateWindowTitle();
 }
@@ -279,4 +353,23 @@ void QtExperimentalAppShell::markSessionDirty() {
         this->session.markDirty(true);
         updateWindowTitle();
     }
+}
+
+void QtExperimentalAppShell::updateEditCommandStates() {
+    this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndoGeometryEdit());
+    this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedoGeometryEdit());
+}
+
+void QtExperimentalAppShell::setGeometrySnapEnabled(bool enabled) {
+    this->window.canvas()->setGeometrySnapEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", enabled);
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Geometry snap enabled") : QStringLiteral("Geometry snap disabled"), 2500);
+}
+
+void QtExperimentalAppShell::setGridSnapEnabled(bool enabled) {
+    this->window.canvas()->setGridSnapEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", enabled);
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Grid snap enabled") : QStringLiteral("Grid snap disabled"), 2500);
 }

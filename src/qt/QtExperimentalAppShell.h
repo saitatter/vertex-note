@@ -43,6 +43,9 @@ private:
     void openSession();
     void saveSessionAs();
     void markSessionDirty();
+    void updateEditCommandStates();
+    void setGeometrySnapEnabled(bool enabled);
+    void setGridSnapEnabled(bool enabled);
 
 private:
     QtExperimentalMainWindow window;

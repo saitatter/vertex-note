@@ -42,6 +42,15 @@ public:
     void resetViewport();
     void fitPage(bool edited = true);
     void panBy(double dx, double dy);
+    void setGeometrySnapEnabled(bool enabled);
+    void setGridSnapEnabled(bool enabled);
+    [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
+    [[nodiscard]] auto isGridSnapEnabled() const -> bool;
+    [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
+    [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
+    [[nodiscard]] auto undoGeometryEdit() -> bool;
+    [[nodiscard]] auto redoGeometryEdit() -> bool;
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -90,6 +99,8 @@ private:
     double zoomFactor = 1.0;
     double scrollX = 0.0;
     double scrollY = 0.0;
+    bool geometrySnapEnabled = true;
+    bool gridSnapEnabled = false;
     bool spaceHeld = false;
     bool panning = false;
     QPointF lastPanScreenPosition;

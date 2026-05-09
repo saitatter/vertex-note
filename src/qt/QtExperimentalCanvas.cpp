@@ -224,6 +224,70 @@ void QtExperimentalCanvas::panBy(double dx, double dy) {
     emitViewportUpdate();
 }
 
+void QtExperimentalCanvas::setGeometrySnapEnabled(bool enabled) {
+    this->geometrySnapEnabled = enabled;
+    update();
+}
+
+void QtExperimentalCanvas::setGridSnapEnabled(bool enabled) {
+    this->gridSnapEnabled = enabled;
+    update();
+}
+
+auto QtExperimentalCanvas::isGeometrySnapEnabled() const -> bool { return this->geometrySnapEnabled; }
+
+auto QtExperimentalCanvas::isGridSnapEnabled() const -> bool { return this->gridSnapEnabled; }
+
+auto QtExperimentalCanvas::deleteSelectedGeometry() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const bool changed = this->documentController->deleteSelectedGeometry();
+    if (changed) {
+        updateDebugOverlay(QStringLiteral("deleted selected geometry"));
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
+auto QtExperimentalCanvas::canUndoGeometryEdit() const -> bool {
+    return this->documentController && this->documentController->canUndoGeometryEdit();
+}
+
+auto QtExperimentalCanvas::canRedoGeometryEdit() const -> bool {
+    return this->documentController && this->documentController->canRedoGeometryEdit();
+}
+
+auto QtExperimentalCanvas::undoGeometryEdit() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const bool changed = this->documentController->undoGeometryEdit();
+    if (changed) {
+        updateDebugOverlay(QStringLiteral("undo geometry edit"));
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
+auto QtExperimentalCanvas::redoGeometryEdit() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const bool changed = this->documentController->redoGeometryEdit();
+    if (changed) {
+        updateDebugOverlay(QStringLiteral("redo geometry edit"));
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
 void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
     QWidget::paintEvent(event);
 
@@ -346,7 +410,9 @@ void QtExperimentalCanvas::mouseMoveEvent(QMouseEvent* event) {
             const auto& pageRect = rects[drag.pageIndex];
             const double pageX = scenePoint.x() - pageRect.x();
             const double pageY = scenePoint.y() - pageRect.y();
-            static_cast<void>(this->documentController->updateGeometryVertexDrag(pageX, pageY, this->zoomFactor));
+            static_cast<void>(this->documentController->updateGeometryVertexDrag(
+                    pageX, pageY, this->zoomFactor,
+                    {.geometryEnabled = this->geometrySnapEnabled, .gridEnabled = this->gridSnapEnabled}));
             update();
             event->accept();
             return;
@@ -381,6 +447,10 @@ void QtExperimentalCanvas::keyPressEvent(QKeyEvent* event) {
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = true;
         setCursor(Qt::OpenHandCursor);
+    } else if (!event->isAutoRepeat() &&
+               (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) && deleteSelectedGeometry()) {
+        event->accept();
+        return;
     } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Escape && this->documentController) {
         this->documentController->clearInteractiveGeometryState();
         updateDebugOverlay(QStringLiteral("selection cleared"));
@@ -548,6 +618,8 @@ void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
             QStringLiteral("pages %1").arg(static_cast<int>(pages.size())),
             QStringLiteral("drawables %1").arg(static_cast<int>(drawableCount)),
             QStringLiteral("geometry %1").arg(static_cast<int>(geometryCount)),
+            QStringLiteral("g-snap %1").arg(this->geometrySnapEnabled ? QStringLiteral("on") : QStringLiteral("off")),
+            QStringLiteral("grid %1").arg(this->gridSnapEnabled ? QStringLiteral("on") : QStringLiteral("off")),
     };
 
     constexpr int badgeHeight = 28;
