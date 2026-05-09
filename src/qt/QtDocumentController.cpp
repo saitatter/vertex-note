@@ -687,6 +687,77 @@ auto QtDocumentController::activeStroke() const -> const QtActiveStroke* {
 }
 
 // ---------------------------------------------------------------------------
+// Eraser
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::beginErase(std::size_t pageIndex) -> void {
+    this->pendingErase = QtEraseHistoryEntry{.pageIndex = pageIndex, .removedElements = {}, .text = "Erase"};
+}
+
+auto QtDocumentController::eraseAt(std::size_t pageIndex, double x, double y, double halfSize) -> int {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return 0;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return 0;
+    }
+
+    // Collect strokes that intersect the eraser point
+    std::vector<const Element*> toRemove;
+    for (auto& ep: layer->getElements()) {
+        if (!ep || ep->getType() != ELEMENT_STROKE) {
+            continue;
+        }
+        auto* s = dynamic_cast<Stroke*>(ep.get());
+        if (s && s->intersects(x, y, halfSize)) {
+            toRemove.push_back(s);
+        }
+    }
+
+    int erased = 0;
+    for (const auto* elem: toRemove) {
+        auto removed = layer->removeElement(elem);
+        if (removed.e) {
+            if (this->pendingErase) {
+                this->pendingErase->removedElements.push_back(std::move(removed));
+            }
+            ++erased;
+        }
+    }
+
+    this->document->unlock();
+    if (erased > 0) {
+        rebuildPageSnapshots();
+    }
+    return erased;
+}
+
+auto QtDocumentController::finalizeErase() -> bool {
+    if (!this->pendingErase || this->pendingErase->removedElements.empty()) {
+        this->pendingErase.reset();
+        return false;
+    }
+
+    auto entry = std::move(*this->pendingErase);
+    this->pendingErase.reset();
+
+    const auto count = entry.removedElements.size();
+    entry.text = count == 1 ? "Erase stroke" : "Erase " + std::to_string(count) + " strokes";
+
+    pushHistory(QtHistoryEntry{std::move(entry)});
+    return true;
+}
+
+auto QtDocumentController::cancelErase() -> void { this->pendingErase.reset(); }
+
+auto QtDocumentController::isErasing() const -> bool { return this->pendingErase.has_value(); }
+
+// ---------------------------------------------------------------------------
 // Unified undo/redo
 // ---------------------------------------------------------------------------
 
@@ -710,7 +781,7 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                 using T = std::decay_t<decltype(e)>;
                 if constexpr (std::is_same_v<T, QtGeometryHistoryEntry>) {
                     return applyGeometryHistoryEntry(e, false);
-                } else {
+                } else if constexpr (std::is_same_v<T, QtStrokeHistoryEntry>) {
                     // Stroke undo: remove the element from the layer and take ownership
                     if (!this->document || e.pageIndex >= this->document->getPageCount()) {
                         return false;
@@ -736,6 +807,29 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     }
                     this->document->unlock();
                     return false;
+                } else if constexpr (std::is_same_v<T, QtEraseHistoryEntry>) {
+                    // Erase undo: re-insert all removed elements at their original positions
+                    if (e.removedElements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    // Re-insert in ascending position order to restore original z-order
+                    std::sort(e.removedElements.begin(), e.removedElements.end());
+                    e.elementPtrs.clear();
+                    for (auto& ip: e.removedElements) {
+                        e.elementPtrs.push_back(ip.e.get());
+                        layer->insertElement(std::move(ip.e), ip.pos);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);
@@ -747,7 +841,7 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                 using T = std::decay_t<decltype(e)>;
                 if constexpr (std::is_same_v<T, QtGeometryHistoryEntry>) {
                     return applyGeometryHistoryEntry(e, true);
-                } else {
+                } else if constexpr (std::is_same_v<T, QtStrokeHistoryEntry>) {
                     // Stroke redo: re-insert the owned element at its original position
                     if (!e.ownedElement || !this->document ||
                         e.pageIndex >= this->document->getPageCount()) {
@@ -765,6 +859,33 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtEraseHistoryEntry>) {
+                    // Erase redo: remove elements again using saved raw pointers
+                    if (e.elementPtrs.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    e.removedElements.clear();
+                    for (const auto* ptr: e.elementPtrs) {
+                        auto removed = layer->removeElement(ptr);
+                        if (removed.e) {
+                            e.removedElements.push_back(std::move(removed));
+                        }
+                    }
+                    e.elementPtrs.clear();
+                    this->document->unlock();
+                    if (!e.removedElements.empty()) {
+                        rebuildPageSnapshots();
+                        return true;
+                    }
+                    return false;
                 }
             },
             entry.data);

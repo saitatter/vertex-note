@@ -107,6 +107,10 @@ private:
     void finalizeActiveStroke();
     void cancelActiveStroke();
     void drawActiveStroke(QPainter& painter) const;
+    void beginEraseAtScreen(const QPointF& screenPoint);
+    void eraseAtScreen(const QPointF& screenPoint);
+    void finalizeErase();
+    void cancelErase();
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
@@ -125,6 +129,7 @@ private:
     bool spaceHeld = false;
     bool panning = false;
     bool drawing = false;
+    bool erasing = false;
     QPointF lastPanScreenPosition;
     QtToolState currentToolState;
 };

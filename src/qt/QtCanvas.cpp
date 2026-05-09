@@ -376,8 +376,13 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton) {
         const auto tool = this->currentToolState.activeTool;
-        if (tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::Eraser) {
+        if (tool == QtToolType::Pen || tool == QtToolType::Highlighter) {
             beginStrokeAtScreen(event->position(), 0.5);
+            event->accept();
+            return;
+        }
+        if (tool == QtToolType::Eraser) {
+            beginEraseAtScreen(event->position());
             event->accept();
             return;
         }
@@ -420,6 +425,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->erasing) {
+        finalizeErase();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->documentController && this->documentController->activeGeometryDrag()) {
         const bool changed = this->documentController->endGeometryVertexDrag();
         if (!this->spaceHeld) {
@@ -449,6 +459,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
     if (this->drawing) {
         updateStrokeAtScreen(event->position(), 0.5);
+        event->accept();
+        return;
+    }
+    if (this->erasing) {
+        eraseAtScreen(event->position());
         event->accept();
         return;
     }
@@ -490,7 +505,8 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
     const auto tool = this->currentToolState.activeTool;
-    const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::Eraser;
+    const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter;
+    const bool isEraserTool = tool == QtToolType::Eraser;
     if (isDrawTool) {
         if (event->type() == QEvent::TabletPress && event->buttons().testFlag(Qt::LeftButton) && !this->spaceHeld) {
             beginStrokeAtScreen(event->position(), event->pressure());
@@ -504,6 +520,23 @@ void QtCanvas::tabletEvent(QTabletEvent* event) {
         }
         if (event->type() == QEvent::TabletRelease && this->drawing) {
             finalizeActiveStroke();
+            event->accept();
+            return;
+        }
+    }
+    if (isEraserTool) {
+        if (event->type() == QEvent::TabletPress && event->buttons().testFlag(Qt::LeftButton) && !this->spaceHeld) {
+            beginEraseAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletMove && this->erasing) {
+            eraseAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletRelease && this->erasing) {
+            finalizeErase();
             event->accept();
             return;
         }
@@ -1043,10 +1076,6 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
         color = this->currentToolState.highlighterColor;
         width = this->currentToolState.highlighterWidth;
         toolType = StrokeTool::HIGHLIGHTER;
-    } else if (tool == QtToolType::Eraser) {
-        color = Colors::white;
-        width = this->currentToolState.eraserWidth;
-        toolType = StrokeTool::ERASER;
     } else {
         return;
     }
@@ -1140,4 +1169,83 @@ void QtCanvas::drawActiveStroke(QPainter& painter) const {
     }
     painter.drawPath(path);
     painter.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Eraser input
+// ---------------------------------------------------------------------------
+
+void QtCanvas::beginEraseAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    this->documentController->beginErase(*pageIdx);
+    this->erasing = true;
+
+    // Immediately erase at the press point
+    const QRectF& pageRect = rects[*pageIdx];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    const double halfSize = this->currentToolState.eraserWidth / 2.0;
+
+    if (this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize) > 0) {
+        update();
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::eraseAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->erasing) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[*pageIdx];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    const double halfSize = this->currentToolState.eraserWidth / 2.0;
+
+    if (this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize) > 0) {
+        update();
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::finalizeErase() {
+    if (!this->documentController) {
+        this->erasing = false;
+        return;
+    }
+    this->documentController->finalizeErase();
+    this->erasing = false;
+    Q_EMIT documentEdited();
+}
+
+void QtCanvas::cancelErase() {
+    if (this->documentController) {
+        this->documentController->cancelErase();
+    }
+    this->erasing = false;
 }

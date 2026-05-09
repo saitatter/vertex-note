@@ -14,6 +14,8 @@
 #include <variant>
 #include <vector>
 
+#include "model/ElementInsertionPosition.h"
+
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
 #include "model/Element.h"
@@ -72,8 +74,15 @@ struct QtStrokeHistoryEntry {
     std::string text;
 };
 
+struct QtEraseHistoryEntry {
+    std::size_t pageIndex = 0U;
+    InsertionOrder removedElements;           // owned elements with original positions
+    std::vector<const Element*> elementPtrs;  // raw pointers for re-removal on redo
+    std::string text;
+};
+
 struct QtHistoryEntry {
-    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry> data;
+    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry> data;
     [[nodiscard]] auto text() const -> std::string;
 };
 
@@ -126,6 +135,13 @@ public:
     auto cancelStroke() -> void;
     [[nodiscard]] auto activeStroke() const -> const QtActiveStroke*;
 
+    // Eraser
+    auto beginErase(std::size_t pageIndex) -> void;
+    auto eraseAt(std::size_t pageIndex, double x, double y, double halfSize) -> int;
+    auto finalizeErase() -> bool;
+    auto cancelErase() -> void;
+    [[nodiscard]] auto isErasing() const -> bool;
+
     // Unified undo/redo
     [[nodiscard]] auto canUndo() const -> bool;
     [[nodiscard]] auto canRedo() const -> bool;
@@ -161,6 +177,7 @@ private:
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
     std::optional<QtActiveStroke> currentStroke;
+    std::optional<QtEraseHistoryEntry> pendingErase;
     std::deque<QtHistoryEntry> undoHistory;
     std::deque<QtHistoryEntry> redoHistory;
 };
