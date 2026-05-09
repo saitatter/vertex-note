@@ -1157,17 +1157,89 @@ void QtCanvas::drawActiveStroke(QPainter& painter) const {
     const auto color = active->stroke->getColor();
     QColor qColor(static_cast<int>(color.red), static_cast<int>(color.green), static_cast<int>(color.blue),
                   static_cast<int>(color.alpha));
-    QPen pen(qColor, active->stroke->getWidth(), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
-    pen.setCosmetic(false);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
+    const double strokeWidth = active->stroke->getWidth();
 
-    QPainterPath path;
-    path.moveTo(pageRect.x() + points[0].x, pageRect.y() + points[0].y);
-    for (std::size_t i = 1; i < points.size(); ++i) {
-        path.lineTo(pageRect.x() + points[i].x, pageRect.y() + points[i].y);
+    if (active->hasPressure) {
+        // Variable-width outline using per-point pressure
+        const auto n = points.size();
+        std::vector<QPointF> leftSide(n);
+        std::vector<QPointF> rightSide(n);
+
+        // Compute per-segment normals
+        struct Vec2 { double x, y; };
+        std::vector<Vec2> segNormals(n - 1);
+        for (std::size_t i = 0; i + 1 < n; ++i) {
+            const double dx = points[i + 1].x - points[i].x;
+            const double dy = points[i + 1].y - points[i].y;
+            const double len = std::hypot(dx, dy);
+            segNormals[i] = len > 1e-9 ? Vec2{-dy / len, dx / len} : Vec2{0.0, 1.0};
+        }
+
+        // Per-point normals (averaged)
+        std::vector<Vec2> normals(n);
+        normals[0] = segNormals[0];
+        normals[n - 1] = segNormals[n - 2];
+        for (std::size_t i = 1; i + 1 < n; ++i) {
+            double nx = segNormals[i - 1].x + segNormals[i].x;
+            double ny = segNormals[i - 1].y + segNormals[i].y;
+            double len = std::hypot(nx, ny);
+            normals[i] = len > 1e-9 ? Vec2{nx / len, ny / len} : segNormals[i];
+        }
+
+        for (std::size_t i = 0; i < n; ++i) {
+            const double hw = (points[i].z > 0.0 ? points[i].z : strokeWidth) * 0.5;
+            const double px = pageRect.x() + points[i].x;
+            const double py = pageRect.y() + points[i].y;
+            leftSide[i] = QPointF(px + normals[i].x * hw, py + normals[i].y * hw);
+            rightSide[i] = QPointF(px - normals[i].x * hw, py - normals[i].y * hw);
+        }
+
+        QPainterPath outline;
+        outline.moveTo(leftSide[0]);
+        for (std::size_t i = 1; i < n; ++i) {
+            outline.lineTo(leftSide[i]);
+        }
+
+        // End cap
+        {
+            const double r = (points[n - 1].z > 0.0 ? points[n - 1].z : strokeWidth) * 0.5;
+            const double cx = pageRect.x() + points[n - 1].x;
+            const double cy = pageRect.y() + points[n - 1].y;
+            const double angle = std::atan2(normals[n - 1].y, normals[n - 1].x) * 180.0 / M_PI;
+            outline.arcTo(QRectF(cx - r, cy - r, 2.0 * r, 2.0 * r), angle, -180.0);
+        }
+
+        for (std::size_t i = n - 1; i > 0; --i) {
+            outline.lineTo(rightSide[i - 1]);
+        }
+
+        // Start cap
+        {
+            const double r = (points[0].z > 0.0 ? points[0].z : strokeWidth) * 0.5;
+            const double cx = pageRect.x() + points[0].x;
+            const double cy = pageRect.y() + points[0].y;
+            const double angle = std::atan2(-normals[0].y, -normals[0].x) * 180.0 / M_PI;
+            outline.arcTo(QRectF(cx - r, cy - r, 2.0 * r, 2.0 * r), angle, -180.0);
+        }
+
+        outline.closeSubpath();
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QBrush(qColor));
+        painter.drawPath(outline);
+    } else {
+        // Constant-width stroke
+        QPen pen(qColor, strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+        pen.setCosmetic(false);
+        painter.setPen(pen);
+        painter.setBrush(Qt::NoBrush);
+
+        QPainterPath path;
+        path.moveTo(pageRect.x() + points[0].x, pageRect.y() + points[0].y);
+        for (std::size_t i = 1; i < points.size(); ++i) {
+            path.lineTo(pageRect.x() + points[i].x, pageRect.y() + points[i].y);
+        }
+        painter.drawPath(path);
     }
-    painter.drawPath(path);
     painter.restore();
 }
 
