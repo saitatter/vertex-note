@@ -60,7 +60,7 @@ class ToolView;
 
 class PageView: public LegacyRedrawable, public PageListener, public vn::view::Repaintable {
 public:
-    PageView(VertexNoteView* xournal, const PageRef& page);
+    PageView(VertexNoteView* noteView, const PageRef& page);
     ~PageView() override;
 
 public:
@@ -137,6 +137,7 @@ public:
      */
     const PageRef getPage() const;
 
+    VertexNoteView* getNoteView() const;
     VertexNoteView* getXournal() const;
 
     /**
@@ -230,7 +231,7 @@ private:
 
 private:
     PageRef page;
-    VertexNoteView* xournal = nullptr;
+    VertexNoteView* noteView = nullptr;
     Settings* settings = nullptr;
     std::unique_ptr<EraseHandler> eraser;
     std::unique_ptr<InputHandler> inputHandler;
@@ -295,3 +296,4 @@ private:
     friend class PlayObject;
     friend class PdfFloatingToolbox;
 };
+

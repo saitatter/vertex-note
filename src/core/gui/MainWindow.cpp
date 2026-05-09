@@ -315,9 +315,9 @@ void MainWindow::initVertexNoteWidget() {
 
     scrollHandling = std::make_unique<ScrollHandling>(GTK_SCROLLED_WINDOW(winXournal));
 
-    this->xournal = std::make_unique<VertexNoteView>(winXournal, control, scrollHandling.get());
+    this->noteView = std::make_unique<VertexNoteView>(winXournal, control, scrollHandling.get());
 
-    control->getZoomControl()->initZoomHandler(this->window, winXournal, xournal.get(), control);
+    control->getZoomControl()->initZoomHandler(this->window, winXournal, noteView.get(), control);
     gtk_widget_show_all(winXournal);
 }
 
@@ -336,7 +336,7 @@ void MainWindow::setGtkTouchscreenScrollingEnabled(bool enabled) {
     gtk_scrolled_window_set_kinetic_scrolling(GTK_SCROLLED_WINDOW(winXournal), enabled);
 }
 
-auto MainWindow::getLayout() const -> Layout* { return this->xournal->getLayout(); }
+auto MainWindow::getLayout() const -> Layout* { return this->noteView->getLayout(); }
 
 auto cancellable_cancel(GCancellable* cancel) -> bool {
     g_cancellable_cancel(cancel);
@@ -631,7 +631,9 @@ auto MainWindow::setFullscreen(bool enabled) const -> void {
 
 auto MainWindow::isDarkTheme() const -> bool { return this->darkMode; }
 
-auto MainWindow::getXournal() const -> VertexNoteView* { return xournal.get(); }
+auto MainWindow::getNoteView() const -> VertexNoteView* { return noteView.get(); }
+
+auto MainWindow::getXournal() const -> VertexNoteView* { return getNoteView(); }
 
 auto MainWindow::windowMaximizedCallback(GObject* window, GParamSpec*, MainWindow* win) -> void {
     win->setMaximized(gtk_window_is_maximized(GTK_WINDOW(window)));
@@ -746,3 +748,4 @@ void MainWindow::setDPI() const {
         this->getControl()->getZoomControl()->setZoom100Value(dpi / Util::DPI_NORMALIZATION_FACTOR);
     }
 }
+

@@ -84,7 +84,7 @@ public:
         if (match) {
             Control* ctrl = view->getXournal()->getControl();
             auto sel = SelectionFactory::createFromElementOnActiveLayer(ctrl, view->getPage(), view, match, matchIndex);
-            view->xournal->setSelection(sel.release());
+            view->noteView->setSelection(sel.release());
             view->repaintPage();
             return true;
         }

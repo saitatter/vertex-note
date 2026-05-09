@@ -33,13 +33,13 @@ constexpr double SNAPPING_DISTANCE_TOLERANCE = 5.0;                 // pt
 constexpr double SNAPPING_ROTATION_TOLERANCE = 3.0 * M_PI / 180.0;  // rad
 constexpr double ZOOM_DISTANCE_MIN = 0.01;
 
-GeometryToolInputHandler::GeometryToolInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
-        xournal(xournal), controller(controller) {}
+GeometryToolInputHandler::GeometryToolInputHandler(VertexNoteView* noteView, GeometryToolController* controller):
+        noteView(noteView), controller(controller) {}
 
 GeometryToolInputHandler::~GeometryToolInputHandler() = default;
 
 auto GeometryToolInputHandler::handle(InputEvent const& event) -> bool {
-    if (xournal->getSelection() || xournal->getControl()->getTextEditor()) {
+    if (noteView->getSelection() || noteView->getControl()->getTextEditor()) {
         return false;
     }
     const auto device = event.deviceClass;
@@ -194,7 +194,7 @@ void GeometryToolInputHandler::sequenceStart(InputEvent const& event) {
 
     const Layer* layer = page->getSelectedLayer();
     this->lines.clear();
-    Document* doc = xournal->getDocument();
+    Document* doc = noteView->getDocument();
     doc->lock_shared();
     // Performance improvement might be obtained by avoiding filtering all elements each
     // time a finger has been put onto the screen
@@ -266,11 +266,11 @@ void GeometryToolInputHandler::rotateAndZoomMotion(InputEvent const& event) {
 
     const double dist = std::max(this->priLastPageRel.distance(this->secLastPageRel), ZOOM_DISTANCE_MIN);
 
-    const double zoomTriggerThreshold = xournal->getControl()->getSettings()->getTouchZoomStartThreshold();
+    const double zoomTriggerThreshold = noteView->getControl()->getSettings()->getTouchZoomStartThreshold();
     const double zoomChangePercentage = std::abs(dist - startZoomDistance) / startZoomDistance * 100;
 
     // Has the touch points moved far enough to trigger a zoom and are zoom gestures enabled?
-    const bool zoomGesturesEnabled = xournal->getControl()->getSettings()->isZoomGesturesEnabled();
+    const bool zoomGesturesEnabled = noteView->getControl()->getSettings()->isZoomGesturesEnabled();
     if (zoomChangePercentage >= zoomTriggerThreshold && zoomGesturesEnabled) {
         this->canBlockZoom = false;
     }
@@ -299,7 +299,7 @@ void GeometryToolInputHandler::rotateAndZoomMotion(InputEvent const& event) {
 }
 
 auto GeometryToolInputHandler::getCoords(InputEvent const& event) -> vn::util::Point<double> {
-    const double zoom = xournal->getZoom();
+    const double zoom = noteView->getZoom();
     auto viewPos = controller->getView()->getPixelPosition();
     return (event.relative - vn::util::Point<double>(viewPos.x, viewPos.y)) / zoom;
 }
@@ -307,3 +307,4 @@ auto GeometryToolInputHandler::getCoords(InputEvent const& event) -> vn::util::P
 void GeometryToolInputHandler::blockDevice(InputContext::DeviceType deviceType) { isBlocked[deviceType] = true; }
 
 void GeometryToolInputHandler::unblockDevice(InputContext::DeviceType deviceType) { isBlocked[deviceType] = false; }
+

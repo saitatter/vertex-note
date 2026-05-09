@@ -13,8 +13,8 @@
 constexpr double MIN_HEIGHT = 4.5;
 constexpr double MAX_HEIGHT = 15.0;
 
-SetsquareInputHandler::SetsquareInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
-        GeometryToolInputHandler(xournal, controller) {}
+SetsquareInputHandler::SetsquareInputHandler(VertexNoteView* noteView, GeometryToolController* controller):
+        GeometryToolInputHandler(noteView, controller) {}
 
 SetsquareInputHandler::~SetsquareInputHandler() noexcept = default;
 
@@ -22,7 +22,7 @@ auto SetsquareInputHandler::handlePointer(InputEvent const& event) -> bool {
     const auto coords = getCoords(event);
     SetsquareController* setsquareController = static_cast<SetsquareController*>(controller);
 
-    const auto toolHandler = xournal->getControl()->getToolHandler();
+    const auto toolHandler = noteView->getControl()->getToolHandler();
     switch (toolHandler->getToolType()) {
         case TOOL_HIGHLIGHTER:
         case TOOL_PEN:
@@ -88,3 +88,4 @@ auto SetsquareInputHandler::handlePointer(InputEvent const& event) -> bool {
 
 auto SetsquareInputHandler::getMinHeight() const -> double { return MIN_HEIGHT; }
 auto SetsquareInputHandler::getMaxHeight() const -> double { return MAX_HEIGHT; }
+

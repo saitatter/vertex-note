@@ -170,7 +170,7 @@ public:
      */
     vn::util::Point<double> getScrollPositionAfterZoom() const;
 
-    /// Get visible rect on xournal view, for Zoom Gesture
+    /// Get visible rect on the note view, for Zoom Gesture
     vn::util::Rectangle<double> getVisibleRect();
 
     void setZoomStep(double zoomStep);
@@ -260,3 +260,4 @@ private:
     size_t last_page = static_cast<size_t>(-1);
     bool isZoomFittingNow = false;
 };
+

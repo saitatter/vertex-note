@@ -41,7 +41,7 @@ protected:
     /**
      * @brief the VertexNoteView attached to this handler
      */
-    VertexNoteView* xournal;
+    VertexNoteView* noteView;
 
     /**
      * @brief the geometry tool controller
@@ -152,7 +152,7 @@ protected:
     virtual double getMaxHeight() const = 0;
 
 public:
-    explicit GeometryToolInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
+    explicit GeometryToolInputHandler(VertexNoteView* noteView, GeometryToolController* controller);
     virtual ~GeometryToolInputHandler();
 
     bool handle(InputEvent const& event);
@@ -162,3 +162,4 @@ public:
     bool keyPressed(KeyEvent const& event);
     // bool keyReleased(KeyEvent const& event); // Implement if needed
 };
+

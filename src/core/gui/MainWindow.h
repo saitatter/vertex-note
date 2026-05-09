@@ -81,6 +81,7 @@ public:
 
     bool isDarkTheme() const;
 
+    VertexNoteView* getNoteView() const;
     VertexNoteView* getXournal() const;
 
     void setMenubarVisible(bool visible);
@@ -158,7 +159,7 @@ private:
 private:
     Control* control;
 
-    std::unique_ptr<VertexNoteView> xournal;
+    std::unique_ptr<VertexNoteView> noteView;
     GtkWidget* winXournal = nullptr;
     std::unique_ptr<ScrollHandling> scrollHandling;
 
@@ -189,3 +190,4 @@ private:
     vn::util::WidgetSPtr mainContentWidget;
     vn::util::WidgetSPtr sidebarWidget;
 };
+

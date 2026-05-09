@@ -99,13 +99,13 @@ class OverlayBase;
 using std::string;
 using vn::util::Rectangle;
 
-PageView::PageView(VertexNoteView* xournal, const PageRef& page):
+PageView::PageView(VertexNoteView* noteView, const PageRef& page):
         page(page),
-        xournal(xournal),
-        settings(xournal->getControl()->getSettings()),
-        eraser(std::make_unique<EraseHandler>(xournal->getControl()->getUndoRedoHandler(),
-                                              xournal->getControl()->getDocument(), this->page,
-                                              xournal->getControl()->getToolHandler(), this)),
+        noteView(noteView),
+        settings(noteView->getControl()->getSettings()),
+        eraser(std::make_unique<EraseHandler>(noteView->getControl()->getUndoRedoHandler(),
+                                              noteView->getControl()->getDocument(), this->page,
+                                              noteView->getControl()->getToolHandler(), this)),
         oldtext(nullptr) {
     this->registerToHandler(this->page);
 }
@@ -113,7 +113,7 @@ PageView::PageView(VertexNoteView* xournal, const PageRef& page):
 PageView::~PageView() {
     this->unregisterFromHandler();
 
-    this->xournal->getControl()->getScheduler()->removePage(this);
+    this->noteView->getControl()->getScheduler()->removePage(this);
 
     this->overlayViews.clear();
     endText();
@@ -151,7 +151,7 @@ auto PageView::searchTextOnPage(const std::string& text, size_t index, size_t* o
         auto pNr = this->page->getPdfPageNr();
         PdfPagePtr pdf = nullptr;
         if (pNr != npos) {
-            Document* doc = xournal->getControl()->getDocument();
+            Document* doc = noteView->getControl()->getDocument();
 
             doc->lock_shared();
             pdf = doc->getPdfPage(pNr);
@@ -172,8 +172,8 @@ auto PageView::searchTextOnPage(const std::string& text, size_t index, size_t* o
 void PageView::endText() { this->textEditor.reset(); }
 
 void PageView::startText(double x, double y) {
-    this->xournal->endTextAllPages(this);
-    this->xournal->getControl()->getSearchBar()->showSearchBar(false);
+    this->noteView->endTextAllPages(this);
+    this->noteView->getControl()->getSearchBar()->showSearchBar(false);
 
     if (this->textEditor != nullptr) {
         const Text* text = this->textEditor->getTextElement();
@@ -186,7 +186,7 @@ void PageView::startText(double x, double y) {
     }
 
     if (this->textEditor == nullptr) {
-        this->textEditor = std::make_unique<TextEditor>(xournal->getControl(), page, xournal->getWidget(), x, y);
+        this->textEditor = std::make_unique<TextEditor>(noteView->getControl(), page, noteView->getWidget(), x, y);
         this->overlayViews.emplace_back(std::make_unique<vn::view::TextEditionView>(this->textEditor.get(), this));
     }
 }
@@ -241,7 +241,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     }
     currentSequenceDeviceId = pos.deviceId;
 
-    Control* control = xournal->getControl();
+    Control* control = noteView->getControl();
 
     if (!this->selected) {
         control->firePageSelected(this->page);
@@ -256,11 +256,11 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
         return false;
     }
 
-    double zoom = xournal->getZoom();
+    double zoom = noteView->getZoom();
     x /= zoom;
     y /= zoom;
 
-    VertexNoteCursor* cursor = xournal->getCursor();
+    VertexNoteCursor* cursor = noteView->getCursor();
     cursor->setMouseDown(true);
 
     if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
@@ -284,7 +284,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
             this->inputHandler.reset();
         }
 
-        Control* control = this->xournal->getControl();
+        Control* control = this->noteView->getControl();
         switch (h->getDrawingType()) {
             case DRAWING_TYPE_LINE:
                 this->inputHandler = std::make_unique<RulerHandler>(control, getPage());
@@ -322,7 +322,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     } else if ((h->getToolType() == TOOL_PEN || h->getToolType() == TOOL_HIGHLIGHTER) &&
                h->getDrawingType() == DRAWING_TYPE_SPLINE) {
         if (!this->inputHandler) {
-            this->inputHandler = std::make_unique<SplineHandler>(this->xournal->getControl(), getPage());
+            this->inputHandler = std::make_unique<SplineHandler>(this->noteView->getControl(), getPage());
             this->inputHandler->onButtonPressEvent(pos, zoom);
             this->overlayViews.emplace_back(this->inputHandler->createView(this));
         } else {
@@ -344,8 +344,8 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
             control->getUndoRedoHandler()->addUndoAction(this->verticalSpace->finalize());
             this->verticalSpace.reset();
         }
-        auto* zoomControl = this->getXournal()->getControl()->getZoomControl();
-        this->verticalSpace = std::make_unique<VerticalToolHandler>(this->page, this->getXournal()->getControl(), y,
+        auto* zoomControl = this->getNoteView()->getControl()->getZoomControl();
+        this->verticalSpace = std::make_unique<VerticalToolHandler>(this->page, this->getNoteView()->getControl(), y,
                                                                     pos.isControlDown());
         this->overlayViews.emplace_back(this->verticalSpace->createView(this, zoomControl, this->settings));
     } else if (h->getToolType() == TOOL_SELECT_RECT || h->getToolType() == TOOL_SELECT_REGION ||
@@ -420,7 +420,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
             }
         } else if (h->getToolType() == TOOL_SELECT_OBJECT) {
             SelectObject select(this);
-            if (pos.isShiftDown() && xournal->getSelection()) {
+            if (pos.isShiftDown() && noteView->getSelection()) {
                 select.atAggregate(x, y);
             } else {
                 select.at(x, y);
@@ -432,7 +432,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 auto& status = *play.playbackStatus;
                 if (!status.success) {
                     string message = FS(_F("Unable to play audio recording {1}") % status.filename.u8string());
-                    AppMessageBox::showErrorToUser(this->xournal->getControl()->getGtkWindow(), message);
+                    AppMessageBox::showErrorToUser(this->noteView->getControl()->getGtkWindow(), message);
                 }
             }
         }
@@ -451,7 +451,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
 }
 
 auto PageView::onButtonClickEvent(const PositionInputData& pos) -> bool {
-    Control* control = xournal->getControl();
+    Control* control = noteView->getControl();
     double x = pos.x;
     double y = pos.y;
 
@@ -471,18 +471,18 @@ auto PageView::onButtonClickEvent(const PositionInputData& pos) -> bool {
 auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
     // This method assumes that it is called after onButtonPressEvent but before
     // onButtonReleaseEvent
-    double zoom = this->xournal->getZoom();
+    double zoom = this->noteView->getZoom();
     double x = pos.x / zoom;
     double y = pos.y / zoom;
     if (x < 0 || y < 0) {
         return false;
     }
 
-    ToolHandler* toolHandler = this->xournal->getControl()->getToolHandler();
+    ToolHandler* toolHandler = this->noteView->getControl()->getToolHandler();
     ToolType toolType = toolHandler->getToolType();
     DrawingType drawingType = toolHandler->getDrawingType();
 
-    EditSelection* selection = xournal->getSelection();
+    EditSelection* selection = noteView->getSelection();
     bool hasNoModifiers = !pos.isShiftDown() && !pos.isControlDown();
 
     if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
@@ -505,19 +505,19 @@ auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
             const Element* object = *it;
             ElementType elemType = object->getType();
             if (elemType == ELEMENT_TEXT) {
-                this->xournal->clearSelection();
+                this->noteView->clearSelection();
                 toolHandler->selectTool(TOOL_TEXT);
                 toolHandler->fireToolChanged();
                 // Simulate a button press; there's too many things that we
                 // could forget to do if we manually call startText
                 this->onButtonPressEvent(pos);
             } else if (elemType == ELEMENT_TEXIMAGE) {
-                Control* control = this->xournal->getControl();
+                Control* control = this->noteView->getControl();
                 if (elems.size() > 1) {
                     // Deselect the other elements
-                    this->xournal->clearSelection();
+                    this->noteView->clearSelection();
                     auto sel = SelectionFactory::createFromElementOnActiveLayer(control, getPage(), this, object);
-                    this->xournal->setSelection(sel.release());
+                    this->noteView->setSelection(sel.release());
                 }
                 control->runLatex();
             }
@@ -526,7 +526,7 @@ auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
         this->startText(x, y);
         this->textEditor->selectAtCursor(TextEditor::SelectType::WORD);
     } else if (toolType == TOOL_SELECT_PDF_TEXT_LINEAR || toolType == TOOL_SELECT_PDF_TEXT_RECT) {
-        auto* pdfToolbox = this->xournal->getControl()->getWindow()->getPdfToolbox();
+        auto* pdfToolbox = this->noteView->getControl()->getWindow()->getPdfToolbox();
         if (auto* selection = pdfToolbox->getSelection()) {
             pdfToolbox->selectionStyle = PdfPageSelectionStyle::Word;
             selection->currentPos(x, y, pdfToolbox->selectionStyle);
@@ -545,21 +545,21 @@ auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
 auto PageView::onButtonTriplePressEvent(const PositionInputData& pos) -> bool {
     // This method assumes that it is called after onButtonDoubleEvent but before
     // onButtonReleaseEvent
-    double zoom = this->xournal->getZoom();
+    double zoom = this->noteView->getZoom();
     double x = pos.x / zoom;
     double y = pos.y / zoom;
     if (x < 0 || y < 0) {
         return false;
     }
 
-    ToolHandler* toolHandler = this->xournal->getControl()->getToolHandler();
+    ToolHandler* toolHandler = this->noteView->getControl()->getToolHandler();
     ToolType toolType = toolHandler->getToolType();
 
     if (toolType == TOOL_TEXT) {
         this->startText(x, y);
         this->textEditor->selectAtCursor(TextEditor::SelectType::PARAGRAPH);
     } else if (toolType == TOOL_SELECT_PDF_TEXT_LINEAR || toolType == TOOL_SELECT_PDF_TEXT_RECT) {
-        auto* pdfToolbox = this->xournal->getControl()->getWindow()->getPdfToolbox();
+        auto* pdfToolbox = this->noteView->getControl()->getWindow()->getPdfToolbox();
         if (auto* selection = pdfToolbox->getSelection()) {
             pdfToolbox->selectionStyle = PdfPageSelectionStyle::Line;
             selection->currentPos(x, y, pdfToolbox->selectionStyle);
@@ -574,12 +574,12 @@ auto PageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
         return false;
     }
 
-    double zoom = xournal->getZoom();
+    double zoom = noteView->getZoom();
     double x = pos.x / zoom;
     double y = pos.y / zoom;
 
-    ToolHandler* h = xournal->getControl()->getToolHandler();
-    auto* pdfToolbox = this->xournal->getControl()->getWindow()->getPdfToolbox();
+    ToolHandler* h = noteView->getControl()->getToolHandler();
+    auto* pdfToolbox = this->noteView->getControl()->getWindow()->getPdfToolbox();
 
     if (this->inputHandler && this->inputHandler->onMotionNotifyEvent(pos, zoom)) {
         // input handler used this event
@@ -592,7 +592,7 @@ auto PageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
     } else if (this->verticalSpace) {
         this->verticalSpace->currentPos(x, y);
     } else if (this->textEditor) {
-        VertexNoteCursor* cursor = getXournal()->getCursor();
+        VertexNoteCursor* cursor = getNoteView()->getCursor();
         cursor->setInvisible(false);
 
         const Text* text = this->textEditor->getTextElement();
@@ -649,10 +649,10 @@ void PageView::onTapEvent(const PositionInputData& pos) {
         return;
     }
 
-    auto* settings = xournal->getControl()->getSettings();
+    auto* settings = noteView->getControl()->getSettings();
     bool doAction = settings->getDoActionOnStrokeFiltered();
     if (settings->getTrySelectOnStrokeFiltered()) {
-        double zoom = xournal->getZoom();
+        double zoom = noteView->getZoom();
         SelectObject select(this);
         if (pos.isShiftDown()) {
             if (select.atAggregate(pos.x / zoom, pos.y / zoom)) {
@@ -673,10 +673,10 @@ void PageView::onTapEvent(const PositionInputData& pos) {
 
 auto PageView::showPdfToolbox(const PositionInputData& pos) -> void {
     // Convert to the widget-coordinate system
-    auto p = vn::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
+    auto p = vn::util::Point{pos.x, pos.y} - this->noteView->getScrollHandling()->getPosition();
     auto q = vn::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
 
-    this->getXournal()->getControl()->getWindow()->getPdfToolbox()->show(q.x, q.y);
+    this->getNoteView()->getControl()->getWindow()->getPdfToolbox()->show(q.x, q.y);
 }
 
 void PageView::deleteView(vn::view::OverlayView* view) {
@@ -694,10 +694,10 @@ auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
     }
     currentSequenceDeviceId.reset();
 
-    Control* control = xournal->getControl();
+    Control* control = noteView->getControl();
 
     if (this->inputHandler) {
-        double zoom = xournal->getZoom();
+        double zoom = noteView->getZoom();
         this->inputHandler->onButtonReleaseEvent(pos, zoom);
 
         if (this->inputHandler->isDone()) {
@@ -706,12 +706,12 @@ auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
         }
     } else if (auto tt = control->getToolHandler()->getToolType();
                this->laserPointer && (tt == TOOL_LASER_POINTER_PEN || tt == TOOL_LASER_POINTER_HIGHLIGHTER)) {
-        this->laserPointer->onButtonReleaseEvent(pos, xournal->getZoom());
+        this->laserPointer->onButtonReleaseEvent(pos, noteView->getZoom());
     }
 
     if (this->inEraser) {
         this->inEraser = false;
-        Document* doc = this->xournal->getControl()->getDocument();
+        Document* doc = this->noteView->getControl()->getDocument();
         doc->lock();
         this->eraser->finalize();
         doc->unlock();
@@ -732,9 +732,9 @@ auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
 
     ToolType toolType = control->getToolHandler()->getActiveTool()->getToolType();
     if (vn::tool::isPdfSelectionTool(toolType)) {
-        const double zoom = xournal->getZoom();
+        const double zoom = noteView->getZoom();
         // Attempt PDF selection
-        auto& pdfDoc = this->xournal->getDocument()->getPdfDocument();
+        auto& pdfDoc = this->noteView->getDocument()->getPdfDocument();
         if (this->getPage()->getPdfPageNr() != npos) {
             auto page = pdfDoc.getPage(this->getPage()->getPdfPageNr());
 
@@ -746,24 +746,24 @@ auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
     }
 
     if (this->selector) {
-        const bool aggregate = pos.isShiftDown() && xournal->getSelection();
+        const bool aggregate = pos.isShiftDown() && noteView->getSelection();
         size_t layerOfFinalizedSel = this->selector->finalize(this->page, aggregate, control->getDocument());
 
         if (layerOfFinalizedSel) {
-            xournal->setSelection([&]() {
+            noteView->setSelection([&]() {
                 if (aggregate) {
                     // Aggregate selection
                     auto sel = selector->releaseElements();
-                    return SelectionFactory::addElementsFromActiveLayer(control, xournal->getSelection(), sel);
+                    return SelectionFactory::addElementsFromActiveLayer(control, noteView->getSelection(), sel);
                 } else {
                     // if selection->multiLayer == true, the selected objects might be on another layer
-                    xournal->getControl()->getLayerController()->switchToLay(layerOfFinalizedSel);
+                    noteView->getControl()->getLayerController()->switchToLay(layerOfFinalizedSel);
                     return SelectionFactory::createFromElementsOnActiveLayer(control, page, this,
                                                                              selector->releaseElements());
                 }
             }()
                                           .release());
-        } else if (const double zoom = xournal->getZoom(); selector->userTapped(zoom)) {
+        } else if (const double zoom = noteView->getZoom(); selector->userTapped(zoom)) {
             if (aggregate) {
                 SelectObject(this).atAggregate(pos.x / zoom, pos.y / zoom);
             } else {
@@ -840,14 +840,14 @@ auto PageView::onKeyReleaseEvent(const KeyEvent& event) -> bool {
 void PageView::rerenderPage(bool sizeChanged) {
     this->rerenderComplete = true;
     this->sizeChanged = sizeChanged;
-    this->xournal->getControl()->getScheduler()->addRerenderPage(this);
+    this->noteView->getControl()->getScheduler()->addRerenderPage(this);
 }
 
-void PageView::repaintPage() const { xournal->getRepaintHandler()->repaintPage(this); }
+void PageView::repaintPage() const { noteView->getRepaintHandler()->repaintPage(this); }
 
 void PageView::repaintArea(double x1, double y1, double x2, double y2) const {
-    double zoom = xournal->getZoom();
-    xournal->getRepaintHandler()->repaintPageArea(this, floor_cast<int>(x1 * zoom), floor_cast<int>(y1 * zoom),
+    double zoom = noteView->getZoom();
+    noteView->getRepaintHandler()->repaintPageArea(this, floor_cast<int>(x1 * zoom), floor_cast<int>(y1 * zoom),
                                                   ceil_cast<int>(x2 * zoom), ceil_cast<int>(y2 * zoom));
 }
 
@@ -875,12 +875,12 @@ void PageView::deleteOverlayView(vn::view::OverlayView* v, const Range& rg) {
     }
 }
 
-double PageView::getZoom() const { return xournal->getZoom(); }
+double PageView::getZoom() const { return noteView->getZoom(); }
 
-ZoomControl* PageView::getZoomControl() const { return this->getXournal()->getControl()->getZoomControl(); }
+ZoomControl* PageView::getZoomControl() const { return this->getNoteView()->getControl()->getZoomControl(); }
 
 Range PageView::getVisiblePart() const {
-    std::unique_ptr<vn::util::Rectangle<double>> rect(xournal->getVisibleRect(this));
+    std::unique_ptr<vn::util::Rectangle<double>> rect(noteView->getVisibleRect(this));
     if (rect) {
         return Range(*rect);
     }
@@ -894,7 +894,7 @@ double PageView::getHeight() const { return page->getHeight(); }
 auto PageView::toWidgetCoordinates(const vn::util::Rectangle<double>& r) const -> vn::util::Rectangle<double> {
     double zoom = this->getZoom();
     auto p = this->getPixelPosition();
-    auto scrollDelta = this->getXournal()->getScrollHandling()->getPosition();
+    auto scrollDelta = this->getNoteView()->getScrollHandling()->getPosition();
     return {r.x * zoom + p.x - scrollDelta.x, r.y * zoom + p.y - scrollDelta.y, r.width * zoom, r.height * zoom};
 }
 
@@ -921,15 +921,15 @@ void PageView::rerenderRect(double x, double y, double width, double height) {
     this->rerenderRects.push_back(rect);
     this->repaintRectMutex.unlock();
 
-    this->xournal->getControl()->getScheduler()->addRerenderPage(this);
+    this->noteView->getControl()->getScheduler()->addRerenderPage(this);
 }
 
 void PageView::setSelected(bool selected) {
     this->selected = selected;
 
     if (selected) {
-        this->xournal->requestFocus();
-        this->xournal->getRepaintHandler()->repaintPageBorder(this);
+        this->noteView->requestFocus();
+        this->noteView->getRepaintHandler()->repaintPageBorder(this);
     } else {
         this->endSpline();
     }
@@ -1017,7 +1017,7 @@ bool PageView::displayLinkPopover(std::shared_ptr<PdfPage> page, double pageX, d
         } else {
             size_t pdfPage = dest->getPdfPage();
 
-            Document* doc = xournal->getControl()->getDocument();
+            Document* doc = noteView->getControl()->getDocument();
             doc->lock_shared();
             const size_t pageId = doc->findPdfPage(pdfPage);
             doc->unlock_shared();
@@ -1038,7 +1038,7 @@ bool PageView::displayLinkPopover(std::shared_ptr<PdfPage> page, double pageX, d
                                       GtkWidget* popover;
                                       std::tie(self, dest, popover) = *static_cast<State*>(state);
 
-                                      self->getXournal()->getControl()->getScrollHandler()->scrollToLinkDest(*dest);
+                                      self->getNoteView()->getControl()->getScrollHandler()->scrollToLinkDest(*dest);
                                       gtk_popover_popdown(GTK_POPOVER(popover));
                                   }),
                                   new State(this, dest, popover), vn::util::closure_notify_cb<State>,
@@ -1054,13 +1054,13 @@ bool PageView::displayLinkPopover(std::shared_ptr<PdfPage> page, double pageX, d
 }
 
 GtkWidget* PageView::makePopover(const PdfRectangle& rect, GtkWidget* child) {
-    double zoom = xournal->getZoom();
+    double zoom = noteView->getZoom();
 
-    GtkWidget* popover = gtk_popover_new(this->getXournal()->getWidget());
+    GtkWidget* popover = gtk_popover_new(this->getNoteView()->getWidget());
     gtk_popover_set_child(GTK_POPOVER(popover), child);
 
     auto p = getPixelPosition();
-    auto q = this->getXournal()->getScrollHandling()->getPosition();
+    auto q = this->getNoteView()->getScrollHandling()->getPosition();
     auto x = floor_cast<int>(p.x - q.x + rect.x1 * zoom);
     auto y = floor_cast<int>(p.y - q.y + rect.y1 * zoom);
     auto w = ceil_cast<int>((rect.x2 - rect.x1) * zoom);
@@ -1075,7 +1075,7 @@ GtkWidget* PageView::makePopover(const PdfRectangle& rect, GtkWidget* child) {
 
 auto PageView::paintPage(cairo_t* cr, GdkRectangle* rect) -> bool {
 
-    double zoom = xournal->getZoom();
+    double zoom = noteView->getZoom();
     vn::util::CairoSaveGuard saveGuard(cr);
     cairo_scale(cr, zoom, zoom);
 
@@ -1121,29 +1121,31 @@ auto PageView::getSelectionColor() -> GdkRGBA { return Util::rgb_to_GdkRGBA(sett
 auto PageView::getTextEditor() -> TextEditor* { return textEditor.get(); }
 
 auto PageView::getPixelPosition() const -> vn::util::Point<int> {
-    return this->xournal->getLayout()->getPixelCoordinatesOfEntry(this->gridCoordinates);
+    return this->noteView->getLayout()->getPixelCoordinatesOfEntry(this->gridCoordinates);
 }
 
 auto PageView::getPage() const -> const PageRef { return page; }
 
-auto PageView::getXournal() const -> VertexNoteView* { return this->xournal; }
+auto PageView::getNoteView() const -> VertexNoteView* { return this->noteView; }
+
+auto PageView::getXournal() const -> VertexNoteView* { return getNoteView(); }
 
 auto PageView::getDisplayWidth() const -> int {
-    return round_cast<int>(this->page->getWidth() * this->xournal->getZoom());
+    return round_cast<int>(this->page->getWidth() * this->noteView->getZoom());
 }
 
 auto PageView::getDisplayHeight() const -> int {
-    return round_cast<int>(this->page->getHeight() * this->xournal->getZoom());
+    return round_cast<int>(this->page->getHeight() * this->noteView->getZoom());
 }
 
-auto PageView::getDisplayWidthDouble() const -> double { return this->page->getWidth() * this->xournal->getZoom(); }
+auto PageView::getDisplayWidthDouble() const -> double { return this->page->getWidth() * this->noteView->getZoom(); }
 
 auto PageView::getDisplayHeightDouble() const -> double {
-    return this->page->getHeight() * this->xournal->getZoom();
+    return this->page->getHeight() * this->noteView->getZoom();
 }
 
 auto PageView::getSelectedTex() const -> const TexImage* {
-    EditSelection* theSelection = this->xournal->getSelection();
+    EditSelection* theSelection = this->noteView->getSelection();
     if (!theSelection) {
         return nullptr;
     }
@@ -1157,7 +1159,7 @@ auto PageView::getSelectedTex() const -> const TexImage* {
 }
 
 auto PageView::getSelectedText() const -> const Text* {
-    EditSelection* theSelection = this->xournal->getSelection();
+    EditSelection* theSelection = this->noteView->getSelection();
     if (!theSelection) {
         return nullptr;
     }
@@ -1202,11 +1204,13 @@ void PageView::elementsChanged(const std::vector<const Element*>& elements, cons
 
 void PageView::showFloatingToolbox(const PositionInputData& pos) {
     // Convert to the widget-coordinate system
-    auto p = vn::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
+    auto p = vn::util::Point{pos.x, pos.y} - this->noteView->getScrollHandling()->getPosition();
     auto q = vn::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
 
-    this->getXournal()->getControl()->getWindow()->getFloatingToolbox()->show(q.x, q.y);
+    this->getNoteView()->getControl()->getWindow()->getFloatingToolbox()->show(q.x, q.y);
 }
 
 void PageView::setGridCoordinates(vn::util::Point<int> coords) { this->gridCoordinates = coords; }
 auto PageView::getGridCoordinates() const -> vn::util::Point<int> { return this->gridCoordinates; }
+
+

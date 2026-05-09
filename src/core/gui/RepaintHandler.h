@@ -16,7 +16,7 @@ class VertexNoteView;
 
 class RepaintHandler {
 public:
-    RepaintHandler(VertexNoteView* xournal);
+    RepaintHandler(VertexNoteView* noteView);
     virtual ~RepaintHandler();
 
 public:
@@ -34,5 +34,6 @@ public:
     void repaintPageBorder(const PageView* view);
 
 private:
-    VertexNoteView* xournal;
+    VertexNoteView* noteView;
 };
+

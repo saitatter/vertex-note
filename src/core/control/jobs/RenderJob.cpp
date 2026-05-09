@@ -46,7 +46,7 @@ void RenderJob::rerenderRectangle(Rectangle<double> const& rect) {
 
     Range maskRange(rect);
     maskRange.addPadding(RENDER_PADDING);
-    vn::view::Mask newMask(view->xournal->getDpiScaleFactor(), maskRange, view->xournal->getZoom(),
+    vn::view::Mask newMask(view->noteView->getDpiScaleFactor(), maskRange, view->noteView->getZoom(),
                             CAIRO_CONTENT_COLOR_ALPHA);
 
     renderToBuffer(newMask.get());
@@ -70,8 +70,8 @@ void RenderJob::run() {
     this->view->repaintRectMutex.unlock();
 
     if (rerenderComplete) {
-        vn::view::Mask newMask(view->xournal->getDpiScaleFactor(),
-                                Range(0, 0, view->page->getWidth(), view->page->getHeight()), view->xournal->getZoom(),
+        vn::view::Mask newMask(view->noteView->getDpiScaleFactor(),
+                                Range(0, 0, view->page->getWidth(), view->page->getHeight()), view->noteView->getZoom(),
                                 CAIRO_CONTENT_COLOR_ALPHA);
 
         renderToBuffer(newMask.get());
@@ -81,7 +81,7 @@ void RenderJob::run() {
         }
         if (sizeChanged) {
             // We do not have any control on what portion of the widget needs to be redrawn. Redraw it all.
-            Util::execInUiThread([w = view->xournal->getWidget()]() { gtk_widget_queue_draw(w); });
+            Util::execInUiThread([w = view->noteView->getWidget()]() { gtk_widget_queue_draw(w); });
         } else {
             repaintPage();
         }
@@ -100,20 +100,21 @@ static void repaintWidgetArea(GtkWidget* widget, int x1, int y1, int x2, int y2)
 void RenderJob::repaintPage() const { repaintPageArea(0, 0, view->getWidth(), view->getHeight()); }
 
 void RenderJob::repaintPageArea(double x1, double y1, double x2, double y2) const {
-    double zoom = view->xournal->getZoom();
+    double zoom = view->noteView->getZoom();
     auto p = this->view->getPixelPosition();
-    repaintWidgetArea(view->xournal->getWidget(), p.x + floor_cast<int>(zoom * x1), p.y + floor_cast<int>(zoom * y1),
+    repaintWidgetArea(view->noteView->getWidget(), p.x + floor_cast<int>(zoom * x1), p.y + floor_cast<int>(zoom * y1),
                       p.x + ceil_cast<int>(zoom * x2), p.y + ceil_cast<int>(zoom * y2));
 }
 
 void RenderJob::renderToBuffer(cairo_t* cr) const {
     DocumentView localView;
-    localView.setMarkAudioStroke(this->view->getXournal()->getControl()->getToolHandler()->getToolType() ==
+    localView.setMarkAudioStroke(this->view->getNoteView()->getControl()->getToolHandler()->getToolType() ==
                                  TOOL_PLAY_OBJECT);
-    localView.setPdfCache(this->view->xournal->getCache());
+    localView.setPdfCache(this->view->noteView->getCache());
 
-    std::shared_lock<Document> lock(*this->view->xournal->getDocument());
+    std::shared_lock<Document> lock(*this->view->noteView->getDocument());
     localView.drawPage(this->view->page, cr, false);
 }
 
 auto RenderJob::getType() -> JobType { return JOB_TYPE_RENDER; }
+

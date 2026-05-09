@@ -13,8 +13,8 @@
 constexpr double MIN_HEIGHT = 0.5;
 constexpr double MAX_HEIGHT = 10.0;
 
-CompassInputHandler::CompassInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
-        GeometryToolInputHandler(xournal, controller) {}
+CompassInputHandler::CompassInputHandler(VertexNoteView* noteView, GeometryToolController* controller):
+        GeometryToolInputHandler(noteView, controller) {}
 
 CompassInputHandler::~CompassInputHandler() noexcept = default;
 
@@ -23,7 +23,7 @@ auto CompassInputHandler::handlePointer(InputEvent const& event) -> bool {
     CompassController* compassController = static_cast<CompassController*>(controller);
     const auto p = compassController->posRelToSide(coords.x, coords.y);
 
-    const auto toolHandler = xournal->getControl()->getToolHandler();
+    const auto toolHandler = noteView->getControl()->getToolHandler();
     switch (toolHandler->getToolType()) {
         case TOOL_HIGHLIGHTER:
         case TOOL_PEN:
@@ -88,3 +88,4 @@ auto CompassInputHandler::handlePointer(InputEvent const& event) -> bool {
 
 auto CompassInputHandler::getMinHeight() const -> double { return MIN_HEIGHT; }
 auto CompassInputHandler::getMaxHeight() const -> double { return MAX_HEIGHT; }
+
