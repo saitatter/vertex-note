@@ -120,7 +120,7 @@ PageView::~PageView() {
     deleteViewBuffer();  // Ensures the mutex is locked during the buffer's destruction
 }
 
-void PageView::addOverlayView(std::unique_ptr<xoj::view::OverlayView> overlay) {
+void PageView::addOverlayView(std::unique_ptr<vn::view::OverlayView> overlay) {
     this->overlayViews.emplace_back(std::move(overlay));
 }
 
@@ -158,7 +158,7 @@ auto PageView::searchTextOnPage(const std::string& text, size_t index, size_t* o
             doc->unlock_shared();
         }
         this->search = std::make_unique<SearchControl>(page, pdf);
-        this->overlayViews.emplace_back(std::make_unique<xoj::view::SearchResultView>(
+        this->overlayViews.emplace_back(std::make_unique<vn::view::SearchResultView>(
                 this->search.get(), this, settings->getSelectionColor(), settings->getActiveSelectionColor()));
     }
 
@@ -187,19 +187,19 @@ void PageView::startText(double x, double y) {
 
     if (this->textEditor == nullptr) {
         this->textEditor = std::make_unique<TextEditor>(xournal->getControl(), page, xournal->getWidget(), x, y);
-        this->overlayViews.emplace_back(std::make_unique<xoj::view::TextEditionView>(this->textEditor.get(), this));
+        this->overlayViews.emplace_back(std::make_unique<vn::view::TextEditionView>(this->textEditor.get(), this));
     }
 }
 
 #ifndef NDEBUG
 // used in xoj_assert()
-[[maybe_unused]] static bool hasNoViewOf(const std::vector<std::unique_ptr<xoj::view::OverlayView>>& views,
+[[maybe_unused]] static bool hasNoViewOf(const std::vector<std::unique_ptr<vn::view::OverlayView>>& views,
                                          const OverlayBase* o) {
     return std::find_if(views.begin(), views.end(), [o](auto& v) { return v->isViewOf(o); }) == views.end();
 }
 #endif
 
-static void eraseViewsOf(std::vector<std::unique_ptr<xoj::view::OverlayView>>& views, const OverlayBase* o) {
+static void eraseViewsOf(std::vector<std::unique_ptr<vn::view::OverlayView>>& views, const OverlayBase* o) {
     views.erase(std::remove_if(views.begin(), views.end(), [o](auto& v) { return v->isViewOf(o); }), views.end());
     xoj_assert(hasNoViewOf(views, o));
 }
@@ -355,7 +355,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
         if (h->getToolType() == TOOL_SELECT_RECT) {
             if (!selector) {
                 this->selector = std::make_unique<RectangularSelector>(x, y);
-                this->overlayViews.emplace_back(std::make_unique<xoj::view::SelectorView>(
+                this->overlayViews.emplace_back(std::make_unique<vn::view::SelectorView>(
                         this->selector.get(), this, this->settings->getSelectionColor()));
             } else {
                 xoj_assert_message(
@@ -366,7 +366,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
         } else if (h->getToolType() == TOOL_SELECT_REGION) {
             if (!selector) {
                 this->selector = std::make_unique<LassoSelector>(x, y);
-                this->overlayViews.emplace_back(std::make_unique<xoj::view::SelectorView>(
+                this->overlayViews.emplace_back(std::make_unique<vn::view::SelectorView>(
                         this->selector.get(), this, this->settings->getSelectionColor()));
             } else {
                 xoj_assert_message(
@@ -377,7 +377,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
         } else if (h->getToolType() == TOOL_SELECT_MULTILAYER_RECT) {
             if (!selector) {
                 this->selector = std::make_unique<RectangularSelector>(x, y, /*multiLayer*/ true);
-                this->overlayViews.emplace_back(std::make_unique<xoj::view::SelectorView>(
+                this->overlayViews.emplace_back(std::make_unique<vn::view::SelectorView>(
                         this->selector.get(), this, this->settings->getSelectionColor()));
             } else {
                 xoj_assert_message(
@@ -388,7 +388,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
         } else if (h->getToolType() == TOOL_SELECT_MULTILAYER_REGION) {
             if (!selector) {
                 this->selector = std::make_unique<LassoSelector>(x, y, /*multiLayer*/ true);
-                this->overlayViews.emplace_back(std::make_unique<xoj::view::SelectorView>(
+                this->overlayViews.emplace_back(std::make_unique<vn::view::SelectorView>(
                         this->selector.get(), this, this->settings->getSelectionColor()));
             } else {
                 xoj_assert_message(
@@ -416,7 +416,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 pdfToolbox->selectionStyle = PdfElemSelection::selectionStyleForToolType(h->getToolType());
                 auto sel = pdfToolbox->newSelection(x, y);
                 this->overlayViews.emplace_back(
-                        std::make_unique<xoj::view::PdfElementSelectionView>(sel, this, settings->getSelectionColor()));
+                        std::make_unique<vn::view::PdfElementSelectionView>(sel, this, settings->getSelectionColor()));
             }
         } else if (h->getToolType() == TOOL_SELECT_OBJECT) {
             SelectObject select(this);
@@ -441,7 +441,7 @@ auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     } else if (h->getToolType() == TOOL_IMAGE) {
         // start selecting the size for the image
         this->imageSizeSelection = std::make_unique<ImageSizeSelection>(x, y);
-        this->overlayViews.emplace_back(std::make_unique<xoj::view::ImageSizeSelectionView>(
+        this->overlayViews.emplace_back(std::make_unique<vn::view::ImageSizeSelectionView>(
                 this->imageSizeSelection.get(), this, settings->getSelectionColor()));
     }
 
@@ -679,7 +679,7 @@ auto PageView::showPdfToolbox(const PositionInputData& pos) -> void {
     this->getXournal()->getControl()->getWindow()->getPdfToolbox()->show(q.x, q.y);
 }
 
-void PageView::deleteView(xoj::view::OverlayView* view) {
+void PageView::deleteView(vn::view::OverlayView* view) {
     auto it = std::find_if(this->overlayViews.begin(), this->overlayViews.end(),
                            [view](const auto& v) { return view == v.get(); });
     if (it != this->overlayViews.end()) {
@@ -853,7 +853,7 @@ void PageView::repaintArea(double x1, double y1, double x2, double y2) const {
 
 void PageView::flagDirtyRegion(const Range& rg) const { repaintArea(rg.minX, rg.minY, rg.maxX, rg.maxY); }
 
-void PageView::drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg) {
+void PageView::drawAndDeleteToolView(vn::view::ToolView* v, const Range& rg) {
     if (v->isViewOf(this->inputHandler.get()) || v->isViewOf(this->verticalSpace.get()) ||
         v->isViewOf(this->textEditor.get())) {
         // Draw the inputHandler's view onto the page buffer.
@@ -867,7 +867,7 @@ void PageView::drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg) {
     this->deleteOverlayView(v, rg);
 }
 
-void PageView::deleteOverlayView(xoj::view::OverlayView* v, const Range& rg) {
+void PageView::deleteOverlayView(vn::view::OverlayView* v, const Range& rg) {
     this->deleteView(v);
     if (!rg.empty()) {
         xoj_assert(rg.isValid());

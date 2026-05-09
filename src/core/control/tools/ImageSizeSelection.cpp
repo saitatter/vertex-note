@@ -2,7 +2,7 @@
 
 #include "util/Rectangle.h"  // for Rectangle
 
-using namespace xoj::view;
+using namespace vn::view;
 
 ImageSizeSelection::ImageSizeSelection(double x, double y):
         startX(x),
@@ -18,7 +18,7 @@ void ImageSizeSelection::updatePosition(double x, double y) {
     this->endX = x;
     this->endY = y;
 
-    this->viewPool->dispatch(xoj::view::ImageSizeSelectionView::FLAG_DIRTY_REGION, old);
+    this->viewPool->dispatch(vn::view::ImageSizeSelectionView::FLAG_DIRTY_REGION, old);
 }
 
 auto ImageSizeSelection::getSelectedSpace() const -> vn::util::Rectangle<double> {
@@ -32,5 +32,5 @@ auto ImageSizeSelection::getSelectedSpace() const -> vn::util::Rectangle<double>
 void ImageSizeSelection::finalize() {
     Range box(startX, startY);
     box.addPoint(endX, endY);
-    this->viewPool->dispatchAndClear(xoj::view::ImageSizeSelectionView::FINALIZATION_REQUEST, box);
+    this->viewPool->dispatchAndClear(vn::view::ImageSizeSelectionView::FINALIZATION_REQUEST, box);
 }

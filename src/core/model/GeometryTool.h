@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <cairo.h>  // for cairo_matrix_t
 
 #include "model/OverlayBase.h"
@@ -66,7 +68,7 @@ public:
     Stroke* getStroke() const;
     void setStroke(Stroke* s);
 
-    const std::shared_ptr<xoj::util::DispatchPool<xoj::view::GeometryToolView>>& getViewPool() const;
+    const std::shared_ptr<xoj::util::DispatchPool<vn::view::GeometryToolView>>& getViewPool() const;
     const std::shared_ptr<xoj::util::DispatchPool<GeometryToolInputHandler>>& getHandlerPool() const;
 
     virtual void notify(bool resetMask = false) const = 0;  // calls the update method of all observers
@@ -96,7 +98,7 @@ protected:
 
     Stroke* stroke = nullptr;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::GeometryToolView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::GeometryToolView>> viewPool;
 
     /**
      * @brief Bounding box of the geometry tool and stroke after its last update

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <cstddef>  // for size_t
 #include <memory>   // for unique_ptr, shared_ptr
 #include <mutex>    // for mutex
@@ -56,13 +58,13 @@ class OverlayView;
 class ToolView;
 }  // namespace xoj::view
 
-class PageView: public LegacyRedrawable, public PageListener, public xoj::view::Repaintable {
+class PageView: public LegacyRedrawable, public PageListener, public vn::view::Repaintable {
 public:
     PageView(VertexNoteView* xournal, const PageRef& page);
     ~PageView() override;
 
 public:
-    void addOverlayView(std::unique_ptr<xoj::view::OverlayView>);
+    void addOverlayView(std::unique_ptr<vn::view::OverlayView>);
     void rerenderPage(bool sizeChanged = false) override;
     void rerenderRect(double x, double y, double width, double height) override;
 
@@ -75,12 +77,12 @@ public:
      * @brief This draws the ToolView directly onto the buffer, deletes the view and repaints the given range
      *      Used to avoid blinking when a tool finished editing an element
      */
-    void drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg) override;
+    void drawAndDeleteToolView(vn::view::ToolView* v, const Range& rg) override;
     /**
      * @brief Simply deletes an overlay and any trace of it on the display (provided the overlay is contained in the
      * given range)
      */
-    void deleteOverlayView(xoj::view::OverlayView* v, const Range& rg) override;
+    void deleteOverlayView(vn::view::OverlayView* v, const Range& rg) override;
 
     double getZoom() const override;
     ZoomControl* getZoomControl() const override;
@@ -224,7 +226,7 @@ private:
      */
     void showPdfToolbox(const PositionInputData& pos);
 
-    void deleteView(xoj::view::OverlayView* v);
+    void deleteView(vn::view::OverlayView* v);
 
 private:
     PageRef page;
@@ -233,7 +235,7 @@ private:
     std::unique_ptr<EraseHandler> eraser;
     std::unique_ptr<InputHandler> inputHandler;
 
-    std::vector<std::unique_ptr<xoj::view::OverlayView>> overlayViews;
+    std::vector<std::unique_ptr<vn::view::OverlayView>> overlayViews;
 
     /**
      * The selected (while selection)
@@ -260,7 +262,7 @@ private:
     bool visible = false;
     bool selected = false;
 
-    xoj::view::Mask buffer;
+    vn::view::Mask buffer;
     std::mutex drawingMutex;
 
     bool inEraser = false;

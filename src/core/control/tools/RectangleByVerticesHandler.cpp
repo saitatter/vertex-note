@@ -36,7 +36,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 RectangleByVerticesHandler::RectangleByVerticesHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::RectangleByVerticesView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::RectangleByVerticesView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -62,7 +62,7 @@ auto RectangleByVerticesHandler::onMotionNotifyEvent(const PositionInputData& po
     Range repaintRange = previewRange();
     updateCurrentPoint(pos, zoom);
     repaintRange = repaintRange.unite(previewRange());
-    this->viewPool->dispatch(xoj::view::RectangleByVerticesView::FLAG_DIRTY_REGION, repaintRange);
+    this->viewPool->dispatch(vn::view::RectangleByVerticesView::FLAG_DIRTY_REGION, repaintRange);
     return true;
 }
 
@@ -87,7 +87,7 @@ void RectangleByVerticesHandler::onButtonPressEvent(const PositionInputData& pos
     updateCurrentPoint(pos, zoom);
     if (!this->startPoint) {
         this->startPoint = this->currentPoint;
-        this->viewPool->dispatch(xoj::view::RectangleByVerticesView::FLAG_DIRTY_REGION, previewRange());
+        this->viewPool->dispatch(vn::view::RectangleByVerticesView::FLAG_DIRTY_REGION, previewRange());
         return;
     }
 
@@ -98,9 +98,9 @@ void RectangleByVerticesHandler::onButtonDoublePressEvent(const PositionInputDat
 
 void RectangleByVerticesHandler::onSequenceCancelEvent() { cancel(); }
 
-auto RectangleByVerticesHandler::createView(xoj::view::Repaintable* parent) const
-        -> std::unique_ptr<xoj::view::OverlayView> {
-    return std::make_unique<xoj::view::RectangleByVerticesView>(this, parent);
+auto RectangleByVerticesHandler::createView(vn::view::Repaintable* parent) const
+        -> std::unique_ptr<vn::view::OverlayView> {
+    return std::make_unique<vn::view::RectangleByVerticesView>(this, parent);
 }
 
 auto RectangleByVerticesHandler::isDone() const -> bool { return this->done; }
@@ -122,7 +122,7 @@ auto RectangleByVerticesHandler::getStrokeWidth() const -> double { return this-
 auto RectangleByVerticesHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto RectangleByVerticesHandler::getViewPool() const
-        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::RectangleByVerticesView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<vn::view::RectangleByVerticesView>>& {
     return this->viewPool;
 }
 
@@ -197,7 +197,7 @@ void RectangleByVerticesHandler::finalizeRectangle() {
     const Range range = previewRange();
     this->done = true;
     this->startPoint.reset();
-    this->viewPool->dispatchAndClear(xoj::view::RectangleByVerticesView::FINALIZATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::RectangleByVerticesView::FINALIZATION_REQUEST, range);
     this->page->fireElementChanged(ptr);
 }
 
@@ -205,5 +205,5 @@ void RectangleByVerticesHandler::cancel() {
     const Range range = previewRange();
     this->done = true;
     this->startPoint.reset();
-    this->viewPool->dispatchAndClear(xoj::view::RectangleByVerticesView::CANCELLATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::RectangleByVerticesView::CANCELLATION_REQUEST, range);
 }

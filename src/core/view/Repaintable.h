@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 class Range;
 class ZoomControl;
 
@@ -65,4 +67,4 @@ public:
      */
     virtual void deleteOverlayView(OverlayView* v, const Range& rg) = 0;
 };
-};  // namespace vn::view
+};  // namespace xoj::view

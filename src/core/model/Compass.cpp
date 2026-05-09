@@ -12,7 +12,7 @@ Compass::Compass(double height, double rotation, double x, double y): GeometryTo
     this->lastRepaintRange = getToolRange(true);
 }
 
-Compass::~Compass() { viewPool->dispatchAndClear(xoj::view::CompassView::FINALIZATION_REQUEST, lastRepaintRange); }
+Compass::~Compass() { viewPool->dispatchAndClear(vn::view::CompassView::FINALIZATION_REQUEST, lastRepaintRange); }
 
 auto Compass::getToolRange(bool transformed) const -> Range {
     const auto h = height * CM;
@@ -28,17 +28,17 @@ auto Compass::getToolRange(bool transformed) const -> Range {
     // Padding required to fully render the boundary red lines and last blue digit
     constexpr double RENDER_PADDING = 2.0;
 
-    rg.addPadding(RENDER_PADDING + .5 * xoj::view::CompassView::LINE_WIDTH_IN_CM * CM);  // account for line width
+    rg.addPadding(RENDER_PADDING + .5 * vn::view::CompassView::LINE_WIDTH_IN_CM * CM);  // account for line width
     return rg;
 }
 
 void Compass::notify(bool resetMask) const {
     if (resetMask) {
-        viewPool->dispatch(xoj::view::GeometryToolView::RESET_MASK);
+        viewPool->dispatch(vn::view::GeometryToolView::RESET_MASK);
     }
 
-    viewPool->dispatch(xoj::view::CompassView::UPDATE_VALUES, this->getHeight(), this->getRotation(),
+    viewPool->dispatch(vn::view::CompassView::UPDATE_VALUES, this->getHeight(), this->getRotation(),
                        this->getMatrix());
     Range rg = this->getToolRange(true);
-    viewPool->dispatch(xoj::view::CompassView::FLAG_DIRTY_REGION, this->computeRepaintRange(rg));
+    viewPool->dispatch(vn::view::CompassView::FLAG_DIRTY_REGION, this->computeRepaintRange(rg));
 }

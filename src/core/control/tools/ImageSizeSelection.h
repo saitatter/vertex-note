@@ -11,12 +11,14 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include "model/OverlayBase.h"                     // for OverlayBase
 #include "util/DispatchPool.h"                     // for Listener
 #include "util/Rectangle.h"                        // for Rectangle
 #include "view/overlays/ImageSizeSelectionView.h"  // for ImageSizeSelectionView
 
-using namespace xoj::view;
+using namespace vn::view;
 
 class ImageSizeSelection: public OverlayBase {
 public:

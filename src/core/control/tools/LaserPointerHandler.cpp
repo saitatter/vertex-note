@@ -25,7 +25,7 @@ public:
 };
 
 LaserPointerHandler::LaserPointerHandler(PageView* pageView, Control* control, const PageRef& page):
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::LaserPointerView>>()),
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::LaserPointerView>>()),
         ctrl(control),
         page(page),
         pageView(pageView),
@@ -34,10 +34,10 @@ LaserPointerHandler::LaserPointerHandler(PageView* pageView, Control* control, c
 
 LaserPointerHandler::~LaserPointerHandler() = default;
 
-std::unique_ptr<xoj::view::OverlayView> LaserPointerHandler::createView(xoj::view::Repaintable* parent) const {
-    auto view = std::make_unique<xoj::view::LaserPointerView>(this, parent);
+std::unique_ptr<vn::view::OverlayView> LaserPointerHandler::createView(vn::view::Repaintable* parent) const {
+    auto view = std::make_unique<vn::view::LaserPointerView>(this, parent);
     if (this->strokehandler) {
-        view->on(xoj::view::LaserPointerView::START_NEW_STROKE_REQUEST, this->strokehandler.get());
+        view->on(vn::view::LaserPointerView::START_NEW_STROKE_REQUEST, this->strokehandler.get());
     }
     return view;
 }
@@ -45,7 +45,7 @@ std::unique_ptr<xoj::view::OverlayView> LaserPointerHandler::createView(xoj::vie
 void LaserPointerHandler::onButtonPressEvent(const PositionInputData& pos, double zoom) {
     this->strokehandler = std::make_unique<TemporaryStrokeHandler>(ctrl, page);
     this->strokehandler->onButtonPressEvent(pos, zoom);
-    this->viewPool->dispatch(xoj::view::LaserPointerView::START_NEW_STROKE_REQUEST, strokehandler.get());
+    this->viewPool->dispatch(vn::view::LaserPointerView::START_NEW_STROKE_REQUEST, strokehandler.get());
 
     this->fadeoutTimer.cancel();
     this->fadeoutAlpha = 255;
@@ -57,7 +57,7 @@ void LaserPointerHandler::onButtonReleaseEvent(const PositionInputData& pos, dou
     }
     this->hasFinishedStrokes = true;
     this->strokehandler->finalizeStroke(pos.pressure);
-    this->viewPool->dispatch(xoj::view::LaserPointerView::FINISH_STROKE_REQUEST,
+    this->viewPool->dispatch(vn::view::LaserPointerView::FINISH_STROKE_REQUEST,
                              Range(this->strokehandler->getStroke()->boundingRect()));
     this->strokehandler.reset();
     this->fadeoutTimer =
@@ -72,7 +72,7 @@ void LaserPointerHandler::onSequenceCancelEvent() {
     auto s = std::move(this->strokehandler);
     if (s && s->getStroke()) {
         Range rg(s->getStroke()->boundingRect());
-        this->viewPool->dispatch(xoj::view::LaserPointerView::INPUT_CANCELLATION_REQUEST, rg);
+        this->viewPool->dispatch(vn::view::LaserPointerView::INPUT_CANCELLATION_REQUEST, rg);
     }
     if (this->hasFinishedStrokes) {
         this->fadeoutTimer =
@@ -88,12 +88,12 @@ void LaserPointerHandler::triggerFadeoutCallback(LaserPointerHandler* self) {
 gboolean LaserPointerHandler::fadeoutCallback(LaserPointerHandler* self) {
     if (self->fadeoutAlpha <= FADEOUT_ALPHA_STEP) {
         self->fadeoutAlpha = 0;
-        self->viewPool->dispatchAndClear(xoj::view::LaserPointerView::FINALIZATION_REQUEST);
+        self->viewPool->dispatchAndClear(vn::view::LaserPointerView::FINALIZATION_REQUEST);
         self->fadeoutTimer.consume();
         self->pageView->deleteLaserPointerHandler();  // WARNING: deletes *self
         return G_SOURCE_REMOVE;
     }
     self->fadeoutAlpha -= FADEOUT_ALPHA_STEP;
-    self->viewPool->dispatch(xoj::view::LaserPointerView::SET_ALPHA_REQUEST, self->fadeoutAlpha);
+    self->viewPool->dispatch(vn::view::LaserPointerView::SET_ALPHA_REQUEST, self->fadeoutAlpha);
     return G_SOURCE_CONTINUE;  // The timer will run again and call this callback once more (or be cancelled)
 }

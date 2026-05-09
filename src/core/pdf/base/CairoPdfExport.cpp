@@ -153,12 +153,12 @@ void CairoPdfExport::exportPage(size_t page, bool exportPdfBackground) {
         popplerPage->renderForPrinting(cr);
     }
 
-    xoj::view::BackgroundFlags flags;
-    flags.showPDF = xoj::view::HIDE_PDF_BACKGROUND;  // Already exported (if any)
-    flags.showImage = exportBackground == EXPORT_BACKGROUND_NONE ? xoj::view::HIDE_IMAGE_BACKGROUND :
-                                                                   xoj::view::SHOW_IMAGE_BACKGROUND;
-    flags.showRuling = exportBackground <= EXPORT_BACKGROUND_UNRULED ? xoj::view::HIDE_RULING_BACKGROUND :
-                                                                       xoj::view::SHOW_RULING_BACKGROUND;
+    vn::view::BackgroundFlags flags;
+    flags.showPDF = vn::view::HIDE_PDF_BACKGROUND;  // Already exported (if any)
+    flags.showImage = exportBackground == EXPORT_BACKGROUND_NONE ? vn::view::HIDE_IMAGE_BACKGROUND :
+                                                                   vn::view::SHOW_IMAGE_BACKGROUND;
+    flags.showRuling = exportBackground <= EXPORT_BACKGROUND_UNRULED ? vn::view::HIDE_RULING_BACKGROUND :
+                                                                       vn::view::SHOW_RULING_BACKGROUND;
 
     if (layerRange) {
         view.drawLayersOfPage(*layerRange, p, this->cr, true /* dont render eraseable */, flags);

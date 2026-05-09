@@ -17,7 +17,7 @@ auto createPreviewImage(const PageType& pt) -> GtkWidget* {
 
     cairo_scale(cr, zoom, zoom);
 
-    auto bgView = xoj::view::BackgroundView::createRuled(PREVIEW_WIDTH / zoom, PREVIEW_HEIGHT / zoom, Colors::white, pt,
+    auto bgView = vn::view::BackgroundView::createRuled(PREVIEW_WIDTH / zoom, PREVIEW_HEIGHT / zoom, Colors::white, pt,
                                                          1. / zoom);
     bgView->draw(cr);
 

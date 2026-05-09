@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <string>  // for string
 
 #include <gdk/gdk.h>      // for GdkEventKey
@@ -70,7 +72,7 @@ public:
 
     PangoLayout* getUpToDateLayout() const;
 
-    const std::shared_ptr<xoj::util::DispatchPool<xoj::view::TextEditionView>>& getViewPool() const;
+    const std::shared_ptr<xoj::util::DispatchPool<vn::view::TextEditionView>>& getViewPool() const;
 
     Color getSelectionColor() const;
 
@@ -184,7 +186,7 @@ private:
     Range previousBoundingBox;
     Range cursorBox;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::TextEditionView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::TextEditionView>> viewPool;
 
     /**
      * @brief Coordinate of the virtual cursor, in Pango coordinates.

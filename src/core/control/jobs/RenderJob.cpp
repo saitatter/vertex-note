@@ -46,7 +46,7 @@ void RenderJob::rerenderRectangle(Rectangle<double> const& rect) {
 
     Range maskRange(rect);
     maskRange.addPadding(RENDER_PADDING);
-    xoj::view::Mask newMask(view->xournal->getDpiScaleFactor(), maskRange, view->xournal->getZoom(),
+    vn::view::Mask newMask(view->xournal->getDpiScaleFactor(), maskRange, view->xournal->getZoom(),
                             CAIRO_CONTENT_COLOR_ALPHA);
 
     renderToBuffer(newMask.get());
@@ -70,7 +70,7 @@ void RenderJob::run() {
     this->view->repaintRectMutex.unlock();
 
     if (rerenderComplete) {
-        xoj::view::Mask newMask(view->xournal->getDpiScaleFactor(),
+        vn::view::Mask newMask(view->xournal->getDpiScaleFactor(),
                                 Range(0, 0, view->page->getWidth(), view->page->getHeight()), view->xournal->getZoom(),
                                 CAIRO_CONTENT_COLOR_ALPHA);
 

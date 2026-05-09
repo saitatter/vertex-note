@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <string>  // for string
 #include <vector>  // for vector
 
@@ -37,7 +39,7 @@ public:
 
     const PdfRectangle* getHighlightRect() const { return highlightRect; }
 
-    const std::shared_ptr<xoj::util::DispatchPool<xoj::view::SearchResultView>>& getViewPool() const {
+    const std::shared_ptr<xoj::util::DispatchPool<vn::view::SearchResultView>>& getViewPool() const {
         return viewPool;
     }
 
@@ -48,5 +50,5 @@ private:
     PdfRectangle* highlightRect = nullptr;
 
     std::vector<PdfRectangle> results;
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::SearchResultView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::SearchResultView>> viewPool;
 };

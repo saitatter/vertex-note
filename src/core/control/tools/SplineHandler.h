@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>    // for unique_ptr
 #include <optional>  // for optional
 #include <vector>    // for vector
@@ -69,7 +71,7 @@ public:
     SplineHandler(Control* control, const PageRef& page);
     ~SplineHandler() override;
 
-    std::unique_ptr<xoj::view::OverlayView> createView(xoj::view::Repaintable* parent) const override;
+    std::unique_ptr<vn::view::OverlayView> createView(vn::view::Repaintable* parent) const override;
 
     void onSequenceCancelEvent() override;
     bool onMotionNotifyEvent(const PositionInputData& pos, double zoom) override;
@@ -86,7 +88,7 @@ public:
     void zoomChanged() override;
 
 public:
-    const std::shared_ptr<xoj::util::DispatchPool<xoj::view::SplineToolView>>& getViewPool() const;
+    const std::shared_ptr<xoj::util::DispatchPool<vn::view::SplineToolView>>& getViewPool() const;
 
     using Data = SplineHandlerData;
     std::optional<Data> getData() const;
@@ -124,7 +126,7 @@ private:
     bool inFirstKnotAttractionZone = false;
     SnapToGridInputHandler snappingHandler;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::SplineToolView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::SplineToolView>> viewPool;
 
     static constexpr double KNOTS_ATTRACTION_RADIUS_IN_PIXELS = 10.0;  // for circling the spline's knots
 };

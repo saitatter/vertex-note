@@ -394,11 +394,11 @@ void Control::updatePageNumbers(size_t page, size_t pdfPage) {
 NavigationHistory* Control::getNavigationHistory() const { return navHistory.get(); }
 
 bool Control::toggleCompass() {
-    return toggleGeometryTool<Compass, xoj::view::CompassView, CompassController, CompassInputHandler,
+    return toggleGeometryTool<Compass, vn::view::CompassView, CompassController, CompassInputHandler,
                               GeometryToolType::COMPASS>();
 }
 bool Control::toggleSetsquare() {
-    return toggleGeometryTool<Setsquare, xoj::view::SetsquareView, SetsquareController, SetsquareInputHandler,
+    return toggleGeometryTool<Setsquare, vn::view::SetsquareView, SetsquareController, SetsquareInputHandler,
                               GeometryToolType::SETSQUARE>();
 }
 

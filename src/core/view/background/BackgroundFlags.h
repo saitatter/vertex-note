@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 namespace xoj::view {
 
 enum PDFBackgroundTreatment : bool { SHOW_PDF_BACKGROUND = true, HIDE_PDF_BACKGROUND = false };

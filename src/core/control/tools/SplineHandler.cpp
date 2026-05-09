@@ -32,7 +32,7 @@
 SplineHandler::SplineHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SplineToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::SplineToolView>>()) {
     snappingHandler.setPageRef(page);
     this->control->getZoomControl()->addZoomListener(this);
     this->knotsAttractionRadius = KNOTS_ATTRACTION_RADIUS_IN_PIXELS / this->control->getZoomControl()->getZoom();
@@ -40,8 +40,8 @@ SplineHandler::SplineHandler(Control* control, const PageRef& page):
 
 SplineHandler::~SplineHandler() { this->control->getZoomControl()->removeZoomListener(this); }
 
-std::unique_ptr<xoj::view::OverlayView> SplineHandler::createView(xoj::view::Repaintable* parent) const {
-    return std::make_unique<xoj::view::SplineToolView>(this, parent);
+std::unique_ptr<vn::view::OverlayView> SplineHandler::createView(vn::view::Repaintable* parent) const {
+    return std::make_unique<vn::view::SplineToolView>(this, parent);
 }
 
 constexpr double SHIFT_AMOUNT = 1.0;
@@ -124,7 +124,7 @@ auto SplineHandler::onKeyPressEvent(const KeyEvent& event) -> bool {
             return false;
     }
 
-    this->viewPool->dispatch(xoj::view::SplineToolView::FLAG_DIRTY_REGION, rg);
+    this->viewPool->dispatch(vn::view::SplineToolView::FLAG_DIRTY_REGION, rg);
     return true;
 }
 
@@ -169,7 +169,7 @@ auto SplineHandler::onMotionNotifyEvent(const PositionInputData& pos, double zoo
     }
     rg = rg.unite(this->computeLastSegmentRepaintRange());
 
-    this->viewPool->dispatch(xoj::view::SplineToolView::FLAG_DIRTY_REGION, rg);
+    this->viewPool->dispatch(vn::view::SplineToolView::FLAG_DIRTY_REGION, rg);
     return true;
 }
 
@@ -185,7 +185,7 @@ void SplineHandler::onSequenceCancelEvent() {
     } else {
         auto rg = this->computeLastSegmentRepaintRange();
         this->deleteLastKnotWithTangent();
-        this->viewPool->dispatch(xoj::view::SplineToolView::FLAG_DIRTY_REGION, rg);
+        this->viewPool->dispatch(vn::view::SplineToolView::FLAG_DIRTY_REGION, rg);
     }
 }
 
@@ -226,11 +226,11 @@ void SplineHandler::onButtonPressEvent(const PositionInputData& pos, double zoom
             this->addKnotWithTangent(this->knots.front(), this->tangents.front());
             this->inFirstKnotAttractionZone = true;
             auto rg = this->computeLastSegmentRepaintRange();
-            this->viewPool->dispatch(xoj::view::SplineToolView::FLAG_DIRTY_REGION, rg);
+            this->viewPool->dispatch(vn::view::SplineToolView::FLAG_DIRTY_REGION, rg);
         } else if (validMotion(currPoint, this->knots.back())) {
             this->addKnot(this->currPoint);
             auto rg = this->computeLastSegmentRepaintRange();
-            this->viewPool->dispatch(xoj::view::SplineToolView::FLAG_DIRTY_REGION, rg);
+            this->viewPool->dispatch(vn::view::SplineToolView::FLAG_DIRTY_REGION, rg);
         }
     }
 }
@@ -254,7 +254,7 @@ void SplineHandler::clearTinySpline() {
     this->tangents.clear();
     this->stroke.reset();
     // Repaints and deletes the views
-    this->viewPool->dispatchAndClear(xoj::view::SplineToolView::FINALIZATION_REQUEST, rg);
+    this->viewPool->dispatchAndClear(vn::view::SplineToolView::FINALIZATION_REQUEST, rg);
 }
 
 void SplineHandler::finalizeSpline() {
@@ -283,7 +283,7 @@ void SplineHandler::finalizeSpline() {
     layer->addElement(std::move(stroke));
     doc->unlock();
     auto rg = this->computeTotalRepaintRange(data, ptr->getWidth());
-    this->viewPool->dispatchAndClear(xoj::view::SplineToolView::FINALIZATION_REQUEST, rg);
+    this->viewPool->dispatchAndClear(vn::view::SplineToolView::FINALIZATION_REQUEST, rg);
 
     // Wait until this finishes before releasing `stroke`, so that PageView::elementChanged does not needlessly rerender
     // the stroke
@@ -374,7 +374,7 @@ Range SplineHandler::computeLastSegmentRepaintRange() const {
     return rg;
 }
 
-auto SplineHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::SplineToolView>>& {
+auto SplineHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<vn::view::SplineToolView>>& {
     return viewPool;
 }
 

@@ -12,7 +12,7 @@
 SearchControl::SearchControl(const PageRef& page, PdfPagePtr pdf):
         page(page),
         pdf(std::move(pdf)),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SearchResultView>>()) {}
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::SearchResultView>>()) {}
 
 SearchControl::~SearchControl() = default;
 
@@ -23,7 +23,7 @@ auto SearchControl::search(const std::string& text, size_t index, size_t* occurr
         if (!this->results.empty()) {
             this->results.clear();
             this->currentText.clear();
-            this->viewPool->dispatch(xoj::view::SearchResultView::SEARCH_CHANGED_NOTIFICATION);
+            this->viewPool->dispatch(vn::view::SearchResultView::SEARCH_CHANGED_NOTIFICATION);
         }
         return true;
     }
@@ -52,7 +52,7 @@ auto SearchControl::search(const std::string& text, size_t index, size_t* occurr
         }
     }
 
-    this->viewPool->dispatch(xoj::view::SearchResultView::SEARCH_CHANGED_NOTIFICATION);
+    this->viewPool->dispatch(vn::view::SearchResultView::SEARCH_CHANGED_NOTIFICATION);
     if (occurrences) {
         *occurrences = this->results.size();
     }

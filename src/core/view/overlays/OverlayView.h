@@ -13,6 +13,8 @@
 
 #include <cairo.h>
 
+#include "view/ViewNamespaceAliases.h"
+
 class OverlayBase;
 
 namespace xoj::view {
@@ -42,4 +44,4 @@ public:
      */
     virtual void drawWithoutDrawingAids(cairo_t* cr) const { this->draw(cr); }
 };
-};  // namespace vn::view
+};  // namespace xoj::view

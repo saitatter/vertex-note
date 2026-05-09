@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <cstdint>
 #include <memory>  // for unique_ptr
 
@@ -45,9 +47,9 @@ public:
     void onButtonReleaseEvent(const PositionInputData& pos, double zoom);
     void onButtonPressEvent(const PositionInputData& pos, double zoom);
 
-    auto createView(xoj::view::Repaintable* parent) const -> std::unique_ptr<xoj::view::OverlayView>;
+    auto createView(vn::view::Repaintable* parent) const -> std::unique_ptr<vn::view::OverlayView>;
 
-    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<xoj::view::LaserPointerView>> {
+    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<vn::view::LaserPointerView>> {
         return viewPool;
     }
 
@@ -57,7 +59,7 @@ private:
 
 private:
     std::unique_ptr<TemporaryStrokeHandler> strokehandler;
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::LaserPointerView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::LaserPointerView>> viewPool;
 
     // Used only to pass on to (Temporary)StrokeHandler
     Control* ctrl;

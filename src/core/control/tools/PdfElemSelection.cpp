@@ -24,7 +24,7 @@ PdfElemSelection::PdfElemSelection(double x, double y, Control* control):
         pdf(nullptr),
         bounds({x, y, x, y}),
         finalized(false),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::PdfElementSelectionView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::PdfElementSelectionView>>()) {
 
     if (auto pNr = control->getCurrentPage()->getPdfPageNr(); pNr != npos) {
         Document* doc = control->getDocument();
@@ -40,7 +40,7 @@ PdfElemSelection::PdfElemSelection(double x, double y, Control* control):
 
 PdfElemSelection::~PdfElemSelection() {
     Range rg = getRegionBbox();
-    this->viewPool->dispatchAndClear(xoj::view::PdfElementSelectionView::CANCEL_SELECTION_REQUEST, rg);
+    this->viewPool->dispatchAndClear(vn::view::PdfElementSelectionView::CANCEL_SELECTION_REQUEST, rg);
 }
 
 auto PdfElemSelection::finalizeSelectionAndRepaint(PdfPageSelectionStyle style) -> bool {
@@ -48,7 +48,7 @@ auto PdfElemSelection::finalizeSelectionAndRepaint(PdfPageSelectionStyle style) 
     bool result = this->finalizeSelection(style);
     rg = rg.unite(getRegionBbox());
     if (!rg.empty()) {
-        this->viewPool->dispatch(xoj::view::PdfElementSelectionView::FLAG_DIRTY_REGION_REQUEST, rg);
+        this->viewPool->dispatch(vn::view::PdfElementSelectionView::FLAG_DIRTY_REGION_REQUEST, rg);
     }
     return result;
 }
@@ -116,7 +116,7 @@ void PdfElemSelection::currentPos(double x, double y, PdfPageSelectionStyle styl
 
     rg = rg.unite(getRegionBbox());
     if (!rg.empty()) {
-        this->viewPool->dispatch(xoj::view::PdfElementSelectionView::FLAG_DIRTY_REGION_REQUEST, rg);
+        this->viewPool->dispatch(vn::view::PdfElementSelectionView::FLAG_DIRTY_REGION_REQUEST, rg);
     }
 }
 

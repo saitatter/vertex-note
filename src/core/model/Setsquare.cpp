@@ -13,7 +13,7 @@ Setsquare::Setsquare(double height, double rotation, double x, double y): Geomet
 }
 
 Setsquare::~Setsquare() {
-    viewPool->dispatchAndClear(xoj::view::SetsquareView::FINALIZATION_REQUEST, lastRepaintRange);
+    viewPool->dispatchAndClear(vn::view::SetsquareView::FINALIZATION_REQUEST, lastRepaintRange);
 }
 
 auto Setsquare::getToolRange(bool transformed) const -> Range {
@@ -34,16 +34,16 @@ auto Setsquare::getToolRange(bool transformed) const -> Range {
     // Padding required to fully render the boundary red lines
     constexpr double RENDER_PADDING = 1.0;
 
-    rg.addPadding(RENDER_PADDING + .5 * xoj::view::SetsquareView::LINE_WIDTH_IN_CM * CM);  // account for line width
+    rg.addPadding(RENDER_PADDING + .5 * vn::view::SetsquareView::LINE_WIDTH_IN_CM * CM);  // account for line width
     return rg;
 }
 
 void Setsquare::notify(bool resetMask) const {
     if (resetMask) {
-        viewPool->dispatch(xoj::view::GeometryToolView::RESET_MASK);
+        viewPool->dispatch(vn::view::GeometryToolView::RESET_MASK);
     }
-    viewPool->dispatch(xoj::view::SetsquareView::UPDATE_VALUES, this->getHeight(), this->getRotation(),
+    viewPool->dispatch(vn::view::SetsquareView::UPDATE_VALUES, this->getHeight(), this->getRotation(),
                        this->getMatrix());
     Range rg = this->getToolRange(true);
-    viewPool->dispatch(xoj::view::SetsquareView::FLAG_DIRTY_REGION, this->computeRepaintRange(rg));
+    viewPool->dispatch(vn::view::SetsquareView::FLAG_DIRTY_REGION, this->computeRepaintRange(rg));
 }

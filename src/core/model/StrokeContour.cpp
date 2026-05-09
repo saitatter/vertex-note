@@ -41,8 +41,8 @@ struct ReturnOp {
     void operator()(cairo_t* cr) { op(cr, x, y, r, a, b); }
 };
 
-xoj::view::StrokeContour::StrokeContour(const std::vector<Point>& path): path(path) {}
-xoj::view::StrokeContour::~StrokeContour() = default;
+vn::view::StrokeContour::StrokeContour(const std::vector<Point>& path): path(path) {}
+vn::view::StrokeContour::~StrokeContour() = default;
 
 static inline void drawCoupling(cairo_t* cr, std::vector<ReturnOp>& ops, const Point& p2, double n1, double n3,
                                 double a1, double a3, double z1) {
@@ -113,7 +113,7 @@ static inline void contourStrokeEnd(cairo_t* cr, const Point& endPoint, const Po
     cairo_arc(cr, endPoint.x, endPoint.y, .5 * (forward ? endPoint.z : adjacentPoint.z), a + M_PI_2, a - M_PI_2);
 }
 
-void xoj::view::StrokeContour::addToCairo(cairo_t* cr) const {
+void vn::view::StrokeContour::addToCairo(cairo_t* cr) const {
     xoj_assert(path.size() >= 2);
     contourStrokeEnd<true>(cr, path.front(), path[1]);
     // left side of the stroke
@@ -129,7 +129,7 @@ void xoj::view::StrokeContour::addToCairo(cairo_t* cr) const {
     cairo_close_path(cr);
 }
 
-void xoj::view::StrokeContour::drawDebug(cairo_t* cr) const {
+void vn::view::StrokeContour::drawDebug(cairo_t* cr) const {
     {
         // Draw the points as dashed circles
         cairo_save(cr);
@@ -183,10 +183,10 @@ void xoj::view::StrokeContour::drawDebug(cairo_t* cr) const {
 
 
 // Dashes
-xoj::view::StrokeContourDashes::StrokeContourDashes(const std::vector<Point>& path,
+vn::view::StrokeContourDashes::StrokeContourDashes(const std::vector<Point>& path,
                                                     const std::vector<double>& dashPattern):
         path(path), dashPattern(dashPattern) {}
-xoj::view::StrokeContourDashes::~StrokeContourDashes() = default;
+vn::view::StrokeContourDashes::~StrokeContourDashes() = default;
 
 static void noop(cairo_t*) {};
 
@@ -220,7 +220,7 @@ static inline void dashSegment(cairo_t* cr, std::vector<ReturnOp>& ops, double& 
     }
 }
 
-double xoj::view::StrokeContourDashes::addToCairo(cairo_t* cr, double globalDashOffset) const {
+double vn::view::StrokeContourDashes::addToCairo(cairo_t* cr, double globalDashOffset) const {
     std::vector<ReturnOp> ops;
     auto dashIt = dashPattern.begin();
     bool on = true;
@@ -298,7 +298,7 @@ static void xtraFun(cairo_t* cr) {
     cairo_stroke(cr);
 }
 
-void xoj::view::StrokeContourDashes::drawDebug(cairo_t* cr) const {
+void vn::view::StrokeContourDashes::drawDebug(cairo_t* cr) const {
     {
         // Draw the points as dashed circles
         cairo_save(cr);

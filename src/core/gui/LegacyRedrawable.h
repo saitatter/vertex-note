@@ -17,7 +17,7 @@ class Element;
 class Range;
 
 /*
- * The (base) class Redrawable (now LegacyRedrawable) is deprecated. Use xoj::view::Repaintable instead.
+ * The (base) class Redrawable (now LegacyRedrawable) is deprecated. Use vn::view::Repaintable instead.
  *
  * Reasons for the deprecation:
  *

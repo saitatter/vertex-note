@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <cstddef>  // for size_t
 #include <deque>    // for deque
 #include <mutex>    // for mutex
@@ -79,7 +81,7 @@ private:
     /**
      * @brief Push a cache entry
      */
-    const PdfCacheEntry* cache(PdfPagePtr popplerPage, xoj::view::Mask&& buffer);
+    const PdfCacheEntry* cache(PdfPagePtr popplerPage, vn::view::Mask&& buffer);
 
 private:
     PdfDocument pdfDocument;

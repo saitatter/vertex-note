@@ -127,7 +127,7 @@ TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournal
         xournalWidget(xournalWidget),
         imContext(gtk_im_multicontext_new(), vn::util::adopt),
         buffer(gtk_text_buffer_new(nullptr), vn::util::adopt),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::TextEditionView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::TextEditionView>>()) {
     // Informs the windowing system of the selection -- i.e. for accessibility purposes
     gtk_text_buffer_add_selection_clipboard(buffer.get(), gtk_clipboard_get(GDK_SELECTION_PRIMARY));
 
@@ -177,7 +177,7 @@ TextEditor::~TextEditor() {
     finalizeEdition();
 }
 
-auto TextEditor::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::TextEditionView>>& {
+auto TextEditor::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<vn::view::TextEditionView>>& {
     return viewPool;
 }
 
@@ -876,7 +876,7 @@ void TextEditor::blinkCallback(TextEditor* te) {
 
     Range dirtyRange = te->cursorBox;
     dirtyRange.translate(te->textElement->getX(), te->textElement->getY());
-    te->viewPool->dispatch(xoj::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
+    te->viewPool->dispatch(vn::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
 }
 
 void TextEditor::setTextToPangoLayout(PangoLayout* pl) const {
@@ -985,7 +985,7 @@ void TextEditor::repaintEditor(bool sizeChanged) {
         dirtyRange = dirtyRange.unite(this->previousBoundingBox);
     }
     this->updateCursorBox();
-    this->viewPool->dispatch(xoj::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
+    this->viewPool->dispatch(vn::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
 }
 
 void TextEditor::repaintCursorAfterChange() {
@@ -993,7 +993,7 @@ void TextEditor::repaintCursorAfterChange() {
     this->updateCursorBox();
     dirtyRange = dirtyRange.unite(this->cursorBox);
     dirtyRange.translate(this->textElement->getX(), this->textElement->getY());
-    this->viewPool->dispatch(xoj::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
+    this->viewPool->dispatch(vn::view::TextEditionView::FLAG_DIRTY_REGION, dirtyRange);
 }
 
 void TextEditor::finalizeEdition() {
@@ -1017,14 +1017,14 @@ void TextEditor::finalizeEdition() {
             }  // A warning has already been issued otherwise
             originalTextElement = nullptr;
         }
-        this->viewPool->dispatchAndClear(xoj::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
+        this->viewPool->dispatchAndClear(vn::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
         return;
     }
 
     this->updateTextElementContent();
     if (originalTextElement) {
         // Modifying a preexisting element
-        this->viewPool->dispatchAndClear(xoj::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
+        this->viewPool->dispatchAndClear(vn::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
 
         doc->lock();
         Layer* layer = this->page->getSelectedLayer();
@@ -1051,7 +1051,7 @@ void TextEditor::finalizeEdition() {
         Layer* layer = this->page->getSelectedLayer();
         layer->addElement(std::move(this->textElement));
         doc->unlock();
-        this->viewPool->dispatchAndClear(xoj::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
+        this->viewPool->dispatchAndClear(vn::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
         this->page->fireElementChanged(ptr);
         undo->addUndoAction(std::make_unique<InsertUndoAction>(page, layer, ptr));
     }

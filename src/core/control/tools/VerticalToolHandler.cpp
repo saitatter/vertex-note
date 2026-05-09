@@ -24,7 +24,7 @@ VerticalToolHandler::VerticalToolHandler(const PageRef& page, Control* control, 
         control(control),
         spacingSide(initiallyReverse ? Side::Above : Side::Below),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::VerticalToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::VerticalToolView>>()) {
     snappingHandler.setPageRef(page);
     double ySnapped = snappingHandler.snapVertically(y, false);
     this->startY = ySnapped;
@@ -69,13 +69,13 @@ void VerticalToolHandler::currentPos(double x, double y) {
         return;
     }
     this->endY = ySnapped;
-    this->viewPool->dispatch(xoj::view::VerticalToolView::SET_VERTICAL_SHIFT_REQUEST, ySnapped);
+    this->viewPool->dispatch(vn::view::VerticalToolView::SET_VERTICAL_SHIFT_REQUEST, ySnapped);
 }
 
 bool VerticalToolHandler::onKeyPressEvent(const KeyEvent& event) {
     if ((event.keyval == GDK_KEY_Control_L || event.keyval == GDK_KEY_Control_R) && this->spacingSide == Side::Below) {
         this->adoptElements(Side::Above);
-        this->viewPool->dispatch(xoj::view::VerticalToolView::SWITCH_DIRECTION_REQUEST);
+        this->viewPool->dispatch(vn::view::VerticalToolView::SWITCH_DIRECTION_REQUEST);
         return true;
     }
     return false;
@@ -84,7 +84,7 @@ bool VerticalToolHandler::onKeyPressEvent(const KeyEvent& event) {
 bool VerticalToolHandler::onKeyReleaseEvent(const KeyEvent& event) {
     if ((event.keyval == GDK_KEY_Control_L || event.keyval == GDK_KEY_Control_R) && this->spacingSide == Side::Above) {
         this->adoptElements(Side::Below);
-        this->viewPool->dispatch(xoj::view::VerticalToolView::SWITCH_DIRECTION_REQUEST);
+        this->viewPool->dispatch(vn::view::VerticalToolView::SWITCH_DIRECTION_REQUEST);
         return true;
     }
     return false;
@@ -113,7 +113,7 @@ auto VerticalToolHandler::computeElementsBoundingBox() const -> Range {
 auto VerticalToolHandler::finalize() -> std::unique_ptr<MoveUndoAction> {
 
     // Erase the blue area indicating the shift
-    this->viewPool->dispatchAndClear(xoj::view::VerticalToolView::FINALIZATION_REQUEST);
+    this->viewPool->dispatchAndClear(vn::view::VerticalToolView::FINALIZATION_REQUEST);
 
     if (this->elements.empty()) {
         return nullptr;
@@ -137,7 +137,7 @@ auto VerticalToolHandler::finalize() -> std::unique_ptr<MoveUndoAction> {
 
 double VerticalToolHandler::getPageWidth() const { return page->getWidth(); }
 
-auto VerticalToolHandler::createView(xoj::view::Repaintable* parent, ZoomControl* zoomControl,
-                                     const Settings* settings) const -> std::unique_ptr<xoj::view::OverlayView> {
-    return std::make_unique<xoj::view::VerticalToolView>(this, parent, zoomControl, settings);
+auto VerticalToolHandler::createView(vn::view::Repaintable* parent, ZoomControl* zoomControl,
+                                     const Settings* settings) const -> std::unique_ptr<vn::view::OverlayView> {
+    return std::make_unique<vn::view::VerticalToolView>(this, parent, zoomControl, settings);
 }

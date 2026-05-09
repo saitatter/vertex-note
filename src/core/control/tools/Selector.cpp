@@ -17,7 +17,7 @@
 static_assert(std::numeric_limits<double>::is_iec559);
 
 Selector::Selector(bool multiLayer):
-        multiLayer(multiLayer), viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SelectorView>>()) {}
+        multiLayer(multiLayer), viewPool(std::make_shared<vn::util::DispatchPool<vn::view::SelectorView>>()) {}
 
 Selector::~Selector() = default;
 
@@ -25,7 +25,7 @@ auto Selector::finalize(PageRef page, bool disableMultilayer, Document* doc) -> 
     this->page = page;
 
     // Trigger redraw before any geometry modifications
-    this->viewPool->dispatchAndClear(xoj::view::SelectorView::DELETE_VIEWS_REQUEST, this->bbox);
+    this->viewPool->dispatchAndClear(vn::view::SelectorView::DELETE_VIEWS_REQUEST, this->bbox);
 
     // Extend selection geometry (bbox) to infinity where touching page edges
     this->extendAtPageEdges();
@@ -118,7 +118,7 @@ void RectangularSelector::currentPos(double x, double y) {
 
     boundaryPoints = {{sx, sy}, {sx, ey}, {ex, ey}, {ex, sy}};
 
-    this->viewPool->dispatch(xoj::view::SelectorView::FLAG_DIRTY_REGION, rg);
+    this->viewPool->dispatch(vn::view::SelectorView::FLAG_DIRTY_REGION, rg);
 
     this->maxDist = std::max({this->maxDist, x - this->sx, this->sx - x, y - this->sy, this->sy - y});
 }
@@ -144,7 +144,7 @@ void LassoSelector::currentPos(double x, double y) {
         // add the first point to make sure the filling is painted correctly
         rg.addPoint(boundaryPoints.front().x, boundaryPoints.front().y);
 
-        this->viewPool->dispatch(xoj::view::SelectorView::FLAG_DIRTY_REGION, rg);
+        this->viewPool->dispatch(vn::view::SelectorView::FLAG_DIRTY_REGION, rg);
     }
 }
 

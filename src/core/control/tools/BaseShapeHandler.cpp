@@ -28,7 +28,7 @@ BaseShapeHandler::BaseShapeHandler(Control* control, const PageRef& page, bool f
         flipShift(flipShift),
         flipControl(flipControl),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::ShapeToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::ShapeToolView>>()) {
     snappingHandler.setPageRef(page);
 }
 
@@ -40,14 +40,14 @@ void BaseShapeHandler::updateShape(bool isAltDown, bool isShiftDown, bool isCont
     Range repaintRange = rg.unite(lastSnappingRange);
     lastSnappingRange = rg;
     repaintRange.addPadding(0.5 * this->stroke->getWidth());
-    viewPool->dispatch(xoj::view::ShapeToolView::FLAG_DIRTY_REGION, repaintRange);
+    viewPool->dispatch(vn::view::ShapeToolView::FLAG_DIRTY_REGION, repaintRange);
 }
 
 void BaseShapeHandler::cancelStroke() {
     this->shape.clear();
     Range repaintRange = this->lastSnappingRange;
     repaintRange.addPadding(0.5 * this->stroke->getWidth());
-    this->viewPool->dispatchAndClear(xoj::view::ShapeToolView::FINALIZATION_REQUEST, repaintRange);
+    this->viewPool->dispatchAndClear(vn::view::ShapeToolView::FINALIZATION_REQUEST, repaintRange);
     this->lastSnappingRange = Range();
 }
 
@@ -106,7 +106,7 @@ void BaseShapeHandler::onButtonReleaseEvent(const PositionInputData& pos, double
 
     Range repaintRange = lastSnappingRange;
     repaintRange.addPadding(0.5 * this->stroke->getWidth());
-    this->viewPool->dispatchAndClear(xoj::view::ShapeToolView::FINALIZATION_REQUEST, repaintRange);
+    this->viewPool->dispatchAndClear(vn::view::ShapeToolView::FINALIZATION_REQUEST, repaintRange);
 
     undo->addUndoAction(std::make_unique<InsertUndoAction>(page, layer, stroke.get()));
 
@@ -170,11 +170,11 @@ void BaseShapeHandler::modifyModifiersByDrawDir(double width, double height, dou
 
 auto BaseShapeHandler::getShape() const -> const std::vector<Point>& { return this->shape; }
 
-auto BaseShapeHandler::createView(xoj::view::Repaintable* parent) const -> std::unique_ptr<xoj::view::OverlayView> {
-    return std::make_unique<xoj::view::ShapeToolView>(this, parent);
+auto BaseShapeHandler::createView(vn::view::Repaintable* parent) const -> std::unique_ptr<vn::view::OverlayView> {
+    return std::make_unique<vn::view::ShapeToolView>(this, parent);
 }
 
 auto BaseShapeHandler::getViewPool() const
-        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::ShapeToolView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<vn::view::ShapeToolView>>& {
     return viewPool;
 }

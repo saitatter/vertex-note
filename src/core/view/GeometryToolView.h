@@ -18,6 +18,7 @@
 #include "control/zoom/ZoomListener.h"
 #include "model/GeometryTool.h"  // for GeometryTool
 #include "view/overlays/BaseStrokeToolView.h"
+#include "view/ViewNamespaceAliases.h"
 
 #include "Mask.h"
 
@@ -129,4 +130,4 @@ private:
     mutable Mask mask;
     ZoomControl* zoomControl;
 };
-};  // namespace vn::view
+};  // namespace xoj::view

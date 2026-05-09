@@ -15,6 +15,8 @@
 
 #include <cairo.h>
 
+#include "view/ViewNamespaceAliases.h"
+
 class Point;
 
 namespace xoj::view {
@@ -41,4 +43,4 @@ private:
     const std::vector<Point>& path;
     const std::vector<double>& dashPattern;
 };
-};  // namespace vn::view
+};  // namespace xoj::view

@@ -36,7 +36,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 LineByClicksHandler::LineByClicksHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::LineByClicksView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::LineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -62,7 +62,7 @@ auto LineByClicksHandler::onMotionNotifyEvent(const PositionInputData& pos, doub
     Range repaintRange = previewRange();
     updateCurrentPoint(pos, zoom);
     repaintRange = repaintRange.unite(previewRange());
-    this->viewPool->dispatch(xoj::view::LineByClicksView::FLAG_DIRTY_REGION, repaintRange);
+    this->viewPool->dispatch(vn::view::LineByClicksView::FLAG_DIRTY_REGION, repaintRange);
     return true;
 }
 
@@ -87,7 +87,7 @@ void LineByClicksHandler::onButtonPressEvent(const PositionInputData& pos, doubl
     updateCurrentPoint(pos, zoom);
     if (!this->startPoint) {
         this->startPoint = this->currentPoint;
-        this->viewPool->dispatch(xoj::view::LineByClicksView::FLAG_DIRTY_REGION, previewRange());
+        this->viewPool->dispatch(vn::view::LineByClicksView::FLAG_DIRTY_REGION, previewRange());
         return;
     }
 
@@ -98,9 +98,9 @@ void LineByClicksHandler::onButtonDoublePressEvent(const PositionInputData&, dou
 
 void LineByClicksHandler::onSequenceCancelEvent() { cancel(); }
 
-auto LineByClicksHandler::createView(xoj::view::Repaintable* parent) const
-        -> std::unique_ptr<xoj::view::OverlayView> {
-    return std::make_unique<xoj::view::LineByClicksView>(this, parent);
+auto LineByClicksHandler::createView(vn::view::Repaintable* parent) const
+        -> std::unique_ptr<vn::view::OverlayView> {
+    return std::make_unique<vn::view::LineByClicksView>(this, parent);
 }
 
 auto LineByClicksHandler::isDone() const -> bool { return this->done; }
@@ -122,7 +122,7 @@ auto LineByClicksHandler::getStrokeWidth() const -> double { return this->stroke
 auto LineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto LineByClicksHandler::getViewPool() const
-        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::LineByClicksView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<vn::view::LineByClicksView>>& {
     return this->viewPool;
 }
 
@@ -192,7 +192,7 @@ void LineByClicksHandler::finalizeLine() {
     const Range range = previewRange();
     this->done = true;
     this->startPoint.reset();
-    this->viewPool->dispatchAndClear(xoj::view::LineByClicksView::FINALIZATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::LineByClicksView::FINALIZATION_REQUEST, range);
     this->page->fireElementChanged(ptr);
 }
 
@@ -200,5 +200,5 @@ void LineByClicksHandler::cancel() {
     const Range range = previewRange();
     this->done = true;
     this->startPoint.reset();
-    this->viewPool->dispatchAndClear(xoj::view::LineByClicksView::CANCELLATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::LineByClicksView::CANCELLATION_REQUEST, range);
 }

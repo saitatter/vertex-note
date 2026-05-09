@@ -59,7 +59,7 @@ void AbstractLatexDialog::previewDrawFunc(GtkDrawingArea*, cairo_t* cr, int widt
 
     if (!self->previewMask.isInitialized() || self->previewMask.getZoom() < zoom) {
         // Need to rerender the preview
-        self->previewMask = xoj::view::Mask(gtk_widget_get_scale_factor(GTK_WIDGET(self->previewDrawingArea)),
+        self->previewMask = vn::view::Mask(gtk_widget_get_scale_factor(GTK_WIDGET(self->previewDrawingArea)),
                                             pageRange, zoom, CAIRO_CONTENT_COLOR_ALPHA);
         poppler_page_render(self->previewPdfPage.get(), self->previewMask.get());
     }

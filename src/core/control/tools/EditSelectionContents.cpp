@@ -512,8 +512,8 @@ void EditSelectionContents::paint(cairo_t* cr, double x, double y, double rotati
         cairo_translate(cr2, -dx, -dy);
         cairo_scale(cr2, zoom, zoom);
 
-        xoj::view::ElementContainerView view(this);
-        view.draw(xoj::view::Context::createDefault(cr2));
+        vn::view::ElementContainerView view(this);
+        view.draw(vn::view::Context::createDefault(cr2));
 
         cairo_destroy(cr2);
     }

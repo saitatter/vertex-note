@@ -29,13 +29,13 @@ public:
      * @param popplerPage
      * @param buffer is the result of rendering popplerPage
      */
-    PdfCacheEntry(PdfPagePtr popplerPage, xoj::view::Mask&& buffer):
-            popplerPage(std::move(popplerPage)), buffer(std::forward<xoj::view::Mask>(buffer)) {}
+    PdfCacheEntry(PdfPagePtr popplerPage, vn::view::Mask&& buffer):
+            popplerPage(std::move(popplerPage)), buffer(std::forward<vn::view::Mask>(buffer)) {}
 
     ~PdfCacheEntry() = default;
 
     PdfPagePtr popplerPage;
-    xoj::view::Mask buffer;
+    vn::view::Mask buffer;
 };
 
 static double getPercentZoomChange(double oldZoom, double newZoom) {
@@ -89,7 +89,7 @@ auto PdfCache::lookup(size_t pdfPageNo) const -> const PdfCacheEntry* {
     return nullptr;
 }
 
-auto PdfCache::cache(PdfPagePtr popplerPage, xoj::view::Mask&& buffer) -> const PdfCacheEntry* {
+auto PdfCache::cache(PdfPagePtr popplerPage, vn::view::Mask&& buffer) -> const PdfCacheEntry* {
     xoj_assert(this->maxSize > 0);
     xoj_assert(popplerPage);
     const auto pageId = popplerPage->getPageId();
@@ -105,7 +105,7 @@ auto PdfCache::cache(PdfPagePtr popplerPage, xoj::view::Mask&& buffer) -> const 
     }
 
     this->data.emplace_front(
-            std::make_unique<PdfCacheEntry>(std::move(popplerPage), std::forward<xoj::view::Mask>(buffer)));
+            std::make_unique<PdfCacheEntry>(std::move(popplerPage), std::forward<vn::view::Mask>(buffer)));
 
     return this->data.front().get();
 }
@@ -135,7 +135,7 @@ void PdfCache::render(cairo_t* cr, size_t pdfPageNo, double zoom, double pageWid
             return;
         }
 
-        xoj::view::Mask buffer(cairo_get_target(cr), Range(0, 0, popplerPage->getWidth(), popplerPage->getHeight()),
+        vn::view::Mask buffer(cairo_get_target(cr), Range(0, 0, popplerPage->getWidth(), popplerPage->getHeight()),
                                renderZoom, CAIRO_CONTENT_COLOR_ALPHA);
         popplerPage->render(buffer.get());
         if (this->maxSize == 0) {

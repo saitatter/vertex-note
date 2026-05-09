@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>  // for unique_ptr
 
 #include <gdk/gdk.h>  // for GdkEventKey
@@ -85,7 +87,7 @@ public:
      */
     virtual void onSequenceCancelEvent() = 0;
 
-    virtual std::unique_ptr<xoj::view::OverlayView> createView(xoj::view::Repaintable* parent) const = 0;
+    virtual std::unique_ptr<vn::view::OverlayView> createView(vn::view::Repaintable* parent) const = 0;
 
     Stroke* getStroke() const;
     virtual bool isDone() const;

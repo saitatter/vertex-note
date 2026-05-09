@@ -44,7 +44,7 @@ StrokeHandler::StrokeHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
         stabilizer(StrokeStabilizer::get(control->getSettings())),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::StrokeToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::StrokeToolView>>()) {
     snappingHandler.setPageRef(page);
 }
 
@@ -84,7 +84,7 @@ void StrokeHandler::paintTo(Point point) {
             if (pointCount == 1 && this->hasPressure && endPoint.z < point.z) {
                 // Record the possible increase in pressure for the first point
                 this->stroke->setLastPressure(point.z);
-                this->viewPool->dispatch(xoj::view::StrokeToolView::THICKEN_FIRST_POINT_REQUEST, point.z);
+                this->viewPool->dispatch(vn::view::StrokeToolView::THICKEN_FIRST_POINT_REQUEST, point.z);
             }
             return;
         }
@@ -120,13 +120,13 @@ void StrokeHandler::paintTo(Point point) {
 void StrokeHandler::drawSegmentTo(const Point& point) {
 
     this->stroke->addPoint(this->hasPressure ? point : Point(point.x, point.y));
-    this->viewPool->dispatch(xoj::view::StrokeToolView::ADD_POINT_REQUEST, this->stroke->getPointVector().back());
+    this->viewPool->dispatch(vn::view::StrokeToolView::ADD_POINT_REQUEST, this->stroke->getPointVector().back());
     return;
 }
 
 void StrokeHandler::onSequenceCancelEvent() {
     if (this->stroke) {
-        this->viewPool->dispatchAndClear(xoj::view::StrokeToolView::CANCELLATION_REQUEST,
+        this->viewPool->dispatchAndClear(vn::view::StrokeToolView::CANCELLATION_REQUEST,
                                          Range(this->stroke->boundingRect()));
         stroke.reset();
     }
@@ -152,7 +152,7 @@ void StrokeHandler::finalizeStroke(double pressure) {
             // Pressure inference provides a pressure value to the last event. Most devices set this value to 0.
             const double newPressure = std::max(pt.z, pressure * this->stroke->getWidth());
             this->stroke->setLastPressure(newPressure);
-            this->viewPool->dispatch(xoj::view::StrokeToolView::THICKEN_FIRST_POINT_REQUEST, newPressure);
+            this->viewPool->dispatch(vn::view::StrokeToolView::THICKEN_FIRST_POINT_REQUEST, newPressure);
         }
         stroke->addPoint(pt);
     }
@@ -207,7 +207,7 @@ void StrokeHandler::onButtonReleaseEvent(const PositionInputData& pos, double zo
 
     // Blitt the stroke to the page's buffer and delete all views.
     // Passing the empty Range() as no actual redrawing is necessary at this point
-    this->viewPool->dispatchAndClear(xoj::view::StrokeToolView::FINALIZATION_REQUEST, Range());
+    this->viewPool->dispatchAndClear(vn::view::StrokeToolView::FINALIZATION_REQUEST, Range());
 
     page->fireElementChanged(ptr);
 }
@@ -252,11 +252,11 @@ void StrokeHandler::strokeRecognizerDetected(std::unique_ptr<Stroke> recognized,
     range.addPoint(strokePtr->getX(), strokePtr->getY());
     range.addPoint(strokePtr->getX() + strokePtr->getElementWidth(), strokePtr->getY() + strokePtr->getElementHeight());
 
-    this->viewPool->dispatch(xoj::view::StrokeToolView::STROKE_REPLACEMENT_REQUEST, *recognizedPtr);
+    this->viewPool->dispatch(vn::view::StrokeToolView::STROKE_REPLACEMENT_REQUEST, *recognizedPtr);
 
     // Blitt the new stroke to the page's buffer, delete all the views and refresh the area (so the recognized stroke
     // gets displayed instead of the old one).
-    this->viewPool->dispatchAndClear(xoj::view::StrokeToolView::FINALIZATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::StrokeToolView::FINALIZATION_REQUEST, range);
     page->fireElementChanged(recognizedPtr);
 }
 
@@ -280,22 +280,22 @@ void StrokeHandler::onButtonDoublePressEvent(const PositionInputData&, double) {
     // nothing to do
 }
 
-auto StrokeHandler::createView(xoj::view::Repaintable* parent) const -> std::unique_ptr<xoj::view::OverlayView> {
+auto StrokeHandler::createView(vn::view::Repaintable* parent) const -> std::unique_ptr<vn::view::OverlayView> {
     xoj_assert(this->stroke);
     const Stroke& s = *this->stroke;
     if (s.getFill() != -1) {
         if (s.getToolType() == StrokeTool::HIGHLIGHTER) {
             // Filled highlighter requires to wipe the mask entirely at every iteration
             // It has a dedicated view class.
-            return std::make_unique<xoj::view::StrokeToolFilledHighlighterView>(this, s, parent);
+            return std::make_unique<vn::view::StrokeToolFilledHighlighterView>(this, s, parent);
         } else {
-            return std::make_unique<xoj::view::StrokeToolFilledView>(this, s, parent);
+            return std::make_unique<vn::view::StrokeToolFilledView>(this, s, parent);
         }
     } else {
-        return std::make_unique<xoj::view::StrokeToolView>(this, s, parent);
+        return std::make_unique<vn::view::StrokeToolView>(this, s, parent);
     }
 }
 
-auto StrokeHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::StrokeToolView>>& {
+auto StrokeHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<vn::view::StrokeToolView>>& {
     return viewPool;
 }

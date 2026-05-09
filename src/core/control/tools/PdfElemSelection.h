@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <cstddef>  // for size_t
 #include <string>   // for string
 #include <vector>   // for vector
@@ -72,7 +74,7 @@ public:
     /// Returns the selection style corresponding to the given tool type.
     static PdfPageSelectionStyle selectionStyleForToolType(ToolType type);
 
-    inline const std::shared_ptr<xoj::util::DispatchPool<xoj::view::PdfElementSelectionView>>& getViewPool() const {
+    inline const std::shared_ptr<xoj::util::DispatchPool<vn::view::PdfElementSelectionView>>& getViewPool() const {
         return viewPool;
     }
 
@@ -105,5 +107,5 @@ private:
 
     bool finalized;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::PdfElementSelectionView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::PdfElementSelectionView>> viewPool;
 };

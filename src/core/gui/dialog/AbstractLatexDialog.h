@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>  // for unique_ptr
 
 #include <poppler.h>  // for PopplerDocument
@@ -76,7 +78,7 @@ protected:
 
     // Preview
     GtkDrawingArea* previewDrawingArea;
-    xoj::view::Mask previewMask;
+    vn::view::Mask previewMask;
 
     /**
      * Source page from which we render the preview.

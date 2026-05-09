@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>
 #include <optional>
 
@@ -44,7 +46,7 @@ public:
     void onButtonPressEvent(const PositionInputData& pos, double zoom) override;
     void onButtonDoublePressEvent(const PositionInputData& pos, double zoom) override;
     void onSequenceCancelEvent() override;
-    std::unique_ptr<xoj::view::OverlayView> createView(xoj::view::Repaintable* parent) const override;
+    std::unique_ptr<vn::view::OverlayView> createView(vn::view::Repaintable* parent) const override;
     bool isDone() const override;
     bool acceptsAdditionalPress() const override;
 
@@ -56,7 +58,7 @@ public:
     [[nodiscard]] auto getStrokeColor() const -> Color;
 
     [[nodiscard]] auto getViewPool() const
-            -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::RectangleByVerticesView>>&;
+            -> const std::shared_ptr<xoj::util::DispatchPool<vn::view::RectangleByVerticesView>>&;
 
 private:
     [[nodiscard]] auto previewRange() const -> Range;
@@ -76,5 +78,5 @@ private:
     bool done = false;
     double strokeWidth = 1.0;
     Color strokeColor = Colors::black;
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::RectangleByVerticesView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::RectangleByVerticesView>> viewPool;
 };

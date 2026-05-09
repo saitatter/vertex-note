@@ -66,7 +66,7 @@ void PreviewJob::drawPage() {
         layer = (dynamic_cast<SidebarPreviewLayerEntry*>(this->sidebarPreview))->getLayer();
     }
 
-    auto context = xoj::view::Context::createDefault(cr.get());
+    auto context = vn::view::Context::createDefault(cr.get());
 
     switch (type) {
         case RENDER_TYPE_PAGE_PREVIEW:
@@ -78,13 +78,13 @@ void PreviewJob::drawPage() {
             // render single layer
             view.initDrawing(page, cr.get(), true);
             if (layer == 0) {
-                auto flags = xoj::view::BACKGROUND_SHOW_ALL;
-                flags.forceVisible = xoj::view::FORCE_VISIBLE;
+                auto flags = vn::view::BACKGROUND_SHOW_ALL;
+                flags.forceVisible = vn::view::FORCE_VISIBLE;
                 view.drawBackground(flags);
             } else {
-                view.drawBackground(xoj::view::BACKGROUND_FORCE_PAINT_BACKGROUND_COLOR_ONLY);
+                view.drawBackground(vn::view::BACKGROUND_FORCE_PAINT_BACKGROUND_COLOR_ONLY);
                 const Layer* drawLayer = page->getLayersView()[layer - 1];
-                xoj::view::LayerView layerView(drawLayer);
+                vn::view::LayerView layerView(drawLayer);
                 layerView.draw(context);
             }
             view.finializeDrawing();
@@ -93,13 +93,13 @@ void PreviewJob::drawPage() {
         case RENDER_TYPE_PAGE_LAYERSTACK: {
             // render all layers up to layer
             view.initDrawing(page, cr.get(), true);
-            auto flags = xoj::view::BACKGROUND_SHOW_ALL;
-            flags.forceVisible = xoj::view::FORCE_VISIBLE;
+            auto flags = vn::view::BACKGROUND_SHOW_ALL;
+            flags.forceVisible = vn::view::FORCE_VISIBLE;
             view.drawBackground(flags);
             const auto layers = page->getLayersView();
             for (Layer::Index i = 0; i < layer; i++) {
                 const Layer* drawLayer = layers[i];
-                xoj::view::LayerView layerView(drawLayer);
+                vn::view::LayerView layerView(drawLayer);
                 layerView.draw(context);
             }
             view.finializeDrawing();

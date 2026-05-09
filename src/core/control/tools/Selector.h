@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <vector>  // for vector
 
 #include "model/Element.h"  // for Element (ptr only), ShapeContainer
@@ -47,7 +49,7 @@ public:
      */
     virtual void extendAtPageEdges() = 0;
 
-    inline auto getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::SelectorView>>& {
+    inline auto getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<vn::view::SelectorView>>& {
         return viewPool;
     }
 
@@ -73,7 +75,7 @@ protected:
 
     Range bbox;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::SelectorView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::SelectorView>> viewPool;
 
     friend class EditSelection;
 };

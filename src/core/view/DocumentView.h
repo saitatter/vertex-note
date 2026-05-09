@@ -15,6 +15,7 @@
 
 #include "model/PageRef.h"  // for ConstPageRef
 #include "util/ElementRange.h"
+#include "view/ViewNamespaceAliases.h"
 #include "view/background/BackgroundFlags.h"
 
 class PdfCache;

@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>   // for unique_ptr
 #include <mutex>    // for mutex
 #include <utility>  // for pair
@@ -139,7 +141,7 @@ protected:
 
 #ifdef DEBUG_ERASABLE_STROKE_BOXES
 public:
-    mutable xoj::view::Mask debugMask;
+    mutable vn::view::Mask debugMask;
 
     static void paintDebugRect(const xoj::util::Rectangle<double>& rect, char color, cairo_t* cr);
 #endif

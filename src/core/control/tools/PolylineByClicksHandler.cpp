@@ -37,7 +37,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 PolylineByClicksHandler::PolylineByClicksHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::PolylineByClicksView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<vn::view::PolylineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -63,7 +63,7 @@ auto PolylineByClicksHandler::onMotionNotifyEvent(const PositionInputData& pos, 
     Range repaintRange = previewRange();
     updateCurrentPoint(pos, zoom);
     repaintRange = repaintRange.unite(previewRange());
-    this->viewPool->dispatch(xoj::view::PolylineByClicksView::FLAG_DIRTY_REGION, repaintRange);
+    this->viewPool->dispatch(vn::view::PolylineByClicksView::FLAG_DIRTY_REGION, repaintRange);
     return true;
 }
 
@@ -102,9 +102,9 @@ void PolylineByClicksHandler::onButtonDoublePressEvent(const PositionInputData&,
 
 void PolylineByClicksHandler::onSequenceCancelEvent() { cancel(); }
 
-auto PolylineByClicksHandler::createView(xoj::view::Repaintable* parent) const
-        -> std::unique_ptr<xoj::view::OverlayView> {
-    return std::make_unique<xoj::view::PolylineByClicksView>(this, parent);
+auto PolylineByClicksHandler::createView(vn::view::Repaintable* parent) const
+        -> std::unique_ptr<vn::view::OverlayView> {
+    return std::make_unique<vn::view::PolylineByClicksView>(this, parent);
 }
 
 auto PolylineByClicksHandler::isDone() const -> bool { return this->done; }
@@ -126,7 +126,7 @@ auto PolylineByClicksHandler::getStrokeWidth() const -> double { return this->st
 auto PolylineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto PolylineByClicksHandler::getViewPool() const
-        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::PolylineByClicksView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<vn::view::PolylineByClicksView>>& {
     return this->viewPool;
 }
 
@@ -179,7 +179,7 @@ void PolylineByClicksHandler::addCurrentPoint() {
     Range repaintRange = previewRange();
     this->points.push_back(this->currentPoint);
     repaintRange = repaintRange.unite(previewRange());
-    this->viewPool->dispatch(xoj::view::PolylineByClicksView::FLAG_DIRTY_REGION, repaintRange);
+    this->viewPool->dispatch(vn::view::PolylineByClicksView::FLAG_DIRTY_REGION, repaintRange);
 }
 
 void PolylineByClicksHandler::finalizePolyline() {
@@ -216,7 +216,7 @@ void PolylineByClicksHandler::finalizePolyline() {
     const Range range = previewRange();
     this->done = true;
     this->points.clear();
-    this->viewPool->dispatchAndClear(xoj::view::PolylineByClicksView::FINALIZATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::PolylineByClicksView::FINALIZATION_REQUEST, range);
     this->page->fireElementChanged(ptr);
 }
 
@@ -224,5 +224,5 @@ void PolylineByClicksHandler::cancel() {
     const Range range = previewRange();
     this->done = true;
     this->points.clear();
-    this->viewPool->dispatchAndClear(xoj::view::PolylineByClicksView::CANCELLATION_REQUEST, range);
+    this->viewPool->dispatchAndClear(vn::view::PolylineByClicksView::CANCELLATION_REQUEST, range);
 }

@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "view/ViewNamespaceAliases.h"
+
 #include <memory>    // for unique_ptr
 #include <vector>    // for vector
 
@@ -69,8 +71,8 @@ public:
 
     void forEachElement(std::function<void(const Element*)> f) const override;
 
-    auto createView(xoj::view::Repaintable* parent, ZoomControl* zoomControl, const Settings* settings) const
-            -> std::unique_ptr<xoj::view::OverlayView>;
+    auto createView(vn::view::Repaintable* parent, ZoomControl* zoomControl, const Settings* settings) const
+            -> std::unique_ptr<vn::view::OverlayView>;
 
     enum class Side {
         /** elements above the reference line */
@@ -84,7 +86,7 @@ public:
     inline Side getSide() const { return spacingSide; }
     double getPageWidth() const;
 
-    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<xoj::view::VerticalToolView>> {
+    inline auto getViewPool() const -> std::shared_ptr<xoj::util::DispatchPool<vn::view::VerticalToolView>> {
         return viewPool;
     }
 
@@ -131,5 +133,5 @@ private:
      */
     SnapToGridInputHandler snappingHandler;
 
-    std::shared_ptr<xoj::util::DispatchPool<xoj::view::VerticalToolView>> viewPool;
+    std::shared_ptr<xoj::util::DispatchPool<vn::view::VerticalToolView>> viewPool;
 };
