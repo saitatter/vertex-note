@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <QWidget>
@@ -32,7 +33,7 @@ public:
     void handlePointerEvent(const vn::ui::input::PointerEvent& event) override;
     void handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) override;
     void handleTouchEvent(const vn::ui::input::TouchEvent& event) override;
-    void setDocumentController(const QtExperimentalDocumentController* documentController);
+    void setDocumentController(QtExperimentalDocumentController* documentController);
     void newBlankDocument();
     void setViewportState(double zoom, double scrollX, double scrollY);
     [[nodiscard]] auto sessionViewportState() const -> QtExperimentalViewportState;
@@ -66,7 +67,14 @@ private:
     [[nodiscard]] auto documentSceneBounds() const -> QRectF;
     void drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
                           std::size_t pageIndex) const;
+    void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
+                                        std::size_t pageIndex) const;
     void drawOverlayHud(QPainter& painter) const;
+    [[nodiscard]] auto screenToScene(const QPointF& screenPoint) const -> QPointF;
+    [[nodiscard]] auto pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t>;
+    void updateGeometryHover(const QPointF& screenPoint);
+    void clearGeometryHover();
+    void selectHoveredGeometry();
     void beginPan(const QPointF& position);
     void endPan();
 
@@ -78,7 +86,7 @@ private:
     std::unique_ptr<vn::view::render::TextRenderer> textRenderer;
     std::unique_ptr<vn::view::render::ImageRenderer> imageRenderer;
     QString lastEventSummary;
-    const QtExperimentalDocumentController* documentController = nullptr;
+    QtExperimentalDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;
     double scrollX = 0.0;
     double scrollY = 0.0;

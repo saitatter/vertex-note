@@ -41,6 +41,7 @@ constexpr double ZOOM_STEP = 1.15;
 constexpr double PAGE_STACK_X = 120.0;
 constexpr double PAGE_STACK_Y = 100.0;
 constexpr double PAGE_STACK_GAP = 56.0;
+constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 
 auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
     using vn::ui::common::CanvasCursor;
@@ -64,6 +65,54 @@ auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
 }
 
 auto clampZoom(double zoom) -> double { return std::clamp(zoom, MIN_ZOOM, MAX_ZOOM); }
+
+auto snapLabel(std::optional<vn::snap::SnapKind> kind) -> QString {
+    if (!kind) {
+        return QStringLiteral("HIT");
+    }
+
+    switch (*kind) {
+        case vn::snap::SnapKind::Grid:
+            return QStringLiteral("GRID");
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+            return QStringLiteral("VERTEX");
+        case vn::snap::SnapKind::Midpoint:
+            return QStringLiteral("MID");
+        case vn::snap::SnapKind::EdgeProjection:
+            return QStringLiteral("PROJ");
+        case vn::snap::SnapKind::Intersection:
+            return QStringLiteral("INT");
+        case vn::snap::SnapKind::ConstraintGuide:
+            return QStringLiteral("CONST");
+    }
+
+    return QStringLiteral("HIT");
+}
+
+auto snapColor(std::optional<vn::snap::SnapKind> kind) -> QColor {
+    if (!kind) {
+        return QColor(45, 125, 255);
+    }
+
+    switch (*kind) {
+        case vn::snap::SnapKind::Grid:
+            return QColor(90, 90, 90);
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+            return QColor(0, 115, 255);
+        case vn::snap::SnapKind::Midpoint:
+            return QColor(0, 166, 89);
+        case vn::snap::SnapKind::EdgeProjection:
+            return QColor(255, 140, 20);
+        case vn::snap::SnapKind::Intersection:
+            return QColor(203, 30, 203);
+        case vn::snap::SnapKind::ConstraintGuide:
+            return QColor(0, 153, 191);
+    }
+
+    return QColor(45, 125, 255);
+}
 
 }  // namespace
 
@@ -120,7 +169,7 @@ void QtExperimentalCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& eve
     updateDebugOverlay(QStringLiteral("touch points=%1").arg(static_cast<int>(event.points.size())));
 }
 
-void QtExperimentalCanvas::setDocumentController(const QtExperimentalDocumentController* documentController) {
+void QtExperimentalCanvas::setDocumentController(QtExperimentalDocumentController* documentController) {
     this->documentController = documentController;
     fitPage(false);
 }
@@ -240,6 +289,12 @@ void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton) {
+        updateGeometryHover(event->position());
+        selectHoveredGeometry();
+        event->accept();
+        return;
+    }
     QWidget::mousePressEvent(event);
 }
 
@@ -265,6 +320,7 @@ void QtExperimentalCanvas::mouseMoveEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    updateGeometryHover(event->position());
     QWidget::mouseMoveEvent(event);
 }
 
@@ -293,6 +349,15 @@ void QtExperimentalCanvas::keyPressEvent(QKeyEvent* event) {
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = true;
         setCursor(Qt::OpenHandCursor);
+    } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Escape && this->documentController) {
+        this->documentController->clearInteractiveGeometryState();
+        updateDebugOverlay(QStringLiteral("selection cleared"));
+        if (!this->spaceHeld && !this->panning) {
+            unsetCursor();
+        }
+        update();
+        event->accept();
+        return;
     }
     QWidget::keyPressEvent(event);
 }
@@ -312,6 +377,8 @@ bool QtExperimentalCanvas::event(QEvent* event) {
     if (event && (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate ||
                   event->type() == QEvent::TouchEnd)) {
         this->inputAdapter->handleTouch(*static_cast<QTouchEvent*>(event));
+    } else if (event && event->type() == QEvent::Leave) {
+        clearGeometryHover();
     }
     return QWidget::event(event);
 }
@@ -409,6 +476,7 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                     },
                     drawable);
         }
+        drawGeometryInteractionOverlay(painter, rect, pageInfo, pageIndex);
     }
 
     painter.setPen(QColor(61, 74, 89));
@@ -465,6 +533,192 @@ void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
         painter.drawText(badgeRect.adjusted(10, 0, -10, 0), Qt::AlignCenter, *it);
         right = badgeRect.left() - badgeSpacing;
     }
+}
+
+auto QtExperimentalCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
+    return QPointF(this->scrollX + screenPoint.x() / this->zoomFactor, this->scrollY + screenPoint.y() / this->zoomFactor);
+}
+
+auto QtExperimentalCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t> {
+    const auto rects = pageRects();
+    for (std::size_t index = 0; index < rects.size(); ++index) {
+        if (rects[index].contains(scenePoint)) {
+            return index;
+        }
+    }
+    return std::nullopt;
+}
+
+void QtExperimentalCanvas::updateGeometryHover(const QPointF& screenPoint) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIndex = pageIndexAtScenePoint(scenePoint);
+    if (!pageIndex) {
+        clearGeometryHover();
+        if (!this->spaceHeld) {
+            unsetCursor();
+        }
+        return;
+    }
+
+    const auto rects = pageRects();
+    const auto& pageRect = rects[*pageIndex];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    auto hit = this->documentController->hitTestGeometry(*pageIndex, pageX, pageY, this->zoomFactor, GEOMETRY_HIT_RADIUS_PIXELS);
+    this->documentController->setHoveredGeometry(hit);
+    if (hit) {
+        if (!this->spaceHeld && !this->panning) {
+            setCursor(hit->hit.type == vn::view::render::GeometryHitType::Vertex ? Qt::CrossCursor : Qt::PointingHandCursor);
+        }
+        updateDebugOverlay(QStringLiteral("geometry hover page=%1 object=%2")
+                                   .arg(static_cast<int>(hit->pageIndex + 1))
+                                   .arg(static_cast<qulonglong>(hit->hit.objectId)));
+    } else if (!this->spaceHeld && !this->panning) {
+        unsetCursor();
+    }
+    update();
+}
+
+void QtExperimentalCanvas::clearGeometryHover() {
+    if (!this->documentController) {
+        return;
+    }
+    this->documentController->setHoveredGeometry(std::nullopt);
+    update();
+}
+
+void QtExperimentalCanvas::selectHoveredGeometry() {
+    if (!this->documentController) {
+        return;
+    }
+
+    this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry());
+    if (!this->documentController->selectedGeometry()) {
+        updateDebugOverlay(QStringLiteral("selection cleared"));
+    } else {
+        const auto& hit = *this->documentController->selectedGeometry();
+        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2")
+                                   .arg(static_cast<int>(hit.pageIndex + 1))
+                                   .arg(static_cast<qulonglong>(hit.hit.objectId)));
+    }
+    update();
+}
+
+void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
+                                                          const QtExperimentalPageInfo& pageInfo,
+                                                          std::size_t pageIndex) const {
+    if (!this->documentController || !this->geometryRenderer) {
+        return;
+    }
+
+    vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
+    const auto& hovered = this->documentController->hoveredGeometry();
+    const auto& selected = this->documentController->selectedGeometry();
+
+    const auto drawEdgeOverlay = [&](const QtExperimentalGeometryHit& geometryHit, const QColor& color, double extraWidth) {
+        if (geometryHit.pageIndex != pageIndex || geometryHit.hit.type != vn::view::render::GeometryHitType::Edge) {
+            return;
+        }
+
+        for (const auto& drawable: pageInfo.drawables) {
+            const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+            if (!geometry || geometry->objectId != geometryHit.hit.objectId) {
+                continue;
+            }
+
+            auto edgeIt = std::find_if(geometry->edges.begin(), geometry->edges.end(), [&](const auto& edge) {
+                return edge.id == geometryHit.hit.edgeId;
+            });
+            if (edgeIt == geometry->edges.end()) {
+                continue;
+            }
+
+            vn::view::render::GeometryRenderModel overlay;
+            overlay.objectId = geometry->objectId;
+            overlay.vertices = geometry->vertices;
+            overlay.edges = {*edgeIt};
+            overlay.color = Color(static_cast<uint8_t>(color.red()), static_cast<uint8_t>(color.green()),
+                                  static_cast<uint8_t>(color.blue()));
+            overlay.strokeWidth = geometry->strokeWidth + extraWidth;
+            this->geometryRenderer->draw(overlay, renderContext);
+            break;
+        }
+    };
+
+    if (selected) {
+        drawEdgeOverlay(*selected, QColor(0, 102, 255, 215), 2.2);
+    }
+    if (hovered) {
+        drawEdgeOverlay(*hovered, QColor(0, 171, 255, 190), 1.2);
+    }
+
+    std::optional<vn::geom::ObjectId> focusObject;
+    if (selected && selected->pageIndex == pageIndex) {
+        focusObject = selected->hit.objectId;
+    } else if (hovered && hovered->pageIndex == pageIndex) {
+        focusObject = hovered->hit.objectId;
+    }
+    if (!focusObject) {
+        return;
+    }
+
+    painter.save();
+    for (const auto& drawable: pageInfo.drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry || geometry->objectId != *focusObject) {
+            continue;
+        }
+
+        for (const auto& vertex: geometry->vertices) {
+            const bool isSelected = selected && selected->pageIndex == pageIndex &&
+                                    selected->hit.type == vn::view::render::GeometryHitType::Vertex &&
+                                    selected->hit.objectId == geometry->objectId && selected->hit.vertexId == vertex.id;
+            const bool isHovered = hovered && hovered->pageIndex == pageIndex &&
+                                   hovered->hit.type == vn::view::render::GeometryHitType::Vertex &&
+                                   hovered->hit.objectId == geometry->objectId && hovered->hit.vertexId == vertex.id;
+
+            const double size = isHovered ? 9.0 : isSelected ? 8.0 : 6.5;
+            const QRectF handle(rect.x() + vertex.position.x - size / 2.0, rect.y() + vertex.position.y - size / 2.0,
+                                size, size);
+            painter.setPen(QPen(QColor(0, 102, 255), isHovered ? 2.1 : isSelected ? 1.9 : 1.4));
+            painter.setBrush(isSelected ? QBrush(QColor(0, 102, 255)) : QBrush(QColor(255, 255, 255, 240)));
+            painter.drawRect(handle);
+            if (isSelected || isHovered) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : QColor(0, 102, 255));
+                painter.drawEllipse(QPointF(rect.x() + vertex.position.x, rect.y() + vertex.position.y), 1.8, 1.8);
+            }
+        }
+        break;
+    }
+
+    const auto indicator = hovered ? hovered : selected;
+    if (indicator && indicator->pageIndex == pageIndex) {
+        const QPointF center(rect.x() + indicator->hit.point.x, rect.y() + indicator->hit.point.y);
+        const QColor color = snapColor(indicator->hit.snapKind);
+        painter.setPen(QPen(QColor(255, 255, 255, 235), 3.2));
+        painter.setBrush(QColor(color.red(), color.green(), color.blue(), 40));
+        painter.drawEllipse(center, 4.8, 4.8);
+        painter.setPen(QPen(color, 1.4));
+        painter.drawEllipse(center, 4.8, 4.8);
+        painter.drawLine(QPointF(center.x() - 4.8, center.y()), QPointF(center.x() + 4.8, center.y()));
+        painter.drawLine(QPointF(center.x(), center.y() - 4.8), QPointF(center.x(), center.y() + 4.8));
+
+        const QString label = snapLabel(indicator->hit.snapKind);
+        QFontMetrics metrics(painter.font());
+        const int labelWidth = metrics.horizontalAdvance(label) + 10;
+        const QRectF badge(center.x() + 10.0, center.y() - 22.0, labelWidth, 18.0);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(255, 255, 255, 225));
+        painter.drawRoundedRect(badge, 6.0, 6.0);
+        painter.setPen(color);
+        painter.drawText(badge, Qt::AlignCenter, label);
+    }
+    painter.restore();
 }
 
 void QtExperimentalCanvas::beginPan(const QPointF& position) {

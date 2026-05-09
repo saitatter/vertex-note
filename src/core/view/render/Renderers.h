@@ -72,7 +72,13 @@ struct ImageRenderModel {
     double height = 0.0;
 };
 
+struct GeometryVertexRenderModel {
+    vn::geom::VertexId id = vn::geom::InvalidVertexId;
+    Point position;
+};
+
 struct GeometryEdgeRenderModel {
+    vn::geom::EdgeId id = vn::geom::InvalidEdgeId;
     vn::geom::EdgeKind kind = vn::geom::EdgeKind::Line;
     Point start;
     Point end;
@@ -81,6 +87,8 @@ struct GeometryEdgeRenderModel {
 };
 
 struct GeometryRenderModel {
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    std::vector<GeometryVertexRenderModel> vertices;
     std::vector<GeometryEdgeRenderModel> edges;
     Color color{};
     double strokeWidth = 1.0;

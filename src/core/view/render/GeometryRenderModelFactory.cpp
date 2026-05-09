@@ -13,10 +13,17 @@ namespace vn::view::render {
 
 auto GeometryRenderModelFactory::fromGeometryElement(const vn::geom::GeometryElement& geometry) -> GeometryRenderModel {
     GeometryRenderModel model;
+    model.objectId = geometry.geometry().objectId();
     model.color = geometry.getColor();
     model.strokeWidth = geometry.getStrokeWidth();
 
     const auto& object = geometry.geometry();
+    model.vertices.reserve(object.vertices().size());
+    for (const auto& vertex: object.vertices()) {
+        model.vertices.push_back(
+                {.id = vertex.id, .position = Point(vertex.position.x, vertex.position.y)});
+    }
+
     model.edges.reserve(object.edges().size());
     for (const auto& edge: object.edges()) {
         const auto* start = object.vertex(edge.start);
@@ -26,6 +33,7 @@ auto GeometryRenderModelFactory::fromGeometryElement(const vn::geom::GeometryEle
         }
 
         GeometryEdgeRenderModel renderEdge;
+        renderEdge.id = edge.id;
         renderEdge.kind = edge.kind;
         renderEdge.start = Point(start->position.x, start->position.y);
         renderEdge.end = Point(end->position.x, end->position.y);

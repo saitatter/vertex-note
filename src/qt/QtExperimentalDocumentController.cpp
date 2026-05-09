@@ -96,6 +96,54 @@ auto QtExperimentalDocumentController::titleText() const -> std::string {
     return "Untitled Document";
 }
 
+auto QtExperimentalDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                                       double maxScreenDistance) const
+        -> std::optional<QtExperimentalGeometryHit> {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        return std::nullopt;
+    }
+
+    std::optional<QtExperimentalGeometryHit> bestHit;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+
+        auto hit = vn::view::render::hitTestGeometry(*geometry, pageX, pageY, zoom, maxScreenDistance);
+        if (!hit) {
+            continue;
+        }
+
+        if (!bestHit || hit->screenDistance < bestHit->hit.screenDistance) {
+            bestHit = QtExperimentalGeometryHit{.pageIndex = pageIndex, .hit = *hit};
+        }
+    }
+
+    return bestHit;
+}
+
+void QtExperimentalDocumentController::setHoveredGeometry(std::optional<QtExperimentalGeometryHit> hit) {
+    this->hoveredGeometryHit = std::move(hit);
+}
+
+void QtExperimentalDocumentController::setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit) {
+    this->selectedGeometryHit = std::move(hit);
+}
+
+void QtExperimentalDocumentController::clearInteractiveGeometryState() {
+    this->hoveredGeometryHit.reset();
+    this->selectedGeometryHit.reset();
+}
+
+auto QtExperimentalDocumentController::hoveredGeometry() const -> const std::optional<QtExperimentalGeometryHit>& {
+    return this->hoveredGeometryHit;
+}
+
+auto QtExperimentalDocumentController::selectedGeometry() const -> const std::optional<QtExperimentalGeometryHit>& {
+    return this->selectedGeometryHit;
+}
+
 auto QtExperimentalDocumentController::isPdfPath(const std::filesystem::path& path) -> bool {
     return normalizeExtension(path) == ".pdf";
 }
@@ -175,6 +223,7 @@ auto renderImageBackgroundPreview(const BackgroundImage& image) -> std::string {
 
 void QtExperimentalDocumentController::rebuildPageSnapshots() {
     this->pageSnapshots.clear();
+    clearInteractiveGeometryState();
     if (!this->document) {
         return;
     }
