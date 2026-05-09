@@ -7,6 +7,7 @@
 #include <memory>     // for make_unique, __sha...
 #include <numeric>    // for reduce
 #include <optional>
+#include <sstream>
 #include <span>
 #include <stdexcept>
 #include <string>     // for string
@@ -118,6 +119,50 @@ static auto intersectsSelection(std::span<const vn::geom::VertexId> selectedVert
                 return std::ranges::find(constraint.edges, id) != constraint.edges.end();
             });
     return vertexMatch || edgeMatch;
+}
+
+static auto formatConstraintValue(double value) -> std::string {
+    std::ostringstream stream;
+    stream.setf(std::ios::fixed, std::ios::floatfield);
+    stream.precision(2);
+    stream << value;
+    auto text = stream.str();
+    while (!text.empty() && text.back() == '0') {
+        text.pop_back();
+    }
+    if (!text.empty() && text.back() == '.') {
+        text.pop_back();
+    }
+    return text;
+}
+
+static auto constraintBadgeText(const vn::geom::Constraint& constraint) -> std::string {
+    using vn::geom::ConstraintKind;
+
+    switch (constraint.kind) {
+        case ConstraintKind::Coincident:
+            return "COINC";
+        case ConstraintKind::Horizontal:
+            return "H";
+        case ConstraintKind::Vertical:
+            return "V";
+        case ConstraintKind::Parallel:
+            return "PAR";
+        case ConstraintKind::Perpendicular:
+            return "PERP";
+        case ConstraintKind::FixedLength:
+            return "L=" + formatConstraintValue(constraint.value);
+        case ConstraintKind::EqualLength:
+            return "EQ";
+        case ConstraintKind::FixedAngle:
+            return "ANGLE";
+        case ConstraintKind::Radius:
+            return "R";
+        case ConstraintKind::OnEdge:
+            return "ON";
+    }
+
+    return "C";
 }
 
 auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr eOwn)
@@ -1589,6 +1634,7 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
     }
 
     drawGeometryEdgeHighlight(cr, x, y, zoom);
+    drawGeometryConstraintBadges(cr, x, y, zoom);
     drawGeometryVertexHandles(cr, x, y, zoom);
     drawGeometrySnapIndicator(cr, zoom, baseMatrix);
 }
@@ -1702,6 +1748,52 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
         drawEdge(edge, edgeHovered ? 1.0 : edgeSelected ? 0.85 : 0.45,
                  edgeHovered ? 0.5 : edgeSelected ? 0.4 : 0.28);
     }
+    cairo_restore(cr);
+}
+
+void EditSelection::drawGeometryConstraintBadges(cairo_t* cr, double x, double y, double zoom) const {
+    const auto constraints = selectedGeometryConstraints();
+    if (constraints.empty()) {
+        return;
+    }
+
+    constexpr double paddingX = 8.0;
+    constexpr double paddingY = 5.0;
+    constexpr double gap = 6.0;
+    constexpr double fontSize = 11.0;
+
+    cairo_save(cr);
+    cairo_set_dash(cr, nullptr, 0, 0);
+    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, fontSize);
+
+    GdkRGBA selectionColor = view->getSelectionColor();
+    double badgeX = std::min(x, x + width) * zoom;
+    double badgeY = (std::min(y, y + height) * zoom) - (fontSize + 18.0);
+
+    for (const auto& constraint: constraints) {
+        const auto label = SelectionFactory::constraintBadgeText(constraint);
+        cairo_text_extents_t extents{};
+        cairo_text_extents(cr, label.c_str(), &extents);
+
+        const double badgeWidth = extents.width + paddingX * 2.0;
+        const double badgeHeight = fontSize + paddingY * 2.0;
+
+        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 0.96);
+        cairo_rectangle(cr, badgeX, badgeY, badgeWidth, badgeHeight);
+        cairo_fill_preserve(cr);
+        gdk_cairo_set_source_rgba(cr, &selectionColor);
+        cairo_set_line_width(cr, 1.25);
+        cairo_stroke(cr);
+
+        cairo_move_to(cr, badgeX + paddingX - extents.x_bearing,
+                      badgeY + paddingY + fontSize - extents.y_bearing * 0.15);
+        gdk_cairo_set_source_rgba(cr, &selectionColor);
+        cairo_show_text(cr, label.c_str());
+
+        badgeX += badgeWidth + gap;
+    }
+
     cairo_restore(cr);
 }
 
@@ -2008,6 +2100,21 @@ auto EditSelection::findSelectedGeometryEdge(vn::geom::GeometryElement* element,
         }
     }
     return std::nullopt;
+}
+
+auto EditSelection::selectedGeometryConstraints() const -> std::vector<vn::geom::Constraint> {
+    if (!this->activeGeometryElement) {
+        return {};
+    }
+
+    std::vector<vn::geom::Constraint> constraints;
+    for (const auto& constraint: this->activeGeometryElement->geometry().constraints()) {
+        if (SelectionFactory::intersectsSelection(this->activeGeometryVertices, this->activeGeometryEdges,
+                                                  constraint)) {
+            constraints.push_back(constraint);
+        }
+    }
+    return constraints;
 }
 
 /**

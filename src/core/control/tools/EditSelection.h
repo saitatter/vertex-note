@@ -333,6 +333,7 @@ private:
      * Draw VertexNote vertex handles for selected object-based geometry.
      */
     void drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, double zoom) const;
+    void drawGeometryConstraintBadges(cairo_t* cr, double x, double y, double zoom) const;
     void drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const;
     void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool selected, bool hovered) const;
     void drawGeometrySnapIndicator(cairo_t* cr, double zoom, const cairo_matrix_t& baseMatrix) const;
@@ -359,6 +360,7 @@ private:
             -> bool;
     [[nodiscard]] auto findSelectedGeometryEdge(vn::geom::GeometryElement* element, vn::geom::EdgeId edge) const
             -> std::optional<std::size_t>;
+    [[nodiscard]] auto selectedGeometryConstraints() const -> std::vector<vn::geom::Constraint>;
 
 
     /**
