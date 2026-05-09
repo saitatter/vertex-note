@@ -19,11 +19,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 ## Project related variables
-file(STRINGS pyproject.toml VERTEX_NOTE_VERSION_LINE REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+\"")
+file(STRINGS pyproject.toml VERTEX_NOTE_VERSION_LINE
+        REGEX "^[ ]*version[ ]*=[ ]*\"[0-9]+\\.[0-9]+\\.[0-9]+\"")
 if(NOT VERTEX_NOTE_VERSION_LINE)
     message(FATAL_ERROR "Could not extract VertexNote version from pyproject.toml")
 endif()
-string(REGEX REPLACE "^version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"$" "\\1" VERTEX_NOTE_VERSION "${VERTEX_NOTE_VERSION_LINE}")
+list(GET VERTEX_NOTE_VERSION_LINE 0 VERTEX_NOTE_VERSION_LINE)
+string(REGEX REPLACE "^[ ]*version[ ]*=[ ]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\".*$" "\\1"
+        VERTEX_NOTE_VERSION "${VERTEX_NOTE_VERSION_LINE}")
 if(NOT VERTEX_NOTE_VERSION)
     message(FATAL_ERROR "Parsed VertexNote version is empty")
 endif()

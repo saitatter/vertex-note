@@ -17,7 +17,7 @@ documents or upstream-derived internals that still need incremental refactors.
 ## Current High-Impact Surfaces
 
 - Build/package identity:
-  - `CMakeLists.txt` still declares `project(vertex-note)`.
+  - `CMakeLists.txt` now declares `project(VertexNote)`.
   - `src/CMakeLists.txt` still builds `vertex-note` and `vertexnote-wrapper`.
   - Windows packaging still outputs `vertex-note-setup.exe` from `windows-setup/package.sh`.
 - Desktop/app metadata:
