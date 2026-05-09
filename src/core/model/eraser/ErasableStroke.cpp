@@ -18,7 +18,7 @@
 #include "ErasableStrokeOverlapTree.h"  // for ErasableStroke::OverlapTree
 #include "PaddedBox.h"                  // for PaddedBox
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 ErasableStroke::ErasableStroke(const Stroke& stroke): stroke(stroke) {
     const auto& pts = this->stroke.getPointVector();

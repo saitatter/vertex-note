@@ -19,7 +19,7 @@ GeometryToolView::GeometryToolView(const GeometryTool* geometryTool, Repaintable
 GeometryToolView::~GeometryToolView() { zoomControl->removeZoomListener(this); }
 
 void GeometryToolView::draw(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_save(cr);
 
     if (!mask.isInitialized()) {
@@ -54,7 +54,7 @@ auto GeometryToolView::createMask(cairo_t* targetCr) const -> Mask {
 void GeometryToolView::on(ResetMaskRequest) { mask.reset(); }
 
 void GeometryToolView::showTextCenteredAndRotated(cairo_t* cr, const std::string& text, double angle) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_text_extents_t te;
     cairo_text_extents(cr, text.c_str(), &te);
     const double dx = te.x_bearing + te.width / 2.0;

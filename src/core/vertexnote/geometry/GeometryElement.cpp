@@ -23,7 +23,7 @@
 #include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 namespace vn::geom {
 

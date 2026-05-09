@@ -69,7 +69,7 @@ void NotePage::setSelectedLayerId(Layer::Index id) { this->currentLayer = id; }
 
 auto NotePage::getLayers() -> std::vector<Layer*>& { return this->layer; }
 
-auto NotePage::getLayersView() const -> xoj::util::PointerContainerView<std::vector<Layer*>> { return this->layer; }
+auto NotePage::getLayersView() const -> vn::util::PointerContainerView<std::vector<Layer*>> { return this->layer; }
 
 auto NotePage::getLayerCount() const -> Layer::Index { return this->layer.size(); }
 

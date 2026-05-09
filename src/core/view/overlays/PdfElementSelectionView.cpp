@@ -17,7 +17,7 @@ PdfElementSelectionView::PdfElementSelectionView(const PdfElemSelection* selecti
 PdfElementSelectionView::~PdfElementSelectionView() noexcept { this->unregisterFromPool(); }
 
 void PdfElementSelectionView::draw(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     if (auto reg = selection->getSelectedRegion(); reg && !cairo_region_is_empty(reg)) {
         gdk_cairo_region(cr, reg);

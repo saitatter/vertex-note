@@ -15,6 +15,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "util/NamespaceAliases.h"
 #include "util/safe_casts.h"
 
 namespace xoj::util {

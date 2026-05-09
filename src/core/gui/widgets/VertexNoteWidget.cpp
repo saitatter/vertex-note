@@ -100,7 +100,7 @@ static void gtk_vertex_note_class_init(GtkVertexNoteClass* cptr) {
     g_object_class_override_property(G_OBJECT_CLASS(cptr), PROP_VSCROLL_POLICY, "vscroll-policy");
 }
 
-auto gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p) -> xoj::util::Rectangle<double>* {
+auto gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p) -> vn::util::Rectangle<double>* {
     if (!p || !p->isVisible()) {
         return nullptr;
     }
@@ -143,7 +143,7 @@ auto gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p) -> x
                   "should never happen");
     }
 
-    return new xoj::util::Rectangle<double>(std::max(r3.x, 0) / zoom, std::max(r3.y, 0) / zoom, r3.width / zoom,
+    return new vn::util::Rectangle<double>(std::max(r3.x, 0) / zoom, std::max(r3.y, 0) / zoom, r3.width / zoom,
                                             r3.height / zoom);
 }
 
@@ -258,7 +258,7 @@ void gtk_vertex_note_repaint_area(GtkWidget* widget, int x1, int y1, int x2, int
         return;
     }
 
-    Range visible(xoj::util::Rectangle<double>(gtk_adjustment_get_value(GTK_VERTEX_NOTE(widget)->hadjustment),
+    Range visible(vn::util::Rectangle<double>(gtk_adjustment_get_value(GTK_VERTEX_NOTE(widget)->hadjustment),
                                                gtk_adjustment_get_value(GTK_VERTEX_NOTE(widget)->vadjustment),
                                                gtk_adjustment_get_page_size(GTK_VERTEX_NOTE(widget)->hadjustment),
                                                gtk_adjustment_get_page_size(GTK_VERTEX_NOTE(widget)->vadjustment)));
@@ -311,9 +311,9 @@ static auto gtk_vertex_note_draw(GtkWidget* widget, cairo_t* cr) -> gboolean {
 
     const auto& views = xournal->view->getViewPages();
     // Store the pages to release the layout mutex ASAP
-    std::vector<std::pair<size_t, xoj::util::Point<int>>> pages;
+    std::vector<std::pair<size_t, vn::util::Point<int>>> pages;
     xournal->layout->forEachEntriesIntersectingRange(
-            clip, [&](size_t index, const Range&, xoj::util::Point<int> pos) { pages.emplace_back(index, pos); });
+            clip, [&](size_t index, const Range&, vn::util::Point<int> pos) { pages.emplace_back(index, pos); });
 
     for (auto [index, pos]: pages) {
         const auto& pv = views[index];

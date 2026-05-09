@@ -26,7 +26,7 @@
 #include "util/EnumIndexedArray.h"                     // for EnumIndexedArray
 #include "util/StringUtils.h"                          // for ellipsize
 #include "util/i18n.h"                                 // for FS, _F, _
-#include "util/utf8_view.h"                            // for xoj::util::utf8
+#include "util/utf8_view.h"                            // for vn::util::utf8
 #include "vertexnote/io/GeometryXoppMetadata.h"
 
 #include "filesystem.h"  // for path
@@ -86,7 +86,7 @@ void XmlParser::parserStartElement(GMarkupParseContext* context, const gchar* el
     auto self = static_cast<XmlParser*>(userdata);
     xoj_assert(self);
 
-    const auto tagType = self->getTagType(elementName | xoj::util::utf8);
+    const auto tagType = self->getTagType(elementName | vn::util::utf8);
 
     // Check for unknown tags
     if (tagType == TagType::UNKNOWN) {
@@ -121,7 +121,7 @@ void XmlParser::parserEndElement(GMarkupParseContext* context, const gchar* elem
 
     // GMarkup should have already risen an error if there was an error in the document structure.
     xoj_assert(!self->hierarchy.empty());
-    xoj_assert(TAG_NAMES[self->hierarchy.back()] == xoj::util::utf8(elementName) ||
+    xoj_assert(TAG_NAMES[self->hierarchy.back()] == vn::util::utf8(elementName) ||
                self->hierarchy.back() == TagType::UNKNOWN);
     self->closeTopTag();
 }

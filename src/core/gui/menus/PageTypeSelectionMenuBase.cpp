@@ -40,7 +40,7 @@ GSimpleAction* createPageTypeSelectionAction(PageTypeHandler* types, const std::
 PageTypeSelectionMenuBase::PageTypeSelectionMenuBase(PageTypeHandler* typesHandler, const Settings* settings,
                                                      const std::string_view& actionName):
         selectedPT(settings->getPageTemplateSettings().getPageInsertType()),
-        typeSelectionAction(createPageTypeSelectionAction(typesHandler, selectedPT, actionName), xoj::util::adopt),
+        typeSelectionAction(createPageTypeSelectionAction(typesHandler, selectedPT, actionName), vn::util::adopt),
         types(typesHandler) {
     g_signal_connect(G_OBJECT(typeSelectionAction.get()), "change-state", G_CALLBACK(changeSelectionCallback), this);
 
@@ -49,7 +49,7 @@ PageTypeSelectionMenuBase::PageTypeSelectionMenuBase(PageTypeHandler* typesHandl
 
 void PageTypeSelectionMenuBase::changeSelectionCallback(GSimpleAction* ga, GVariant* parameter,
                                                         PageTypeSelectionMenuBase* self) {
-    if (g_variant_equal(parameter, xoj::util::GVariantSPtr(g_action_get_state(G_ACTION(ga)), xoj::util::adopt).get())) {
+    if (g_variant_equal(parameter, vn::util::GVariantSPtr(g_action_get_state(G_ACTION(ga)), vn::util::adopt).get())) {
         return;
     }
 

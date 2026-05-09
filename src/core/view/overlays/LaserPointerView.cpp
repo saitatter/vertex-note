@@ -21,7 +21,7 @@ LaserPointerView::~LaserPointerView() noexcept { this->unregisterFromPool(); }
 
 void LaserPointerView::draw(cairo_t* cr) const {
     if (this->mask.isInitialized()) {
-        xoj::util::CairoSaveGuard saveGuard(cr);
+        vn::util::CairoSaveGuard saveGuard(cr);
         cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
         this->mask.paintToWithAlpha(cr, this->alpha);
     } else {

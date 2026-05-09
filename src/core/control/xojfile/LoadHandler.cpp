@@ -146,8 +146,8 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
 
     // Extract audio to temporary file
     GFileIOStream* fileStream = nullptr;
-    const xoj::util::GObjectSPtr<GFile> tmpFile(g_file_new_tmp("xournal_audio_XXXXXX.tmp", &fileStream, nullptr),
-                                                xoj::util::adopt);
+    const vn::util::GObjectSPtr<GFile> tmpFile(g_file_new_tmp("xournal_audio_XXXXXX.tmp", &fileStream, nullptr),
+                                                vn::util::adopt);
     if (!tmpFile) {
         logError(_("Unable to create temporary file for audio attachment"));
         return;
@@ -197,8 +197,8 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
     if (this->isGzFile || !attach) {
         const fs::path fileToLoad = getAbsoluteFilepath(filename, attach);
 
-        xoj::util::GErrorGuard error{};
-        img.loadFile(fileToLoad, xoj::util::out_ptr(error));
+        vn::util::GErrorGuard error{};
+        img.loadFile(fileToLoad, vn::util::out_ptr(error));
 
         if (error) {
             logError(FS(_F("Could not read image: {1}. Error message: {2}") % fileToLoad.u8string() % error->message));
@@ -216,12 +216,12 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
          * input stream assumes the data will not be modified: do not remove the const qualifier on readResult or
          * imgData
          */
-        const xoj::util::GObjectSPtr<GInputStream> inputStream{
+        const vn::util::GObjectSPtr<GInputStream> inputStream{
                 g_memory_input_stream_new_from_data(imgData.data(), static_cast<gssize>(imgData.size()), nullptr),
-                xoj::util::adopt};
+                vn::util::adopt};
 
-        xoj::util::GErrorGuard error{};
-        img.loadFile(inputStream.get(), filename, xoj::util::out_ptr(error));
+        vn::util::GErrorGuard error{};
+        img.loadFile(inputStream.get(), filename, vn::util::out_ptr(error));
 
         g_input_stream_close(inputStream.get(), nullptr, nullptr);
 
@@ -488,7 +488,7 @@ void LoadHandler::logError(const std::string& error) {
 }
 
 
-auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<xoj::util::InputStream> {
+auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<vn::util::InputStream> {
     this->xournalFilepath = filepath;
     int zipError = 0;
     this->zipFp = zip_wrapper{zip_open(char_cast(filepath.u8string().c_str()), ZIP_RDONLY, &zipError)};
@@ -496,7 +496,7 @@ auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<xoj::uti
     // Check if file is a gzip
     if (!this->zipFp && zipError == ZIP_ER_NOZIP) {
         this->isGzFile = true;
-        return std::make_unique<xoj::util::GzInputStream>(filepath);
+        return std::make_unique<vn::util::GzInputStream>(filepath);
     }
 
     // Check if file is a zip
@@ -538,7 +538,7 @@ auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<xoj::uti
         }
 
         // open the main content file
-        return std::make_unique<xoj::util::ZipInputStream>(this->zipFp.get(), "content.xml");
+        return std::make_unique<vn::util::ZipInputStream>(this->zipFp.get(), "content.xml");
     }
 
     // Fail if neither method could open the file
@@ -549,14 +549,14 @@ void LoadHandler::closeFile() noexcept { this->zipFp.reset(); }
 
 VN_GIO_GUARD_GENERATOR_TYPE(GMarkupParseContext, g_markup_parse_context_free);
 
-void LoadHandler::parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStream) {
+void LoadHandler::parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStream) {
     xoj_assert(xmlContentStream);
 
     XmlParser parserInterface{*this};
     auto context = GMarkupParseContextGuard{g_markup_parse_context_new(
             &XmlParser::interface, static_cast<GMarkupParseFlags>(0), &parserInterface, nullptr)};
 
-    const auto handleGError = [this](xoj::util::GErrorGuard error) -> void {
+    const auto handleGError = [this](vn::util::GErrorGuard error) -> void {
         if (error) {
             logError(FS(_F("XML Parser error: {1}") % error->message));
         }
@@ -564,7 +564,7 @@ void LoadHandler::parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStr
 
     std::array<char, 1024> buffer{};
     int len{};
-    xoj::util::GErrorGuard error;
+    vn::util::GErrorGuard error;
     while (true) {
         len = xmlContentStream->read(buffer.data(), buffer.size());
         if (len < 0) {
@@ -574,7 +574,7 @@ void LoadHandler::parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStr
             break;
         }
 
-        auto valid = g_markup_parse_context_parse(context.get(), buffer.data(), len, xoj::util::out_ptr(error));
+        auto valid = g_markup_parse_context_parse(context.get(), buffer.data(), len, vn::util::out_ptr(error));
         handleGError(std::move(error));
         if (!valid) {
             throw std::runtime_error{_("Invalid XML data read")};
@@ -582,7 +582,7 @@ void LoadHandler::parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStr
     }
 
     // Sanity checks for document validity
-    if (!g_markup_parse_context_end_parse(context.get(), xoj::util::out_ptr(error)) || !this->parsingComplete) {
+    if (!g_markup_parse_context_end_parse(context.get(), vn::util::out_ptr(error)) || !this->parsingComplete) {
         handleGError(std::move(error));
 
         // The end may be cut off. Attempt to recover contents by closing the remaining open nodes.

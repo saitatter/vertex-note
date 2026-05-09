@@ -18,7 +18,7 @@ TextView::TextView(const Text* text): text(text) {}
 
 TextView::~TextView() = default;
 
-auto TextView::initPango(cairo_t* cr, const Text* t) -> xoj::util::GObjectSPtr<PangoLayout> {
+auto TextView::initPango(cairo_t* cr, const Text* t) -> vn::util::GObjectSPtr<PangoLayout> {
     auto layout = t->createPangoLayout();
     pango_cairo_update_layout(cr, layout.get());
     pango_context_set_matrix(pango_layout_get_context(layout.get()), nullptr);
@@ -32,7 +32,7 @@ void TextView::draw(const Context& ctx) const {
         return;
     }
 
-    xoj::util::CairoSaveGuard saveGuard(ctx.cr);
+    vn::util::CairoSaveGuard saveGuard(ctx.cr);
 
     // make elements without audio translucent when highlighting elements with audio
     if (ctx.fadeOutNonAudio && text->getAudioFilename().empty()) {

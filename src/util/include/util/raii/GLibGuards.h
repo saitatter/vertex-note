@@ -15,6 +15,9 @@
 #include <type_traits>
 
 #include <gtk/gtk.h>
+
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 inline namespace raii {
 

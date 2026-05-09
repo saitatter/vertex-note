@@ -118,7 +118,7 @@ void LatexController::findSelectedTexElement() {
     if (this->selectedElem) {
         // this will get the position of the Latex properly
         EditSelection* theSelection = control->getWindow()->getXournal()->getSelection();
-        xoj::util::Rectangle<double> rect = theSelection->getSnappedBounds();
+        vn::util::Rectangle<double> rect = theSelection->getSnappedBounds();
         this->posx = rect.x;
         this->posy = rect.y;
 

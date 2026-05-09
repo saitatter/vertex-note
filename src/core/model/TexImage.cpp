@@ -12,7 +12,7 @@
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 TexImage::TexImage(): Element(ELEMENT_TEXIMAGE) { this->sizeCalculated = true; }
 
@@ -93,14 +93,14 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
     if (type == "PDF") {
         // Note: binaryData must not be modified while pdf is live.
         auto* bytes = g_bytes_new_with_free_func(this->binaryData.data(), this->binaryData.size(), nullptr, nullptr);
-        this->pdf.reset(poppler_document_new_from_bytes(bytes, nullptr, err), xoj::util::adopt);
+        this->pdf.reset(poppler_document_new_from_bytes(bytes, nullptr, err), vn::util::adopt);
         g_bytes_unref(bytes);
 
         if (!pdf.get() || poppler_document_get_n_pages(this->pdf.get()) < 1) {
             return false;
         }
         if (std::abs(this->width * this->height) <= std::numeric_limits<double>::epsilon()) {
-            xoj::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), xoj::util::adopt);
+            vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
             poppler_page_get_size(page.get(), &this->width, &this->height);
         }
     } else if (type == "PNG") {

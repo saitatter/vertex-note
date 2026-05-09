@@ -14,7 +14,7 @@
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 TextBoxUndoAction::TextBoxUndoAction(const PageRef& page, Layer* layer, Element* element, ElementPtr oldelement):
         UndoAction("TextBoxUndoAction"), layer(layer), element(element), oldelement(std::move(oldelement)) {

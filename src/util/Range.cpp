@@ -5,7 +5,7 @@
 #include "util/Rectangle.h"
 
 
-Range::Range(const xoj::util::Rectangle<double>& r): minX(r.x), minY(r.y), maxX(r.x + r.width), maxY(r.y + r.height) {}
+Range::Range(const vn::util::Rectangle<double>& r): minX(r.x), minY(r.y), maxX(r.x + r.width), maxY(r.y + r.height) {}
 
 void Range::addPoint(double x, double y) {
     this->minX = std::min(this->minX, x);
@@ -55,6 +55,6 @@ bool Range::isValid() const { return minX <= maxX && minY <= maxY; }
 
 bool Range::contains(double x, double y) const { return x >= minX && x <= maxX && y >= minY && y <= maxY; }
 
-bool Range::contains(const xoj::util::Rectangle<double>& r) const {
+bool Range::contains(const vn::util::Rectangle<double>& r) const {
     return this->minX <= r.x && this->maxX >= r.x + r.width && this->minY <= r.y && this->maxY >= r.y + r.height;
 }

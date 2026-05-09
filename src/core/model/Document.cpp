@@ -42,7 +42,7 @@ Document::~Document() {
 
 void Document::freeTreeContentModel() {
     if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), xoj::util::wrap_v<freeTreeContentEntry>, this);
+        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<freeTreeContentEntry>, this);
 
         this->contentsModel.reset();
     }
@@ -186,15 +186,15 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
     }
 
     auto fn2 = converter.to_bytes(filename);
-    auto p = fs::path(xoj::util::utf8(fn2));
+    auto p = fs::path(vn::util::utf8(fn2));
 
     Util::clearExtensions(p);
     return p;
 }
 
-auto Document::getPreview() const -> xoj::util::CairoSurfaceSPtr { return this->preview; }
+auto Document::getPreview() const -> vn::util::CairoSurfaceSPtr { return this->preview; }
 
-void Document::setPreview(xoj::util::CairoSurfaceSPtr preview) { this->preview = std::move(preview); }
+void Document::setPreview(vn::util::CairoSurfaceSPtr preview) { this->preview = std::move(preview); }
 
 auto Document::getEvMetadataFilename() const -> fs::path {
     if (!this->filepath.empty()) {
@@ -279,7 +279,7 @@ void Document::buildContentsModel() {
 
     this->contentsModel.reset(reinterpret_cast<GtkTreeModel*>(gtk_tree_store_new(4, G_TYPE_STRING, G_TYPE_OBJECT,
                                                                                  G_TYPE_BOOLEAN, G_TYPE_STRING)),
-                              xoj::util::adopt);
+                              vn::util::adopt);
     buildTreeContentsModel(nullptr, iter);
     delete iter;
 }
@@ -310,7 +310,7 @@ auto Document::fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTre
 void Document::updateIndexPageNumbers() {
     indexPdfPages();
     if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), xoj::util::wrap_v<fillPageLabels>, this);
+        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<fillPageLabels>, this);
     }
 }
 

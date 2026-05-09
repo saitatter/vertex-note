@@ -48,7 +48,7 @@ auto createRecentMenuItem(const GtkRecentInfo* info, size_t i) {
     action += std::to_string(i);
     action += ")";
 
-    return xoj::util::GObjectSPtr<GMenuItem>(g_menu_item_new(label.c_str(), action.c_str()), xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenuItem>(g_menu_item_new(label.c_str(), action.c_str()), vn::util::adopt);
 }
 
 auto createRemoveMenuItem(const GtkRecentInfo* info, size_t i) {
@@ -66,11 +66,11 @@ auto createRemoveMenuItem(const GtkRecentInfo* info, size_t i) {
     action += std::to_string(i);
     action += ")";
 
-    return xoj::util::GObjectSPtr<GMenuItem>(g_menu_item_new(label.c_str(), action.c_str()), xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenuItem>(g_menu_item_new(label.c_str(), action.c_str()), vn::util::adopt);
 }
 
 template <typename container>
-auto createRecentMenu(const container& recentFiles, size_t start_index) -> xoj::util::GObjectSPtr<GMenu> {
+auto createRecentMenu(const container& recentFiles, size_t start_index) -> vn::util::GObjectSPtr<GMenu> {
     if (recentFiles.empty()) {
         return nullptr;
     }
@@ -79,11 +79,11 @@ auto createRecentMenu(const container& recentFiles, size_t start_index) -> xoj::
     for (auto& recent: recentFiles) {
         g_menu_append_item(menu, createRecentMenuItem(recent.get(), start_index++).get());
     }
-    return xoj::util::GObjectSPtr<GMenu>(menu, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenu>(menu, vn::util::adopt);
 }
 
 template <typename container>
-auto createRemoveSubmenu(const container& recentFiles, size_t start_index) -> xoj::util::GObjectSPtr<GMenu> {
+auto createRemoveSubmenu(const container& recentFiles, size_t start_index) -> vn::util::GObjectSPtr<GMenu> {
     if (recentFiles.empty()) {
         return nullptr;
     }
@@ -93,12 +93,12 @@ auto createRemoveSubmenu(const container& recentFiles, size_t start_index) -> xo
         g_menu_append_item(menu, createRemoveMenuItem(recent.get(), start_index++).get());
     }
 
-    return xoj::util::GObjectSPtr<GMenu>(menu, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenu>(menu, vn::util::adopt);
 }
 
 auto createEmptyListPlaceholder() {
-    return xoj::util::GObjectSPtr<GMenuItem>(g_menu_item_new(_("No recent files"), DISABLED_ACTION_NAME),
-                                             xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenuItem>(g_menu_item_new(_("No recent files"), DISABLED_ACTION_NAME),
+                                             vn::util::adopt);
 }
 
 auto createClearListSection() {
@@ -109,7 +109,7 @@ auto createClearListSection() {
     GMenu* menu = g_menu_new();
     g_menu_append(menu, _("Clear list"), action.c_str());
 
-    return xoj::util::GObjectSPtr<GMenu>(menu, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenu>(menu, vn::util::adopt);
 }
 }  // namespace
 
@@ -123,15 +123,15 @@ RecentDocumentsSubmenu::RecentDocumentsSubmenu(Control* control, GtkApplicationW
     } else {
         static_assert(is_action_namespace_match<decltype(win)>(G_ACTION_NAMESPACE));
 
-        openFileAction.reset(g_simple_action_new(OPEN_ACTION_NAME, G_VARIANT_TYPE_UINT64), xoj::util::adopt);
+        openFileAction.reset(g_simple_action_new(OPEN_ACTION_NAME, G_VARIANT_TYPE_UINT64), vn::util::adopt);
         g_signal_connect(G_OBJECT(openFileAction.get()), "activate", G_CALLBACK(openFileCallback), this);
         g_action_map_add_action(G_ACTION_MAP(win), G_ACTION(openFileAction.get()));
 
-        clearListAction.reset(g_simple_action_new(CLEAR_LIST_ACTION_NAME, nullptr), xoj::util::adopt);
+        clearListAction.reset(g_simple_action_new(CLEAR_LIST_ACTION_NAME, nullptr), vn::util::adopt);
         g_signal_connect(G_OBJECT(clearListAction.get()), "activate", G_CALLBACK(clearRecentFilesCallback), nullptr);
         g_action_map_add_action(G_ACTION_MAP(win), G_ACTION(clearListAction.get()));
 
-        removeFileAction.reset(g_simple_action_new(REMOVE_ACTION_NAME, G_VARIANT_TYPE_UINT64), xoj::util::adopt);
+        removeFileAction.reset(g_simple_action_new(REMOVE_ACTION_NAME, G_VARIANT_TYPE_UINT64), vn::util::adopt);
         g_signal_connect(G_OBJECT(removeFileAction.get()), "activate", G_CALLBACK(removeFileCallback), this);
         g_action_map_add_action(G_ACTION_MAP(win), G_ACTION(removeFileAction.get()));
     }
@@ -206,7 +206,7 @@ void RecentDocumentsSubmenu::updateMenu() {
 }
 
 void RecentDocumentsSubmenu::addToMenubar(Menubar& menubar) {
-    recentFilesSubmenu.reset(menubar.get<GMenu>(SUBMENU_ID, [](auto* p) { return G_MENU(p); }), xoj::util::ref);
+    recentFilesSubmenu.reset(menubar.get<GMenu>(SUBMENU_ID, [](auto* p) { return G_MENU(p); }), vn::util::ref);
     updateMenu();
 }
 

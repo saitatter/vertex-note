@@ -29,9 +29,9 @@ FloatingToolbox::FloatingToolbox(MainWindow* theMainWindow, GtkOverlay* overlay)
     gtk_overlay_set_overlay_pass_through(overlay, this->floatingToolbox, true);
     gtk_widget_add_events(this->floatingToolbox, GDK_LEAVE_NOTIFY_MASK);
     g_signal_connect(this->floatingToolbox, "leave-notify-event",
-                     xoj::util::wrap_for_g_callback_v<handleLeaveFloatingToolbox>, this);
+                     vn::util::wrap_for_g_callback_v<handleLeaveFloatingToolbox>, this);
     // position overlay widgets
-    g_signal_connect(overlay, "get-child-position", xoj::util::wrap_for_g_callback_v<getOverlayPosition>, this);
+    g_signal_connect(overlay, "get-child-position", vn::util::wrap_for_g_callback_v<getOverlayPosition>, this);
 }
 
 

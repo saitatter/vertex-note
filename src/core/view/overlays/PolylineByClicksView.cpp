@@ -35,7 +35,7 @@ void PolylineByClicksView::draw(cairo_t* cr) const {
         return;
     }
 
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
     cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
     cairo_set_line_width(cr, this->handler->getStrokeWidth());

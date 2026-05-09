@@ -505,7 +505,7 @@ void on_startup(GApplication* application, XMPtr app_data) {
 auto on_handle_local_options(GApplication*, GVariantDict*, XMPtr app_data) -> gint {
     initCAndCoutLocales();
 
-    auto print_version = [&] { std::cout << xoj::util::getVersionInfo() << std::endl; };
+    auto print_version = [&] { std::cout << vn::util::getVersionInfo() << std::endl; };
 
     auto exec_guarded = [&](auto&& fun, auto&& s) {
         try {

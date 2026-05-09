@@ -17,7 +17,7 @@
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 Text::Text(): AudioElement(ELEMENT_TEXT) {
     this->font.setName("Sans");
@@ -87,11 +87,11 @@ void Text::setHeight(double height) {
 
 void Text::setInEditing(bool inEditing) { this->inEditing = inEditing; }
 
-auto Text::createPangoLayout() const -> xoj::util::GObjectSPtr<PangoLayout> {
-    xoj::util::GObjectSPtr<PangoContext> c(pango_font_map_create_context(pango_cairo_font_map_get_default()),
-                                           xoj::util::adopt);
+auto Text::createPangoLayout() const -> vn::util::GObjectSPtr<PangoLayout> {
+    vn::util::GObjectSPtr<PangoContext> c(pango_font_map_create_context(pango_cairo_font_map_get_default()),
+                                           vn::util::adopt);
     pango_context_set_round_glyph_positions(c.get(), false);  // Avoid weird glyph positioning on small fonts
-    xoj::util::GObjectSPtr<PangoLayout> layout(pango_layout_new(c.get()), xoj::util::adopt);
+    vn::util::GObjectSPtr<PangoLayout> layout(pango_layout_new(c.get()), vn::util::adopt);
 
 #if PANGO_VERSION_CHECK(1, 48, 5)  // see https://gitlab.gnome.org/GNOME/pango/-/issues/499
     pango_layout_set_line_spacing(layout.get(), 1.0);

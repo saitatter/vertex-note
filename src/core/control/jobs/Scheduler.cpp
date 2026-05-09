@@ -184,7 +184,7 @@ auto Scheduler::jobThreadCallback(Scheduler* scheduler) -> gpointer {
 
                 if (hasOnlyRenderJobs) {
                     if (auto id = scheduler->jobRenderThreadTimerId.exchange(g_timeout_add(
-                                static_cast<guint>(diff), xoj::util::wrap_for_once_v<jobRenderThreadTimer>, scheduler));
+                                static_cast<guint>(diff), vn::util::wrap_for_once_v<jobRenderThreadTimer>, scheduler));
                         id != 0) {
                         g_source_remove(id);
                     }

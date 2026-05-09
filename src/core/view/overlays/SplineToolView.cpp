@@ -38,7 +38,7 @@ void SplineToolView::draw(cairo_t* cr) const {
 
     const double lineWidth = LINE_WIDTH_WITHOUT_ZOOM / this->parent->getZoom();
 
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_set_line_width(cr, lineWidth);
 
     const Point& firstKnot = data->knots.front();
@@ -95,7 +95,7 @@ void SplineToolView::drawWithoutDrawingAids(cairo_t* cr) const {
     }
     xoj_assert(!data->knots.empty() && data->knots.size() == data->tangents.size());
 
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     this->drawSpline(cr, data.value());
 }
 

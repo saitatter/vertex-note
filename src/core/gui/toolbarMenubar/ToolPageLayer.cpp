@@ -42,7 +42,7 @@ ShowLayerEntry::ShowLayerEntry(LayerController* lc, Layer::Index id) noexcept: c
                                       Data* d = reinterpret_cast<Data*>(data);
                                       d->lc->setLayerVisible(d->id, gtk_toggle_button_get_active(btn));
                                   }),
-                                  new Data{lc, id}, xoj::util::closure_notify_cb<Data>, GConnectFlags(0));
+                                  new Data{lc, id}, vn::util::closure_notify_cb<Data>, GConnectFlags(0));
     gtk_widget_set_margin_end(checkButton, 4);
 }
 
@@ -69,7 +69,7 @@ static std::tuple<GtkWidget*, std::vector<ShowLayerEntry>, std::vector<std::pair
         gtk_widget_set_can_focus(btn, false);
         group = GTK_RADIO_BUTTON(btn);
 
-        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), xoj::util::makeGVariantSPtr(id).get());
+        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), vn::util::makeGVariantSPtr(id).get());
         /**
          * RadioButton's and GAction don't work as expected in GTK3
          * To circumvent this, we have our own GAction/RadioButton interactions
@@ -100,7 +100,7 @@ static std::tuple<GtkWidget*, std::vector<ShowLayerEntry>, std::vector<std::pair
                                                          Layer::Index id) -> std::pair<GtkWidget*, gulong> {
         GtkWidget* btn = gtk_check_button_new_with_label(layerName.c_str());
         gtk_actionable_set_action_name(GTK_ACTIONABLE(btn), actionName.c_str());
-        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), xoj::util::makeGVariantSPtr(id).get());
+        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), vn::util::makeGVariantSPtr(id).get());
         // Callback to hide the popover when a new layer is selected
         auto sig = g_signal_connect_object(btn, "toggled", G_CALLBACK(+[](GtkToggleButton*, gpointer popover) {
             gtk_popover_popdown(GTK_POPOVER(popover)); }), popover, GConnectFlags(0));
@@ -143,7 +143,7 @@ static std::tuple<GtkWidget*, std::vector<ShowLayerEntry>, std::vector<std::pair
 /// @return floating ref
 static GtkLabel* makeLabel() {
     auto* label = GTK_LABEL(gtk_label_new(_("Loading...")));
-    xoj::util::PangoAttrListSPtr attrs(pango_attr_list_new(), xoj::util::adopt);
+    vn::util::PangoAttrListSPtr attrs(pango_attr_list_new(), vn::util::adopt);
     pango_attr_list_insert(attrs.get(), pango_attr_weight_new(PANGO_WEIGHT_BOLD));
     gtk_label_set_attributes(label, attrs.get());
     return label;
@@ -156,7 +156,7 @@ static void addSpecialButton(GtkBox* box, const std::string& name, Action action
     GtkWidget* lb = gtk_label_new(name.c_str());
     gtk_widget_set_halign(lb, GTK_ALIGN_START);
 
-    xoj::util::PangoAttrListSPtr attrs(pango_attr_list_new(), xoj::util::adopt);
+    vn::util::PangoAttrListSPtr attrs(pango_attr_list_new(), vn::util::adopt);
     pango_attr_list_insert(attrs.get(), pango_attr_weight_new(PANGO_WEIGHT_BOLD));
     gtk_label_set_attributes(GTK_LABEL(lb), attrs.get());
 
@@ -197,8 +197,8 @@ public:
             grid(nullptr) {}
     ~InstanceData() = default;
 
-    xoj::util::WidgetSPtr makeWidget(bool horizontal) {
-        xoj::util::WidgetSPtr item(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1), xoj::util::adopt);
+    vn::util::WidgetSPtr makeWidget(bool horizontal) {
+        vn::util::WidgetSPtr item(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1), vn::util::adopt);
         GtkBox* hbox = GTK_BOX(item.get());
         GtkWidget* lbl = gtk_label_new(_("Layer"));
         gtk_widget_set_margin_start(lbl, 7);
@@ -220,8 +220,8 @@ public:
         LayerCtrlListener::registerListener(lc);
 
         // *this is destroyed once the widget (hence *popover) has been destroyed. No need to disconnect those signals
-        g_signal_connect(popover, "show", xoj::util::wrap_for_g_callback_v<popoverShown>, this);
-        g_signal_connect(popover, "hide", xoj::util::wrap_for_g_callback_v<popoverHidden>, this);
+        g_signal_connect(popover, "show", vn::util::wrap_for_g_callback_v<popoverShown>, this);
+        g_signal_connect(popover, "hide", vn::util::wrap_for_g_callback_v<popoverHidden>, this);
 
         updateSelectedLayer();
 
@@ -303,7 +303,7 @@ auto ToolPageLayer::getNewToolIcon() const -> GtkWidget* {
     return gtk_image_new_from_icon_name(this->iconName.c_str(), GTK_ICON_SIZE_SMALL_TOOLBAR);
 }
 
-auto ToolPageLayer::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto ToolPageLayer::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     auto data = std::make_unique<InstanceData>(lc);
     auto item = data->makeWidget(horizontal);
 

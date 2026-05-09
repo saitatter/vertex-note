@@ -89,7 +89,7 @@ class ActionDatabase::Populator {
 
         ACTIONDB_PRINT_DEBUG(START_ROW << " |               |            |");
 
-        db->gActions[a].reset(g_simple_action_new(Action_toString(a), nullptr), xoj::util::adopt);
+        db->gActions[a].reset(g_simple_action_new(Action_toString(a), nullptr), vn::util::adopt);
 
         finishSetup<a>(db, "activate");
     }
@@ -104,7 +104,7 @@ class ActionDatabase::Populator {
 
         db->gActions[a].reset(
                 g_simple_action_new(Action_toString(a), gVariantType<typename ActionProperties<a>::parameter_type>()),
-                xoj::util::adopt);
+                vn::util::adopt);
 
         finishSetup<a>(db, "activate");
     }
@@ -121,7 +121,7 @@ class ActionDatabase::Populator {
         db->gActions[a].reset(g_simple_action_new_stateful(Action_toString(a), nullptr,
                                                            makeGVariant<typename ActionProperties<a>::state_type>(
                                                                    ActionProperties<a>::initialState(db->control))),
-                              xoj::util::adopt);
+                              vn::util::adopt);
 
         finishSetup<a>(db, "change-state");
     }
@@ -141,7 +141,7 @@ class ActionDatabase::Populator {
                                                            gVariantType<typename ActionProperties<a>::state_type>(),
                                                            makeGVariant<typename ActionProperties<a>::state_type>(
                                                                    ActionProperties<a>::initialState(db->control))),
-                              xoj::util::adopt);
+                              vn::util::adopt);
 
         finishSetup<a>(db, "change-state");
     }

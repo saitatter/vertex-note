@@ -12,7 +12,7 @@
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 LineStyleUndoAction::LineStyleUndoAction(const PageRef& page, Layer* layer): UndoAction("LineStyleUndoAction") {
     this->page = page;

@@ -67,10 +67,10 @@ MainWindow::MainWindow(GladeSearchpath* gladeSearchPath, Control* control, GtkAp
         menubar(std::make_unique<Menubar>()) {
     gtk_window_set_application(GTK_WINDOW(getWindow()), parent);
 
-    panedContainerWidget.reset(get("panelMainContents"), xoj::util::ref);
-    boxContainerWidget.reset(get("mainContentContainer"), xoj::util::ref);
-    mainContentWidget.reset(get("boxContents"), xoj::util::ref);
-    sidebarWidget.reset(get("sidebar"), xoj::util::ref);
+    panedContainerWidget.reset(get("panelMainContents"), vn::util::ref);
+    boxContainerWidget.reset(get("mainContentContainer"), vn::util::ref);
+    mainContentWidget.reset(get("boxContents"), vn::util::ref);
+    sidebarWidget.reset(get("sidebar"), vn::util::ref);
 
     loadMainCSS(gladeSearchPath, "vertex-note.css");
 
@@ -79,7 +79,7 @@ MainWindow::MainWindow(GladeSearchpath* gladeSearchPath, Control* control, GtkAp
     this->floatingToolbox = std::make_unique<FloatingToolbox>(this, overlay);
 
     for (size_t i = 0; i < TOOLBAR_DEFINITIONS_LEN; i++) {
-        this->toolbarWidgets[i].reset(get(TOOLBAR_DEFINITIONS[i].guiName), xoj::util::ref);
+        this->toolbarWidgets[i].reset(get(TOOLBAR_DEFINITIONS[i].guiName), vn::util::ref);
     }
 
     initVertexNoteWidget();
@@ -87,13 +87,13 @@ MainWindow::MainWindow(GladeSearchpath* gladeSearchPath, Control* control, GtkAp
     setSidebarVisible(control->getSettings()->isSidebarVisible());
 
     // Window handler
-    g_signal_connect(this->window, "delete-event", xoj::util::wrap_for_g_callback_v<deleteEventCallback>,
+    g_signal_connect(this->window, "delete-event", vn::util::wrap_for_g_callback_v<deleteEventCallback>,
                      this->control);
 #if GTK_MAJOR_VERSION == 3
-    g_signal_connect(this->window, "notify::is-maximized", xoj::util::wrap_for_g_callback_v<windowMaximizedCallback>,
+    g_signal_connect(this->window, "notify::is-maximized", vn::util::wrap_for_g_callback_v<windowMaximizedCallback>,
                      this);
 #else
-    g_signal_connect(this->window, "notify::maximized", xoj::util::wrap_for_g_callback_v<windowMaximizedCallback>,
+    g_signal_connect(this->window, "notify::maximized", vn::util::wrap_for_g_callback_v<windowMaximizedCallback>,
                      this);
 #endif
 
@@ -174,7 +174,7 @@ struct ThemeProperties {
     std::string rootname;  ///< Name without any putative -dark suffix
 };
 static ThemeProperties getThemeProperties(GtkWidget* w) {
-    xoj::util::OwnedCString name;
+    vn::util::OwnedCString name;
     [[maybe_unused]] bool useEnv = false;
     // Gtk prioritizes GTK_THEME over GtkSettings content
     // cf https://gitlab.gnome.org/GNOME/gtk/blob/90d84a2af8b367bd5a5312b3fa3b67563462c0ef/gtk/gtksettings.c#L1567-L1622
@@ -363,7 +363,7 @@ void MainWindow::dragDataRecived(GtkWidget* widget, GdkDragContext* dragContext,
         return;
     }
 
-    xoj::util::GObjectSPtr<GdkPixbuf> image(gtk_selection_data_get_pixbuf(data), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbuf> image(gtk_selection_data_get_pixbuf(data), vn::util::adopt);
     if (image) {
         win->control->clipboardPasteImage(image.get());
 
@@ -377,9 +377,9 @@ void MainWindow::dragDataRecived(GtkWidget* widget, GdkDragContext* dragContext,
             const char* uri = uris[i];
 
             GCancellable* cancel = g_cancellable_new();
-            auto cancelTimeout = g_timeout_add(3000, xoj::util::wrap_for_once_v<cancellable_cancel>, cancel);
+            auto cancelTimeout = g_timeout_add(3000, vn::util::wrap_for_once_v<cancellable_cancel>, cancel);
 
-            xoj::util::GObjectSPtr<GFile> file(g_file_new_for_uri(uri), xoj::util::adopt);
+            vn::util::GObjectSPtr<GFile> file(g_file_new_for_uri(uri), vn::util::adopt);
             GError* err = nullptr;
             GFileInputStream* in = g_file_read(file.get(), cancel, &err);
             if (g_cancellable_is_cancelled(cancel)) {
@@ -387,8 +387,8 @@ void MainWindow::dragDataRecived(GtkWidget* widget, GdkDragContext* dragContext,
             }
 
             if (err == nullptr) {
-                xoj::util::GObjectSPtr<GdkPixbuf> pixbuf(
-                        gdk_pixbuf_new_from_stream(G_INPUT_STREAM(in), cancel, nullptr), xoj::util::adopt);
+                vn::util::GObjectSPtr<GdkPixbuf> pixbuf(
+                        gdk_pixbuf_new_from_stream(G_INPUT_STREAM(in), cancel, nullptr), vn::util::adopt);
                 if (g_cancellable_is_cancelled(cancel)) {
                     continue;
                 }
@@ -596,7 +596,7 @@ void MainWindow::updatePanedPosition(int contentWidth) {
             gulong* signal_id = new gulong{};
             *signal_id = g_signal_connect_data(
                     this->panedContainerWidget.get(), "size-allocate",
-                    xoj::util::wrap_for_g_callback_v<invertPanedPosition>, signal_id,
+                    vn::util::wrap_for_g_callback_v<invertPanedPosition>, signal_id,
                     [](gpointer d, GClosure*) { delete reinterpret_cast<gulong*>(d); }, GConnectFlags(0));
         }
     }
@@ -727,7 +727,7 @@ auto MainWindow::getToolMenuHandler() const -> ToolMenuHandler* { return this->t
 
 void MainWindow::loadMainCSS(GladeSearchpath* gladeSearchPath, const gchar* cssFilename) {
     auto filepath = gladeSearchPath->findFile("", cssFilename);
-    xoj::util::GObjectSPtr<GtkCssProvider> provider(gtk_css_provider_new(), xoj::util::adopt);
+    vn::util::GObjectSPtr<GtkCssProvider> provider(gtk_css_provider_new(), vn::util::adopt);
     gtk_css_provider_load_from_path(provider.get(), char_cast(filepath.u8string().c_str()), nullptr);
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider.get()),
                                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);

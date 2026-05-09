@@ -53,6 +53,4 @@ void fixActionableInitialSensitivity(GtkActionable* w);
 #endif
 };  // namespace xoj::util::gtk
 
-namespace vn {
-namespace util = xoj::util;
-}
+#include "util/NamespaceAliases.h"

@@ -30,7 +30,7 @@ XmlParserHelper::AttributeMap::AttributeMap(const char** attributeNames, const c
 
 auto XmlParserHelper::AttributeMap::operator[](std::u8string_view name) const -> std::optional<const char*> {
     for (auto it = this->names; *it != nullptr; ++it) {
-        if ((*it | xoj::util::utf8) == name) {
+        if ((*it | vn::util::utf8) == name) {
             // Name was found
             return this->values[as_unsigned(std::distance(this->names, it))];
         }
@@ -55,7 +55,7 @@ auto XmlParserHelper::getAttrib<c_string_utf8_view>(std::u8string_view name, con
         -> std::optional<c_string_utf8_view> {
     const auto optCStr = attributeMap[name];
     if (optCStr) {
-        return *optCStr | xoj::util::utf8;
+        return *optCStr | vn::util::utf8;
     } else {
         return std::nullopt;
     }
@@ -66,7 +66,7 @@ auto XmlParserHelper::getAttrib<string_utf8_view>(std::u8string_view name, const
         -> std::optional<string_utf8_view> {
     const auto optCStr = attributeMap[name];
     if (optCStr) {
-        return std::string_view{*optCStr} | xoj::util::utf8;
+        return std::string_view{*optCStr} | vn::util::utf8;
     } else {
         return std::nullopt;
     }
@@ -77,7 +77,7 @@ auto XmlParserHelper::getAttrib<fs::path>(std::u8string_view name, const Attribu
         -> std::optional<fs::path> {
     const auto optCStr = attributeMap[name];
     if (optCStr) {
-        return fs::path{*optCStr | xoj::util::utf8};
+        return fs::path{*optCStr | vn::util::utf8};
     } else {
         return std::nullopt;
     }
@@ -106,7 +106,7 @@ auto XmlParserHelper::getAttribColorMandatory(const AttributeMap& attributeMap, 
     if (optColorSV) {
         std::optional<Color> optColor;
         if (bg) {
-            optColor = parseBgColor(*optColorSV | xoj::util::utf8);
+            optColor = parseBgColor(*optColorSV | vn::util::utf8);
             if (optColor) {
                 return *optColor;
             }
@@ -115,7 +115,7 @@ auto XmlParserHelper::getAttribColorMandatory(const AttributeMap& attributeMap, 
         if (optColor) {
             return *optColor;
         }
-        optColor = parsePredefinedColor(*optColorSV | xoj::util::utf8);
+        optColor = parsePredefinedColor(*optColorSV | vn::util::utf8);
         if (optColor) {
             return *optColor;
         }

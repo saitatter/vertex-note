@@ -16,6 +16,8 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
+#include "util/NamespaceAliases.h"
+
 #include "CLibrariesSPtr.h"
 
 namespace xoj::util {
@@ -45,4 +47,4 @@ using GObjectSPtr = CLibrariesSPtr<GlibClass, raii::specialization::GObjectHandl
 using WidgetSPtr = GObjectSPtr<GtkWidget>;
 
 };  // namespace raii
-};  // namespace vn::util
+};  // namespace xoj::util

@@ -206,14 +206,14 @@ TEST(UtilPath, normalizeAssetPath) {
 TEST(UtilPath, pathGFilenameConvertion) {
     auto test = [](const char8_t* str) {
         fs::path p = fs::path(str);
-        auto gf = xoj::util::OwnedCString::assumeOwnership(
+        auto gf = vn::util::OwnedCString::assumeOwnership(
                 g_filename_from_utf8(char_cast(str), -1, nullptr, nullptr, nullptr));
 
         EXPECT_EQ(p.u8string(), str);
         EXPECT_STREQ(Util::toGFilename(p).c_str(), gf.get());
         EXPECT_EQ(p, Util::fromGFilename(gf.get()));
 
-        xoj::util::GObjectSPtr<GFile> gfile(g_file_new_for_path(gf.get()), xoj::util::adopt);
+        vn::util::GObjectSPtr<GFile> gfile(g_file_new_for_path(gf.get()), vn::util::adopt);
         EXPECT_TRUE(g_file_equal(Util::toGFile(p).get(), gfile.get()));
         EXPECT_EQ(fs::absolute(p), fs::absolute(Util::fromGFile(gfile.get())));
 

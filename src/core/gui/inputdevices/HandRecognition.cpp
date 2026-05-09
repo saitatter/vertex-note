@@ -120,7 +120,7 @@ auto HandRecognition::enableTimeout(HandRecognition* self) -> bool {
     auto nextTime = static_cast<guint>(now - self->lastPenAction + self->disableTimeout);
 
     self->timer.consume();
-    self->timer = g_timeout_add(strict_cast<guint>(nextTime), xoj::util::wrap_v<enableTimeout>, self);
+    self->timer = g_timeout_add(strict_cast<guint>(nextTime), vn::util::wrap_v<enableTimeout>, self);
 
     // Do not call again, a new time is scheduled
     return false;
@@ -137,7 +137,7 @@ void HandRecognition::penEvent() {
         if (enabled) {
             disableTouch();
         }
-        timer = g_timeout_add(strict_cast<guint>(disableTimeout), xoj::util::wrap_v<enableTimeout>, this);
+        timer = g_timeout_add(strict_cast<guint>(disableTimeout), vn::util::wrap_v<enableTimeout>, this);
     }
 }
 

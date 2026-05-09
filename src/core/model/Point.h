@@ -100,3 +100,5 @@ public:
 
     static constexpr double NO_PRESSURE = -1;
 };
+
+#include "util/NamespaceAliases.h"

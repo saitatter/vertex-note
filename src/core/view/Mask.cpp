@@ -84,14 +84,14 @@ void Mask::constructorImpl(DPIInfoType dpiInfo, const Range& extent, double zoom
         std::cout << "  Its DPI scaling: " << x << " x " << y << std::endl;
     });
 
-    this->cr.reset(cairo_create(surf), xoj::util::adopt);
+    this->cr.reset(cairo_create(surf), vn::util::adopt);
     cairo_surface_destroy(surf);  // surf is now owned by this->cr
 
     cairo_translate(this->cr.get(), -xOffset, -yOffset);
     cairo_scale(this->cr.get(), zoom, zoom);
 
     IF_DBG_MASKS({
-        xoj::util::CairoSaveGuard saveGuard(cr.get());
+        vn::util::CairoSaveGuard saveGuard(cr.get());
         cairo_set_operator(cr.get(), CAIRO_OPERATOR_OVER);
         cairo_set_source_rgba(cr.get(), 1.0, 0.0, 0.0, 0.3);
         cairo_paint(cr.get());
@@ -104,14 +104,14 @@ bool Mask::isInitialized() const { return cr; }
 
 void Mask::blitTo(cairo_t* targetCr) const {
     xoj_assert(isInitialized());
-    xoj::util::CairoSaveGuard guard(targetCr);
+    vn::util::CairoSaveGuard guard(targetCr);
     cairo_scale(targetCr, 1. / zoom, 1. / zoom);
     cairo_mask_surface(targetCr, cairo_get_target(const_cast<cairo_t*>(cr.get())), xOffset, yOffset);
 }
 
 void Mask::paintTo(cairo_t* targetCr) const {
     xoj_assert(isInitialized());
-    xoj::util::CairoSaveGuard guard(targetCr);
+    vn::util::CairoSaveGuard guard(targetCr);
     cairo_scale(targetCr, 1. / zoom, 1. / zoom);
     cairo_set_source_surface(targetCr, cairo_get_target(const_cast<cairo_t*>(cr.get())), xOffset, yOffset);
     cairo_paint(targetCr);
@@ -119,7 +119,7 @@ void Mask::paintTo(cairo_t* targetCr) const {
 
 void Mask::paintToWithAlpha(cairo_t* targetCr, uint8_t alpha) const {
     xoj_assert(isInitialized());
-    xoj::util::CairoSaveGuard guard(targetCr);
+    vn::util::CairoSaveGuard guard(targetCr);
     cairo_scale(targetCr, 1. / zoom, 1. / zoom);
     cairo_set_source_surface(targetCr, cairo_get_target(const_cast<cairo_t*>(cr.get())), xOffset, yOffset);
     cairo_paint_with_alpha(targetCr, alpha / 255.0);
@@ -127,7 +127,7 @@ void Mask::paintToWithAlpha(cairo_t* targetCr, uint8_t alpha) const {
 
 void Mask::wipe() {
     xoj_assert(isInitialized());
-    xoj::util::CairoSaveGuard saveGuard(cr.get());
+    vn::util::CairoSaveGuard saveGuard(cr.get());
     cairo_set_operator(cr.get(), CAIRO_OPERATOR_CLEAR);
     cairo_paint(cr.get());
     IF_DBG_MASKS({
@@ -139,7 +139,7 @@ void Mask::wipe() {
 
 void Mask::wipeRange(const Range& rg) {
     xoj_assert(isInitialized());
-    xoj::util::CairoSaveGuard saveGuard(cr.get());
+    vn::util::CairoSaveGuard saveGuard(cr.get());
     cairo_rectangle(cr.get(), rg.minX, rg.minY, rg.getWidth(), rg.getHeight());
     cairo_clip(cr.get());
     wipe();

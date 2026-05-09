@@ -18,9 +18,9 @@ ImageSizeSelectionView::~ImageSizeSelectionView() noexcept = default;
 
 
 void ImageSizeSelectionView::draw(cairo_t* cr) const {
-    const xoj::util::Rectangle space = this->imageSizeSelection->getSelectedSpace();
+    const vn::util::Rectangle space = this->imageSizeSelection->getSelectedSpace();
 
-    xoj::util::CairoSaveGuard const saveGuard(cr);  // cairo_save
+    vn::util::CairoSaveGuard const saveGuard(cr);  // cairo_save
 
     cairo_set_line_width(cr, BORDER_WIDTH_IN_PIXELS / this->parent->getZoom());
     cairo_set_dash(cr, DASH_PATTERN.data(), DASH_PATTERN.size(), 0);

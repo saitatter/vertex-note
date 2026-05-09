@@ -10,7 +10,7 @@
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 Element::Element(ElementType type): type(type) {}
 

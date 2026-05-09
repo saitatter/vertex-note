@@ -97,7 +97,7 @@
 class OverlayBase;
 
 using std::string;
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 PageView::PageView(VertexNoteView* xournal, const PageRef& page):
         page(page),
@@ -673,8 +673,8 @@ void PageView::onTapEvent(const PositionInputData& pos) {
 
 auto PageView::showPdfToolbox(const PositionInputData& pos) -> void {
     // Convert to the widget-coordinate system
-    auto p = xoj::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
-    auto q = xoj::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
+    auto p = vn::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
+    auto q = vn::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
 
     this->getXournal()->getControl()->getWindow()->getPdfToolbox()->show(q.x, q.y);
 }
@@ -880,7 +880,7 @@ double PageView::getZoom() const { return xournal->getZoom(); }
 ZoomControl* PageView::getZoomControl() const { return this->getXournal()->getControl()->getZoomControl(); }
 
 Range PageView::getVisiblePart() const {
-    std::unique_ptr<xoj::util::Rectangle<double>> rect(xournal->getVisibleRect(this));
+    std::unique_ptr<vn::util::Rectangle<double>> rect(xournal->getVisibleRect(this));
     if (rect) {
         return Range(*rect);
     }
@@ -891,7 +891,7 @@ double PageView::getWidth() const { return page->getWidth(); }
 
 double PageView::getHeight() const { return page->getHeight(); }
 
-auto PageView::toWidgetCoordinates(const xoj::util::Rectangle<double>& r) const -> xoj::util::Rectangle<double> {
+auto PageView::toWidgetCoordinates(const vn::util::Rectangle<double>& r) const -> vn::util::Rectangle<double> {
     double zoom = this->getZoom();
     auto p = this->getPixelPosition();
     auto scrollDelta = this->getXournal()->getScrollHandling()->getPosition();
@@ -1041,7 +1041,7 @@ bool PageView::displayLinkPopover(std::shared_ptr<PdfPage> page, double pageX, d
                                       self->getXournal()->getControl()->getScrollHandler()->scrollToLinkDest(*dest);
                                       gtk_popover_popdown(GTK_POPOVER(popover));
                                   }),
-                                  new State(this, dest, popover), xoj::util::closure_notify_cb<State>,
+                                  new State(this, dest, popover), vn::util::closure_notify_cb<State>,
                                   (GConnectFlags)0);
         }
 
@@ -1076,12 +1076,12 @@ GtkWidget* PageView::makePopover(const PdfRectangle& rect, GtkWidget* child) {
 auto PageView::paintPage(cairo_t* cr, GdkRectangle* rect) -> bool {
 
     double zoom = xournal->getZoom();
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_scale(cr, zoom, zoom);
 
     {
         std::lock_guard lock(this->drawingMutex);  // Lock the mutex first
-        xoj::util::CairoSaveGuard saveGuard(cr);   // see comment at the end of the scope
+        vn::util::CairoSaveGuard saveGuard(cr);   // see comment at the end of the scope
         if (!this->hasBuffer()) {
             drawLoadingPage(cr);
             return true;
@@ -1120,7 +1120,7 @@ auto PageView::getSelectionColor() -> GdkRGBA { return Util::rgb_to_GdkRGBA(sett
 
 auto PageView::getTextEditor() -> TextEditor* { return textEditor.get(); }
 
-auto PageView::getPixelPosition() const -> xoj::util::Point<int> {
+auto PageView::getPixelPosition() const -> vn::util::Point<int> {
     return this->xournal->getLayout()->getPixelCoordinatesOfEntry(this->gridCoordinates);
 }
 
@@ -1202,11 +1202,11 @@ void PageView::elementsChanged(const std::vector<const Element*>& elements, cons
 
 void PageView::showFloatingToolbox(const PositionInputData& pos) {
     // Convert to the widget-coordinate system
-    auto p = xoj::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
-    auto q = xoj::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
+    auto p = vn::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
+    auto q = vn::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
 
     this->getXournal()->getControl()->getWindow()->getFloatingToolbox()->show(q.x, q.y);
 }
 
-void PageView::setGridCoordinates(xoj::util::Point<int> coords) { this->gridCoordinates = coords; }
-auto PageView::getGridCoordinates() const -> xoj::util::Point<int> { return this->gridCoordinates; }
+void PageView::setGridCoordinates(vn::util::Point<int> coords) { this->gridCoordinates = coords; }
+auto PageView::getGridCoordinates() const -> vn::util::Point<int> { return this->gridCoordinates; }

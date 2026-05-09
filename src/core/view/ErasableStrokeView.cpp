@@ -21,7 +21,7 @@
 #include "StrokeView.h"    // for StrokeView, StrokeView::CAI...
 #include "config-debug.h"  // for DEBUG_ERASABLE_STROKE_BOXES
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 using namespace xoj::view;
 
 ErasableStrokeView::ErasableStrokeView(const ErasableStroke& erasableStroke): erasableStroke(erasableStroke) {}
@@ -39,7 +39,7 @@ void ErasableStrokeView::draw(cairo_t* cr) const {
 
     const std::vector<Point>& data = stroke.getPointVector();
 
-    xoj::util::CairoSaveGuard guard(cr);
+    vn::util::CairoSaveGuard guard(cr);
 
     if (stroke.hasPressure()) {
         double dashOffset = 0;
@@ -204,7 +204,7 @@ void ErasableStrokeView::paintFilledHighlighter(cairo_t* cr) const {
         return;
     }
 
-    xoj::util::CairoSaveGuard guard(cr);
+    vn::util::CairoSaveGuard guard(cr);
 
     const auto linecap = StrokeView::CAIRO_LINE_CAP[stroke.getStrokeCapStyle()];
 

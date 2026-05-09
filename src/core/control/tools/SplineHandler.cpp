@@ -32,7 +32,7 @@
 SplineHandler::SplineHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::SplineToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SplineToolView>>()) {
     snappingHandler.setPageRef(page);
     this->control->getZoomControl()->addZoomListener(this);
     this->knotsAttractionRadius = KNOTS_ATTRACTION_RADIUS_IN_PIXELS / this->control->getZoomControl()->getZoom();
@@ -374,7 +374,7 @@ Range SplineHandler::computeLastSegmentRepaintRange() const {
     return rg;
 }
 
-auto SplineHandler::getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::SplineToolView>>& {
+auto SplineHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::SplineToolView>>& {
     return viewPool;
 }
 

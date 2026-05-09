@@ -28,7 +28,7 @@ BaseShapeHandler::BaseShapeHandler(Control* control, const PageRef& page, bool f
         flipShift(flipShift),
         flipControl(flipControl),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::ShapeToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::ShapeToolView>>()) {
     snappingHandler.setPageRef(page);
 }
 
@@ -175,6 +175,6 @@ auto BaseShapeHandler::createView(xoj::view::Repaintable* parent) const -> std::
 }
 
 auto BaseShapeHandler::getViewPool() const
-        -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::ShapeToolView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::ShapeToolView>>& {
     return viewPool;
 }

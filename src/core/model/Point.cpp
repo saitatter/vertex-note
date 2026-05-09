@@ -18,6 +18,6 @@ auto Point::relativeLineTo(const Point& p, const double ratio) const -> Point {
 
 auto Point::equalsPos(const Point& p) const -> bool { return this->x == p.x && this->y == p.y; }
 
-auto Point::isInside(const xoj::util::Rectangle<double>& rect) const -> bool {
+auto Point::isInside(const vn::util::Rectangle<double>& rect) const -> bool {
     return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
 }

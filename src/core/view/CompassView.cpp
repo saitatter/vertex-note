@@ -59,7 +59,7 @@ void CompassView::deleteOn(CompassView::FinalizationRequest, const Range& rg) {
 }
 
 void CompassView::drawGeometryTool(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_scale(cr, CM, CM);
 
     cairo_set_line_width(cr, LINE_WIDTH_IN_CM);
@@ -78,7 +78,7 @@ void CompassView::drawGeometryTool(cairo_t* cr) const {
 }
 
 void CompassView::drawDisplays(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_transform(cr, &matrix);
     cairo_set_line_width(cr, LINE_WIDTH_IN_CM);
     cairo_select_font_face(cr, FONT_FAMILY, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
@@ -89,7 +89,7 @@ void CompassView::drawDisplays(cairo_t* cr) const {
 }
 
 void CompassView::drawOutline(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_move_to(cr, .0, .0);
     cairo_arc(cr, .0, .0, this->height, .0, 2. * M_PI);
     cairo_stroke_preserve(cr);
@@ -102,7 +102,7 @@ void CompassView::drawRotation(cairo_t* cr) const {
     if (!drawRotationDisplay) {
         return;
     }
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     // write the angle within a small circle
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << std::abs(std::remainder(deg(this->rotation), 180.));
@@ -116,7 +116,7 @@ void CompassView::drawRotation(cairo_t* cr) const {
 }
 
 void CompassView::drawAngularMarks(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     for (int i = angularOffset; i < 360; i += angularOffset) {
         const double cs = std::cos(rad(i));
@@ -136,7 +136,7 @@ void CompassView::drawAngularMarks(cairo_t* cr) const {
 }
 
 void CompassView::drawHorizontalMarks(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     // BEGIN: radial measuring marks
 
     for (int i = 0; i <= this->maxHmark; i++) {

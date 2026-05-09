@@ -20,7 +20,7 @@ SearchResultView::~SearchResultView() noexcept { this->unregisterFromPool(); }
 
 void SearchResultView::draw(cairo_t* cr) const {
     const PdfRectangle* highlightRect = this->searchControl->getHighlightRect();
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     cairo_set_line_width(cr, BORDER_WIDTH_IN_PIXELS / this->parent->getZoom());
 

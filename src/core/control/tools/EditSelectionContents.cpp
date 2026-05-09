@@ -42,7 +42,7 @@
 class XojFont;
 
 using std::vector;
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 EditSelectionContents::EditSelectionContents(Rectangle<double> bounds, Rectangle<double> snappedBounds,
                                              const PageRef& sourcePage, Layer* sourceLayer, PageView* sourceView):
@@ -89,7 +89,7 @@ auto EditSelectionContents::stealInsertionOrder() -> InsertionOrder { return std
 /**
  * Returns all containing elements of this selection
  */
-auto EditSelectionContents::getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>> {
+auto EditSelectionContents::getElementsView() const -> vn::util::PointerContainerView<std::vector<Element*>> {
     return this->selected;
 }
 
@@ -355,8 +355,8 @@ void EditSelectionContents::deleteViewBuffer() {
 
 void EditSelectionContents::invalidateViewBuffer() { deleteViewBuffer(); }
 
-InsertionOrder EditSelectionContents::makeMoveEffective(const xoj::util::Rectangle<double>& bounds,
-                                                        const xoj::util::Rectangle<double>& snappedBounds,
+InsertionOrder EditSelectionContents::makeMoveEffective(const vn::util::Rectangle<double>& bounds,
+                                                        const vn::util::Rectangle<double>& snappedBounds,
                                                         bool preserveAspectRatio) {
     double fx = bounds.width / this->originalBounds.width;
     double fy = bounds.height / this->originalBounds.height;
@@ -531,7 +531,7 @@ void EditSelectionContents::paint(cairo_t* cr, double x, double y, double rotati
 
     if (wTarget != wImg || hTarget != hImg || std::abs(rotation) > std::numeric_limits<double>::epsilon()) {
         if (!this->rescaleId) {
-            this->rescaleId = g_idle_add(xoj::util::wrap_v<repaintSelection>, this);
+            this->rescaleId = g_idle_add(vn::util::wrap_v<repaintSelection>, this);
         }
         cairo_scale(cr, sx, sy);
     }

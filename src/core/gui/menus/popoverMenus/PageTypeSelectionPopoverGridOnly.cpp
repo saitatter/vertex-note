@@ -38,7 +38,7 @@ GtkWidget* createPreviewGrid(const std::vector<std::unique_ptr<PageTypeInfo>>& p
         auto* entry = gtk_check_menu_item_new();
         gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(entry), true);
         gtk_actionable_set_action_name(GTK_ACTIONABLE(entry), prefixedActionName.data());
-        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(entry), xoj::util::makeGVariantSPtr(n++).get());
+        gtk_actionable_set_action_target_value(GTK_ACTIONABLE(entry), vn::util::makeGVariantSPtr(n++).get());
         GtkWidget* preview = vn::helper::createPreviewImage(pageInfo->page);
         gtk_widget_set_tooltip_text(preview, pageInfo->name.c_str());
         gtk_container_add(GTK_CONTAINER(entry), preview);  // takes ownership of preview
@@ -61,18 +61,18 @@ PageTypeSelectionPopoverGridOnly::PageTypeSelectionPopoverGridOnly(PageTypeHandl
         parent(parent),
         popover(createPopover()) {
 
-    xoj::util::GObjectSPtr<GSimpleActionGroup> group(g_simple_action_group_new(), xoj::util::adopt);
+    vn::util::GObjectSPtr<GSimpleActionGroup> group(g_simple_action_group_new(), vn::util::adopt);
     g_action_map_add_action(G_ACTION_MAP(group.get()), G_ACTION(typeSelectionAction.get()));
     gtk_widget_insert_action_group(GTK_WIDGET(parent->getWindow()), G_ACTION_NAMESPACE, G_ACTION_GROUP(group.get()));
 }
 
-xoj::util::WidgetSPtr PageTypeSelectionPopoverGridOnly::createPopover() {
+vn::util::WidgetSPtr PageTypeSelectionPopoverGridOnly::createPopover() {
     // Todo(cpp20): constexpr this
     std::string prefixedActionName = G_ACTION_NAMESPACE;
     prefixedActionName += ".";
     prefixedActionName += SELECTION_ACTION_NAME;
 
-    xoj::util::WidgetSPtr popover(createPreviewGrid(types->getPageTypes(), prefixedActionName), xoj::util::adopt);
+    vn::util::WidgetSPtr popover(createPreviewGrid(types->getPageTypes(), prefixedActionName), vn::util::adopt);
     gtk_widget_show_all(popover.get());
     return popover;
 }

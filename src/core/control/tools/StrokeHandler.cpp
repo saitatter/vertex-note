@@ -38,13 +38,13 @@
 
 #include "StrokeStabilizer.h"  // for Base, get
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 StrokeHandler::StrokeHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
         stabilizer(StrokeStabilizer::get(control->getSettings())),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::StrokeToolView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::StrokeToolView>>()) {
     snappingHandler.setPageRef(page);
 }
 
@@ -296,6 +296,6 @@ auto StrokeHandler::createView(xoj::view::Repaintable* parent) const -> std::uni
     }
 }
 
-auto StrokeHandler::getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::StrokeToolView>>& {
+auto StrokeHandler::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::StrokeToolView>>& {
     return viewPool;
 }

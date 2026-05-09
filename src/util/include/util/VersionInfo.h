@@ -24,4 +24,6 @@ std::string getOsInfo();
 
 /// Get a paragraph with all version info
 std::string getVersionInfo();
-};  // namespace vn::util
+};  // namespace xoj::util
+
+#include "util/NamespaceAliases.h"

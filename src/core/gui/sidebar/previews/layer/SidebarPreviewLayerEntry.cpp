@@ -14,7 +14,7 @@ SidebarPreviewLayerEntry::SidebarPreviewLayerEntry(SidebarPreviewLayers* sidebar
         SidebarPreviewBaseEntry(sidebar, page),
         sidebar(sidebar),
         layerId(layerId),
-        box(gtk_box_new(GTK_ORIENTATION_VERTICAL, 4), xoj::util::adopt),
+        box(gtk_box_new(GTK_ORIENTATION_VERTICAL, 4), vn::util::adopt),
         stacked(stacked) {
 
 #if GTK_CHECK_VERSION(4, 8, 0)

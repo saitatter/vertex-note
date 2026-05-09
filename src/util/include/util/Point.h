@@ -14,6 +14,8 @@
 #include <cmath>
 #include <tuple>
 
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 
 template <typename T>

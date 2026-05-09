@@ -15,6 +15,8 @@
 
 #include <gtk/gtk.h>
 
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 
 inline namespace raii {
@@ -31,4 +33,4 @@ using GtkPaperSizeUPtr = std::unique_ptr<GtkPaperSize, specialization::GtkPaperS
 
 
 };  // namespace raii
-};  // namespace vn::util
+};  // namespace xoj::util

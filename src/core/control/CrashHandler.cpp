@@ -51,7 +51,7 @@ extern "C" void crashHandler(int sig) {
     std::cerr << "\n\n\n*************************************************************************\n\n";
     std::cerr << "[Crash Handler] Crashed " << crash << " time(s) with signal " << sig << std::endl;
     if (crash == 1) {  // Avoid a loop in case we crash again on emergencySave()
-        std::cerr << xoj::util::getVersionInfo() << std::endl;
+        std::cerr << vn::util::getVersionInfo() << std::endl;
 
         std::cerr << "\nTry to get a stacktrace...\n";
 

@@ -6,7 +6,7 @@ GeometryTool::GeometryTool(double h, double r, double tx, double ty):
         height(h),
         rotation(r),
         origin(tx, ty),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::GeometryToolView>>()) {}
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::GeometryToolView>>()) {}
 
 GeometryTool::~GeometryTool() {}
 
@@ -16,9 +16,9 @@ auto GeometryTool::getHeight() const -> double { return this->height; }
 void GeometryTool::setRotation(double rotation) { this->rotation = rotation; }
 auto GeometryTool::getRotation() const -> double { return this->rotation; }
 
-auto GeometryTool::getOrigin() const -> const xoj::util::Point<double>& { return origin; }
+auto GeometryTool::getOrigin() const -> const vn::util::Point<double>& { return origin; }
 
-void GeometryTool::setOrigin(const xoj::util::Point<double>& o) { this->origin = o; }
+void GeometryTool::setOrigin(const vn::util::Point<double>& o) { this->origin = o; }
 
 auto GeometryTool::getMatrix() const -> cairo_matrix_t {
     cairo_matrix_t matrix;
@@ -29,7 +29,7 @@ auto GeometryTool::getMatrix() const -> cairo_matrix_t {
     return matrix;
 }
 
-auto GeometryTool::getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::GeometryToolView>>& {
+auto GeometryTool::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::GeometryToolView>>& {
     return viewPool;
 }
 

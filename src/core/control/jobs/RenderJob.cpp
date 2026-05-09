@@ -29,7 +29,7 @@
 #define VN_CPP20_UNLIKELY
 #endif
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 RenderJob::RenderJob(PageView* view): view(view) {}
 

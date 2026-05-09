@@ -36,7 +36,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 LineByClicksHandler::LineByClicksHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::LineByClicksView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::LineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -122,7 +122,7 @@ auto LineByClicksHandler::getStrokeWidth() const -> double { return this->stroke
 auto LineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto LineByClicksHandler::getViewPool() const
-        -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::LineByClicksView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::LineByClicksView>>& {
     return this->viewPool;
 }
 

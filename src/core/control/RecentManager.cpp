@@ -118,7 +118,7 @@ auto RecentManager::getMostRecent() -> GtkRecentInfoSPtr {
         }
     }
     // Prolong lifetime past the list deletion
-    GtkRecentInfoSPtr res = mostRecent == nullptr ? nullptr : GtkRecentInfoSPtr(mostRecent, xoj::util::ref);
+    GtkRecentInfoSPtr res = mostRecent == nullptr ? nullptr : GtkRecentInfoSPtr(mostRecent, vn::util::ref);
 
     g_list_free_full(recent_items, GDestroyNotify(gtk_recent_info_unref));
 
@@ -133,10 +133,10 @@ auto RecentManager::getRecentFiles() -> RecentFiles {
     for (auto& recent: GListView<GtkRecentInfo>(items)) {
         auto fileType = getFileType(recent);
         if (fileType == PDF_FILE_TYPE && res.recentPdfFiles.size() < MAX_RECENT) {
-            res.recentPdfFiles.emplace_back(&recent, xoj::util::ref);
+            res.recentPdfFiles.emplace_back(&recent, vn::util::ref);
         }
         if (fileType == XOURNAL_FILE_TYPE && res.recentXoppFiles.size() < MAX_RECENT) {
-            res.recentXoppFiles.emplace_back(&recent, xoj::util::ref);
+            res.recentXoppFiles.emplace_back(&recent, vn::util::ref);
         }
     }
     g_list_free_full(items, GDestroyNotify(gtk_recent_info_unref));

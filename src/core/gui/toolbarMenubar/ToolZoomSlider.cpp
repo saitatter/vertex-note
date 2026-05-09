@@ -33,7 +33,7 @@ auto ToolZoomSlider::formatSliderValue(double value) -> std::string {
     return out.str();
 }
 
-auto ToolZoomSlider::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto ToolZoomSlider::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     auto item = SliderItemCreationHelper<ToolZoomSlider>::createItem(this, horizontal);
 
     class Listener: public ZoomListener {

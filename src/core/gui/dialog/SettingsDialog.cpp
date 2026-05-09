@@ -926,9 +926,9 @@ void SettingsDialog::save() {
     settings->setEagerPageCleanup(getCheckbox("cbEagerPageCleanup"));
 
     settings->setDefaultSaveName(
-            xoj::util::utf8(gtk_editable_get_text(GTK_EDITABLE(builder.get("txtDefaultSaveName")))).str());
+            vn::util::utf8(gtk_editable_get_text(GTK_EDITABLE(builder.get("txtDefaultSaveName")))).str());
     settings->setDefaultPdfExportName(
-            xoj::util::utf8(gtk_editable_get_text(GTK_EDITABLE(builder.get("txtDefaultPdfName")))).str());
+            vn::util::utf8(gtk_editable_get_text(GTK_EDITABLE(builder.get("txtDefaultPdfName")))).str());
 
     GtkWidget* spAutosaveTimeout = builder.get("spAutosaveTimeout");
     int autosaveTimeout = static_cast<int>(gtk_spin_button_get_value(GTK_SPIN_BUTTON(spAutosaveTimeout)));

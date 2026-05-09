@@ -50,7 +50,7 @@ void Sidebar::initTabs(GtkWidget* sidebarContents) {
 
         gtk_button_set_icon_name(GTK_BUTTON(btn), p->getIconName().c_str());
         g_signal_connect_data(btn, "clicked", G_CALLBACK(&buttonClicked), new SidebarTabButton(this, i, p.get()),
-                              xoj::util::closure_notify_cb<SidebarTabButton>, GConnectFlags(0));
+                              vn::util::closure_notify_cb<SidebarTabButton>, GConnectFlags(0));
         gtk_widget_set_tooltip_text(btn, p->getName().c_str());
         gtk_box_append(tbSelectTab, btn);
 

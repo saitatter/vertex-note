@@ -4,7 +4,7 @@
 #include "util/StringUtils.h"
 #include "util/raii/GObjectSPtr.h"
 
-using xoj::util::GtkPaperSizeUPtr;
+using vn::util::GtkPaperSizeUPtr;
 
 void PaperFormatUtils::loadDefaultPaperSizes(PaperFormatMenuOptionVector& paperSizes) {
     GList* default_sizes = gtk_paper_size_get_paper_sizes(false);

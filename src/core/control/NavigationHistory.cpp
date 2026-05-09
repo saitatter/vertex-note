@@ -42,7 +42,7 @@ NavigationHistory::NavState NavigationHistory::captureState() const {
         return state;
     }
 
-    std::unique_ptr<xoj::util::Rectangle<double>> visibleRect(xournal->getVisibleRect(pageNo));
+    std::unique_ptr<vn::util::Rectangle<double>> visibleRect(xournal->getVisibleRect(pageNo));
     if (visibleRect) {
         state.rect = *visibleRect;
     }

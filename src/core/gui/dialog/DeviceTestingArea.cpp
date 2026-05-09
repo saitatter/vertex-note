@@ -167,7 +167,7 @@ static void saveLog(const std::stringstream& fullLog, const std::stringstream& e
 #else
             addSource("settings.xml", zip_source_file(zip, char_cast(settings.u8string().c_str()), 0, -1));
 #endif
-            auto version = xoj::util::getVersionInfo();
+            auto version = vn::util::getVersionInfo();
             addSource("version.txt", zip_source_buffer(zip, version.data(), version.length(), 0));
 
             errorCode = zip_close(zip);
@@ -195,7 +195,7 @@ DeviceTestingArea::DeviceTestingArea(GladeSearchpath* gladeSearchPath, GtkBox* p
         gladeSearchPath(gladeSearchPath),
         emulateTipContactOnButtonPress(settings->getInputSystemTPCButtonEnabled()),
         inputContext(std::make_unique<InputContext>(settings, *this)),
-        ancestorScrolledWindow(gtk_widget_get_ancestor(GTK_WIDGET(parent), GTK_TYPE_SCROLLED_WINDOW), xoj::util::ref),
+        ancestorScrolledWindow(gtk_widget_get_ancestor(GTK_WIDGET(parent), GTK_TYPE_SCROLLED_WINDOW), vn::util::ref),
         data(std::make_unique<Data>()) {
     data->log << std::setprecision(6);
     data->log.imbue(std::locale::classic());
@@ -218,7 +218,7 @@ DeviceTestingArea::DeviceTestingArea(GladeSearchpath* gladeSearchPath, GtkBox* p
                               gtk_text_buffer_set_text(dd->view, dd->log->str().c_str(), -1);
                           }),
                           new D{&data->ellipsizedLog, GTK_TEXT_BUFFER(builder.get<GObject>("logbuffer"))},
-                          xoj::util::closure_notify_cb<D>, GConnectFlags(0));
+                          vn::util::closure_notify_cb<D>, GConnectFlags(0));
 
     auto* cbEmulateTipContactOnButtonPress = builder.get("cbEmulateTipContactOnButtonPress");
     gtk_check_button_set_active(GTK_CHECK_BUTTON(cbEmulateTipContactOnButtonPress), emulateTipContactOnButtonPress);
@@ -255,25 +255,25 @@ DeviceTestingArea::DeviceTestingArea(GladeSearchpath* gladeSearchPath, GtkBox* p
 
     lastDeviceClassConfig = std::make_unique<DeviceClassConfigGui>(
             gladeSearchPath, GTK_BOX(builder.get("boxLastDevice")), settings, true);
-    drawingArea.reset(builder.get("testArea"), xoj::util::ref);
+    drawingArea.reset(builder.get("testArea"), vn::util::ref);
 
-    mouseIndicators[0].reset(builder.get("mouse-in-use"), xoj::util::ref);
-    mouseIndicators[GDK_BUTTON_PRIMARY].reset(builder.get("mouse-left"), xoj::util::ref);
-    mouseIndicators[GDK_BUTTON_MIDDLE].reset(builder.get("mouse-middle"), xoj::util::ref);
-    mouseIndicators[GDK_BUTTON_SECONDARY].reset(builder.get("mouse-right"), xoj::util::ref);
-    mouseIndicators[4].reset(builder.get("mouse-4"), xoj::util::ref);
-    mouseIndicators[5].reset(builder.get("mouse-5"), xoj::util::ref);
-    stylusIndicators[0].reset(builder.get("stylus-hover"), xoj::util::ref);
-    stylusIndicators[1].reset(builder.get("stylus-tip"), xoj::util::ref);
-    stylusIndicators[2].reset(builder.get("stylus-1"), xoj::util::ref);
-    stylusIndicators[3].reset(builder.get("stylus-2"), xoj::util::ref);
-    eraserIndicators[0].reset(builder.get("eraser-hover"), xoj::util::ref);
-    eraserIndicators[1].reset(builder.get("eraser-tip"), xoj::util::ref);
-    touchIndicators[0].reset(builder.get("touch-1"), xoj::util::ref);
-    touchIndicators[1].reset(builder.get("touch-2"), xoj::util::ref);
-    touchIndicators[2].reset(builder.get("touch-3"), xoj::util::ref);
-    touchIndicators[3].reset(builder.get("touch-4"), xoj::util::ref);
-    touchIndicators[4].reset(builder.get("touch-5"), xoj::util::ref);
+    mouseIndicators[0].reset(builder.get("mouse-in-use"), vn::util::ref);
+    mouseIndicators[GDK_BUTTON_PRIMARY].reset(builder.get("mouse-left"), vn::util::ref);
+    mouseIndicators[GDK_BUTTON_MIDDLE].reset(builder.get("mouse-middle"), vn::util::ref);
+    mouseIndicators[GDK_BUTTON_SECONDARY].reset(builder.get("mouse-right"), vn::util::ref);
+    mouseIndicators[4].reset(builder.get("mouse-4"), vn::util::ref);
+    mouseIndicators[5].reset(builder.get("mouse-5"), vn::util::ref);
+    stylusIndicators[0].reset(builder.get("stylus-hover"), vn::util::ref);
+    stylusIndicators[1].reset(builder.get("stylus-tip"), vn::util::ref);
+    stylusIndicators[2].reset(builder.get("stylus-1"), vn::util::ref);
+    stylusIndicators[3].reset(builder.get("stylus-2"), vn::util::ref);
+    eraserIndicators[0].reset(builder.get("eraser-hover"), vn::util::ref);
+    eraserIndicators[1].reset(builder.get("eraser-tip"), vn::util::ref);
+    touchIndicators[0].reset(builder.get("touch-1"), vn::util::ref);
+    touchIndicators[1].reset(builder.get("touch-2"), vn::util::ref);
+    touchIndicators[2].reset(builder.get("touch-3"), vn::util::ref);
+    touchIndicators[3].reset(builder.get("touch-4"), vn::util::ref);
+    touchIndicators[4].reset(builder.get("touch-5"), vn::util::ref);
 
     inputContext->connect(drawingArea.get(), /* connectKeyboardHandler */ false, [data = data.get()](GdkEvent* e) {
         vn::input::printGdkEvent(data->allGdkEvents, e, data->timeReference);
@@ -347,13 +347,13 @@ bool DeviceTestingArea::handle(const InputEvent& e, HandlerType handlerType) {
     };
 
     // The mouse rarely issues LEAVE_EVENT. We turn off the "in-use" indicator after a short time of inactivity
-    auto resetInUseTimer = [](xoj::util::GSourceURef& timer, GtkWidget* indicator) {
+    auto resetInUseTimer = [](vn::util::GSourceURef& timer, GtkWidget* indicator) {
         if (!timer) {
             gtk_widget_add_css_class(indicator, "pressed");
         }
         struct cbData {
             GtkWidget* indicator;
-            xoj::util::GSourceURef* timer;
+            vn::util::GSourceURef* timer;
         };
         timer = g_timeout_add_full(
                 G_PRIORITY_DEFAULT, IN_USE_RESET_DELAY,
@@ -363,7 +363,7 @@ bool DeviceTestingArea::handle(const InputEvent& e, HandlerType handlerType) {
                     data->timer->consume();
                     return G_SOURCE_REMOVE;
                 },
-                new cbData{indicator, &timer}, xoj::util::destroy_cb<cbData>);
+                new cbData{indicator, &timer}, vn::util::destroy_cb<cbData>);
     };
 
     if (e.type == BUTTON_PRESS_EVENT) {

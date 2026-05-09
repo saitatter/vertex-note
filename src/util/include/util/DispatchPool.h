@@ -139,4 +139,6 @@ public:
 private:
     std::weak_ptr<pool_type> pool;
 };
-};  // namespace vn::util
+};  // namespace xoj::util
+
+#include "util/NamespaceAliases.h"

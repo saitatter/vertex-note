@@ -8,7 +8,7 @@
 #include "model/Stroke.h"
 #include "model/NotePage.h"
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 SetsquareController::SetsquareController(PageView* view, Setsquare* setsquare):
         GeometryToolController(view, setsquare) {}
 
@@ -16,18 +16,18 @@ SetsquareController::~SetsquareController() = default;
 
 auto SetsquareController::getType() const -> GeometryToolType { return GeometryToolType::SETSQUARE; }
 
-auto SetsquareController::posRelToSide(Leg leg, double x, double y) const -> xoj::util::Point<double> {
+auto SetsquareController::posRelToSide(Leg leg, double x, double y) const -> vn::util::Point<double> {
     cairo_matrix_t matrix = geometryTool->getMatrix();
     cairo_matrix_invert(&matrix);
     cairo_matrix_transform_point(&matrix, &x, &y);
     switch (leg) {
         case HYPOTENUSE:
-            return xoj::util::Point<double>(x, -y);
+            return vn::util::Point<double>(x, -y);
         case LEFT_LEG:
-            return xoj::util::Point<double>((y + x) / std::sqrt(2.),
+            return vn::util::Point<double>((y + x) / std::sqrt(2.),
                                             (y - x - geometryTool->getHeight()) / std::sqrt(2.));
         case RIGHT_LEG:
-            return xoj::util::Point<double>((y - x) / std::sqrt(2.),
+            return vn::util::Point<double>((y - x) / std::sqrt(2.),
                                             (y + x - geometryTool->getHeight()) / std::sqrt(2.));
         default:
             g_error("Invalid enum value: %d", leg);
@@ -39,13 +39,13 @@ auto SetsquareController::isInsideGeometryTool(double x, double y, double border
            posRelToSide(RIGHT_LEG, x, y).y < border;
 }
 
-auto SetsquareController::getPointForPos(double xCoord) const -> xoj::util::Point<double> {
+auto SetsquareController::getPointForPos(double xCoord) const -> vn::util::Point<double> {
     double x = xCoord;
     double y = 0.0;
     cairo_matrix_t matrix = geometryTool->getMatrix();
     cairo_matrix_transform_point(&matrix, &x, &y);
 
-    return xoj::util::Point<double>(x, y);
+    return vn::util::Point<double>(x, y);
 }
 
 void SetsquareController::createEdgeStroke(double x) {

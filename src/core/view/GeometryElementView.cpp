@@ -22,7 +22,7 @@ void GeometryElementView::draw(const Context& ctx) const {
     }
 
     auto const& object = this->geometry->geometry();
-    xoj::util::CairoSaveGuard saveGuard(ctx.cr);
+    vn::util::CairoSaveGuard saveGuard(ctx.cr);
     cairo_set_line_join(ctx.cr, CAIRO_LINE_JOIN_ROUND);
     cairo_set_line_cap(ctx.cr, CAIRO_LINE_CAP_ROUND);
     cairo_set_line_width(ctx.cr, this->geometry->getStrokeWidth());

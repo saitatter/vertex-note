@@ -105,7 +105,7 @@ public:
 private:
     T* p = nullptr;
 };
-};  // namespace vn::util
+};  // namespace xoj::util
 
 namespace std {
 template <typename T, class H>
@@ -113,3 +113,5 @@ void swap(xoj::util::CLibrariesSPtr<T, H>& first, xoj::util::CLibrariesSPtr<T, H
     first.swap(second);
 }
 };  // namespace std
+
+#include "util/NamespaceAliases.h"

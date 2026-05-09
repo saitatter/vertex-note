@@ -25,7 +25,7 @@ void SelectorView::draw(cairo_t* cr) const {
         return;
     }
 
-    xoj::util::CairoSaveGuard saveGuard(cr);  // cairo_save
+    vn::util::CairoSaveGuard saveGuard(cr);  // cairo_save
 
     // set the line always the same size on display
     cairo_set_line_width(cr, BORDER_WIDTH_IN_PIXELS / this->parent->getZoom());

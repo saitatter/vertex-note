@@ -25,17 +25,17 @@ Menubar::~Menubar() noexcept = default;
 static void removeItemsWithClass(GMenu* menu, const char* classname) {
     int N = g_menu_model_get_n_items(G_MENU_MODEL(menu));
     for (int n = 0; n < N; ++n) {
-        xoj::util::GVariantSPtr c(
+        vn::util::GVariantSPtr c(
                 g_menu_model_get_item_attribute_value(G_MENU_MODEL(menu), n, "class", G_VARIANT_TYPE_STRING),
-                xoj::util::adopt);
+                vn::util::adopt);
         if (c && std::string_view(g_variant_get_string(c.get(), nullptr)) == classname) {
             g_menu_remove(menu, n--);
             N--;
         } else {
-            xoj::util::GObjectSPtr<GMenuLinkIter> it(g_menu_model_iterate_item_links(G_MENU_MODEL(menu), n),
-                                                     xoj::util::adopt);
+            vn::util::GObjectSPtr<GMenuLinkIter> it(g_menu_model_iterate_item_links(G_MENU_MODEL(menu), n),
+                                                     vn::util::adopt);
             while (g_menu_link_iter_next(it.get())) {
-                xoj::util::GObjectSPtr<GMenuModel> sub(g_menu_link_iter_get_value(it.get()), xoj::util::adopt);
+                vn::util::GObjectSPtr<GMenuModel> sub(g_menu_link_iter_get_value(it.get()), vn::util::adopt);
                 if (sub && G_IS_MENU(sub.get())) {
                     removeItemsWithClass(G_MENU(sub.get()), classname);
                 }
@@ -45,7 +45,7 @@ static void removeItemsWithClass(GMenu* menu, const char* classname) {
 }
 
 void Menubar::populate(const GladeSearchpath* gladeSearchPath, MainWindow* win) {
-    builder.reset(gtk_builder_new(), xoj::util::adopt);
+    builder.reset(gtk_builder_new(), vn::util::adopt);
 
     auto filepath = gladeSearchPath->findFile("", MENU_XML_FILE);
     GError* error = nullptr;

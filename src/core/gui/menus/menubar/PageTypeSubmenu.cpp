@@ -29,12 +29,12 @@ auto createPageTypesSection(const std::vector<std::unique_ptr<PageTypeInfo>>& pa
     actionName += SELECTION_ACTION_NAME;
 
     for (auto& pageInfo: pageTypes) {
-        xoj::util::GObjectSPtr<GMenuItem> item(g_menu_item_new(pageInfo->name.c_str(), nullptr), xoj::util::adopt);
+        vn::util::GObjectSPtr<GMenuItem> item(g_menu_item_new(pageInfo->name.c_str(), nullptr), vn::util::adopt);
         g_menu_item_set_action_and_target_value(item.get(), actionName.c_str(),
-                                                xoj::util::makeGVariantSPtr(index++).get());
+                                                vn::util::makeGVariantSPtr(index++).get());
         g_menu_append_item(menu, item.get());
     }
-    return xoj::util::GObjectSPtr<GMenu>(menu, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenu>(menu, vn::util::adopt);
 }
 
 auto createApplyToAllPagesSection() {
@@ -45,7 +45,7 @@ auto createApplyToAllPagesSection() {
     actionName += APPLY_ALL_ACTION_NAME;
 
     g_menu_append(menu, _("Apply to all pages"), actionName.c_str());
-    return xoj::util::GObjectSPtr<GMenu>(menu, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenu>(menu, vn::util::adopt);
 }
 };  // namespace
 
@@ -58,7 +58,7 @@ PageTypeSubmenu::PageTypeSubmenu(PageTypeHandler* typesHandler, PageBackgroundCh
         specialPageTypesSection(
                 createPageTypesSection(typesHandler->getSpecialPageTypes(), typesHandler->getPageTypes().size())),
         applyToAllPagesSection(createApplyToAllPagesSection()),
-        applyToAllPagesAction(g_simple_action_new(APPLY_ALL_ACTION_NAME, nullptr), xoj::util::adopt) {
+        applyToAllPagesAction(g_simple_action_new(APPLY_ALL_ACTION_NAME, nullptr), vn::util::adopt) {
 
     this->changeCurrentPageUponCallback = true;
 

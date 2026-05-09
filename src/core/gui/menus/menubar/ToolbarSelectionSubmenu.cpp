@@ -28,8 +28,8 @@ auto createToolbarSelectionMenuItem(const ToolbarData* toolbarData) {
     action += toolbarData->getId();
     action += "')";
 
-    return xoj::util::GObjectSPtr<GMenuItem>(g_menu_item_new(toolbarData->getName().c_str(), action.c_str()),
-                                             xoj::util::adopt);
+    return vn::util::GObjectSPtr<GMenuItem>(g_menu_item_new(toolbarData->getName().c_str(), action.c_str()),
+                                             vn::util::adopt);
 }
 
 void toolbarSelectionMenuChangeStateCallback(GSimpleAction* ga, GVariant* parameter, MainWindow* window) {
@@ -46,15 +46,15 @@ void toolbarSelectionMenuChangeStateCallback(GSimpleAction* ga, GVariant* parame
 ToolbarSelectionSubmenu::ToolbarSelectionSubmenu(MainWindow* win, Settings* settings, ToolMenuHandler* toolbar):
         gAction(g_simple_action_new_stateful(G_ACTION_NAME, G_VARIANT_TYPE_STRING,
                                              g_variant_new_string(settings->getSelectedToolbar().c_str())),
-                xoj::util::adopt) {
+                vn::util::adopt) {
     const auto& toolbars = toolbar->getModel()->getToolbars();
 
     auto it = toolbars.begin();
-    this->stockConfigurationsSection.reset(g_menu_new(), xoj::util::adopt);
+    this->stockConfigurationsSection.reset(g_menu_new(), vn::util::adopt);
     for (; it != toolbars.end() && (*it)->isPredefined(); ++it) {
         g_menu_append_item(this->stockConfigurationsSection.get(), createToolbarSelectionMenuItem(it->get()).get());
     }
-    this->customConfigurationsSection.reset(g_menu_new(), xoj::util::adopt);
+    this->customConfigurationsSection.reset(g_menu_new(), vn::util::adopt);
     for (; it != toolbars.end(); ++it) {
         g_menu_append_item(this->customConfigurationsSection.get(), createToolbarSelectionMenuItem(it->get()).get());
     }

@@ -24,7 +24,7 @@
 #include "util/PairView.h"                        // for PairView<>::BaseIte...
 #include "util/PairView.h"                        // for PairView
 #include "util/PlaceholderString.h"               // for PlaceholderString
-#include "util/Point.h"                           // for xoj::util::Point<>
+#include "util/Point.h"                           // for vn::util::Point<>
 #include "util/Rectangle.h"                       // for Rectangle
 #include "util/SmallVector.h"                     // for SmallVector
 #include "util/TinyVector.h"                      // for TinyVector
@@ -36,7 +36,7 @@
 #include "PathParameter.h"  // for PathParameter
 #include "config-debug.h"   // for ENABLE_ERASER_DEBUG
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 #define COMMA ,
 // #define ENABLE_ERASER_DEBUG // See config-debug.h.in
@@ -293,7 +293,7 @@ void Stroke::setPointVectorInternal(const Range* const snappingBox) {
         this->sizeCalculated = false;
     } else {
         xoj_assert(snappingBox->isValid());
-        this->snappedBounds = xoj::util::Rectangle<double>(*snappingBox);
+        this->snappedBounds = vn::util::Rectangle<double>(*snappingBox);
         Element::x = snappingBox->minX - 0.5 * this->width;
         Element::y = snappingBox->minY - 0.5 * this->width;
         Element::width = snappingBox->getWidth() + this->width;
@@ -502,10 +502,10 @@ auto Stroke::intersects(double x, double y, double halfEraserSize) const -> bool
 double Stroke::distanceTo(double x, double y) const {
     double distance = std::numeric_limits<double>::max();
     for (auto&& [p1, p2]: PairView(this->points)) {
-        xoj::util::Point<double> v(p2.x - p1.x, p2.y - p1.y);
+        vn::util::Point<double> v(p2.x - p1.x, p2.y - p1.y);
         double ratio = std::clamp(((x - p1.x) * v.x + (y - p1.y) * v.y) / (v.x * v.x + v.y * v.y), 0., 1.);
         /// Projection of (x,y) onto the segment [p1,p2]
-        xoj::util::Point<double> projection(p1.x + ratio * v.x, p1.y + ratio * v.y);
+        vn::util::Point<double> projection(p1.x + ratio * v.x, p1.y + ratio * v.y);
         double width = p1.z == Point::NO_PRESSURE ? this->width : p1.z;
         distance = std::clamp(std::hypot(x - projection.x, y - projection.y) - .5 * width, 0., distance);
     }

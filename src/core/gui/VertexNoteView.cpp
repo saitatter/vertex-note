@@ -50,7 +50,7 @@
 #include "RepaintHandler.h"   // for RepaintHandler
 #include "VertexNoteCursor.h"  // for VertexNoteCursor
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 constexpr int REGULAR_MOVE_AMOUNT = 3;
 constexpr int SMALL_MOVE_AMOUNT = 1;
@@ -102,7 +102,7 @@ VertexNoteView::VertexNoteView(GtkWidget* parent, Control* control, ScrollHandli
 
     gtk_widget_grab_focus(this->widget);
 
-    this->cleanupTimeout = g_timeout_add_seconds(5, xoj::util::wrap_v<clearMemoryTimer>, this);
+    this->cleanupTimeout = g_timeout_add_seconds(5, vn::util::wrap_v<clearMemoryTimer>, this);
 }
 
 VertexNoteView::~VertexNoteView() {

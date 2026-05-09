@@ -46,7 +46,7 @@ vn::SaveExportDialog::SaveExportDialog(Settings* settings, fs::path suggestedPat
                 auto* fc = GTK_FILE_CHOOSER(win);
                 if (response == GTK_RESPONSE_OK) {
                     auto file = Util::fromGFile(
-                            xoj::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(fc), xoj::util::adopt).get());
+                            vn::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(fc), vn::util::adopt).get());
 
                     if (self->pathValidation(file, gtk_file_filter_get_name(gtk_file_chooser_get_filter(fc)))) {
                         AppMessageBox::replaceFileQuestion(

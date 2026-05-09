@@ -19,7 +19,7 @@
 #include "util/safe_casts.h"                 // for as_signed
 
 
-using namespace xoj::util;
+using namespace vn::util;
 
 LatexGenerator::LatexGenerator(const LatexSettings& settings): settings(settings) {}
 
@@ -128,7 +128,7 @@ auto LatexGenerator::asyncRun(const fs::path& texDir, const std::string& texFile
     }
 
     auto flags = static_cast<GSubprocessFlags>(G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE);
-    xoj::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(flags), xoj::util::adopt);
+    vn::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(flags), vn::util::adopt);
     g_subprocess_launcher_set_cwd(launcher.get(), Util::GFilename(texDir).c_str());
     auto* proc = g_subprocess_launcher_spawnv(launcher.get(), argv.get(), out_ptr(err));
 

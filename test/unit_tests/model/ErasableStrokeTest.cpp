@@ -10,7 +10,7 @@
 #include "util/Rectangle.h"
 #include "util/SmallVector.h"
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 void assertRangesEq(const Range& r1, const Range& r2) {
     ASSERT_EQ(r1.minX, r2.minX);

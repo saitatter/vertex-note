@@ -13,7 +13,7 @@ TooltipToolButton::TooltipToolButton(std::string id, Category cat, Action action
         ToolButton(std::move(id), cat, action, std::move(iconName), std::move(description), false),
         fetchTooltip(std::move(fetchTooltip)) {}
 
-auto TooltipToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto TooltipToolButton::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     auto item = ToolButton::createItem(horizontal);
 
     gtk_widget_set_has_tooltip(item.get(), true);
@@ -26,7 +26,7 @@ auto TooltipToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
                               gtk_tooltip_set_text(tooltip, (*fn)().c_str());
                               return true;
                           }),
-                          cloneFetchTooltip, xoj::util::closure_notify_cb<std::function<std::string()>>,
+                          cloneFetchTooltip, vn::util::closure_notify_cb<std::function<std::string()>>,
                           GConnectFlags(0));
 
     return item;

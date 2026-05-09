@@ -86,15 +86,15 @@ size_t Plugin::populateMenuSection(GtkApplicationWindow* win, size_t startId) {
     // If this assert ever fails, do not recreate the GSimpleAction's below
     xoj_assert(!menuSection);
 
-    this->menuSection.reset(g_menu_new(), xoj::util::adopt);
+    this->menuSection.reset(g_menu_new(), vn::util::adopt);
 
     for (auto& m: menuEntries) {
         std::string actionName = G_ACTION_NAME_PREFIX;
         actionName += std::to_string(startId++);
-        m.action.reset(g_simple_action_new(actionName.c_str(), nullptr), xoj::util::adopt);
+        m.action.reset(g_simple_action_new(actionName.c_str(), nullptr), vn::util::adopt);
 
         actionName = "win." + actionName;
-        xoj::util::GObjectSPtr<GMenuItem> entry(g_menu_item_new(m.label.c_str(), actionName.c_str()), xoj::util::adopt);
+        vn::util::GObjectSPtr<GMenuItem> entry(g_menu_item_new(m.label.c_str(), actionName.c_str()), vn::util::adopt);
 
         g_menu_append_item(menuSection.get(), entry.get());
 

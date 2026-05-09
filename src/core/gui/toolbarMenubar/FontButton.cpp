@@ -36,10 +36,10 @@ static GtkWidget* makeChild(const char* desc) {
     return box;
 }
 
-auto FontButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto FontButton::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     GtkWidget* btn = gtk_button_new();
     gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
-    xoj::util::GVariantSPtr font(g_action_get_state(G_ACTION(gAction.get())), xoj::util::adopt);
+    vn::util::GVariantSPtr font(g_action_get_state(G_ACTION(gAction.get())), vn::util::adopt);
     const char* desc = g_variant_get_string(font.get(), nullptr);
     gtk_button_set_child(GTK_BUTTON(btn), makeChild(desc));
     gtk_widget_set_tooltip_text(btn, getToolDisplayName().c_str());
@@ -47,7 +47,7 @@ auto FontButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
                                    (std::string("win.") + Action_toString(Action::SELECT_FONT)).c_str());
 
     g_signal_connect_object(gAction.get(), "notify::state", G_CALLBACK(+[](GObject* action, GParamSpec*, gpointer btn) {
-                                xoj::util::GVariantSPtr font(g_action_get_state(G_ACTION(action)), xoj::util::adopt);
+                                vn::util::GVariantSPtr font(g_action_get_state(G_ACTION(action)), vn::util::adopt);
                                 const char* desc = g_variant_get_string(font.get(), nullptr);
                                 gtk_button_set_child(GTK_BUTTON(btn), makeChild(desc));
                             }),
@@ -68,7 +68,7 @@ auto FontButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());
-    return xoj::util::WidgetSPtr(GTK_WIDGET(it), xoj::util::adopt);
+    return vn::util::WidgetSPtr(GTK_WIDGET(it), vn::util::adopt);
 }
 
 auto FontButton::getToolDisplayName() const -> std::string { return _("Font"); }

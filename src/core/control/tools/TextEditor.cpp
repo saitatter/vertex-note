@@ -86,7 +86,7 @@ static auto getIteratorAtByteOffset(GtkTextBuffer* buf, int byteIndex) {
 static auto cloneToCString(GtkTextBuffer* buf) {
     GtkTextIter start, end;
     gtk_text_buffer_get_bounds(buf, &start, &end);
-    return xoj::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&start, &end));
+    return vn::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&start, &end));
 }
 
 /**
@@ -106,8 +106,8 @@ static auto cloneWithInsertToStdString(GtkTextBuffer* buf, std::string_view inse
     gtk_text_buffer_get_bounds(buf, &start, &end);
     GtkTextIter insertionPoint = getIteratorAtCursor(buf);
 
-    auto firstHalf = xoj::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&start, &insertionPoint));
-    auto secondHalf = xoj::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&insertionPoint, &end));
+    auto firstHalf = vn::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&start, &insertionPoint));
+    auto secondHalf = vn::util::OwnedCString::assumeOwnership(gtk_text_iter_get_text(&insertionPoint, &end));
 
     std::string_view str1(firstHalf);
     std::string_view str2(secondHalf);
@@ -125,9 +125,9 @@ TextEditor::TextEditor(Control* control, const PageRef& page, GtkWidget* xournal
         control(control),
         page(page),
         xournalWidget(xournalWidget),
-        imContext(gtk_im_multicontext_new(), xoj::util::adopt),
-        buffer(gtk_text_buffer_new(nullptr), xoj::util::adopt),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::TextEditionView>>()) {
+        imContext(gtk_im_multicontext_new(), vn::util::adopt),
+        buffer(gtk_text_buffer_new(nullptr), vn::util::adopt),
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::TextEditionView>>()) {
     // Informs the windowing system of the selection -- i.e. for accessibility purposes
     gtk_text_buffer_add_selection_clipboard(buffer.get(), gtk_clipboard_get(GDK_SELECTION_PRIMARY));
 
@@ -177,7 +177,7 @@ TextEditor::~TextEditor() {
     finalizeEdition();
 }
 
-auto TextEditor::getViewPool() const -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::TextEditionView>>& {
+auto TextEditor::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::TextEditionView>>& {
     return viewPool;
 }
 
@@ -242,7 +242,7 @@ void TextEditor::iMCommitCallback(GtkIMContext* context, const gchar* str, TextE
 }
 
 void TextEditor::iMPreeditChangedCallback(GtkIMContext* context, TextEditor* te) {
-    xoj::util::OwnedCString str;
+    vn::util::OwnedCString str;
     gint cursor_pos = 0;
     GtkTextIter iter = getIteratorAtCursor(te->buffer.get());
 
@@ -252,7 +252,7 @@ void TextEditor::iMPreeditChangedCallback(GtkIMContext* context, TextEditor* te)
         if (attrs == nullptr) {
             attrs = pango_attr_list_new();
         }
-        te->preeditAttrList.reset(attrs, xoj::util::adopt);
+        te->preeditAttrList.reset(attrs, vn::util::adopt);
     }
 
     if (str && str[0] && !gtk_text_iter_can_insert(&iter, true)) {
@@ -279,7 +279,7 @@ auto TextEditor::iMRetrieveSurroundingCallback(GtkIMContext* context, TextEditor
     gtk_text_iter_set_line_offset(&start, 0);
     gtk_text_iter_forward_to_line_end(&end);
 
-    auto text = xoj::util::OwnedCString::assumeOwnership(gtk_text_iter_get_slice(&start, &end));
+    auto text = vn::util::OwnedCString::assumeOwnership(gtk_text_iter_get_slice(&start, &end));
     gtk_im_context_set_surrounding(context, text.get(), -1, pos);
 
     return true;
@@ -654,7 +654,7 @@ void TextEditor::updateCursorBox() {
     if (!viewPool->empty()) {
         // Inform the IM of the cursor location (for word selection popup's location)
         // We use the first view as the main view, as far as the IM is concerned
-        auto box = viewPool->front().toWindowCoordinates(xoj::util::Rectangle<double>(this->cursorBox));
+        auto box = viewPool->front().toWindowCoordinates(vn::util::Rectangle<double>(this->cursorBox));
 
         GdkRectangle cursorRect;  // cursor position in window coordinates
         cursorRect.x = static_cast<int>(box.x);
@@ -872,7 +872,7 @@ void TextEditor::resetImContext() {
 void TextEditor::blinkCallback(TextEditor* te) {
     te->cursorVisible = !te->cursorVisible;
     auto time = te->cursorVisible ? te->cursorBlinkingTimeOn : te->cursorBlinkingTimeOff;
-    te->blinkTimer = g_timeout_add(time, xoj::util::wrap_for_once_v<blinkCallback>, te);
+    te->blinkTimer = g_timeout_add(time, vn::util::wrap_for_once_v<blinkCallback>, te);
 
     Range dirtyRange = te->cursorBox;
     dirtyRange.translate(te->textElement->getX(), te->textElement->getY());
@@ -887,7 +887,7 @@ void TextEditor::setTextToPangoLayout(PangoLayout* pl) const {
         std::string txt = cloneWithInsertToStdString(this->buffer.get(), preed);
 
         int pos = getByteOffsetOfCursor(this->buffer.get());
-        xoj::util::PangoAttrListSPtr attrlist(pango_attr_list_new(), xoj::util::adopt);
+        vn::util::PangoAttrListSPtr attrlist(pango_attr_list_new(), vn::util::adopt);
         pango_attr_list_splice(attrlist.get(), this->preeditAttrList.get(), pos, static_cast<int>(preed.length()));
 
         pango_layout_set_attributes(pl, attrlist.get());
@@ -902,7 +902,7 @@ void TextEditor::setTextToPangoLayout(PangoLayout* pl) const {
 Color TextEditor::getSelectionColor() const { return this->control->getSettings()->getSelectionColor(); }
 
 void TextEditor::setSelectionAttributesToPangoLayout(PangoLayout* pl) const {
-    xoj::util::PangoAttrListSPtr attrlist(pango_attr_list_new(), xoj::util::adopt);
+    vn::util::PangoAttrListSPtr attrlist(pango_attr_list_new(), vn::util::adopt);
 
     GtkTextIter start;
     GtkTextIter end;

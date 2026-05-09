@@ -170,9 +170,9 @@ void VertexNoteCursor::setCursorBusy(bool busy) {
 
     if (busy) {
         GdkWindow* window = gtk_widget_get_window(win->getWindow());
-        xoj::util::GObjectSPtr<GdkCursor> cursor(
+        vn::util::GObjectSPtr<GdkCursor> cursor(
                 gdk_cursor_new_from_name(gdk_window_get_display(window), cssCursors[CRSR_BUSY].cssName),
-                xoj::util::adopt);
+                vn::util::adopt);
         gdk_window_set_cursor(window, cursor.get());
     } else {
         if (gtk_widget_get_window(win->getWindow())) {

@@ -41,7 +41,7 @@ static constexpr const char* UI_RESOURCE = "/app/vertexnote/VertexNote/wrapper/u
 static constexpr const char* EMERGENCY_SAVE_MSG_REGEX = "Successfully saved document to \"(.*)\"";
 
 static auto escape(const std::string& str) {
-    return xoj::util::OwnedCString::assumeOwnership(g_uri_escape_string(str.c_str(), nullptr, true));
+    return vn::util::OwnedCString::assumeOwnership(g_uri_escape_string(str.c_str(), nullptr, true));
 }
 
 /// Create a URL which opens a crash report on github, pre-filled with the data we can get
@@ -51,7 +51,7 @@ static std::string makeCrashReportURL() {
     str.imbue(std::locale::classic());
 
     str << PROJECT_CRASHREPORT;
-    str << "&os=" << escape(xoj::util::getOsInfo()).get();
+    str << "&os=" << escape(vn::util::getOsInfo()).get();
 
 #ifdef __linux__
     auto getEnvTruncated = [](const char* var) {
@@ -67,17 +67,17 @@ static std::string makeCrashReportURL() {
         }
     };
     str << "&desktop=" << escape(getEnvTruncated("DESKTOP_SESSION") + " " + getEnvTruncated("XDG_SESSION_TYPE")).get();
-    str << "&displayserver=" << escape(xoj::util::getGdkBackend()).get();
+    str << "&displayserver=" << escape(vn::util::getGdkBackend()).get();
 #endif
 
-    str << "&version=" << escape(xoj::util::getVertexNoteVersion()).get();
+    str << "&version=" << escape(vn::util::getVertexNoteVersion()).get();
     str << "&gtk=" << gtk_major_version << "." << gtk_minor_version << "." << gtk_micro_version;
 
     return str.str();
 }
 
 static void activate(GtkApplication* app, std::string* str) {
-    xoj::util::GObjectSPtr<GtkBuilder> builder(gtk_builder_new_from_resource(UI_RESOURCE), xoj::util::adopt);
+    vn::util::GObjectSPtr<GtkBuilder> builder(gtk_builder_new_from_resource(UI_RESOURCE), vn::util::adopt);
     auto* window = GTK_WIDGET(gtk_builder_get_object(builder.get(), "crashDialog"));
     gtk_application_add_window(app, GTK_WINDOW(window));
     auto* view = GTK_TEXT_VIEW(gtk_builder_get_object(builder.get(), "textViewLog"));
@@ -166,12 +166,12 @@ auto main(int argc, char* argv[]) -> int {
         subargv.emplace_back(nullptr);
         errorlog << "\"" << std::endl;
 
-        xoj::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(FLAGS), xoj::util::adopt);
+        vn::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(FLAGS), vn::util::adopt);
         g_subprocess_launcher_set_environ(launcher.get(), nullptr);  // Copies the host's environment
         g_subprocess_launcher_setenv(launcher.get(), "G_MESSAGES_DEBUG", G_LOG_DOMAIN, false);  // Print xopp debug
 
-        return xoj::util::GObjectSPtr<GSubprocess>(g_subprocess_launcher_spawnv(launcher.get(), subargv.data(), &err),
-                                                   xoj::util::adopt);
+        return vn::util::GObjectSPtr<GSubprocess>(g_subprocess_launcher_spawnv(launcher.get(), subargv.data(), &err),
+                                                   vn::util::adopt);
     }();
 
     int exitstatus = -1;
@@ -182,9 +182,9 @@ auto main(int argc, char* argv[]) -> int {
         g_error_free(err);
         err = nullptr;
     } else {
-        xoj::util::OwnedCString stdoutBuffer;
+        vn::util::OwnedCString stdoutBuffer;
 #ifdef _WIN32  // On Windows, STDERR_MERGE does not work. See https://gitlab.gnome.org/GNOME/glib/-/issues/3723
-        xoj::util::OwnedCString stderrBuffer;
+        vn::util::OwnedCString stderrBuffer;
 #endif
 
         std::cout << "VertexNote started with PID: " << g_subprocess_get_identifier(p.get()) << std::endl;
@@ -223,7 +223,7 @@ auto main(int argc, char* argv[]) -> int {
         time_t lt = time(nullptr);
         errorlog << "    Date: " << ctime(&lt) << std::endl;
 
-        errorlog << xoj::util::getVersionInfo();
+        errorlog << vn::util::getVersionInfo();
         errorlog << "  (The GDK backend is probably printed out below)\n";
 
         errorlog << "\n*** Output: ***\n\n" << stdoutBuffer.get();
@@ -234,8 +234,8 @@ auto main(int argc, char* argv[]) -> int {
     }
 
     GtkApplication* app = gtk_application_new(PROJECT_APP_ID, G_APPLICATION_FLAGS_NONE);
-    g_signal_connect_data(app, "activate", xoj::util::wrap_for_g_callback_v<activate>, new std::string(errorlog.str()),
-                          xoj::util::closure_notify_cb<std::string>, GConnectFlags(0));
+    g_signal_connect_data(app, "activate", vn::util::wrap_for_g_callback_v<activate>, new std::string(errorlog.str()),
+                          vn::util::closure_notify_cb<std::string>, GConnectFlags(0));
 
     g_application_run(G_APPLICATION(app), 0, nullptr);
     g_object_unref(app);

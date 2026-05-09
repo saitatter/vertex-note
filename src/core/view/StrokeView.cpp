@@ -18,7 +18,7 @@
 
 class ErasableStroke;
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 using namespace xoj::view;
 
 StrokeView::StrokeView(const Stroke* s): s(s) {}
@@ -46,7 +46,7 @@ void StrokeView::draw(const Context& ctx) const {
     // The mask will be colorblind
     const bool noColor = ctx.noColor || useMask;
 
-    xoj::util::CairoSaveGuard saveGuard(ctx.cr);
+    vn::util::CairoSaveGuard saveGuard(ctx.cr);
 
     Mask mask;
 

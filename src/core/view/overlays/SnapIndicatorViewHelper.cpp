@@ -127,7 +127,7 @@ void drawSnapIndicator(cairo_t* cr, const Point& point, std::optional<vn::snap::
         return;
     }
 
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_set_dash(cr, nullptr, 0, 0);
 
     cairo_set_line_width(cr, 3.3);

@@ -55,4 +55,6 @@ private:
     char* data = nullptr;
 };
 };  // namespace raii
-};  // namespace vn::util
+};  // namespace xoj::util
+
+#include "util/NamespaceAliases.h"

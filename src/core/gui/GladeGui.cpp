@@ -19,7 +19,7 @@ GladeGui::GladeGui(GladeSearchpath* gladeSearchPath, const std::string& glade, c
     auto filepath = this->gladeSearchPath->findFile("", glade);
 
     GError* error = nullptr;
-    builder.reset(gtk_builder_new(), xoj::util::adopt);
+    builder.reset(gtk_builder_new(), vn::util::adopt);
 
     if (!gtk_builder_add_from_file(builder.get(), char_cast(filepath.u8string().c_str()), &error)) {
         std::string msg = FS(_F("Error loading glade file \"{1}\" (try to load \"{2}\")") % glade %

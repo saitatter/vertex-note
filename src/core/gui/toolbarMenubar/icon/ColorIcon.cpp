@@ -10,7 +10,7 @@ namespace ColorIcon {
  * Create a new GtkImage with preview color
  */
 auto newGtkImage(Color color, int size, bool circle, std::optional<Color> secondaryColor) -> GtkWidget* {
-    xoj::util::GObjectSPtr<GdkPixbuf> img(newGdkPixbuf(color, size, circle, secondaryColor));
+    vn::util::GObjectSPtr<GdkPixbuf> img(newGdkPixbuf(color, size, circle, secondaryColor));
     GtkWidget* w = gtk_image_new_from_pixbuf(img.get());
     gtk_widget_show(w);
     return w;
@@ -20,9 +20,9 @@ auto newGtkImage(Color color, int size, bool circle, std::optional<Color> second
  * Create a new GdkPixbuf* with preview color
  */
 auto newGdkPixbuf(Color color, int size, bool circle, std::optional<Color> secondaryColor)
-        -> xoj::util::GObjectSPtr<GdkPixbuf> {
-    xoj::util::CairoSurfaceSPtr buf(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, size, size), xoj::util::adopt);
-    xoj::util::CairoSPtr cr(cairo_create(buf.get()), xoj::util::adopt);
+        -> vn::util::GObjectSPtr<GdkPixbuf> {
+    vn::util::CairoSurfaceSPtr buf(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, size, size), vn::util::adopt);
+    vn::util::CairoSPtr cr(cairo_create(buf.get()), vn::util::adopt);
 
     Util::cairo_set_source_rgbi(cr.get(), color, 1);
 
@@ -56,7 +56,7 @@ auto newGdkPixbuf(Color color, int size, bool circle, std::optional<Color> secon
         cairo_stroke(cr.get());
     }
 
-    return xoj::util::GObjectSPtr<GdkPixbuf>(gdk_pixbuf_get_from_surface(buf.get(), 0, 0, size, size),
-                                             xoj::util::adopt);
+    return vn::util::GObjectSPtr<GdkPixbuf>(gdk_pixbuf_get_from_surface(buf.get(), 0, 0, size, size),
+                                             vn::util::adopt);
 }
 };  // namespace ColorIcon

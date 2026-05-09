@@ -19,7 +19,7 @@ constexpr auto UI_DIALOG_NAME = "manageToolbarsDialog";
 
 enum { COLUMN_STRING, COLUMN_BOLD, COLUMN_POINTER, COLUMN_EDITABLE, N_COLUMNS };
 
-static xoj::util::GObjectSPtr<GtkListStore> createModel(ToolbarModel* tb) {
+static vn::util::GObjectSPtr<GtkListStore> createModel(ToolbarModel* tb) {
     xoj_assert(tb);
     GtkTreeIter iter;
     GtkListStore* model = gtk_list_store_new(N_COLUMNS, G_TYPE_STRING, G_TYPE_INT, G_TYPE_POINTER, G_TYPE_BOOLEAN);
@@ -46,7 +46,7 @@ static xoj::util::GObjectSPtr<GtkListStore> createModel(ToolbarModel* tb) {
                                COLUMN_POINTER, data.get(), COLUMN_EDITABLE, true, -1);
         }
     }
-    return xoj::util::GObjectSPtr<GtkListStore>(model, xoj::util::adopt);
+    return vn::util::GObjectSPtr<GtkListStore>(model, vn::util::adopt);
 }
 
 ToolbarManageDialog::ToolbarManageDialog(GladeSearchpath* gladeSearchPath, ToolbarModel* tbModel,

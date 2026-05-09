@@ -192,7 +192,7 @@ public:
 };
 
 void Layout::forEachEntriesIntersectingRange(
-        const Range& rg, std::function<void(size_t, const Range&, xoj::util::Point<int>)> fun) const {
+        const Range& rg, std::function<void(size_t, const Range&, vn::util::Point<int>)> fun) const {
     if (rg.empty()) {
         return;
     }
@@ -241,7 +241,7 @@ void Layout::forEachEntriesIntersectingRange(
 
 void Layout::updateVisibility() {
     auto visibleRg = Range(getVisibleRect());
-    xoj::util::Point<int> center(round_cast<int>(.5 * (visibleRg.minX + visibleRg.maxX)),
+    vn::util::Point<int> center(round_cast<int>(.5 * (visibleRg.minX + visibleRg.maxX)),
                                  round_cast<int>(.5 * (visibleRg.minY + visibleRg.maxY)));
 
     // Data to select page based on visibility
@@ -249,7 +249,7 @@ void Layout::updateVisibility() {
     double mostPagePercent = 0;
 
     std::vector<size_t> visiblePages;
-    forEachEntriesIntersectingRange(visibleRg, [&](size_t index, const Range& intersection, xoj::util::Point<int> pos) {
+    forEachEntriesIntersectingRange(visibleRg, [&](size_t index, const Range& intersection, vn::util::Point<int> pos) {
         auto& pageView = this->view->getViewPages()[index];
         pageView->setIsVisible(true);
         visiblePages.emplace_back(index);
@@ -289,8 +289,8 @@ auto Layout::getVisiblePages() const -> std::vector<size_t> {
     return previouslyVisiblePages;
 }
 
-auto Layout::getVisibleRect() -> xoj::util::Rectangle<double> {
-    return xoj::util::Rectangle<double>(gtk_adjustment_get_value(scrollHandling->getHorizontal()),
+auto Layout::getVisibleRect() -> vn::util::Rectangle<double> {
+    return vn::util::Rectangle<double>(gtk_adjustment_get_value(scrollHandling->getHorizontal()),
                                         gtk_adjustment_get_value(scrollHandling->getVertical()),
                                         gtk_adjustment_get_page_size(scrollHandling->getHorizontal()),
                                         gtk_adjustment_get_page_size(scrollHandling->getVertical()));
@@ -391,7 +391,7 @@ void Layout::recalculate() {
     gtk_widget_queue_draw(view->getWidget());
 }
 
-auto Layout::getFixedPaddingBeforePoint(const xoj::util::Point<double>& ref) const -> xoj::util::Point<int> {
+auto Layout::getFixedPaddingBeforePoint(const vn::util::Point<double>& ref) const -> vn::util::Point<int> {
     std::lock_guard g{pc.m};
     auto pos = getGridPositionAtUnsafe(ref);
     int paddingY = strict_cast<int>(pos.row) * XOURNAL_PADDING_BETWEEN + pc.paddingTop;
@@ -413,7 +413,7 @@ auto Layout::getFixedPaddingBeforePoint(const xoj::util::Point<double>& ref) con
     return {paddingX, paddingY};
 }
 
-auto Layout::getCenteringPadding() const -> xoj::util::Point<int> {
+auto Layout::getCenteringPadding() const -> vn::util::Point<int> {
     std::lock_guard g{pc.m};
     return {pc.horizontalCenteringPadding, pc.verticalCenteringPadding};
 }
@@ -443,7 +443,7 @@ void Layout::ensureRectIsVisible(int x, int y, int width, int height) {
     this->blockHorizontalCallback = false;
 }
 
-auto Layout::getGridPositionAtUnsafe(const xoj::util::Point<double>& p) const -> GridPosition {
+auto Layout::getGridPositionAtUnsafe(const vn::util::Point<double>& p) const -> GridPosition {
     // We do a binary search to find the grid position
     double zoom = this->view->getZoom();
     auto verticalPixels = PixelCounter::makeVertical(this->pc, zoom);
@@ -459,7 +459,7 @@ auto Layout::getGridPositionAtUnsafe(const xoj::util::Point<double>& p) const ->
 auto Layout::getPageViewAt(int x, int y) const -> PageView* {
     auto optionalPage = [&]() {
         std::lock_guard g{pc.m};
-        return pc.mapper.at(getGridPositionAtUnsafe(xoj::util::Point<double>(x, y)));
+        return pc.mapper.at(getGridPositionAtUnsafe(vn::util::Point<double>(x, y)));
     }();
 
     if (optionalPage && this->view->getViewPages()[*optionalPage]->containsPoint(x, y, false)) {
@@ -515,17 +515,17 @@ auto Layout::getMinimalPixelWidthUnsafe() const -> int {
            ceil_cast<int>(pc.stretchableHorizontalPixelsAfterColumn.back() * view->getZoom());
 }
 
-auto Layout::getPixelCoordinatesOfEntry(xoj::util::Point<int> gridCoords) const -> xoj::util::Point<int> {
+auto Layout::getPixelCoordinatesOfEntry(vn::util::Point<int> gridCoords) const -> vn::util::Point<int> {
     std::lock_guard g{pc.m};
     return getPixelCoordinatesOfEntryUnsafe(gridCoords);
 }
 
-auto Layout::getPixelCoordinatesOfEntry(size_t n) const -> xoj::util::Point<int> {
+auto Layout::getPixelCoordinatesOfEntry(size_t n) const -> vn::util::Point<int> {
     std::lock_guard g{pc.m};
     return getPixelCoordinatesOfEntryUnsafe(n);
 }
 
-static xoj::util::Point<int> getPixelCoords(const Layout::PreCalculated& pc, const GridPosition& pos, PageView& pv) {
+static vn::util::Point<int> getPixelCoords(const Layout::PreCalculated& pc, const GridPosition& pos, PageView& pv) {
     double zoom = pv.getZoom();
     return {floor_cast<int>(((pos.col == 0 ? 0. : pc.stretchableHorizontalPixelsAfterColumn[pos.col - 1]) +
                              .5 * (pc.widthCols[pos.col] - pv.getWidth())) *
@@ -538,7 +538,7 @@ static xoj::util::Point<int> getPixelCoords(const Layout::PreCalculated& pc, con
                     strict_cast<int>(pos.row) * XOURNAL_PADDING_BETWEEN + pc.paddingTop + pc.verticalCenteringPadding};
 }
 
-auto Layout::getPixelCoordinatesOfEntryUnsafe(xoj::util::Point<int> gridCoords) const -> xoj::util::Point<int> {
+auto Layout::getPixelCoordinatesOfEntryUnsafe(vn::util::Point<int> gridCoords) const -> vn::util::Point<int> {
     GridPosition pos{size_t(gridCoords.x), size_t(gridCoords.y)};
 
     auto optionalPage = pc.mapper.at(pos);
@@ -550,6 +550,6 @@ auto Layout::getPixelCoordinatesOfEntryUnsafe(xoj::util::Point<int> gridCoords) 
     }
 }
 
-auto Layout::getPixelCoordinatesOfEntryUnsafe(size_t n) const -> xoj::util::Point<int> {
+auto Layout::getPixelCoordinatesOfEntryUnsafe(size_t n) const -> vn::util::Point<int> {
     return getPixelCoords(this->pc, pc.mapper.at(n), *this->view->getViewPages()[n]);
 }

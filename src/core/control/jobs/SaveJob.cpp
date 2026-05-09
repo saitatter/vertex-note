@@ -48,7 +48,7 @@ void SaveJob::updatePreview(Control* control) {
     const int previewSize = 128;
 
     Document* doc = control->getDocument();
-    xoj::util::CairoSurfaceSPtr crBuffer;
+    vn::util::CairoSurfaceSPtr crBuffer;
 
     doc->lock_shared();
     if (doc->getPageCount() > 0) {
@@ -68,7 +68,7 @@ void SaveJob::updatePreview(Control* control) {
         height *= zoom;
 
         crBuffer.reset(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ceil_cast<int>(width), ceil_cast<int>(height)),
-                       xoj::util::adopt);
+                       vn::util::adopt);
 
         cairo_t* cr = cairo_create(crBuffer.get());
         cairo_scale(cr, zoom, zoom);

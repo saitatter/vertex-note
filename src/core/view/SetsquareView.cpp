@@ -74,7 +74,7 @@ void SetsquareView::deleteOn(SetsquareView::FinalizationRequest, const Range& rg
 }
 
 void SetsquareView::drawGeometryTool(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_scale(cr, CM, CM);
 
     cairo_set_line_width(cr, LINE_WIDTH_IN_CM);
@@ -104,7 +104,7 @@ void SetsquareView::drawGeometryTool(cairo_t* cr) const {
 }
 
 void SetsquareView::drawDisplays(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_transform(cr, &matrix);
     cairo_set_line_width(cr, LINE_WIDTH_IN_CM);
     cairo_select_font_face(cr, FONT_FAMILY, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
@@ -115,7 +115,7 @@ void SetsquareView::drawDisplays(cairo_t* cr) const {
 }
 
 void SetsquareView::drawOutline(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_move_to(cr, this->height, .0);
     cairo_line_to(cr, -this->height, .0);
     cairo_line_to(cr, .0, this->height);
@@ -127,7 +127,7 @@ void SetsquareView::drawOutline(cairo_t* cr) const {
 }
 
 void SetsquareView::drawRotation(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     // write the angle between hypotenuse and horizontal axis within a small circle
     std::stringstream ss;
@@ -142,7 +142,7 @@ void SetsquareView::drawRotation(cairo_t* cr) const {
 }
 
 void SetsquareView::drawAngularMarks(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     // BEGIN: 45 degree marks
     clipHorizontalStripes(cr);
     clipVerticalStripes(cr);
@@ -206,7 +206,7 @@ void SetsquareView::drawAngularMarks(cairo_t* cr) const {
 }
 
 void SetsquareView::drawVerticalMarks(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     const auto max = this->maxVmark / 10;  // number of full centimeters
 
     // BEGIN: VERTICAL marks within semicircle
@@ -244,7 +244,7 @@ void SetsquareView::drawVerticalMarks(cairo_t* cr) const {
 }
 
 void SetsquareView::drawHorizontalMarks(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     const auto max = this->maxVmark / 10;  // number of full centimeters
 
     // BEGIN: line indicating horizontal 0

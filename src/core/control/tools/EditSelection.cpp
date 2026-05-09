@@ -43,7 +43,7 @@
 class XojFont;
 
 using std::vector;
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 /// Smallest can scale down to, in pixels.
 constexpr size_t MINPIXSIZE = 5;
@@ -444,7 +444,7 @@ void EditSelection::addElement(ElementPtr eOwned, Element::Index order) {
 /**
  * Returns all containing elements of this selection
  */
-auto EditSelection::getElementsView() const -> xoj::util::PointerContainerView<std::vector<Element*>> {
+auto EditSelection::getElementsView() const -> vn::util::PointerContainerView<std::vector<Element*>> {
     return this->contents->getElementsView();
 }
 
@@ -881,7 +881,7 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
 void EditSelection::setEdgePan(bool pan) {
     if (pan && !this->edgePanHandler) {
         this->edgePanHandler =
-                g_timeout_add(1000 / PAN_TIMER_RATE, xoj::util::wrap_v<EditSelection::handleEdgePan>, this);
+                g_timeout_add(1000 / PAN_TIMER_RATE, vn::util::wrap_v<EditSelection::handleEdgePan>, this);
     } else if (!pan) {
         this->edgePanHandler.cancel();
         this->edgePanInhibitNext = false;
@@ -1383,7 +1383,7 @@ void EditSelection::readSerialized(ObjectInputStream& in) {
     this->rotation = in.readDouble();
 
     this->contents =
-            std::make_unique<EditSelectionContents>(xoj::util::Rectangle<double>(), xoj::util::Rectangle<double>(),
+            std::make_unique<EditSelectionContents>(vn::util::Rectangle<double>(), vn::util::Rectangle<double>(),
                                                     this->sourcePage, this->sourceLayer, this->view);
     this->contents->readSerialized(in);
 

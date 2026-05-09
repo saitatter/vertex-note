@@ -36,7 +36,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 RectangleByVerticesHandler::RectangleByVerticesHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::RectangleByVerticesView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::RectangleByVerticesView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -122,7 +122,7 @@ auto RectangleByVerticesHandler::getStrokeWidth() const -> double { return this-
 auto RectangleByVerticesHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto RectangleByVerticesHandler::getViewPool() const
-        -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::RectangleByVerticesView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::RectangleByVerticesView>>& {
     return this->viewPool;
 }
 

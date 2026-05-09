@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 template <class T>
 class move_only_function final {};

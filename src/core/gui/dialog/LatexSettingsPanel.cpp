@@ -117,7 +117,7 @@ void LatexSettingsPanel::save(LatexSettings& settings) {
     settings.autoCheckDependencies = gtk_check_button_get_active(this->cbAutoDepCheck);
     settings.defaultText = gtk_editable_get_text(GTK_EDITABLE(builder.get("latexDefaultEntry")));
     settings.globalTemplatePath = Util::fromGFile(
-            xoj::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(this->globalTemplateChooser), xoj::util::adopt)
+            vn::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(this->globalTemplateChooser), vn::util::adopt)
                     .get());
     settings.genCmd = gtk_editable_get_text(GTK_EDITABLE(builder.get("latexSettingsGenCmd")));
 
@@ -134,7 +134,7 @@ void LatexSettingsPanel::save(LatexSettings& settings) {
             gtk_check_button_get_active(GTK_CHECK_BUTTON(builder.get("cbSyntaxHighlight")));
 
     GtkFontChooser* fontSelector = GTK_FONT_CHOOSER(builder.get("selBtnEditorFont"));
-    settings.editorFont = xoj::util::OwnedCString::assumeOwnership(gtk_font_chooser_get_font(fontSelector)).get();
+    settings.editorFont = vn::util::OwnedCString::assumeOwnership(gtk_font_chooser_get_font(fontSelector)).get();
     settings.useCustomEditorFont = !gtk_check_button_get_active(this->cbUseSystemFont);
     settings.editorWordWrap = gtk_check_button_get_active(GTK_CHECK_BUTTON(builder.get("cbWordWrap")));
 

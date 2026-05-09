@@ -22,7 +22,7 @@ VerticalToolView::~VerticalToolView() noexcept {
 }
 
 void VerticalToolView::draw(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     const double startY = toolHandler->getStartY();
     const double endY = toolHandler->getEndY();
@@ -40,7 +40,7 @@ void VerticalToolView::draw(cairo_t* cr) const {
 }
 
 void VerticalToolView::drawWithoutDrawingAids(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     if (!mask.isInitialized()) {
         // Initialize the mask on first call, when changing sides or upon zoom change

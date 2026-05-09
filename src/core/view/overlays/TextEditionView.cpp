@@ -17,7 +17,7 @@ TextEditionView::TextEditionView(const TextEditor* textEditor, Repaintable* pare
 TextEditionView::~TextEditionView() noexcept { this->unregisterFromPool(); }
 
 void TextEditionView::draw(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     // Draw the frame
     double zoom = parent->getZoom();
@@ -49,7 +49,7 @@ void TextEditionView::draw(cairo_t* cr) const {
 }
 
 void TextEditionView::drawWithoutDrawingAids(cairo_t* cr) const {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
 
     const Text* textElement = this->textEditor->getTextElement();
     Util::cairo_set_source_rgbi(cr, textElement->getColor());
@@ -70,7 +70,7 @@ void TextEditionView::drawWithoutDrawingAids(cairo_t* cr) const {
 
 bool TextEditionView::isViewOf(const OverlayBase* overlay) const { return overlay == this->textEditor; }
 
-auto TextEditionView::toWindowCoordinates(const xoj::util::Rectangle<double>& r) const -> xoj::util::Rectangle<double> {
+auto TextEditionView::toWindowCoordinates(const vn::util::Rectangle<double>& r) const -> vn::util::Rectangle<double> {
     auto* textElement = this->textEditor->getTextElement();
     return parent->toWidgetCoordinates(r.translated(textElement->getX(), textElement->getY()));
 }

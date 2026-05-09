@@ -24,7 +24,7 @@ void ShapeToolView::draw(cairo_t* cr) const {
         return;
     }
 
-    xoj::util::CairoSaveGuard saveGuard(cr);  // cairo_save
+    vn::util::CairoSaveGuard saveGuard(cr);  // cairo_save
 
     cairo_t* effCr = this->prepareContext(cr);
 

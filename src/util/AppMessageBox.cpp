@@ -20,7 +20,7 @@
 
 GtkWindow* defaultWindow = nullptr;
 
-AppMessageBox::AppMessageBox(GtkDialog* dialog, xoj::util::move_only_function<void(int)> callback, CallbackPolicy pol):
+AppMessageBox::AppMessageBox(GtkDialog* dialog, vn::util::move_only_function<void(int)> callback, CallbackPolicy pol):
         window(reinterpret_cast<GtkWindow*>(dialog)), callback(std::move(callback)), policy(pol) {
     this->signalId =
             g_signal_connect(dialog, "response", G_CALLBACK(+[](GtkDialog* dialog, int response, gpointer data) {
@@ -69,7 +69,7 @@ void AppMessageBox::showMarkupMessageToUser(GtkWindow* win, const std::string_vi
 
 void AppMessageBox::showMessageToUser(GtkWindow* win, const std::string& title, const std::string& msg,
                                   GtkMessageType type) {
-    auto escapedTitle = xoj::util::OwnedCString::assumeOwnership(g_markup_escape_text(title.c_str(), -1));
+    auto escapedTitle = vn::util::OwnedCString::assumeOwnership(g_markup_escape_text(title.c_str(), -1));
     showMarkupMessageToUser(win, escapedTitle.get(), msg, type);
 }
 
@@ -83,15 +83,15 @@ void AppMessageBox::showErrorToUser(GtkWindow* win, const std::string& msg) {
 }
 
 void AppMessageBox::askQuestion(GtkWindow* win, const std::string& maintext, const std::string& secondarytext,
-                            const std::vector<Button>& buttons, xoj::util::move_only_function<void(int)> callback) {
+                            const std::vector<Button>& buttons, vn::util::move_only_function<void(int)> callback) {
 
-    auto formattedMsg = xoj::util::OwnedCString::assumeOwnership(g_markup_escape_text(maintext.c_str(), -1));
+    auto formattedMsg = vn::util::OwnedCString::assumeOwnership(g_markup_escape_text(maintext.c_str(), -1));
     askQuestionWithMarkup(win, std::string_view(formattedMsg), secondarytext, buttons, std::move(callback));
 }
 
 void AppMessageBox::askQuestionWithMarkup(GtkWindow* win, std::string_view maintext, const std::string& secondarytext,
                                       const std::vector<Button>& buttons,
-                                      xoj::util::move_only_function<void(int)> callback) {
+                                      vn::util::move_only_function<void(int)> callback) {
     if (win == nullptr) {
         win = defaultWindow;
     }
@@ -134,7 +134,7 @@ void AppMessageBox::showErrorAndQuit(std::string& msg, int exitCode) {
 
 void AppMessageBox::showPluginMessage(const std::string& pluginName, const std::string& msg, bool error) {
     auto header = std::string("VertexNote Plugin «") + pluginName + "»";
-    auto escapedHeader = xoj::util::OwnedCString::assumeOwnership(g_markup_escape_text(header.c_str(), -1));
+    auto escapedHeader = vn::util::OwnedCString::assumeOwnership(g_markup_escape_text(header.c_str(), -1));
     header = (error ? std::string("<b>Error in </b>") : "") + escapedHeader.get();
 
     showMarkupMessageToUser(nullptr, header, msg, error ? GTK_MESSAGE_ERROR : GTK_MESSAGE_INFO);
@@ -175,7 +175,7 @@ auto AppMessageBox::askPluginQuestion(const std::string& pluginName, const std::
 }
 
 void AppMessageBox::replaceFileQuestion(GtkWindow* win, fs::path file,
-                                    xoj::util::move_only_function<void(const fs::path&)> writeTofile) {
+                                    vn::util::move_only_function<void(const fs::path&)> writeTofile) {
     if (!fs::exists(file)) {
         writeTofile(file);
         return;

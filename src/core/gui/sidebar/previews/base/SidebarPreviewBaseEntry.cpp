@@ -19,7 +19,7 @@
 static constexpr int MAX_MINIATURE_SIZE = 500;  ///< in pixels - avoid things going very wrong when pages are huge
 
 SidebarPreviewBaseEntry::SidebarPreviewBaseEntry(SidebarPreviewBase* sidebar, const PageRef& page):
-        sidebar(sidebar), page(page), button(gtk_button_new(), xoj::util::adopt) {
+        sidebar(sidebar), page(page), button(gtk_button_new(), vn::util::adopt) {
 
     updateSize();
     gtk_widget_set_events(this->button.get(), GDK_EXPOSURE_MASK);
@@ -68,7 +68,7 @@ void SidebarPreviewBaseEntry::setSelected(bool selected) {
 void SidebarPreviewBaseEntry::repaint() { sidebar->getControl()->getScheduler()->addRepaintSidebar(this); }
 
 void SidebarPreviewBaseEntry::drawLoadingPage() {
-    this->buffer.reset(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, imageWidth, imageHeight), xoj::util::adopt);
+    this->buffer.reset(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, imageWidth, imageHeight), vn::util::adopt);
 
     double zoom = sidebar->getZoom();
 
@@ -134,7 +134,7 @@ void SidebarPreviewBaseEntry::paint(cairo_t* cr) {
 
     if (recolor) {
         // encapsulate in save/restore to limit the scope of the clip operation
-        xoj::util::CairoSaveGuard const saveGuard(cr);
+        vn::util::CairoSaveGuard const saveGuard(cr);
         cairo_rectangle(cr, Shadow::getShadowTopLeftSize() + 2, Shadow::getShadowTopLeftSize() + 2, width, height);
         // constrain the area which is painted on
         cairo_clip(cr);

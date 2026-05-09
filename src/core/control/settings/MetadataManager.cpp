@@ -151,7 +151,7 @@ auto MetadataManager::loadMetadataFile(fs::path const& path) -> std::optional<Me
     std::istringstream iss(line);
     std::string p;
     iss >> std::quoted(p);
-    entry.path = fs::path(xoj::util::utf8(p));
+    entry.path = fs::path(vn::util::utf8(p));
 
     if (!getline(infile, line) || line.length() < 6 || line.substr(0, 5) != "page=") {
         // Not valid

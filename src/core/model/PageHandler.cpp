@@ -1,13 +1,14 @@
 #include "PageHandler.h"
 
 #include "PageListener.h"  // for PageListener
+#include "util/NamespaceAliases.h"
 
 namespace xoj::util {
 template <class T>
 class Rectangle;
 }  // namespace xoj::util
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 PageHandler::PageHandler() = default;
 

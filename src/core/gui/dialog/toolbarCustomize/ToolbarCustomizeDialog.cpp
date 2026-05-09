@@ -41,13 +41,13 @@ struct ToolbarCustomizeDialog::ToolItemDragData {
     ToolbarCustomizeDialog* dlg;
     GtkWidget* icon;  ///< Currently must be an GtkImage
     AbstractToolItem* item;
-    xoj::util::WidgetSPtr ebox;
+    vn::util::WidgetSPtr ebox;
 };
 
 struct ToolbarCustomizeDialog::ColorToolItemDragData {
     ToolbarCustomizeDialog* dlg;
     size_t paletteColorIndex;
-    xoj::util::WidgetSPtr ebox;
+    vn::util::WidgetSPtr ebox;
 };
 
 // Separator and spacer
@@ -272,7 +272,7 @@ auto ToolbarCustomizeDialog::buildToolDataVector(const std::vector<std::unique_p
         data.dlg = this;
         data.icon = icon;
         data.item = item.get();
-        data.ebox.reset(ebox, xoj::util::adopt);
+        data.ebox.reset(ebox, vn::util::adopt);
 
         // make ebox a drag source
         gtk_drag_source_set(ebox, GDK_BUTTON1_MASK, &ToolbarDragDropHelper::dropTargetEntry, 1, GDK_ACTION_MOVE);
@@ -308,7 +308,7 @@ auto ToolbarCustomizeDialog::buildColorDataVector(const Palette& palette) -> std
         auto& data = database.emplace_back();
         data.dlg = this;
         data.paletteColorIndex = paletteColorIndex;
-        data.ebox.reset(ebox, xoj::util::ref);
+        data.ebox.reset(ebox, vn::util::ref);
 
         g_signal_connect(ebox, "drag-begin", G_CALLBACK(toolitemColorDragBegin), &data);
         g_signal_connect(ebox, "drag-end", G_CALLBACK(toolitemColorDragEnd), &data);

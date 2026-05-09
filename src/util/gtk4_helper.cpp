@@ -167,7 +167,7 @@ gboolean gtk_im_context_filter_keypress(GtkIMContext* context, GdkEvent* event) 
 
 /**** GtkFileChooserDialog ****/
 gboolean gtk_file_chooser_add_shortcut_folder(GtkFileChooser* chooser, GFile* file, GError** error) {
-    auto uri = xoj::util::OwnedCString::assumeOwnership(g_file_get_uri(file));
+    auto uri = vn::util::OwnedCString::assumeOwnership(g_file_get_uri(file));
     return gtk_file_chooser_add_shortcut_folder(chooser, uri.get(), error);
 }
 gboolean gtk_file_chooser_set_current_folder(GtkFileChooser* chooser, GFile* file, GError** error) {

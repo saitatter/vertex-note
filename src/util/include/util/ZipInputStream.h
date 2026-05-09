@@ -14,6 +14,7 @@
 #include <zip.h>
 
 #include "util/InputStream.h"  // for InputStream
+#include "util/NamespaceAliases.h"
 
 #include "filesystem.h"  // for path
 

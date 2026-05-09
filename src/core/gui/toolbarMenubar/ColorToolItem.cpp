@@ -10,7 +10,7 @@
 ColorToolItem::ColorToolItem(NamedColor namedColor, const std::optional<Recolor>& recolor):
         AbstractToolItem(std::string("COLOR(") + std::to_string(namedColor.getIndex()) + ")", Category::COLORS),
         namedColor(std::move(namedColor)),
-        target(xoj::util::makeGVariantSPtr(this->namedColor.getColor())) {
+        target(vn::util::makeGVariantSPtr(this->namedColor.getColor())) {
     if (recolor) {
         secondaryColor = std::make_optional(recolor->convertColor(namedColor.getColor()));
     } else {
@@ -22,7 +22,7 @@ ColorToolItem::~ColorToolItem() = default;
 
 auto ColorToolItem::getColor() const -> Color { return this->namedColor.getColor(); }
 
-auto ColorToolItem::createItem(bool) -> xoj::util::WidgetSPtr {
+auto ColorToolItem::createItem(bool) -> vn::util::WidgetSPtr {
     auto* btn = gtk_toggle_button_new();
     gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
     auto actionName = std::string("win.") + Action_toString(Action::TOOL_COLOR);
@@ -57,7 +57,7 @@ auto ColorToolItem::createItem(bool) -> xoj::util::WidgetSPtr {
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());
-    return xoj::util::WidgetSPtr(GTK_WIDGET(it), xoj::util::adopt);
+    return vn::util::WidgetSPtr(GTK_WIDGET(it), vn::util::adopt);
 }
 
 auto ColorToolItem::getToolDisplayName() const -> std::string { return this->namedColor.getName(); }

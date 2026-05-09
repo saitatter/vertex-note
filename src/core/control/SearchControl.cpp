@@ -12,7 +12,7 @@
 SearchControl::SearchControl(const PageRef& page, PdfPagePtr pdf):
         page(page),
         pdf(std::move(pdf)),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::SearchResultView>>()) {}
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SearchResultView>>()) {}
 
 SearchControl::~SearchControl() = default;
 

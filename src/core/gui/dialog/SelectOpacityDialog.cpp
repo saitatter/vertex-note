@@ -91,9 +91,9 @@ const int PREVIEW_HEIGTH = 50;
 const int PREVIEW_BORDER = 10;
 
 void vn::popup::SelectOpacityDialog::setPreviewImage(int alpha) {
-    xoj::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, PREVIEW_WIDTH, PREVIEW_HEIGTH),
-                                        xoj::util::adopt);
-    xoj::util::CairoSPtr cairo(cairo_create(surface.get()), xoj::util::adopt);
+    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, PREVIEW_WIDTH, PREVIEW_HEIGTH),
+                                        vn::util::adopt);
+    vn::util::CairoSPtr cairo(cairo_create(surface.get()), vn::util::adopt);
     cairo_t* cr = cairo.get();
 
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
@@ -115,7 +115,7 @@ void vn::popup::SelectOpacityDialog::setPreviewImage(int alpha) {
         cairo_stroke(cr);
     }
 
-    xoj::util::GObjectSPtr<GdkPixbuf> pixbuf(
-            gdk_pixbuf_get_from_surface(surface.get(), 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGTH), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbuf> pixbuf(
+            gdk_pixbuf_get_from_surface(surface.get(), 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGTH), vn::util::adopt);
     gtk_image_set_from_pixbuf(previewImage, pixbuf.get());
 }

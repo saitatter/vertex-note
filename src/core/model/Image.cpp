@@ -19,7 +19,7 @@
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 Image::Image(): Element(ELEMENT_IMAGE) {}
 
@@ -78,7 +78,7 @@ void Image::setImage(std::string&& data) {
 
     // FIXME: awful hack to try to parse the format
     std::array<char*, 4096> buffer{};
-    xoj::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), vn::util::adopt);
     size_t remaining = this->data.size();
     while (remaining > 0) {
         size_t readLen = std::min(remaining, buffer.size());
@@ -134,7 +134,7 @@ auto Image::renderBuffer() const -> std::optional<std::string> {
         // Already rendered
         return std::nullopt;
     }
-    xoj::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), vn::util::adopt);
     g_signal_connect(loader.get(), "size-prepared",
                      G_CALLBACK(+[](GdkPixbufLoader* self, gint width, gint height, gpointer) {
                          static constexpr uint64_t MAX_SIZE =
@@ -178,7 +178,7 @@ auto Image::renderBuffer() const -> std::optional<std::string> {
 
     GdkPixbuf* tmp = gdk_pixbuf_loader_get_pixbuf(loader.get());
     xoj_assert(tmp != nullptr);
-    xoj::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(tmp), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(tmp), vn::util::adopt);
 
     this->imageSize = {gdk_pixbuf_get_width(pixbuf.get()), gdk_pixbuf_get_height(pixbuf.get())};
 

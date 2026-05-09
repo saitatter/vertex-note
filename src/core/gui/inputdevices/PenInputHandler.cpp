@@ -64,7 +64,7 @@ void PenInputHandler::handleScrollEvent(InputEvent const& event) {
         return;
     }
 
-    if (this->scrollOffsetVector == xoj::util::Point<double>(0., 0.)) {
+    if (this->scrollOffsetVector == vn::util::Point<double>(0., 0.)) {
         this->scrollOffsetVector = this->scrollStartPosition - event.absolute;
 
         Util::execInUiThread([&]() {
@@ -72,7 +72,7 @@ void PenInputHandler::handleScrollEvent(InputEvent const& event) {
                                                                      this->scrollOffsetVector.y);
 
             // Scrolling done, so reset our counters
-            this->scrollOffsetVector = xoj::util::Point<double>(0., 0.);
+            this->scrollOffsetVector = vn::util::Point<double>(0., 0.);
         });
 
         // Update the reference for the scroll-offset
@@ -184,7 +184,7 @@ double PenInputHandler::inferPressureValue(PositionInputData const& pos, PageVie
     PositionInputData lastPos = getInputDataRelativeToCurrentPage(page, this->lastEvent);
 
     double dt = (pos.timestamp - lastPos.timestamp) / 10.0;
-    double distance = xoj::util::Point<double>(pos.x, pos.y).distance(xoj::util::Point<double>(lastPos.x, lastPos.y));
+    double distance = vn::util::Point<double>(pos.x, pos.y).distance(vn::util::Point<double>(lastPos.x, lastPos.y));
     double inverseSpeed = dt / (distance + 0.001);
 
     // This doesn't have to be exact. Arctan is used here for its sigmoid-like shape,

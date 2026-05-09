@@ -24,7 +24,7 @@ PdfElemSelection::PdfElemSelection(double x, double y, Control* control):
         pdf(nullptr),
         bounds({x, y, x, y}),
         finalized(false),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::PdfElementSelectionView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::PdfElementSelectionView>>()) {
 
     if (auto pNr = control->getCurrentPage()->getPdfPageNr(); pNr != npos) {
         Document* doc = control->getDocument();
@@ -99,7 +99,7 @@ void PdfElemSelection::currentPos(double x, double y, PdfPageSelectionStyle styl
         case PdfPageSelectionStyle::Linear:
         case PdfPageSelectionStyle::Word:
         case PdfPageSelectionStyle::Line:
-            this->selectedTextRegion.reset(this->pdf->selectTextRegion(this->bounds, style), xoj::util::adopt);
+            this->selectedTextRegion.reset(this->pdf->selectTextRegion(this->bounds, style), vn::util::adopt);
             break;
         case PdfPageSelectionStyle::Area: {
             cairo_rectangle_int_t rect;
@@ -107,7 +107,7 @@ void PdfElemSelection::currentPos(double x, double y, PdfPageSelectionStyle styl
             rect.width = ceil_cast<int>(std::max(bounds.x1, bounds.x2)) - rect.x;
             rect.y = floor_cast<int>(std::min(bounds.y1, bounds.y2));
             rect.height = ceil_cast<int>(std::max(bounds.y1, bounds.y2)) - rect.y;
-            this->selectedTextRegion.reset(cairo_region_create_rectangle(&rect), xoj::util::adopt);
+            this->selectedTextRegion.reset(cairo_region_create_rectangle(&rect), vn::util::adopt);
         } break;
         default:
             xoj_assert_message(false, "Unreachable");

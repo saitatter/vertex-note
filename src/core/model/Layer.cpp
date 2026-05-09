@@ -133,7 +133,7 @@ void Layer::setVisible(bool visible) { this->visible = visible; }
 
 auto Layer::getElements() -> std::vector<ElementPtr>& { return this->elements; }
 
-auto Layer::getElementsView() const -> xoj::util::PointerContainerView<std::vector<ElementPtr>> {
+auto Layer::getElementsView() const -> vn::util::PointerContainerView<std::vector<ElementPtr>> {
     return this->elements;
 }
 

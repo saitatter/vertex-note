@@ -76,7 +76,7 @@ struct Data {
 
     template <DrawingTypeComboToolButton::Type s>
     static void setProminentIconCallback(GObject* action, GParamSpec*, Data* self) {
-        xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), xoj::util::adopt);
+        vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), vn::util::adopt);
         if (getGVariantValue<bool>(state.get())) {
             auto& e = (*self->entries)[s];
             gtk_button_set_icon_name(self->button, e.icon.c_str());
@@ -87,7 +87,7 @@ struct Data {
     }
 };
 
-auto DrawingTypeComboToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto DrawingTypeComboToolButton::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     auto data = std::make_unique<Data>();
     data->entries = this->entries;
 
@@ -111,7 +111,7 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> xoj::util::Widge
         gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
 
         auto it = std::find_if(entries->begin(), entries->end(), [](auto& e) {
-            xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(e.gAction.get())), xoj::util::adopt);
+            vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(e.gAction.get())), vn::util::adopt);
             return getGVariantValue<bool>(state.get());
         });
         const Entry& e = it == entries->end() ? (*entries)[Type::RECTANGLE] : *it;  // Select an entry by default
@@ -131,34 +131,34 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> xoj::util::Widge
     gtk_box_append(box, GTK_WIDGET(data->button));
     gtk_box_append(box, GTK_WIDGET(menubutton));
 
-    auto item = xoj::util::WidgetSPtr(GTK_WIDGET(box), xoj::util::adopt);
+    auto item = vn::util::WidgetSPtr(GTK_WIDGET(box), vn::util::adopt);
 
     /// change the prominent icon when selecting an entry (by any means)
     g_signal_connect((*entries)[Type::RECTANGLE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::RECTANGLE>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::RECTANGLE>>, data.get());
     g_signal_connect((*entries)[Type::ELLIPSE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::ELLIPSE>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::ELLIPSE>>, data.get());
     g_signal_connect((*entries)[Type::ARROW].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::ARROW>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::ARROW>>, data.get());
     g_signal_connect((*entries)[Type::DOUBLE_ARROW].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::DOUBLE_ARROW>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::DOUBLE_ARROW>>, data.get());
     g_signal_connect((*entries)[Type::LINE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::LINE>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::LINE>>, data.get());
     g_signal_connect((*entries)[Type::COORDINATE_SYSTEM].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::COORDINATE_SYSTEM>>,
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::COORDINATE_SYSTEM>>,
                      data.get());
     g_signal_connect((*entries)[Type::SPLINE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SPLINE>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SPLINE>>, data.get());
     g_signal_connect((*entries)[Type::VERTEX_LINE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_LINE>>, data.get());
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_LINE>>, data.get());
     g_signal_connect((*entries)[Type::VERTEX_POLYLINE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_POLYLINE>>,
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_POLYLINE>>,
                      data.get());
     g_signal_connect((*entries)[Type::VERTEX_RECTANGLE].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_RECTANGLE>>,
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_RECTANGLE>>,
                      data.get());
     g_signal_connect((*entries)[Type::SHAPE_RECOGNIZER].gAction.get(), "notify::state",
-                     xoj::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SHAPE_RECOGNIZER>>,
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SHAPE_RECOGNIZER>>,
                      data.get());
 
     // Disconnect the signal and destroy *data if the widget is destroyed

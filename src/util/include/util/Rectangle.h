@@ -15,6 +15,7 @@
 #include <iosfwd>
 #include <optional>
 
+#include "util/NamespaceAliases.h"
 #include "util/Range.h"
 
 namespace xoj::util {  // Rectangle is already defined in windows.h

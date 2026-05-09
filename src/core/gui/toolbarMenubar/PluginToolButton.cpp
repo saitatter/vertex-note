@@ -16,7 +16,7 @@ PluginToolButton::PluginToolButton(ToolbarButtonEntry* t):
 
 PluginToolButton::~PluginToolButton() = default;
 
-auto PluginToolButton::createItem(bool) -> xoj::util::WidgetSPtr {
+auto PluginToolButton::createItem(bool) -> vn::util::WidgetSPtr {
     GtkWidget* btn = gtk_button_new();
     gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
 
@@ -51,7 +51,7 @@ auto PluginToolButton::createItem(bool) -> xoj::util::WidgetSPtr {
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());
 
-    return xoj::util::WidgetSPtr(GTK_WIDGET(it), xoj::util::adopt);
+    return vn::util::WidgetSPtr(GTK_WIDGET(it), vn::util::adopt);
 }
 
 auto PluginToolButton::getToolDisplayName() const -> std::string { return this->t->description; }

@@ -68,7 +68,7 @@ auto InputEvents::translateDeviceType(GdkDevice* device, Settings* settings) -> 
 }
 
 auto InputEvents::translateEvent(GdkEvent* sourceEvent, Settings* settings,
-                                 const xoj::util::Point<double>& relativeOffset) -> InputEvent {
+                                 const vn::util::Point<double>& relativeOffset) -> InputEvent {
     InputEvent targetEvent{};
 
     // Map the event type to our internal ones

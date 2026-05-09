@@ -12,7 +12,7 @@
 #include "model/NotePage.h"
 #include "undo/InsertUndoAction.h"
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 constexpr double MARK_SIZE = 2.;
 
@@ -21,14 +21,14 @@ GeometryToolController::GeometryToolController(PageView* view, GeometryTool* geo
 
 GeometryToolController::~GeometryToolController() = default;
 
-void GeometryToolController::translate(const xoj::util::Point<double>& offset) {
+void GeometryToolController::translate(const vn::util::Point<double>& offset) {
     geometryTool->setOrigin(geometryTool->getOrigin() + offset);
     geometryTool->notify();
 }
 
-void GeometryToolController::rotate(double da, const xoj::util::Point<double>& center) {
+void GeometryToolController::rotate(double da, const vn::util::Point<double>& center) {
     const auto offset = geometryTool->getOrigin() - center;
-    geometryTool->setOrigin(center + xoj::util::Point<double>(offset.x * std::cos(da) - offset.y * std::sin(da),
+    geometryTool->setOrigin(center + vn::util::Point<double>(offset.x * std::cos(da) - offset.y * std::sin(da),
                                                               offset.x * std::sin(da) + offset.y * std::cos(da)));
     this->rotate(da);
 }
@@ -38,7 +38,7 @@ void GeometryToolController::rotate(double da) {
 }
 
 
-void GeometryToolController::scale(double f, const xoj::util::Point<double>& center) {
+void GeometryToolController::scale(double f, const vn::util::Point<double>& center) {
     geometryTool->setOrigin(center + (geometryTool->getOrigin() - center) * f);
     this->scale(f);
 }

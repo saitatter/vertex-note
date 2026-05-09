@@ -17,7 +17,7 @@
 static_assert(std::numeric_limits<double>::is_iec559);
 
 Selector::Selector(bool multiLayer):
-        multiLayer(multiLayer), viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::SelectorView>>()) {}
+        multiLayer(multiLayer), viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::SelectorView>>()) {}
 
 Selector::~Selector() = default;
 

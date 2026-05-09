@@ -21,9 +21,9 @@ constexpr auto XML_FILE = "sidebar.ui";
 
 SidebarPreviewBase::SidebarPreviewBase(Control* control, const char* menuId, const char* toolbarId):
         AbstractSidebarPage(control),
-        scrollableBox(gtk_scrolled_window_new(), xoj::util::adopt),
-        mainBox(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0), xoj::util::adopt),
-        miniaturesContainer(GTK_FIXED(gtk_fixed_new()), xoj::util::adopt) {
+        scrollableBox(gtk_scrolled_window_new(), vn::util::adopt),
+        mainBox(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0), vn::util::adopt),
+        miniaturesContainer(GTK_FIXED(gtk_fixed_new()), vn::util::adopt) {
     gtk_box_append(GTK_BOX(mainBox.get()), scrollableBox.get());
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrollableBox.get()), GTK_POLICY_AUTOMATIC,
                                    GTK_POLICY_AUTOMATIC);
@@ -50,7 +50,7 @@ SidebarPreviewBase::SidebarPreviewBase(Control* control, const char* menuId, con
 
     Builder builder(control->getGladeSearchPath(), XML_FILE);
     GMenuModel* menu = G_MENU_MODEL(builder.get<GObject>(menuId));
-    contextMenu.reset(GTK_MENU(gtk_menu_new_from_model(menu)), xoj::util::adopt);
+    contextMenu.reset(GTK_MENU(gtk_menu_new_from_model(menu)), vn::util::adopt);
     gtk_menu_attach_to_widget(contextMenu.get(), mainBox.get(), nullptr);
 
     gtk_box_append(GTK_BOX(mainBox.get()), builder.get(toolbarId));
@@ -134,7 +134,7 @@ auto SidebarPreviewBase::scrollToPreview(SidebarPreviewBase* sidebar) -> bool {
         int y = allocation.y;
 
         if (x == -1) {
-            g_idle_add(xoj::util::wrap_for_once_v<scrollToPreview>, sidebar);
+            g_idle_add(vn::util::wrap_for_once_v<scrollToPreview>, sidebar);
             return false;
         }
 

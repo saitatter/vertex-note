@@ -11,7 +11,7 @@
 #include "util/Assert.h"                  // for xoj_assert
 #include "util/Range.h"                   // for Range
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 void ErasableStroke::OverlapTree::populate(const SubSection& section, const Stroke& stroke) {
     Populator populator(this->data, stroke);

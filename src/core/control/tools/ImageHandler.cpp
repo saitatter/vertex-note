@@ -124,7 +124,7 @@ void ImageHandler::automaticScaling(Image& img, PageRef page) {
 }
 
 
-void ImageHandler::insertImageWithSize(PageRef page, const xoj::util::Rectangle<double>& space) {
+void ImageHandler::insertImageWithSize(PageRef page, const vn::util::Rectangle<double>& space) {
     chooseAndCreateImage([space, page, ctrl = control](std::unique_ptr<Image> img) {
         xoj_assert(img);
         img->setX(space.x);

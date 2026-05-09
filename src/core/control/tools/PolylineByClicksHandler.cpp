@@ -37,7 +37,7 @@ constexpr double SNAP_INDICATOR_PADDING = 8.0;
 PolylineByClicksHandler::PolylineByClicksHandler(Control* control, const PageRef& page):
         InputHandler(control, page),
         snappingHandler(control->getSettings()),
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::PolylineByClicksView>>()) {
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::PolylineByClicksView>>()) {
     this->snappingHandler.setPageRef(page);
     const auto* settings = control->getSettings();
     this->geometrySnapEnabled = settings->isVertexNoteGeometrySnapEnabled();
@@ -126,7 +126,7 @@ auto PolylineByClicksHandler::getStrokeWidth() const -> double { return this->st
 auto PolylineByClicksHandler::getStrokeColor() const -> Color { return this->strokeColor; }
 
 auto PolylineByClicksHandler::getViewPool() const
-        -> const std::shared_ptr<xoj::util::DispatchPool<xoj::view::PolylineByClicksView>>& {
+        -> const std::shared_ptr<vn::util::DispatchPool<xoj::view::PolylineByClicksView>>& {
     return this->viewPool;
 }
 

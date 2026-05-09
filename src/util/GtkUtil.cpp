@@ -52,7 +52,7 @@ void setToggleButtonUnreleasable(GtkToggleButton* btn) {
 
                          g_signal_connect_object(
                                  btn, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer a) {
-                                     xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(a)), xoj::util::adopt);
+                                     vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(a)), vn::util::adopt);
                                      GVariant* target = gtk_actionable_get_action_target_value(GTK_ACTIONABLE(btn));
                                      if (bool active = g_variant_equal(state.get(), target);
                                          active && !gtk_toggle_button_get_active(btn)) {
@@ -125,7 +125,7 @@ void setRadioButtonActionName(GtkRadioButton* btn, const char* actionNamespace, 
                     // btn owns the return GVariant of gtk_actionable_get_action_target_value()
                     GVariant* target = gtk_actionable_get_action_target_value(GTK_ACTIONABLE(btn));
                     // action does not own the return GVariant and it is not floating either!
-                    xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), xoj::util::adopt);
+                    vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), vn::util::adopt);
                     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btn), g_variant_equal(target, state.get()));
                 }
 
@@ -143,7 +143,7 @@ void setRadioButtonActionName(GtkRadioButton* btn, const char* actionNamespace, 
                             // btn owns the return GVariant of gtk_actionable_get_action_target_value()
                             GVariant* target = gtk_actionable_get_action_target_value(GTK_ACTIONABLE(btn));
                             // action does not own the return GVariant and it is not floating either!
-                            xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), xoj::util::adopt);
+                            vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(action)), vn::util::adopt);
                             xoj_assert(target);
                             xoj_assert(state);
                             if (g_variant_equal(target, state.get()) &&

@@ -33,7 +33,7 @@ void AbstractLatexDialog::setTempRender(PopplerDocument* pdf) {
         return;
     }
 
-    this->previewPdfPage.reset(poppler_document_get_page(pdf, 0), xoj::util::adopt);
+    this->previewPdfPage.reset(poppler_document_get_page(pdf, 0), vn::util::adopt);
     this->previewMask.reset();
 
     // Queue rendering the changed preview.

@@ -92,8 +92,8 @@ void ExtEdLatexDialog::openEditor() {
         return;
     }
 
-    xoj::util::GErrorGuard err{};
-    xoj::util::GStrvGuard argv{};
+    vn::util::GErrorGuard err{};
+    vn::util::GStrvGuard argv{};
 
     std::string editorCmd = texCtrl->settings.externalEditorCmd;
     if (editorCmd.empty()) {
@@ -111,21 +111,21 @@ void ExtEdLatexDialog::openEditor() {
     editorCmd += char_cast(tempf.u8string());
     editorCmd += "'";
 
-    if (!g_shell_parse_argv(editorCmd.c_str(), nullptr, xoj::util::out_ptr(argv), xoj::util::out_ptr(err))) {
+    if (!g_shell_parse_argv(editorCmd.c_str(), nullptr, vn::util::out_ptr(argv), vn::util::out_ptr(err))) {
         AppMessageBox::showErrorToUser(getWindow(), FS(_F("Failed to parse external editor command: {1}") % err->message));
         return;
     }
 
-    xoj::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE),
-                                                         xoj::util::adopt);
+    vn::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_NONE),
+                                                         vn::util::adopt);
 
     Color textColor = texCtrl->control->getToolHandler()->getTool(TOOL_TEXT).getColor();
     std::string colorStr = Util::rgb_to_hex_string(textColor).substr(1);
 
     g_subprocess_launcher_setenv(launcher.get(), "XPP_TEXT_COLOR", colorStr.c_str(), TRUE);
 
-    xoj::util::GObjectSPtr<GSubprocess> process(
-            g_subprocess_launcher_spawnv(launcher.get(), argv.get(), xoj::util::out_ptr(err)), xoj::util::adopt);
+    vn::util::GObjectSPtr<GSubprocess> process(
+            g_subprocess_launcher_spawnv(launcher.get(), argv.get(), vn::util::out_ptr(err)), vn::util::adopt);
 
     if (err) {
         AppMessageBox::showErrorToUser(getWindow(), FS(_F("Could not spawn editor: {1}") % err->message));
@@ -142,8 +142,8 @@ void ExtEdLatexDialog::openEditor() {
 void ExtEdLatexDialog::editorWaitCallback(GObject* processObj, GAsyncResult* res, ExtEdLatexDialog* self) {
     auto process = G_SUBPROCESS(processObj);
 
-    xoj::util::GErrorGuard err;
-    if (!g_subprocess_wait_finish(process, res, xoj::util::out_ptr(err))) {
+    vn::util::GErrorGuard err;
+    if (!g_subprocess_wait_finish(process, res, vn::util::out_ptr(err))) {
         // If we cancelled the operation, that's because the user closed the popup while the editor was still open. We
         // must not interact with self now, because that's likely already been destroyed. We kill the editor and then
         // return.

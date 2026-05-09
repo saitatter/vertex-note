@@ -141,8 +141,8 @@ void PageTemplateDialog::saveToFile() {
                         FileDlg* self = static_cast<FileDlg*>(data);
                         if (response == GTK_RESPONSE_OK) {
                             auto file = Util::fromGFile(
-                                    xoj::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(GTK_FILE_CHOOSER(dialog)),
-                                                                  xoj::util::adopt)
+                                    vn::util::GObjectSPtr<GFile>(gtk_file_chooser_get_file(GTK_FILE_CHOOSER(dialog)),
+                                                                  vn::util::adopt)
                                             .get());
 
                             auto saveTemplate = [self, dialog](const fs::path& file) {
@@ -169,7 +169,7 @@ void PageTemplateDialog::saveToFile() {
         inline GtkWindow* getWindow() const { return window.get(); }
 
     private:
-        xoj::util::GtkWindowUPtr window;
+        vn::util::GtkWindowUPtr window;
         PageTemplateDialog* parent;
         gulong signalId;
     };

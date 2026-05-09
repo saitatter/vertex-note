@@ -48,7 +48,7 @@ void StrokeToolView::draw(cairo_t* cr) const {
         }
     }
 
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_set_operator(cr, this->cairoOp);
 
     this->drawFilling(cr, pts);  // Noop in the base class.

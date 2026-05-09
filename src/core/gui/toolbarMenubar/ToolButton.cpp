@@ -26,10 +26,10 @@ ToolButton::ToolButton(std::string id, Category cat, Action action, GVariant* ta
         iconName(std::move(iconName)),
         description(std::move(description)),
         action(action),
-        target(target, xoj::util::refsink),
+        target(target, vn::util::refsink),
         toggle(true) {}
 
-auto ToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto ToolButton::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     GtkWidget* btn = toggle ? gtk_toggle_button_new() : gtk_button_new();
     gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
     gtk_button_set_child(GTK_BUTTON(btn), getNewToolIcon());
@@ -99,7 +99,7 @@ auto ToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());
-    return xoj::util::WidgetSPtr(GTK_WIDGET(it), xoj::util::adopt);
+    return vn::util::WidgetSPtr(GTK_WIDGET(it), vn::util::adopt);
 }
 
 auto ToolButton::getToolDisplayName() const -> std::string { return description; }

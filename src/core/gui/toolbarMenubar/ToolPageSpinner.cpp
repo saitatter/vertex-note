@@ -16,7 +16,7 @@ class ToolPageSpinner::Instance final {
 public:
     Instance(ToolPageSpinner* handler, GtkOrientation orientation): handler(handler), orientation(orientation) {}
 
-    xoj::util::WidgetSPtr makeWidget() {
+    vn::util::WidgetSPtr makeWidget() {
         GtkWidget* spinner = gtk_spin_button_new_with_range(0, 1, 1);
         gtk_orientable_set_orientation(GTK_ORIENTABLE(spinner), orientation);
         this->spinner.setWidget(spinner);  // takes ownership of spinner reference
@@ -46,7 +46,7 @@ public:
         }
         this->numberLabel = GTK_LABEL(numberLabel);
 
-        xoj::util::WidgetSPtr item(gtk_box_new(orientation, 1), xoj::util::adopt);
+        vn::util::WidgetSPtr item(gtk_box_new(orientation, 1), vn::util::adopt);
         GtkBox* box = GTK_BOX(item.get());
         gtk_box_append(box, pageLabel);
         gtk_box_append(box, spinner);
@@ -112,7 +112,7 @@ auto ToolPageSpinner::getNewToolIcon() const -> GtkWidget* {
     return gtk_image_new_from_icon_name(iconNameHelper.iconName("page-spinner").c_str(), GTK_ICON_SIZE_SMALL_TOOLBAR);
 }
 
-auto ToolPageSpinner::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto ToolPageSpinner::createItem(bool horizontal) -> vn::util::WidgetSPtr {
     auto orientation = horizontal ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL;
     auto data = std::make_unique<Instance>(this, orientation);
     auto item = data->makeWidget();

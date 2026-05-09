@@ -10,15 +10,15 @@
 static constexpr int POSITION_IN_MENUBAR_FROM_END = 1;
 
 PluginsSubmenu::PluginsSubmenu(PluginController* pluginController, GtkApplicationWindow* win):
-        submenu(g_menu_new(), xoj::util::adopt) {
-    xoj::util::GObjectSPtr<GMenu> firstSection(g_menu_new(), xoj::util::adopt);
+        submenu(g_menu_new(), vn::util::adopt) {
+    vn::util::GObjectSPtr<GMenu> firstSection(g_menu_new(), vn::util::adopt);
     g_menu_append(firstSection.get(), _("Plugin Manager"), "win.plugin-manager");
 
     g_menu_append_section(submenu.get(), nullptr, G_MENU_MODEL(firstSection.get()));
 
     for (auto& [pluginName, section]: pluginController->createMenuSections(win)) {
-        xoj::util::GObjectSPtr<GMenuItem> pluginSubmenuItem(g_menu_item_new_submenu(pluginName.c_str(), section),
-                                                            xoj::util::adopt);
+        vn::util::GObjectSPtr<GMenuItem> pluginSubmenuItem(g_menu_item_new_submenu(pluginName.c_str(), section),
+                                                            vn::util::adopt);
         g_menu_append_item(submenu.get(), pluginSubmenuItem.get());
     }
 }

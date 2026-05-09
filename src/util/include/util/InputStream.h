@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "util/NamespaceAliases.h"
 
 namespace xoj::util {
 

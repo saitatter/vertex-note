@@ -42,7 +42,7 @@ constexpr auto UI_DIALOG_ID = "intEdTexDialog";
 constexpr auto TEX_BOX_WIDGET_NAME = "texBox";
 
 IntEdLatexDialog::IntEdLatexDialog(GladeSearchpath* gladeSearchPath, std::unique_ptr<LatexController> ctrl):
-        AbstractLatexDialog(std::move(ctrl)), cssProvider(gtk_css_provider_new(), xoj::util::adopt) {
+        AbstractLatexDialog(std::move(ctrl)), cssProvider(gtk_css_provider_new(), vn::util::adopt) {
 
     Builder builder(gladeSearchPath, UI_FILE_NAME);
     window.reset(GTK_WINDOW(builder.get(UI_DIALOG_ID)));
@@ -179,6 +179,6 @@ auto IntEdLatexDialog::getBufferContents() -> std::string {
     GtkTextIter start, end;
     gtk_text_buffer_get_bounds(this->textBuffer, &start, &end);
     auto content =
-            xoj::util::OwnedCString::assumeOwnership(gtk_text_buffer_get_text(this->textBuffer, &start, &end, false));
+            vn::util::OwnedCString::assumeOwnership(gtk_text_buffer_get_text(this->textBuffer, &start, &end, false));
     return content.get();
 }

@@ -57,7 +57,7 @@ static const auto expectedTypes = setupImpl(std::make_index_sequence<xoj::to_und
 void exploreMenu(GMenuModel* m) {
     int n = g_menu_model_get_n_items(m);
     for (int i = 0; i < n; i++) {
-        xoj::util::GVariantSPtr val(g_menu_model_get_item_attribute_value(m, i, "action", nullptr), xoj::util::adopt);
+        vn::util::GVariantSPtr val(g_menu_model_get_item_attribute_value(m, i, "action", nullptr), vn::util::adopt);
 
         if (val) {
             std::string value = g_variant_get_string(val.get(), nullptr);
@@ -68,8 +68,8 @@ void exploreMenu(GMenuModel* m) {
             std::string action = value.substr(pos + 1);
             Action a = Action_fromString(action);
 
-            xoj::util::GVariantSPtr target(g_menu_model_get_item_attribute_value(m, i, "target", nullptr),
-                                           xoj::util::adopt);
+            vn::util::GVariantSPtr target(g_menu_model_get_item_attribute_value(m, i, "target", nullptr),
+                                           vn::util::adopt);
             if (target) {
                 EXPECT_TRUE(g_variant_type_equal(g_variant_get_type(target.get()), expectedTypes[a]));
             } else {
@@ -78,9 +78,9 @@ void exploreMenu(GMenuModel* m) {
         }
 
         {
-            xoj::util::GObjectSPtr<GMenuLinkIter> it(g_menu_model_iterate_item_links(m, i), xoj::util::adopt);
+            vn::util::GObjectSPtr<GMenuLinkIter> it(g_menu_model_iterate_item_links(m, i), vn::util::adopt);
             while (g_menu_link_iter_next(it.get())) {
-                xoj::util::GObjectSPtr<GMenuModel> subm(g_menu_link_iter_get_value(it.get()), xoj::util::adopt);
+                vn::util::GObjectSPtr<GMenuModel> subm(g_menu_link_iter_get_value(it.get()), vn::util::adopt);
                 exploreMenu(subm.get());
             }
         }
@@ -89,7 +89,7 @@ void exploreMenu(GMenuModel* m) {
 };  // namespace
 
 TEST(ActionDatabaseTest, testActionTargetMatch) {
-    xoj::util::GObjectSPtr<GtkBuilder> builder(gtk_builder_new(), xoj::util::adopt);
+    vn::util::GObjectSPtr<GtkBuilder> builder(gtk_builder_new(), vn::util::adopt);
 
     GError* error = nullptr;
     auto filepath = fs::path(GET_UI_FOLDER) / MENU_XML_FILE;

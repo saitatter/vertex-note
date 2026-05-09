@@ -19,6 +19,8 @@
 #include <glib-object.h>
 #include <glib.h>
 
+#include "util/NamespaceAliases.h"
+
 namespace xoj::util {
 
 namespace detail {

@@ -50,7 +50,7 @@ struct ComboToolInstanceData {
 
 /// change the prominent icon depending on G_ACTION(a)'s state
 static void setProminentIconCallback(GObject* a, GParamSpec*, ComboToolInstanceData* data) {
-    xoj::util::GVariantSPtr state(g_action_get_state(G_ACTION(a)), xoj::util::adopt);
+    vn::util::GVariantSPtr state(g_action_get_state(G_ACTION(a)), vn::util::adopt);
     auto it = std::find_if(data->entries->begin(), data->entries->end(),
                            [s = state.get()](const auto& e) { return g_variant_equal(e.target.get(), s); });
     if (it != data->entries->end()) {
@@ -61,7 +61,7 @@ static void setProminentIconCallback(GObject* a, GParamSpec*, ComboToolInstanceD
     }
 };
 
-auto ComboToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
+auto ComboToolButton::createItem(bool horizontal) -> vn::util::WidgetSPtr {
 
     auto data = std::make_unique<ComboToolInstanceData>();
     data->entries = &this->entries;
@@ -98,12 +98,12 @@ auto ComboToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
     gtk_box_append(box, GTK_WIDGET(data->btn));
     gtk_box_append(box, GTK_WIDGET(menubutton));
 
-    auto item = xoj::util::WidgetSPtr(GTK_WIDGET(box), xoj::util::adopt);
+    auto item = vn::util::WidgetSPtr(GTK_WIDGET(box), vn::util::adopt);
 
     // Set up the prominent button according to the action state
     setProminentIconCallback(G_OBJECT(gAction.get()), nullptr, data.get());
 
-    g_signal_connect(gAction.get(), "notify::state", xoj::util::wrap_for_g_callback_v<setProminentIconCallback>,
+    g_signal_connect(gAction.get(), "notify::state", vn::util::wrap_for_g_callback_v<setProminentIconCallback>,
                      data.get());
 
     // Disconnect the signal and destroy *data if the widget is destroyed

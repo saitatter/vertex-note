@@ -23,11 +23,11 @@ void XmlNode::setAttrib(const char8_t* attrib, const char* value) {
     if (value == nullptr) {
         value = "";
     }
-    putAttrib(new TextAttribute(attrib, xoj::util::utf8(value).str()));
+    putAttrib(new TextAttribute(attrib, vn::util::utf8(value).str()));
 }
 
 void XmlNode::setAttrib(const char8_t* attrib, const std::string& value) {
-    putAttrib(new TextAttribute(attrib, xoj::util::utf8(value).str()));
+    putAttrib(new TextAttribute(attrib, vn::util::utf8(value).str()));
 }
 
 void XmlNode::setAttrib(const char8_t* attrib, const char8_t* value) {

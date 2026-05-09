@@ -75,14 +75,14 @@ std::string getVertexNoteVersion() {
 }
 
 std::string getOsInfo() {
-    auto osInfo = xoj::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_NAME));
+    auto osInfo = vn::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_NAME));
     if (!osInfo) {
-        osInfo = xoj::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_PRETTY_NAME));
+        osInfo = vn::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_PRETTY_NAME));
     }
     if (osInfo) {
-        xoj::util::OwnedCString osVersion;
+        vn::util::OwnedCString osVersion;
         for (auto key: {G_OS_INFO_KEY_VERSION, G_OS_INFO_KEY_VERSION_ID, G_OS_INFO_KEY_VERSION_CODENAME}) {
-            osVersion = xoj::util::OwnedCString::assumeOwnership(g_get_os_info(key));
+            osVersion = vn::util::OwnedCString::assumeOwnership(g_get_os_info(key));
             if (osVersion) {
                 break;
             }

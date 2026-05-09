@@ -18,6 +18,6 @@ auto ScrollHandling::getHorizontal() -> GtkAdjustment* { return adjHorizontal; }
 
 auto ScrollHandling::getVertical() -> GtkAdjustment* { return adjVertical; }
 
-auto ScrollHandling::getPosition() const -> xoj::util::Point<double> {
+auto ScrollHandling::getPosition() const -> vn::util::Point<double> {
     return {gtk_adjustment_get_value(adjHorizontal), gtk_adjustment_get_value(adjVertical)};
 }

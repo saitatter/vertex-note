@@ -25,7 +25,7 @@ void PagePreviewDecoration::drawDecoration(cairo_t* cr, SidebarPreviewPageEntry*
 
 void PagePreviewDecoration::drawPageNumberBelowPreview(cairo_t* cr, SidebarPreviewPageEntry* pageEntry,
                                                        Control* control) {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_text_extents_t extents;
     std::string pageNumber = std::to_string(pageEntry->getIndex() + 1);
     Color color = control->getWindow()->isDarkTheme() ? Colors::white : Colors::xopp_darkslategray;
@@ -44,7 +44,7 @@ void PagePreviewDecoration::drawPageNumberBelowPreview(cairo_t* cr, SidebarPrevi
 
 void PagePreviewDecoration::drawPageNumberWithCircleBackground(cairo_t* cr, SidebarPreviewPageEntry* pageEntry,
                                                                Control* control) {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_text_extents_t extents;
     std::string pageNumber = std::to_string(pageEntry->getIndex() + 1);
     cairo_select_font_face(cr, FONT_NAME, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
@@ -86,7 +86,7 @@ void PagePreviewDecoration::drawPageNumberWithCircleBackground(cairo_t* cr, Side
 
 void PagePreviewDecoration::drawPageNumberWithSquareBackground(cairo_t* cr, SidebarPreviewPageEntry* pageEntry,
                                                                Control* control) {
-    xoj::util::CairoSaveGuard saveGuard(cr);
+    vn::util::CairoSaveGuard saveGuard(cr);
     cairo_text_extents_t extents;
     std::string pageNumber = std::to_string(pageEntry->getIndex() + 1);
     cairo_select_font_face(cr, FONT_NAME, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);

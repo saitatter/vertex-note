@@ -208,7 +208,7 @@ Util::GFilename::GFilename(const fs::path& p) {
     if (!g_get_filename_charsets(nullptr)) {
         // g_filename are NOT utf-8 encoded
         GError* err = nullptr;
-        value = xoj::util::OwnedCString::assumeOwnership(
+        value = vn::util::OwnedCString::assumeOwnership(
                 g_filename_from_utf8(char_cast(p.u8string().c_str()), -1, nullptr, nullptr, &err));
         if (err) {
             g_warning("Failed to convert g_filename from utf8 with error code: %d\n%s", err->code, err->message);
@@ -226,11 +226,11 @@ Util::GFilename::GFilename(const char* p): value(p) {}
 
 auto Util::GFilename::assumeOwnerhip(char* p) -> GFilename {
     GFilename f;
-    f.value = xoj::util::OwnedCString::assumeOwnership(p);
+    f.value = vn::util::OwnedCString::assumeOwnership(p);
     return f;
 }
 const char* Util::GFilename::c_str() const {
-    if (const auto* p = get_if<xoj::util::OwnedCString>(&value); p) {
+    if (const auto* p = get_if<vn::util::OwnedCString>(&value); p) {
         return p->get();
     } else if (const auto* q = get_if<const char*>(&value); q) {
         return *q;
@@ -244,14 +244,14 @@ std::optional<fs::path> Util::GFilename::toPath() const {
         // g_filename are NOT utf-8 encoded
         GError* err = nullptr;
         auto utf8 =
-                xoj::util::OwnedCString::assumeOwnership(g_filename_to_utf8(this->c_str(), -1, nullptr, nullptr, &err));
+                vn::util::OwnedCString::assumeOwnership(g_filename_to_utf8(this->c_str(), -1, nullptr, nullptr, &err));
         if (err) {
             g_warning("Failed to convert g_filename to utf8 with error code: %d\n%s", err->code, err->message);
             g_error_free(err);
             return std::nullopt;
         }
         if (utf8) {
-            return fs::path(xoj::util::utf8(utf8.get()));
+            return fs::path(vn::util::utf8(utf8.get()));
         } else {
             // Conversion failed?
             g_warning("Failed to convert g_filename to utf8: the resulting string is empty");
@@ -261,7 +261,7 @@ std::optional<fs::path> Util::GFilename::toPath() const {
 #endif
     {
         if (const char* p = this->c_str(); p) {
-            return fs::path(xoj::util::utf8(p));
+            return fs::path(vn::util::utf8(p));
         } else {
             return std::nullopt;
         }
@@ -305,8 +305,8 @@ auto Util::fromGFile(GFile* file) -> fs::path {
     return GFilename(g_file_peek_path(file)).toPath().value_or(fs::path());
 }
 
-auto Util::toGFile(fs::path const& path) -> xoj::util::GObjectSPtr<GFile> {
-    return xoj::util::GObjectSPtr<GFile>(g_file_new_for_path(GFilename(path).c_str()), xoj::util::adopt);
+auto Util::toGFile(fs::path const& path) -> vn::util::GObjectSPtr<GFile> {
+    return vn::util::GObjectSPtr<GFile>(g_file_new_for_path(GFilename(path).c_str()), vn::util::adopt);
 }
 
 auto Util::fromGFilename(const char* path) -> fs::path { return GFilename(path).toPath().value_or(fs::path()); }
@@ -373,7 +373,7 @@ auto Util::getDataSubfolder(const fs::path& subfolder) -> fs::path {
 static auto buildUserStateDir() -> fs::path {
 #if _WIN32
     // Windows: state directory is same as data directory (and the path is necessarily in utf-8)
-    return fs::path(xoj::util::utf8(g_get_user_data_dir()));
+    return fs::path(vn::util::utf8(g_get_user_data_dir()));
 #else
     // Unix: $XDG_STATE_HOME or ~/.local/state
     const char* xdgStateHome = std::getenv("XDG_STATE_HOME");

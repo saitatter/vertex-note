@@ -18,7 +18,7 @@ constexpr auto UI_FILE = "pageFormat.glade";
 constexpr auto UI_DIALOG_NAME = "pageFormatDialog";
 
 using namespace vn::popup;
-using xoj::util::GtkPaperSizeUPtr;
+using vn::util::GtkPaperSizeUPtr;
 
 FormatDialog::FormatDialog(GladeSearchpath* gladeSearchPath, Settings* settings, double width, double height,
                            std::function<void(double, double)> callback):

@@ -15,6 +15,8 @@
 
 #include <glib-object.h>
 
+#include "util/NamespaceAliases.h"
+
 #include "util/GVariantTemplate.h"
 
 #include "CLibrariesSPtr.h"
@@ -41,4 +43,4 @@ GVariantSPtr makeGVariantSPtr(T t) {
 }
 
 };  // namespace raii
-};  // namespace vn::util
+};  // namespace xoj::util

@@ -176,7 +176,7 @@ Control::Control(GApplication* gtkApp, GladeSearchpath* gladeSearchPath, bool di
     /**
      * This is needed to update the previews
      */
-    this->changeTimout = g_timeout_add_seconds(5, xoj::util::wrap_v<checkChangedDocument>, this);
+    this->changeTimout = g_timeout_add_seconds(5, vn::util::wrap_v<checkChangedDocument>, this);
 
     this->pageBackgroundChangeController = std::make_unique<PageBackgroundChangeController>(this);
 
@@ -356,7 +356,7 @@ void Control::enableAutosave(bool enable) {
 
     if (enable) {
         auto timeout = guint(settings->getAutosaveTimeout()) * 60U;
-        this->autosaveTimeout = g_timeout_add_seconds(timeout, xoj::util::wrap_v<autosaveCallback>, this);
+        this->autosaveTimeout = g_timeout_add_seconds(timeout, vn::util::wrap_v<autosaveCallback>, this);
     }
 }
 
@@ -1960,8 +1960,8 @@ void Control::loadMetadata(MetadataEntry md) {
     data->md = std::move(md);
     data->ctrl = this;
 
-    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, xoj::util::wrap_v<loadMetadataCallback>, data,
-                    &xoj::util::destroy_cb<MetadataCallbackData>);
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, vn::util::wrap_v<loadMetadataCallback>, data,
+                    &vn::util::destroy_cb<MetadataCallbackData>);
 }
 
 void Control::askToAnnotatePdf() {
@@ -2039,7 +2039,7 @@ void Control::showFontDialog() {
             [this, dlg](int response) {
                 if (response == GTK_RESPONSE_OK) {
                     auto font =
-                            xoj::util::OwnedCString::assumeOwnership(gtk_font_chooser_get_font(GTK_FONT_CHOOSER(dlg)));
+                            vn::util::OwnedCString::assumeOwnership(gtk_font_chooser_get_font(GTK_FONT_CHOOSER(dlg)));
                     this->actionDB->fireChangeActionState(Action::FONT, font.get());
                 }
                 this->actionDB->enableAction(Action::SELECT_FONT, true);
@@ -2295,7 +2295,7 @@ static void onGtkDemoShown(GObject* proc_object, GAsyncResult* res, gpointer) {
 void Control::showGtkDemo() {
     std::string binary = "gtk3-demo";
 #ifdef __APPLE__
-    if (!xoj::util::OwnedCString::assumeOwnership(g_find_program_in_path(binary.c_str()))) {
+    if (!vn::util::OwnedCString::assumeOwnership(g_find_program_in_path(binary.c_str()))) {
         // Try absolute path for binary
         auto path = Util::getExePath() / binary;
 
@@ -2350,7 +2350,7 @@ void Control::clipboardPasteText(string text) {
 
 void Control::clipboardPasteImage(GdkPixbuf* img) {
     auto image = std::make_unique<Image>();
-    xoj::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(img), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(img), vn::util::adopt);
 
     image->setImage(pixbuf.get());
 

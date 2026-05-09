@@ -15,7 +15,7 @@
 using std::string;
 
 PopplerGlibAction::PopplerGlibAction(PopplerAction* action, PopplerDocument* document):
-        document(document, xoj::util::ref) {
+        document(document, vn::util::ref) {
     if (gchar* title_cstr = reinterpret_cast<PopplerActionAny*>(action)->title) {
         title = std::string{title_cstr};
     }

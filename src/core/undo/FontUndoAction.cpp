@@ -12,7 +12,7 @@
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _
 
-using xoj::util::Rectangle;
+using vn::util::Rectangle;
 
 class FontUndoActionEntry {
 public:

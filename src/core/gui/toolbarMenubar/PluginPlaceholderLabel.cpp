@@ -39,10 +39,10 @@ auto PluginPlaceholderLabel::getDisplayText() const -> std::string {
     return sanitizeText(text);
 }
 
-auto PluginPlaceholderLabel::createItem(bool) -> xoj::util::WidgetSPtr {
+auto PluginPlaceholderLabel::createItem(bool) -> vn::util::WidgetSPtr {
     const std::string labelText = getDisplayText();
 
-    xoj::util::WidgetSPtr item(gtk_label_new(labelText.c_str()), xoj::util::adopt);
+    vn::util::WidgetSPtr item(gtk_label_new(labelText.c_str()), vn::util::adopt);
     GtkWidget* rawLabel = item.get();
     labelWidgets.push_back(rawLabel);
     gtk_widget_set_can_focus(rawLabel, false);

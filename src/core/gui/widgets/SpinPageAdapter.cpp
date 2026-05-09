@@ -24,7 +24,7 @@ void SpinPageAdapter::pageNrSpinChangedCallback(GtkSpinButton* spinbutton, SpinP
     }
 
     // Give the spin button some time to release, if we don't do he will send new events...
-    adapter->timeout = g_timeout_add(100, xoj::util::wrap_for_once_v<pageNrSpinChangedTimerCallback>, adapter);
+    adapter->timeout = g_timeout_add(100, vn::util::wrap_for_once_v<pageNrSpinChangedTimerCallback>, adapter);
 }
 
 void SpinPageAdapter::setWidget(GtkWidget* widget) {
@@ -32,7 +32,7 @@ void SpinPageAdapter::setWidget(GtkWidget* widget) {
         g_signal_handler_disconnect(this->widget.get(), this->pageNrSpinChangedHandlerId);
     }
     xoj_assert(widget);
-    this->widget.reset(widget, xoj::util::refsink);
+    this->widget.reset(widget, vn::util::refsink);
     this->pageNrSpinChangedHandlerId =
             g_signal_connect(widget, "value-changed", G_CALLBACK(pageNrSpinChangedCallback), this);
 

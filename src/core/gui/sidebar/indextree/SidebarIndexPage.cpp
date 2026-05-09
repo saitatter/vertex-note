@@ -119,7 +119,7 @@ auto SidebarIndexPage::treeSearchFunction(GtkTreeModel* model, gint column, cons
         sidebar->searchTimeout = 0;
     }
     sidebar->searchTimeout = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT_IDLE, 2,
-                                                        xoj::util::wrap_v<searchTimeoutFunc>, sidebar, nullptr);
+                                                        vn::util::wrap_v<searchTimeoutFunc>, sidebar, nullptr);
 
     // Source: Pidgin
     gchar* text = nullptr;

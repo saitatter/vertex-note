@@ -25,7 +25,7 @@ public:
 };
 
 LaserPointerHandler::LaserPointerHandler(PageView* pageView, Control* control, const PageRef& page):
-        viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::LaserPointerView>>()),
+        viewPool(std::make_shared<vn::util::DispatchPool<xoj::view::LaserPointerView>>()),
         ctrl(control),
         page(page),
         pageView(pageView),
@@ -61,7 +61,7 @@ void LaserPointerHandler::onButtonReleaseEvent(const PositionInputData& pos, dou
                              Range(this->strokehandler->getStroke()->boundingRect()));
     this->strokehandler.reset();
     this->fadeoutTimer =
-            g_timeout_add(this->fadeoutStartDelay, xoj::util::wrap_for_once_v<triggerFadeoutCallback>, this);
+            g_timeout_add(this->fadeoutStartDelay, vn::util::wrap_for_once_v<triggerFadeoutCallback>, this);
 }
 
 bool LaserPointerHandler::onMotionNotifyEvent(const PositionInputData& pos, double zoom) {
@@ -76,13 +76,13 @@ void LaserPointerHandler::onSequenceCancelEvent() {
     }
     if (this->hasFinishedStrokes) {
         this->fadeoutTimer =
-                g_timeout_add(this->fadeoutStartDelay, xoj::util::wrap_for_once_v<triggerFadeoutCallback>, this);
+                g_timeout_add(this->fadeoutStartDelay, vn::util::wrap_for_once_v<triggerFadeoutCallback>, this);
     }
 }
 
 void LaserPointerHandler::triggerFadeoutCallback(LaserPointerHandler* self) {
     self->fadeoutTimer.consume();
-    self->fadeoutTimer = g_timeout_add(FADEOUT_STEP_DURATION, xoj::util::wrap_v<fadeoutCallback>, self);
+    self->fadeoutTimer = g_timeout_add(FADEOUT_STEP_DURATION, vn::util::wrap_v<fadeoutCallback>, self);
 }
 
 gboolean LaserPointerHandler::fadeoutCallback(LaserPointerHandler* self) {

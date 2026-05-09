@@ -23,11 +23,11 @@ static void addlastSavePathShortcut(GtkFileChooser* fc, Settings* settings) {
 }
 
 static void setCurrentFolderToLastOpenPath(GtkFileChooser* fc, Settings* settings) {
-    xoj::util::GObjectSPtr<GFile> currentFolder;
+    vn::util::GObjectSPtr<GFile> currentFolder;
     if (settings && !settings->getLastOpenPath().empty()) {
         currentFolder = Util::toGFile(settings->getLastOpenPath());
     } else {
-        currentFolder.reset(g_file_new_for_path(g_get_home_dir()), xoj::util::adopt);
+        currentFolder.reset(g_file_new_for_path(g_get_home_dir()), vn::util::adopt);
     }
     gtk_file_chooser_set_current_folder(fc, currentFolder.get(), nullptr);
 }
@@ -68,7 +68,7 @@ public:
     inline GtkWindow* getWindow() const { return window.get(); }
 
 private:
-    xoj::util::GtkWindowUPtr window;
+    vn::util::GtkWindowUPtr window;
 
     std::function<void(fs::path, bool)> callback;
     gulong signalId{};
@@ -90,8 +90,8 @@ FileDlg::FileDlg(const char* title, std::function<void(fs::path, bool)> callback
 
                 if (response == GTK_RESPONSE_OK) {
                     auto path =
-                            Util::fromGFile(xoj::util::GObjectSPtr<GFile>(
-                                                    gtk_file_chooser_get_file(GTK_FILE_CHOOSER(win)), xoj::util::adopt)
+                            Util::fromGFile(vn::util::GObjectSPtr<GFile>(
+                                                    gtk_file_chooser_get_file(GTK_FILE_CHOOSER(win)), vn::util::adopt)
                                                     .get());
 
                     bool attach = false;

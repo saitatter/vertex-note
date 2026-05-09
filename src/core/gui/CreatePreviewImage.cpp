@@ -10,9 +10,9 @@ namespace xoj::helper {
 auto createPreviewImage(const PageType& pt) -> GtkWidget* {
     const double zoom = 0.5;
 
-    xoj::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, PREVIEW_WIDTH, PREVIEW_HEIGHT),
-                                        xoj::util::adopt);
-    xoj::util::CairoSPtr crSPtr(cairo_create(surface.get()), xoj::util::adopt);
+    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, PREVIEW_WIDTH, PREVIEW_HEIGHT),
+                                        vn::util::adopt);
+    vn::util::CairoSPtr crSPtr(cairo_create(surface.get()), vn::util::adopt);
     auto cr = crSPtr.get();
 
     cairo_scale(cr, zoom, zoom);
@@ -32,8 +32,8 @@ auto createPreviewImage(const PageType& pt) -> GtkWidget* {
     cairo_line_to(cr, 0, 0);
     cairo_stroke(cr);
 
-    xoj::util::GObjectSPtr<GdkPixbuf> pixbuf(
-            gdk_pixbuf_get_from_surface(surface.get(), 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT), xoj::util::adopt);
+    vn::util::GObjectSPtr<GdkPixbuf> pixbuf(
+            gdk_pixbuf_get_from_surface(surface.get(), 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT), vn::util::adopt);
     return gtk_image_new_from_pixbuf(pixbuf.get());
 }
 };  // namespace vn::helper

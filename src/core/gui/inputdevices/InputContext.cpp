@@ -131,7 +131,7 @@ void InputContext::connect(GtkWidget* pWidget, bool connectKeyboardHandler,
                     data->logfunction(event);
                     return data->self->handle(event);
                 }),
-                new D{this, logfunction.value()}, xoj::util::closure_notify_cb<D>, GConnectFlags(0));
+                new D{this, logfunction.value()}, vn::util::closure_notify_cb<D>, GConnectFlags(0));
     }
 }
 
@@ -152,10 +152,10 @@ auto InputContext::handle(GdkEvent* sourceEvent) -> bool {
     InputEvent event = InputEvents::translateEvent(
             sourceEvent, this->getSettings(),
             this->view ?
-                    xoj::util::Point<double>{
+                    vn::util::Point<double>{
                             gtk_adjustment_get_value(GTK_VERTEX_NOTE(this->view->getWidget())->hadjustment),
                             gtk_adjustment_get_value(GTK_VERTEX_NOTE(this->view->getWidget())->vadjustment)} :
-                    xoj::util::Point<double>{0., 0.});
+                    vn::util::Point<double>{0., 0.});
 
     // Add the device to the list of known devices if it is currently unknown
     if (gdk_device_get_device_type(sourceDevice) != GDK_DEVICE_TYPE_MASTER &&
