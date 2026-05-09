@@ -272,7 +272,7 @@ public:
     /**
      * Handles mouse input for moving and resizing, in pixel-coordinates relative to "view"
      */
-    void mouseDown(CursorSelectionType type, double x, double y);
+    void mouseDown(CursorSelectionType type, double x, double y, bool shiftDown = false);
 
     /**
      * Handles mouse input for moving and resizing, in pixel-coordinates relative to "view"
@@ -332,6 +332,15 @@ private:
     bool selectGeometryVertexHandleAt(double x, double y, double zoom);
     bool selectGeometryEdgeAt(double x, double y, double zoom);
     [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
+    void clearGeometryVertexSelection();
+    void setSingleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
+                                          vn::geom::Vec2 position);
+    void toggleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
+                                       vn::geom::Vec2 position);
+    [[nodiscard]] auto isGeometryVertexSelected(const vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
+            -> bool;
+    [[nodiscard]] auto findSelectedGeometryVertex(vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
+            -> std::optional<std::size_t>;
 
 
     /**
@@ -412,7 +421,13 @@ private:  // DATA
     vn::geom::VertexId activeGeometryVertex = vn::geom::InvalidVertexId;
     vn::geom::Vec2 activeGeometryVertexStart;
     vn::geom::Vec2 activeGeometryVertexCurrent;
+    std::vector<vn::geom::VertexId> activeGeometryVertices;
+    std::vector<vn::geom::Vec2> activeGeometryVertexStartPositions;
+    std::vector<vn::geom::Vec2> activeGeometryVertexCurrentPositions;
     bool activeGeometryVertexMoved = false;
+    vn::geom::GeometryElement* hoveredGeometryVertexElement = nullptr;
+    vn::geom::VertexId hoveredGeometryVertex = vn::geom::InvalidVertexId;
+    vn::geom::Vec2 hoveredGeometryVertexPosition;
     vn::geom::GeometryElement* hoveredGeometryElement = nullptr;
     vn::geom::EdgeId hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     vn::geom::Vec2 hoveredGeometryInsertPosition;

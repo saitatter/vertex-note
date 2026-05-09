@@ -535,14 +535,22 @@ void EditSelection::mouseUp() {
     }
 
     if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
-        if (this->activeGeometryElement && this->activeGeometryVertexMoved) {
-            this->undo->addUndoAction(std::make_unique<GeometryVertexMoveUndoAction>(
-                    this->sourcePage, this->activeGeometryElement, this->activeGeometryVertex,
-                    this->activeGeometryVertexStart, this->activeGeometryVertexCurrent));
+        if (this->activeGeometryElement && this->activeGeometryVertexMoved &&
+            this->activeGeometryVertices.size() == this->activeGeometryVertexCurrentPositions.size()) {
+            if (this->activeGeometryVertices.size() > 1U) {
+                this->undo->addUndoAction(std::make_unique<GeometryVertexMoveUndoAction>(
+                        this->sourcePage, this->activeGeometryElement, this->activeGeometryVertices,
+                        this->activeGeometryVertexStartPositions, this->activeGeometryVertexCurrentPositions));
+            } else {
+                this->undo->addUndoAction(std::make_unique<GeometryVertexMoveUndoAction>(
+                        this->sourcePage, this->activeGeometryElement, this->activeGeometryVertex,
+                        this->activeGeometryVertexStart, this->activeGeometryVertexCurrent));
+            }
+            rebaseSelectionBounds();
+            this->contents->invalidateViewBuffer();
+            this->view->getPage()->fireElementChanged(this->activeGeometryElement);
         }
 
-        this->activeGeometryElement = nullptr;
-        this->activeGeometryVertex = vn::geom::InvalidVertexId;
         this->activeGeometryVertexMoved = false;
         this->mouseDownType = CURSOR_SELECTION_NONE;
         this->view->getNoteView()->repaintSelection();
@@ -570,16 +578,32 @@ void EditSelection::mouseUp() {
     }
 }
 
-void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
+void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool shiftDown) {
     double zoom = this->view->getNoteView()->getZoom();
 
     this->mouseDownType = type;
     if (type != CURSOR_SELECTION_GEOMETRY_VERTEX) {
-        this->activeGeometryElement = nullptr;
-        this->activeGeometryVertex = vn::geom::InvalidVertexId;
-        this->activeGeometryVertexMoved = false;
+        clearGeometryVertexSelection();
         this->hoveredGeometryElement = nullptr;
         this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
+    } else if (this->hoveredGeometryVertexElement && this->hoveredGeometryVertex != vn::geom::InvalidVertexId) {
+        if (shiftDown) {
+            toggleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
+                                          this->hoveredGeometryVertexPosition);
+        } else if (!isGeometryVertexSelected(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex)) {
+            setSingleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
+                                             this->hoveredGeometryVertexPosition);
+        }
+
+        if (this->activeGeometryElement && !this->activeGeometryVertices.empty()) {
+            this->activeGeometryVertexStartPositions = this->activeGeometryVertexCurrentPositions;
+            this->activeGeometryVertexStart = this->activeGeometryVertexCurrent;
+            if (const auto index = findSelectedGeometryVertex(this->activeGeometryElement, this->activeGeometryVertex)) {
+                this->activeGeometryVertexStart = this->activeGeometryVertexCurrentPositions[*index];
+                this->activeGeometryVertexCurrent = this->activeGeometryVertexCurrentPositions[*index];
+            }
+            this->activeGeometryVertexMoved = false;
+        }
     }
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is not modified
@@ -597,7 +621,8 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
     double zoom = this->view->getNoteView()->getZoom();
 
     if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
-        if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId) {
+        if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId ||
+            this->activeGeometryVertices.empty()) {
             return;
         }
 
@@ -609,9 +634,24 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
         snapped = snappingHandler.snapToGrid(snapped, alt);
         modelPosition = {snapped.x, snapped.y};
 
-        if (this->activeGeometryElement->setVertexPosition(this->activeGeometryVertex, modelPosition)) {
-            this->activeGeometryVertexCurrent = modelPosition;
-            this->activeGeometryVertexMoved = true;
+        const vn::geom::Vec2 delta{modelPosition.x - this->activeGeometryVertexStart.x,
+                                   modelPosition.y - this->activeGeometryVertexStart.y};
+
+        bool changed = false;
+        this->activeGeometryVertexCurrent = modelPosition;
+        this->activeGeometryVertexCurrentPositions.clear();
+        this->activeGeometryVertexCurrentPositions.reserve(this->activeGeometryVertexStartPositions.size());
+
+        for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
+            const auto start = this->activeGeometryVertexStartPositions[i];
+            const vn::geom::Vec2 next{start.x + delta.x, start.y + delta.y};
+            changed = this->activeGeometryElement->setVertexPosition(this->activeGeometryVertices[i], next) || changed;
+            this->activeGeometryVertexCurrentPositions.push_back(next);
+        }
+
+        if (changed) {
+            this->activeGeometryVertexMoved =
+                    delta.x != 0.0 || delta.y != 0.0 || this->activeGeometryVertices.size() > 1U;
             this->contents->invalidateViewBuffer();
             this->view->getNoteView()->repaintSelection();
         }
@@ -927,20 +967,26 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
 }
 
 auto EditSelection::deleteActiveGeometryVertex() -> bool {
-    if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId) {
+    if (!this->activeGeometryElement || this->activeGeometryVertices.empty()) {
         return false;
     }
 
     const auto before = this->activeGeometryElement->geometry();
-    if (!this->activeGeometryElement->removeVertex(this->activeGeometryVertex)) {
+    auto after = before;
+    bool changed = false;
+    for (const auto vertex: this->activeGeometryVertices) {
+        changed = after.removeVertex(vertex) || changed;
+    }
+
+    if (!changed) {
         return false;
     }
 
-    const auto after = this->activeGeometryElement->geometry();
+    this->activeGeometryElement->replaceGeometry(after);
     this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
-            this->sourcePage, this->activeGeometryElement, before, after, _("Delete geometry vertex")));
-    this->activeGeometryVertex = vn::geom::InvalidVertexId;
-    this->activeGeometryVertexMoved = false;
+            this->sourcePage, this->activeGeometryElement, before, after,
+            this->activeGeometryVertices.size() > 1U ? _("Delete geometry vertices") : _("Delete geometry vertex")));
+    clearGeometryVertexSelection();
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     rebaseSelectionBounds();
@@ -966,11 +1012,7 @@ auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
     this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
             this->sourcePage, this->hoveredGeometryElement, before, after, _("Insert geometry vertex")));
 
-    this->activeGeometryElement = this->hoveredGeometryElement;
-    this->activeGeometryVertex = *inserted;
-    this->activeGeometryVertexStart = this->hoveredGeometryInsertPosition;
-    this->activeGeometryVertexCurrent = this->hoveredGeometryInsertPosition;
-    this->activeGeometryVertexMoved = false;
+    setSingleGeometryVertexSelection(this->hoveredGeometryElement, *inserted, this->hoveredGeometryInsertPosition);
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     rebaseSelectionBounds();
     this->contents->invalidateViewBuffer();
@@ -1147,11 +1189,13 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
         this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
         return CURSOR_SELECTION_GEOMETRY_VERTEX;
     }
-    this->activeGeometryElement = nullptr;
-    this->activeGeometryVertex = vn::geom::InvalidVertexId;
+    this->hoveredGeometryVertexElement = nullptr;
+    this->hoveredGeometryVertex = vn::geom::InvalidVertexId;
     if (selectGeometryEdgeAt(x, y, zoom)) {
         return CURSOR_SELECTION_MOVE;
     }
+    this->hoveredGeometryVertexElement = nullptr;
+    this->hoveredGeometryVertex = vn::geom::InvalidVertexId;
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
 
@@ -1351,7 +1395,8 @@ void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, d
         for (const auto& vertex: geometry->geometry().vertices()) {
             const double handleX = hasWidth ? x + (vertex.position.x - original.x) * fx : x + this->width / 2.0;
             const double handleY = hasHeight ? y + (vertex.position.y - original.y) * fy : y + this->height / 2.0;
-            const bool active = geometry == this->activeGeometryElement && vertex.id == this->activeGeometryVertex;
+            const bool active = isGeometryVertexSelected(geometry, vertex.id) ||
+                                (geometry == this->hoveredGeometryVertexElement && vertex.id == this->hoveredGeometryVertex);
             drawGeometryVertexHandle(cr, handleX, handleY, zoom, active);
         }
     }
@@ -1460,11 +1505,9 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
             const double handleX = modelX * zoom;
             const double handleY = modelY * zoom;
             if (std::hypot(x - handleX, y - handleY) <= hitRadius) {
-                this->activeGeometryElement = geometry;
-                this->activeGeometryVertex = vertex.id;
-                this->activeGeometryVertexStart = vertex.position;
-                this->activeGeometryVertexCurrent = vertex.position;
-                this->activeGeometryVertexMoved = false;
+                this->hoveredGeometryVertexElement = geometry;
+                this->hoveredGeometryVertex = vertex.id;
+                this->hoveredGeometryVertexPosition = vertex.position;
                 selected = true;
                 return;
             }
@@ -1547,6 +1590,84 @@ auto EditSelection::geometryVertexPreviewToModel(double x, double y) const -> vn
 
     return {hasWidth ? original.x + (x - this->x) / fx : original.x,
             hasHeight ? original.y + (y - this->y) / fy : original.y};
+}
+
+void EditSelection::clearGeometryVertexSelection() {
+    this->activeGeometryElement = nullptr;
+    this->activeGeometryVertex = vn::geom::InvalidVertexId;
+    this->activeGeometryVertexStart = {};
+    this->activeGeometryVertexCurrent = {};
+    this->activeGeometryVertices.clear();
+    this->activeGeometryVertexStartPositions.clear();
+    this->activeGeometryVertexCurrentPositions.clear();
+    this->activeGeometryVertexMoved = false;
+}
+
+void EditSelection::setSingleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
+                                                     vn::geom::Vec2 position) {
+    this->activeGeometryElement = element;
+    this->activeGeometryVertex = vertex;
+    this->activeGeometryVertexStart = position;
+    this->activeGeometryVertexCurrent = position;
+    this->activeGeometryVertices = {vertex};
+    this->activeGeometryVertexStartPositions = {position};
+    this->activeGeometryVertexCurrentPositions = {position};
+    this->activeGeometryVertexMoved = false;
+}
+
+void EditSelection::toggleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
+                                                  vn::geom::Vec2 position) {
+    if (element != this->activeGeometryElement) {
+        setSingleGeometryVertexSelection(element, vertex, position);
+        return;
+    }
+
+    const auto index = findSelectedGeometryVertex(element, vertex);
+    if (!index) {
+        this->activeGeometryVertex = vertex;
+        this->activeGeometryVertexStart = position;
+        this->activeGeometryVertexCurrent = position;
+        this->activeGeometryVertices.push_back(vertex);
+        this->activeGeometryVertexStartPositions.push_back(position);
+        this->activeGeometryVertexCurrentPositions.push_back(position);
+        this->activeGeometryVertexMoved = false;
+        return;
+    }
+
+    this->activeGeometryVertices.erase(this->activeGeometryVertices.begin() + static_cast<std::ptrdiff_t>(*index));
+    this->activeGeometryVertexStartPositions.erase(this->activeGeometryVertexStartPositions.begin() +
+                                                   static_cast<std::ptrdiff_t>(*index));
+    this->activeGeometryVertexCurrentPositions.erase(this->activeGeometryVertexCurrentPositions.begin() +
+                                                     static_cast<std::ptrdiff_t>(*index));
+
+    if (this->activeGeometryVertices.empty()) {
+        clearGeometryVertexSelection();
+        return;
+    }
+
+    this->activeGeometryVertex = this->activeGeometryVertices.back();
+    this->activeGeometryVertexStart = this->activeGeometryVertexStartPositions.back();
+    this->activeGeometryVertexCurrent = this->activeGeometryVertexCurrentPositions.back();
+    this->activeGeometryVertexMoved = false;
+}
+
+auto EditSelection::isGeometryVertexSelected(const vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
+        -> bool {
+    return element == this->activeGeometryElement && findSelectedGeometryVertex(this->activeGeometryElement, vertex).has_value();
+}
+
+auto EditSelection::findSelectedGeometryVertex(vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
+        -> std::optional<std::size_t> {
+    if (element != this->activeGeometryElement) {
+        return std::nullopt;
+    }
+
+    for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
+        if (this->activeGeometryVertices[i] == vertex) {
+            return i;
+        }
+    }
+    return std::nullopt;
 }
 
 /**

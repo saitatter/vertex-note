@@ -150,7 +150,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
                 selection->copySelection();
             }
 
-            noteWidget->selection->mouseDown(selType, selectionPos.x, selectionPos.y);
+            noteWidget->selection->mouseDown(selType, selectionPos.x, selectionPos.y, selectionPos.isShiftDown());
             return true;
         }
 
