@@ -1025,6 +1025,8 @@ void TextEditor::finalizeEdition() {
     if (originalTextElement) {
         // Modifying a preexisting element
         this->viewPool->dispatchAndClear(vn::view::TextEditionView::FINALIZATION_REQUEST, this->previousBoundingBox);
+        auto dirtyRect = this->originalTextElement->boundingRect();
+        dirtyRect.unite(this->textElement->boundingRect());
 
         doc->lock();
         Layer* layer = this->page->getSelectedLayer();
@@ -1033,7 +1035,7 @@ void TextEditor::finalizeEdition() {
         layer->addElement(std::move(this->textElement));
         doc->unlock();
 
-        this->page->fireElementChanged(ptr);
+        this->page->fireRectChanged(dirtyRect);
 
         if (orig) [[likely]] {
             xoj_assert(orig.get() == this->originalTextElement);
