@@ -19,6 +19,7 @@
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
 #include "model/Element.h"
+#include "model/Image.h"
 #include "model/Point.h"
 #include "model/Stroke.h"
 #include "model/Text.h"
@@ -230,6 +231,29 @@ public:
     // Text editing
     auto insertTextElement(std::size_t pageIndex, std::unique_ptr<Text> text) -> const Element*;
     auto hitTestTextElement(std::size_t pageIndex, double pageX, double pageY, double maxDistance) const -> Text*;
+
+    // Page management
+    void addPageAfter(std::size_t afterPageIndex);
+    void duplicatePage(std::size_t pageIndex);
+    void deletePage(std::size_t pageIndex);
+
+    // Document save
+    auto saveDocument(const std::filesystem::path& path, std::string* errorMessage = nullptr) -> bool;
+
+    // Image insertion
+    auto insertImage(std::size_t pageIndex, double x, double y, const std::string& imageData, double width,
+                     double height) -> const Element*;
+
+    // Text search
+    struct TextSearchResult {
+        std::size_t pageIndex = 0U;
+        const Text* textElement = nullptr;
+        std::string matchContext;
+    };
+    auto findTextInDocument(const std::string& query) const -> std::vector<TextSearchResult>;
+
+    // Document access (for exporter/printer)
+    [[nodiscard]] auto documentPtr() const -> const Document*;
 
     // Unified undo/redo
     [[nodiscard]] auto canUndo() const -> bool;

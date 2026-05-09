@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Qt document export (PDF, PNG).
+ * Qt document export (PDF, PNG) and print.
  */
 
 #pragma once
@@ -11,6 +11,8 @@
 #include <vector>
 
 #include "view/render/Renderers.h"
+
+class QWidget;
 
 namespace vn::view::render {
 class PageContentRenderer;
@@ -31,6 +33,9 @@ public:
     [[nodiscard]] auto exportAllPagesPng(const std::filesystem::path& directory,
                                          const std::vector<vn::view::render::PageRenderSnapshot>& pages,
                                          double scale = 2.0, std::string* errorMessage = nullptr) -> bool;
+
+    [[nodiscard]] auto printDocument(const std::vector<vn::view::render::PageRenderSnapshot>& pages,
+                                     QWidget* parentWidget = nullptr) -> bool;
 
 private:
     vn::view::render::PageContentRenderer* contentRenderer = nullptr;

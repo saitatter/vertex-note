@@ -30,11 +30,11 @@ This document tracks the executable slices of the Qt migration.
 
 - **App bootstrap**: `QApplication`, `QMainWindow`, full `IAppShell`
   implementation (`QtAppShell`).
-- **Command host**: `QtCommandHost` — ~20 bootstrap commands wired to
+- **Command host**: `QtCommandHost` — ~35 bootstrap commands wired to
   `QAction`/`QMenu`.
 - **Services**: `QtClipboardService`, `QtDialogService`,
   `QtRecentFilesService` (working), `QtUpdatePresentationService` and
-  `QtPluginUiBridge` (stubs).
+  `QtPluginUiBridge` (real callbacks, menu/toolbar integration).
 - **Canvas**: `QtCanvas` — viewport rendering with translated mouse, pen,
   wheel, key, and touch input; pan / zoom / fit-page interactions.
 - **Input adapter**: `QtInputAdapter` translates Qt events → neutral
@@ -85,7 +85,7 @@ This document tracks the executable slices of the Qt migration.
 The Qt shell is intentionally opt-in.
 
 ```powershell
-pacman -S mingw-w64-x86_64-qt6-base
+pacman -S mingw-w64-x86_64-qt6-base mingw-w64-x86_64-qt6-printsupport
 powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 build-qt
 ```
 
@@ -141,3 +141,13 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 13. ✓ Segment eraser — splits strokes at eraser intersection points, with full undo/redo.
 14. ✓ Plugin UI bridge — real callbacks, separate menu/toolbar registration, true action removal.
 15. ✓ Inline text editing — click to create/edit Text elements with overlay editor, undo/redo.
+
+### Phase 5 — Document workflow & remaining features ✓
+
+16. ✓ Page management — add page after, duplicate page (clones all elements), delete page (with guard).
+17. ✓ Save document — `SaveHandler` serialisation to `.xopp` XML, with save-to-existing-path shortcut (Ctrl+S).
+18. ✓ Image insertion — insert image from file into page layer, with undo support.
+19. ✓ Text search — case-insensitive substring search across all Text elements, scroll-to-first-match.
+20. ✓ Print — `QPrinter` + `QPrintDialog` with per-page sizing and high-resolution DPI scaling.
+21. ✓ Settings dialog — tabbed preferences for tool defaults, page dimensions, eraser mode, snap toggles.
+22. ✓ Text tool command — `tool.text` (T) wired in toolbar and menu alongside other tools.

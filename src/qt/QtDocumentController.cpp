@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "control/xojfile/LoadHandler.h"
+#include "control/xojfile/SaveHandler.h"
 #include "model/Element.h"
 #include "model/Document.h"
 #include "model/Image.h"
@@ -1375,6 +1376,203 @@ auto QtDocumentController::hitTestTextElement(std::size_t pageIndex, double page
         }
     }
     return best;
+}
+
+// ---------------------------------------------------------------------------
+// Page management
+// ---------------------------------------------------------------------------
+
+void QtDocumentController::addPageAfter(std::size_t afterPageIndex) {
+    if (!this->document) {
+        return;
+    }
+    this->document->lock();
+    // Clone dimensions from the reference page if it exists
+    double width = 595.0;
+    double height = 842.0;
+    if (afterPageIndex < this->document->getPageCount()) {
+        auto ref = this->document->getPage(afterPageIndex);
+        if (ref) {
+            width = ref->getWidth();
+            height = ref->getHeight();
+        }
+    }
+    auto newPage = std::make_shared<NotePage>(width, height);
+    const auto insertPos = std::min(afterPageIndex + 1, this->document->getPageCount());
+    this->document->insertPage(newPage, insertPos);
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::duplicatePage(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    this->document->lock();
+    auto srcPage = this->document->getPage(pageIndex);
+    if (!srcPage) {
+        this->document->unlock();
+        return;
+    }
+    // Create a new page with same dimensions and background
+    auto newPage = std::make_shared<NotePage>(srcPage->getWidth(), srcPage->getHeight());
+    newPage->setBackgroundType(srcPage->getBackgroundType());
+    newPage->setBackgroundColor(srcPage->getBackgroundColor());
+
+    // Clone elements from all layers
+    for (auto* srcLayer: srcPage->getLayers()) {
+        if (!srcLayer) {
+            continue;
+        }
+        // NotePage creates with one layer; reuse for first, add for subsequent
+        Layer* dstLayer = nullptr;
+        if (newPage->getLayers().empty()) {
+            // Should not happen, but handle gracefully
+            this->document->unlock();
+            return;
+        }
+        dstLayer = newPage->getLayers().back();
+
+        for (const auto& elem: srcLayer->getElements()) {
+            if (elem) {
+                dstLayer->addElement(elem->clone());
+            }
+        }
+    }
+
+    this->document->insertPage(newPage, pageIndex + 1);
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+void QtDocumentController::deletePage(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    // Don't delete the last page — keep at least one
+    if (this->document->getPageCount() <= 1) {
+        return;
+    }
+    this->document->lock();
+    this->document->deletePage(pageIndex);
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+// ---------------------------------------------------------------------------
+// Document save
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::saveDocument(const std::filesystem::path& path, std::string* errorMessage) -> bool {
+    if (!this->document) {
+        if (errorMessage) {
+            *errorMessage = "No document to save.";
+        }
+        return false;
+    }
+
+    SaveHandler handler;
+    this->document->lock();
+    handler.prepareSave(this->document.get(), path);
+    this->document->unlock();
+
+    handler.saveTo(path);
+
+    const auto& err = handler.getErrorMessage();
+    if (!err.empty()) {
+        if (errorMessage) {
+            *errorMessage = err;
+        }
+        return false;
+    }
+    this->loadedPath = path;
+    return true;
+}
+
+auto QtDocumentController::documentPtr() const -> const Document* { return this->document.get(); }
+
+// ---------------------------------------------------------------------------
+// Image insertion
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::insertImage(std::size_t pageIndex, double x, double y, const std::string& imageData,
+                                       double width, double height) -> const Element* {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return nullptr;
+    }
+
+    auto img = std::make_unique<Image>();
+    img->setX(x);
+    img->setY(y);
+    img->setWidth(width);
+    img->setHeight(height);
+    img->setImage(std::string(imageData));
+
+    const auto* ptr = img.get();
+    layer->addElement(std::move(img));
+
+    // Push to undo history (reuse stroke-style undo: remove on undo, re-insert on redo)
+    QtStrokeHistoryEntry entry;
+    entry.pageIndex = pageIndex;
+    entry.element = ptr;
+    entry.text = "Insert image";
+    pushHistory(QtHistoryEntry{std::move(entry)});
+
+    this->document->unlock();
+    rebuildPageSnapshots();
+    return ptr;
+}
+
+// ---------------------------------------------------------------------------
+// Text search
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::findTextInDocument(const std::string& query) const
+        -> std::vector<TextSearchResult> {
+    std::vector<TextSearchResult> results;
+    if (!this->document || query.empty()) {
+        return results;
+    }
+
+    for (std::size_t pi = 0; pi < this->document->getPageCount(); ++pi) {
+        auto page = this->document->getPage(pi);
+        if (!page) {
+            continue;
+        }
+        for (auto* layer: page->getLayers()) {
+            if (!layer) {
+                continue;
+            }
+            for (const auto& elem: layer->getElements()) {
+                if (!elem || elem->getType() != ELEMENT_TEXT) {
+                    continue;
+                }
+                auto* t = dynamic_cast<const Text*>(elem.get());
+                if (!t) {
+                    continue;
+                }
+                const auto& text = t->getText();
+                // Case-insensitive substring search
+                std::string lowerText = text;
+                std::string lowerQuery = query;
+                std::transform(lowerText.begin(), lowerText.end(), lowerText.begin(),
+                               [](unsigned char c) { return std::tolower(c); });
+                std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(),
+                               [](unsigned char c) { return std::tolower(c); });
+                if (lowerText.find(lowerQuery) != std::string::npos) {
+                    results.push_back({.pageIndex = pi, .textElement = t, .matchContext = text});
+                }
+            }
+        }
+    }
+    return results;
 }
 
 // ---------------------------------------------------------------------------

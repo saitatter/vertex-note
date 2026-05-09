@@ -224,7 +224,7 @@ endif ()
 
 option(ENABLE_QT_SHELL "Build the Qt Widgets shell" OFF)
 if (ENABLE_QT_SHELL)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport)
     message(STATUS "Enable Qt Widgets shell")
 else ()
     message(STATUS "Disable Qt Widgets shell")

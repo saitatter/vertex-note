@@ -11,7 +11,9 @@
 
 #include <QApplication>
 #include <QAction>
+#include <QFile>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QMessageBox>
 #include <QShortcut>
 #include <QStatusBar>
@@ -20,6 +22,7 @@
 
 #include "QtBackgroundDialog.h"
 #include "QtPageSidebar.h"
+#include "QtSettingsDialog.h"
 
 namespace {
 
@@ -333,6 +336,75 @@ void QtAppShell::registerBootstrapCommands() {
              .menu = "View",
              .checkable = true},
             [this]() { togglePresentationMode(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "file.save",
+             .text = "Save Document",
+             .tooltip = "Save the document as .xopp",
+             .shortcut = "Ctrl+S",
+             .menu = "File"},
+            [this]() { saveDocument(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "file.print",
+             .text = "Print...",
+             .tooltip = "Print the current document",
+             .shortcut = "Ctrl+P",
+             .menu = "File"},
+            [this]() { printDocument(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.add",
+             .text = "Add Page",
+             .tooltip = "Add a blank page after the current page",
+             .menu = "Edit"},
+            [this]() { addPage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.delete",
+             .text = "Delete Page",
+             .tooltip = "Delete the current page",
+             .menu = "Edit"},
+            [this]() { deletePage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "page.duplicate",
+             .text = "Duplicate Page",
+             .tooltip = "Duplicate the current page",
+             .menu = "Edit"},
+            [this]() { duplicatePage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.find",
+             .text = "Find Text...",
+             .tooltip = "Search for text in the document",
+             .shortcut = "Ctrl+F",
+             .menu = "Edit"},
+            [this]() { findText(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "edit.insert-image",
+             .text = "Insert Image...",
+             .tooltip = "Insert an image from a file",
+             .menu = "Edit"},
+            [this]() { insertImage(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.text",
+             .text = "Text",
+             .tooltip = "Insert or edit text on the canvas",
+             .shortcut = "T",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::Text},
+            [this]() { selectTool(QtToolType::Text); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "app.settings",
+             .text = "Preferences...",
+             .tooltip = "Open the settings dialog",
+             .menu = "Edit"},
+            [this]() { showSettingsDialog(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -590,6 +662,7 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
+    this->window.commandHost()->setCommandChecked("tool.text", active == QtToolType::Text);
 }
 
 void QtAppShell::showBackgroundDialog() {
@@ -721,4 +794,188 @@ void QtAppShell::togglePresentationMode() {
         }
         this->window.statusBar()->showMessage(QStringLiteral("Exited presentation mode"), 3000);
     }
+}
+
+void QtAppShell::saveDocument() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    // If there's an existing source path, save there; otherwise prompt
+    auto existingPath = this->documentController.sourcePath();
+    std::filesystem::path savePath;
+    if (existingPath) {
+        savePath = *existingPath;
+    } else {
+        const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Save Document"),
+                                                              QString(), QStringLiteral("VertexNote Files (*.xopp)"));
+        if (filePath.isEmpty()) {
+            return;
+        }
+        savePath = filePath.toStdString();
+    }
+
+    std::string errorMsg;
+    if (this->documentController.saveDocument(savePath, &errorMsg)) {
+        this->session.markDirty(false);
+        updateWindowTitle();
+        this->window.statusBar()->showMessage(QStringLiteral("Document saved"), 3000);
+    } else {
+        QMessageBox::warning(&this->window, QStringLiteral("Save Failed"), QString::fromStdString(errorMsg));
+    }
+}
+
+void QtAppShell::printDocument() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    auto* renderer = this->window.canvas()->contentRenderer();
+    if (!renderer) {
+        return;
+    }
+
+    QtDocumentExporter exp(renderer);
+    const auto& pages = this->documentController.snapshotPages();
+    if (exp.printDocument(pages, &this->window)) {
+        this->window.statusBar()->showMessage(QStringLiteral("Document printed"), 3000);
+    }
+}
+
+void QtAppShell::addPage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    // Add after the last page
+    const std::size_t pageCount = this->documentController.pageCount();
+    this->documentController.addPageAfter(pageCount > 0 ? pageCount - 1 : 0);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page added"), 3000);
+}
+
+void QtAppShell::deletePage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const std::size_t pageCount = this->documentController.pageCount();
+    if (pageCount <= 1) {
+        this->window.statusBar()->showMessage(QStringLiteral("Cannot delete the only page"), 3000);
+        return;
+    }
+
+    // Delete the last page (simple policy for now)
+    this->documentController.deletePage(pageCount - 1);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page deleted"), 3000);
+}
+
+void QtAppShell::duplicatePage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const std::size_t pageCount = this->documentController.pageCount();
+    if (pageCount == 0) {
+        return;
+    }
+
+    // Duplicate the last page
+    this->documentController.duplicatePage(pageCount - 1);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page duplicated"), 3000);
+}
+
+void QtAppShell::findText() {
+    bool ok = false;
+    const QString searchTerm = QInputDialog::getText(&this->window, QStringLiteral("Find Text"),
+                                                     QStringLiteral("Search for:"), QLineEdit::Normal, QString(), &ok);
+    if (!ok || searchTerm.isEmpty()) {
+        return;
+    }
+
+    const auto results = this->documentController.findTextInDocument(searchTerm.toStdString());
+    if (results.empty()) {
+        QMessageBox::information(&this->window, QStringLiteral("Find Text"),
+                                 QStringLiteral("No matches found for \"%1\".").arg(searchTerm));
+        return;
+    }
+
+    // Show summary and scroll to first result
+    const auto& first = results.front();
+    QString msg = QStringLiteral("Found %1 match(es). First on page %2.")
+                          .arg(results.size())
+                          .arg(first.pageIndex + 1);
+    this->window.statusBar()->showMessage(msg, 5000);
+
+    // Scroll to the page of the first result
+    const auto& pages = this->documentController.snapshotPages();
+    double y = 0.0;
+    constexpr double PAGE_GAP = 20.0;
+    for (std::size_t i = 0; i < first.pageIndex && i < pages.size(); ++i) {
+        y += pages[i].height + PAGE_GAP;
+    }
+    this->window.canvas()->setViewportState(this->window.canvas()->sessionViewportState().zoom, 0.0, y);
+    this->window.canvas()->update();
+}
+
+void QtAppShell::insertImage() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const QString filePath =
+            QFileDialog::getOpenFileName(&this->window, QStringLiteral("Insert Image"), QString(),
+                                         QStringLiteral("Images (*.png *.jpg *.jpeg *.bmp *.gif *.svg)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(&this->window, QStringLiteral("Insert Image"), QStringLiteral("Could not read the image file."));
+        return;
+    }
+
+    const QByteArray imageData = file.readAll();
+    file.close();
+
+    // Insert on page 0, layer 0 at a default position
+    this->documentController.insertImage(0, 100.0, 100.0, std::string(imageData.constData(), imageData.size()),
+                                         200.0, 200.0);
+    this->window.canvas()->update();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Image inserted"), 3000);
+}
+
+void QtAppShell::showSettingsDialog() {
+    QtSettingsDialog dialog(this->currentSettings, &this->window);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    this->currentSettings = dialog.settings();
+
+    // Apply relevant settings immediately
+    auto& ts = this->window.canvas()->toolState();
+    ts.penWidth = this->currentSettings.defaultPenWidth;
+    ts.highlighterWidth = this->currentSettings.defaultHighlighterWidth;
+    ts.eraserWidth = this->currentSettings.defaultEraserWidth;
+    ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
+    ts.eraserMode = this->currentSettings.defaultEraserMode;
+
+    this->window.canvas()->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
+    this->window.canvas()->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
+    this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
+    this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
+
+    this->window.toolPalette()->syncFromToolState(ts);
+    this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
 }

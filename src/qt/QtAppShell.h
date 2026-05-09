@@ -14,6 +14,7 @@
 #include "QtMainWindow.h"
 #include "QtPluginUiBridge.h"
 #include "QtRecentFilesService.h"
+#include "QtSettingsDialog.h"
 #include "QtToolState.h"
 #include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
@@ -55,6 +56,14 @@ private:
     void exportPng();
     void toggleFullscreen();
     void togglePresentationMode();
+    void saveDocument();
+    void printDocument();
+    void addPage();
+    void deletePage();
+    void duplicatePage();
+    void findText();
+    void insertImage();
+    void showSettingsDialog();
 
 private:
     QtMainWindow window;
@@ -68,4 +77,5 @@ private:
     std::unique_ptr<QtDocumentExporter> exporter;
     bool suppressDirtyTracking = false;
     bool presentationMode = false;
+    QtSettings currentSettings;
 };

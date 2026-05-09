@@ -49,11 +49,13 @@ set(vertexnote_qt_sources
         QtToolPalette.cpp
         QtTextEditor.h
         QtTextEditor.cpp
+        QtSettingsDialog.h
+        QtSettingsDialog.cpp
 )
 
 add_executable(vertexnote-qt-shell ${vertexnote_qt_sources})
 target_compile_definitions(vertexnote-qt-shell PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(vertexnote-qt-shell PRIVATE Qt6::Widgets vertexnote::defaults vertexnote::util vertexnote::core)
+target_link_libraries(vertexnote-qt-shell PRIVATE Qt6::Widgets Qt6::PrintSupport vertexnote::defaults vertexnote::util vertexnote::core)
 target_include_directories(vertexnote-qt-shell PRIVATE
         "${PROJECT_SOURCE_DIR}/src/core"
         "${PROJECT_SOURCE_DIR}/src"

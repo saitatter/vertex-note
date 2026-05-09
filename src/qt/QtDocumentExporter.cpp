@@ -11,6 +11,8 @@
 #include <QImage>
 #include <QPainter>
 #include <QPdfWriter>
+#include <QPrintDialog>
+#include <QPrinter>
 
 #include "QtPageContentRenderer.h"
 #include "view/render/QtPainterRenderContext.h"
@@ -132,5 +134,60 @@ auto QtDocumentExporter::exportAllPagesPng(const std::filesystem::path& director
             return false;
         }
     }
+    return true;
+}
+
+auto QtDocumentExporter::printDocument(const std::vector<vn::view::render::PageRenderSnapshot>& pages,
+                                       QWidget* parentWidget) -> bool {
+    if (!this->contentRenderer || pages.empty()) {
+        return false;
+    }
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setDocName(QStringLiteral("VertexNote Document"));
+
+    QPrintDialog dialog(&printer, parentWidget);
+    dialog.setWindowTitle(QStringLiteral("Print Document"));
+    if (dialog.exec() != QPrintDialog::Accepted) {
+        return false;
+    }
+
+    QPainter painter;
+    const double printerDpi = printer.resolution();
+    const double scale = printerDpi / 72.0;  // Convert from 72 DPI page units to printer DPI
+
+    for (std::size_t i = 0; i < pages.size(); ++i) {
+        const auto& page = pages[i];
+        const double pageWidth = std::max(page.width, 1.0);
+        const double pageHeight = std::max(page.height, 1.0);
+
+        const QPageSize pageSize(QSizeF(pageWidth, pageHeight), QPageSize::Point);
+        printer.setPageSize(pageSize);
+        printer.setPageMargins(QMarginsF(0, 0, 0, 0));
+
+        if (i == 0) {
+            if (!painter.begin(&printer)) {
+                return false;
+            }
+        } else {
+            printer.newPage();
+        }
+
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.scale(scale, scale);
+
+        vn::view::render::QtPainterRenderContext renderContext(&painter, scale);
+        const vn::view::render::RenderRect renderRect{
+                .x = 0.0,
+                .y = 0.0,
+                .width = pageWidth,
+                .height = pageHeight,
+        };
+        this->contentRenderer->drawPage(page, renderRect, renderContext);
+
+        painter.resetTransform();
+    }
+
+    painter.end();
     return true;
 }
