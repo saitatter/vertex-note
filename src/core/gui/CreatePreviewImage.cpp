@@ -6,7 +6,7 @@
 #include "util/raii/GObjectSPtr.h"
 #include "view/background/BackgroundView.h"  // for BackgroundView
 
-namespace xoj::helper {
+namespace vn::helper {
 auto createPreviewImage(const PageType& pt) -> GtkWidget* {
     const double zoom = 0.5;
 

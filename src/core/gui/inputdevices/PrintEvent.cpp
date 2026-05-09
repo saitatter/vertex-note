@@ -34,7 +34,7 @@ static StreamType& operator<<(StreamType& str, TimeToReadable t) {
     return str;
 }
 
-void xoj::input::printEvent(std::ostream& str, const InputEvent& e, guint32 referenceTime) {
+void vn::input::printEvent(std::ostream& str, const InputEvent& e, guint32 referenceTime) {
     static constexpr const char* deviceClassToString[] = {"INPUT_DEVICE_MOUSE", "INPUT_DEVICE_PEN",
                                                           "INPUT_DEVICE_ERASER", "INPUT_DEVICE_TOUCHSCREEN",
                                                           "INPUT_DEVICE_IGNORE"};
@@ -67,7 +67,7 @@ void xoj::input::printEvent(std::ostream& str, const InputEvent& e, guint32 refe
     str << "   State: " << std::bitset<8 * sizeof(decltype(e.state))>(e.state) << std::endl;
 }
 
-void xoj::input::printGdkEvent(std::ostream& str, GdkEvent* e, guint32 referenceTime) {
+void vn::input::printGdkEvent(std::ostream& str, GdkEvent* e, guint32 referenceTime) {
     static constexpr const char* gdkInputSources[] = {
             "GDK_SOURCE_MOUSE      ", "GDK_SOURCE_PEN        ", "GDK_SOURCE_ERASER     ",
             "GDK_SOURCE_CURSOR     ", "GDK_SOURCE_KEYBOARD   ", "GDK_SOURCE_TOUCHSCREEN",

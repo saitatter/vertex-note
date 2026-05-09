@@ -116,12 +116,12 @@ private:
     Color color{0U};
 };
 
-namespace xoj {
+namespace vn {
 
 auto refElementContainer(const std::vector<ElementPtr>& elements) -> std::vector<Element*>;
 
-}  // namespace xoj
+}  // namespace vn
 
-namespace vn {
-using xoj::refElementContainer;
+namespace xoj {
+using vn::refElementContainer;
 }

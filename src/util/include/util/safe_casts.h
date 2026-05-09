@@ -100,15 +100,15 @@ inline auto floor_cast(Float f) -> Integral {
     return rv1;
 }
 
-namespace xoj {
+namespace vn {
 template <class Enum>
 constexpr std::underlying_type_t<Enum> to_underlying(Enum e) noexcept {
     return static_cast<std::underlying_type_t<Enum>>(e);
 }
-}  // namespace xoj
+}  // namespace vn
 
-namespace vn {
-using xoj::to_underlying;
+namespace xoj {
+using vn::to_underlying;
 }
 
 #if defined __has_include && !defined(VN_USE_STD_BIT_CAST)

@@ -17,11 +17,11 @@
 
 class Element;
 
-namespace xoj {
+namespace vn {
 
 auto refElementContainer(const std::vector<ElementPtr>& elements) -> std::vector<Element*>;
 
-}  // namespace xoj
+}  // namespace vn
 
 MergeLayerDownUndoAction::MergeLayerDownUndoAction(LayerController* layerController, const PageRef& page,
                                                    Layer* upperLayer, Layer::Index upperLayerPos, Layer* lowerLayer,

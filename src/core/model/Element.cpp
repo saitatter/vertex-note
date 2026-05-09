@@ -151,7 +151,7 @@ void Element::readSerialized(ObjectInputStream& in) {
     in.endObject();
 }
 
-namespace xoj {
+namespace vn {
 
 auto refElementContainer(const std::vector<ElementPtr>& elements) -> std::vector<Element*> {
     std::vector<Element*> result(elements.size());
@@ -159,4 +159,4 @@ auto refElementContainer(const std::vector<ElementPtr>& elements) -> std::vector
     return result;
 }
 
-}  // namespace xoj
+}  // namespace vn
