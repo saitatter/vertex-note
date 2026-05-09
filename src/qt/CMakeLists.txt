@@ -10,6 +10,8 @@ set(vertexnote_qt_sources
         QtExperimentalCommandHost.cpp
         QtExperimentalDialogService.h
         QtExperimentalDialogService.cpp
+        QtExperimentalDocumentSession.h
+        QtExperimentalDocumentSession.cpp
         QtExperimentalMainWindow.h
         QtExperimentalMainWindow.cpp
         QtExperimentalPluginUiBridge.h

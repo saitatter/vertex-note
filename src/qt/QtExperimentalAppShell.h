@@ -8,6 +8,7 @@
 
 #include "QtExperimentalClipboardService.h"
 #include "QtExperimentalDialogService.h"
+#include "QtExperimentalDocumentSession.h"
 #include "QtExperimentalMainWindow.h"
 #include "QtExperimentalPluginUiBridge.h"
 #include "QtExperimentalRecentFilesService.h"
@@ -34,6 +35,13 @@ public:
 
 private:
     void registerBootstrapCommands();
+    void wireWindowState();
+    void rebuildToolbar();
+    void updateWindowTitle();
+    void newSession();
+    void openSession();
+    void saveSessionAs();
+    void markSessionDirty();
 
 private:
     QtExperimentalMainWindow window;
@@ -42,4 +50,6 @@ private:
     QtExperimentalRecentFilesService recentFiles;
     QtExperimentalUpdatePresentationService updates;
     QtExperimentalPluginUiBridge plugins;
+    QtExperimentalDocumentSession session;
+    bool suppressDirtyTracking = false;
 };

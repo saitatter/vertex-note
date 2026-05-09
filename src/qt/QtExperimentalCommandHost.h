@@ -25,6 +25,7 @@ public:
     void setCommandChecked(std::string_view id, bool checked) override;
     [[nodiscard]] auto hasCommand(std::string_view id) const -> bool override;
     void triggerCommand(std::string_view id) override;
+    [[nodiscard]] auto actionForCommand(std::string_view id) const -> QAction*;
 
 private:
     [[nodiscard]] auto ensureMenu(std::string_view title) -> QMenu*;

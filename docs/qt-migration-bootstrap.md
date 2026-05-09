@@ -9,12 +9,14 @@ This document tracks the first executable slice of the Qt migration.
 - `src/core/view/render/` now contains the first backend-neutral interactive render contracts.
 - The Qt shell now also carries a minimal `QtPainterRenderContext` wrapper beside the Cairo wrapper.
 - `ENABLE_QT_EXPERIMENTAL` adds an optional `Qt Widgets` bootstrap target.
-- The experimental target currently builds a minimal shell:
+- The experimental target now builds a runnable session shell:
   - `QApplication`
   - `QMainWindow`
   - command host bootstrap
   - clipboard / dialogs / recent files / updater / plugin UI bridge stubs
-  - canvas placeholder widget with translated mouse, pen, wheel, key, and touch input debug overlay
+  - canvas viewport with translated mouse, pen, wheel, key, and touch input
+  - pan / zoom / fit-page interactions
+  - experimental `.vnsession` open/save flow for viewport state
 
 ## Build
 
@@ -38,12 +40,12 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 ## Intentional Limits
 
 - The shipping GTK application remains the primary shell.
-- The experimental Qt target does not yet host `Control`, document workflows, dialogs, or rendering parity.
-- The canvas is currently a placeholder bootstrap surface, not the notebook renderer.
+- The experimental Qt target does not yet host `Control`, `.xopp` workflows, or full rendering parity.
+- The canvas is now a viewport/session shell, but not yet the real notebook/page stack.
 - The render seam is scaffolded only; Cairo remains the active production renderer.
 
 ## Next Slices
 
 1. Map `Control` entrypoints to the neutral shell interfaces.
-2. Connect the experimental canvas to a real viewport/document shell instead of the debug overlay.
+2. Replace the experimental session viewport with a real document/page controller.
 3. Route interactive GTK painting through the new render contracts, then add a Qt painter backend beside it.

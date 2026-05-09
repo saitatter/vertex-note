@@ -10,12 +10,14 @@
 
 #include <QWidget>
 
+#include "QtExperimentalDocumentSession.h"
+#include "QtInputAdapter.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
 
-class QtInputAdapter;
-
 class QtExperimentalCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
+    Q_OBJECT
+
 public:
     explicit QtExperimentalCanvas(QWidget* parent = nullptr);
 
@@ -27,6 +29,14 @@ public:
     void handlePointerEvent(const vn::ui::input::PointerEvent& event) override;
     void handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) override;
     void handleTouchEvent(const vn::ui::input::TouchEvent& event) override;
+    void newBlankDocument();
+    void setViewportState(double zoom, double scrollX, double scrollY);
+    [[nodiscard]] auto sessionViewportState() const -> QtExperimentalViewportState;
+    void zoomIn();
+    void zoomOut();
+    void resetViewport();
+    void fitPage(bool edited = true);
+    void panBy(double dx, double dy);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -39,10 +49,26 @@ protected:
     void keyReleaseEvent(QKeyEvent* event) override;
     bool event(QEvent* event) override;
 
+signals:
+    void viewportStateChanged();
+    void statusHintChanged(const QString& text);
+    void documentEdited();
+
 private:
     void updateDebugOverlay(QString summary);
+    void emitViewportUpdate(bool edited = true);
+    void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
+    [[nodiscard]] auto pageRect() const -> QRectF;
+    void beginPan(const QPointF& position);
+    void endPan();
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
     QString lastEventSummary;
+    double zoomFactor = 1.0;
+    double scrollX = 0.0;
+    double scrollY = 0.0;
+    bool spaceHeld = false;
+    bool panning = false;
+    QPointF lastPanScreenPosition;
 };

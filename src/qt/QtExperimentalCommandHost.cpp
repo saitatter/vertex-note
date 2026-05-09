@@ -57,6 +57,8 @@ void QtExperimentalCommandHost::triggerCommand(std::string_view id) {
     }
 }
 
+auto QtExperimentalCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
+
 auto QtExperimentalCommandHost::ensureMenu(std::string_view title) -> QMenu* {
     const std::string key(title);
     if (auto it = this->menus.find(key); it != this->menus.end()) {
