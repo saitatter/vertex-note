@@ -11,9 +11,9 @@
 class QStatusBar;
 class QWidget;
 
-class QtExperimentalUpdatePresentationService: public vn::ui::common::IUpdatePresentationService {
+class QtUpdatePresentationService: public vn::ui::common::IUpdatePresentationService {
 public:
-    QtExperimentalUpdatePresentationService(QWidget* parent, QStatusBar* statusBar);
+    QtUpdatePresentationService(QWidget* parent, QStatusBar* statusBar);
 
 public:
     void showCheckingForUpdates() override;

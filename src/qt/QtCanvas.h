@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Experimental Qt canvas bootstrap.
+ * Qt canvas bootstrap.
  */
 
 #pragma once
@@ -12,18 +12,18 @@
 
 #include <QWidget>
 
-#include "QtExperimentalDocumentController.h"
-#include "QtExperimentalDocumentSession.h"
+#include "QtDocumentController.h"
+#include "QtDocumentSession.h"
 #include "QtInputAdapter.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
 #include "view/render/Renderers.h"
 
-class QtExperimentalCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
+class QtCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
     Q_OBJECT
 
 public:
-    explicit QtExperimentalCanvas(QWidget* parent = nullptr);
+    explicit QtCanvas(QWidget* parent = nullptr);
 
 public:
     void invalidateCanvas() override;
@@ -33,10 +33,10 @@ public:
     void handlePointerEvent(const vn::ui::input::PointerEvent& event) override;
     void handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) override;
     void handleTouchEvent(const vn::ui::input::TouchEvent& event) override;
-    void setDocumentController(QtExperimentalDocumentController* documentController);
+    void setDocumentController(QtDocumentController* documentController);
     void newBlankDocument();
     void setViewportState(double zoom, double scrollX, double scrollY);
-    [[nodiscard]] auto sessionViewportState() const -> QtExperimentalViewportState;
+    [[nodiscard]] auto sessionViewportState() const -> QtViewportState;
     void zoomIn();
     void zoomOut();
     void resetViewport();
@@ -76,9 +76,10 @@ private:
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
     [[nodiscard]] auto pageRects() const -> std::vector<QRectF>;
     [[nodiscard]] auto documentSceneBounds() const -> QRectF;
-    void drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
+    void drawPageContents(QPainter& painter, const QRectF& rect, const vn::view::render::PageRenderSnapshot& pageInfo,
                           std::size_t pageIndex) const;
-    void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
+    void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
+                                        const vn::view::render::PageRenderSnapshot& pageInfo,
                                         std::size_t pageIndex) const;
     void drawOverlayHud(QPainter& painter) const;
     [[nodiscard]] auto screenToScene(const QPointF& screenPoint) const -> QPointF;
@@ -97,7 +98,7 @@ private:
     std::unique_ptr<vn::view::render::TextRenderer> textRenderer;
     std::unique_ptr<vn::view::render::ImageRenderer> imageRenderer;
     QString lastEventSummary;
-    QtExperimentalDocumentController* documentController = nullptr;
+    QtDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;
     double scrollX = 0.0;
     double scrollY = 0.0;

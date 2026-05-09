@@ -11,7 +11,7 @@
 #include "model/BackgroundImage.h"
 #include "model/Document.h"
 auto vn::view::render::createPdfPagePreviewRaster(const Document& document, std::size_t pdfPageNumber, double pageWidth,
-                                                  double pageHeight) -> xoj::util::RasterImageData {
+                                                  double pageHeight) -> vn::util::RasterImageData {
     auto pdfPage = document.getPdfPage(pdfPageNumber);
     if (!pdfPage) {
         return {};
@@ -23,6 +23,6 @@ auto vn::view::render::createPdfPagePreviewRaster(const Document& document, std:
     return pdfPage->renderPreviewRaster(previewWidth, previewHeight, pageWidth, pageHeight);
 }
 
-auto vn::view::render::createBackgroundImagePreviewRaster(const BackgroundImage& image) -> xoj::util::RasterImageData {
+auto vn::view::render::createBackgroundImagePreviewRaster(const BackgroundImage& image) -> vn::util::RasterImageData {
     return image.renderPreviewRaster();
 }

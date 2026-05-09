@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Qt preview text renderer for the experimental shell.
+ * Qt preview text renderer for the Qt shell.
  */
 
 #include "QtPreviewTextRenderer.h"

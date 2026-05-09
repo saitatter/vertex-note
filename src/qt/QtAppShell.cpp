@@ -1,10 +1,10 @@
 /*
  * VertexNote
  *
- * Experimental Qt app shell bootstrap.
+ * Qt app shell bootstrap.
  */
 
-#include "QtExperimentalAppShell.h"
+#include "QtAppShell.h"
 
 #include <array>
 #include <vector>
@@ -27,7 +27,7 @@ auto isSessionFile(const std::filesystem::path& path) -> bool { return path.exte
 
 }  // namespace
 
-QtExperimentalAppShell::QtExperimentalAppShell():
+QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost()) {
@@ -40,39 +40,39 @@ QtExperimentalAppShell::QtExperimentalAppShell():
     updateWindowTitle();
 }
 
-auto QtExperimentalAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
+auto QtAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
 
-auto QtExperimentalAppShell::canvasHost() -> vn::ui::common::ICanvasHost* { return this->window.canvas(); }
+auto QtAppShell::canvasHost() -> vn::ui::common::ICanvasHost* { return this->window.canvas(); }
 
-auto QtExperimentalAppShell::clipboardService() -> vn::ui::common::IClipboardService* { return &this->clipboard; }
+auto QtAppShell::clipboardService() -> vn::ui::common::IClipboardService* { return &this->clipboard; }
 
-auto QtExperimentalAppShell::dialogService() -> vn::ui::common::IDialogService* { return &this->dialogs; }
+auto QtAppShell::dialogService() -> vn::ui::common::IDialogService* { return &this->dialogs; }
 
-auto QtExperimentalAppShell::recentFilesService() -> vn::ui::common::IRecentFilesService* { return &this->recentFiles; }
+auto QtAppShell::recentFilesService() -> vn::ui::common::IRecentFilesService* { return &this->recentFiles; }
 
-auto QtExperimentalAppShell::updatePresentationService() -> vn::ui::common::IUpdatePresentationService* {
+auto QtAppShell::updatePresentationService() -> vn::ui::common::IUpdatePresentationService* {
     return &this->updates;
 }
 
-auto QtExperimentalAppShell::pluginUiBridge() -> vn::ui::common::IPluginUiBridge* { return &this->plugins; }
+auto QtAppShell::pluginUiBridge() -> vn::ui::common::IPluginUiBridge* { return &this->plugins; }
 
-auto QtExperimentalAppShell::nativeMainWindowHandle() const -> void* {
-    return reinterpret_cast<void*>(const_cast<QtExperimentalMainWindow*>(&this->window));
+auto QtAppShell::nativeMainWindowHandle() const -> void* {
+    return reinterpret_cast<void*>(const_cast<QtMainWindow*>(&this->window));
 }
 
-void QtExperimentalAppShell::showMainWindow() { this->window.show(); }
+void QtAppShell::showMainWindow() { this->window.show(); }
 
-void QtExperimentalAppShell::requestQuit() { QApplication::quit(); }
+void QtAppShell::requestQuit() { QApplication::quit(); }
 
-void QtExperimentalAppShell::setMainWindowTitle(std::string_view title) {
+void QtAppShell::setMainWindowTitle(std::string_view title) {
     this->window.setWindowTitle(QString::fromUtf8(title.data(), static_cast<int>(title.size())));
 }
 
-void QtExperimentalAppShell::registerBootstrapCommands() {
+void QtAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.new",
              .text = "New",
-             .tooltip = "Create a new experimental Qt session",
+             .tooltip = "Create a new Qt session",
              .shortcut = "Ctrl+N",
              .menu = "File"},
             [this]() { newSession(); });
@@ -80,7 +80,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.open",
              .text = "Open...",
-             .tooltip = "Open an experimental Qt session or a VertexNote document",
+             .tooltip = "Open a Qt session or a VertexNote document",
              .shortcut = "Ctrl+O",
              .menu = "File"},
             [this]() { openSession(); });
@@ -104,7 +104,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.check-updates",
              .text = "Check for Updates",
-             .tooltip = "Show the experimental Qt updater surface",
+             .tooltip = "Show the Qt updater surface",
              .menu = "Help"},
             [this]() {
                 this->updates.showCheckingForUpdates();
@@ -114,20 +114,20 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "app.about-qt-shell",
              .text = "About Qt Shell",
-             .tooltip = "Show the experimental Qt shell status",
+             .tooltip = "Show the Qt shell status",
              .menu = "Help"},
             [this]() {
-                this->dialogs.showInfo("VertexNote Qt Experimental Shell",
+                this->dialogs.showInfo("VertexNote Qt Shell",
                                        "Qt shell bootstrap is active.\n\n"
                                        "Current slice includes neutral UI services, input translation, a Qt painter "
-                                       "render seam, real document-backed page previews, and an experimental "
+                                       "render seam, real document-backed page previews, and a "
                                        "viewport session flow with pan/zoom.");
             });
 
     this->window.commandHost()->registerCommand(
             {.id = "view.zoom-in",
              .text = "Zoom In",
-             .tooltip = "Zoom in on the Qt experimental canvas",
+             .tooltip = "Zoom in on the Qt canvas",
              .shortcut = "Ctrl+=",
              .menu = "View"},
             [this]() { this->window.canvas()->zoomIn(); });
@@ -135,7 +135,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "view.zoom-out",
              .text = "Zoom Out",
-             .tooltip = "Zoom out on the Qt experimental canvas",
+             .tooltip = "Zoom out on the Qt canvas",
              .shortcut = "Ctrl+-",
              .menu = "View"},
             [this]() { this->window.canvas()->zoomOut(); });
@@ -143,7 +143,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "view.zoom-reset",
              .text = "Reset View",
-             .tooltip = "Reset the experimental canvas viewport",
+             .tooltip = "Reset the canvas viewport",
              .shortcut = "Ctrl+0",
              .menu = "View"},
             [this]() { this->window.canvas()->resetViewport(); });
@@ -151,7 +151,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "view.fit-page",
              .text = "Fit Page",
-             .tooltip = "Fit the page into the Qt experimental canvas",
+             .tooltip = "Fit the page into the Qt canvas",
              .shortcut = "Ctrl+9",
              .menu = "View"},
             [this]() { this->window.canvas()->fitPage(); });
@@ -159,7 +159,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "edit.undo-geometry",
              .text = "Undo Geometry Edit",
-             .tooltip = "Undo the last experimental Qt geometry edit",
+             .tooltip = "Undo the last Qt geometry edit",
              .shortcut = "Ctrl+Z",
              .menu = "Edit",
              .enabled = this->window.canvas()->canUndoGeometryEdit()},
@@ -173,7 +173,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "edit.redo-geometry",
              .text = "Redo Geometry Edit",
-             .tooltip = "Redo the last experimental Qt geometry edit",
+             .tooltip = "Redo the last Qt geometry edit",
              .shortcut = "Ctrl+Y",
              .menu = "Edit",
              .enabled = this->window.canvas()->canRedoGeometryEdit()},
@@ -187,7 +187,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "edit.insert-vertex",
              .text = "Insert Vertex on Edge",
-             .tooltip = "Insert a geometry vertex on the selected experimental Qt edge",
+             .tooltip = "Insert a geometry vertex on the selected Qt edge",
              .shortcut = "Insert",
              .menu = "Edit"},
             [this]() {
@@ -200,7 +200,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "edit.delete-geometry",
              .text = "Delete Selected Geometry",
-             .tooltip = "Delete the selected experimental Qt geometry vertex or edge",
+             .tooltip = "Delete the selected Qt geometry vertex or edge",
              .shortcut = "Delete",
              .menu = "Edit"},
             [this]() {
@@ -213,7 +213,7 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "view.toggle-geometry-snap",
              .text = "Geometry Snap",
-             .tooltip = "Toggle geometry snapping in the experimental Qt shell",
+             .tooltip = "Toggle geometry snapping in the Qt shell",
              .menu = "View",
              .checkable = true,
              .checked = this->window.canvas()->isGeometrySnapEnabled()},
@@ -222,21 +222,21 @@ void QtExperimentalAppShell::registerBootstrapCommands() {
     this->window.commandHost()->registerCommand(
             {.id = "view.toggle-grid-snap",
              .text = "Grid Snap",
-             .tooltip = "Toggle grid snapping in the experimental Qt shell",
+             .tooltip = "Toggle grid snapping in the Qt shell",
              .menu = "View",
              .checkable = true,
              .checked = this->window.canvas()->isGridSnapEnabled()},
             [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
 }
 
-void QtExperimentalAppShell::wireWindowState() {
-    QObject::connect(this->window.canvas(), &QtExperimentalCanvas::statusHintChanged, &this->window,
+void QtAppShell::wireWindowState() {
+    QObject::connect(this->window.canvas(), &QtCanvas::statusHintChanged, &this->window,
                      [this](const QString& text) { this->window.statusBar()->showMessage(text); });
 
-    QObject::connect(this->window.canvas(), &QtExperimentalCanvas::viewportStateChanged, &this->window,
+    QObject::connect(this->window.canvas(), &QtCanvas::viewportStateChanged, &this->window,
                      [this]() { updateWindowTitle(); });
 
-    QObject::connect(this->window.canvas(), &QtExperimentalCanvas::documentEdited, &this->window,
+    QObject::connect(this->window.canvas(), &QtCanvas::documentEdited, &this->window,
                      [this]() {
                          if (!this->suppressDirtyTracking) {
                              markSessionDirty();
@@ -247,7 +247,7 @@ void QtExperimentalAppShell::wireWindowState() {
     updateEditCommandStates();
 }
 
-void QtExperimentalAppShell::rebuildToolbar() {
+void QtAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
@@ -275,24 +275,24 @@ void QtExperimentalAppShell::rebuildToolbar() {
     }
 }
 
-void QtExperimentalAppShell::updateWindowTitle() {
+void QtAppShell::updateWindowTitle() {
     const auto title = std::string("VertexNote - ") + this->documentController.titleText() +
                        (this->session.isDirty() ? " *" : "");
     setMainWindowTitle(title);
 }
 
-void QtExperimentalAppShell::newSession() {
+void QtAppShell::newSession() {
     this->session.newDocument();
     this->documentController.newBlankDocument();
     this->suppressDirtyTracking = true;
     this->window.canvas()->newBlankDocument();
     this->suppressDirtyTracking = false;
     updateEditCommandStates();
-    this->window.statusBar()->showMessage(QStringLiteral("Created a blank experimental document"), 3000);
+    this->window.statusBar()->showMessage(QStringLiteral("Created a blank document"), 3000);
     updateWindowTitle();
 }
 
-void QtExperimentalAppShell::openSession() {
+void QtAppShell::openSession() {
     const auto path = this->dialogs.openDocument(SESSION_FILTERS);
     if (!path) {
         return;
@@ -301,7 +301,7 @@ void QtExperimentalAppShell::openSession() {
     if (isSessionFile(*path)) {
         const auto sessionState = this->session.openFrom(*path);
         if (!sessionState) {
-            this->dialogs.showError("Open Failed", "VertexNote could not parse this experimental Qt session file.");
+            this->dialogs.showError("Open Failed", "VertexNote could not parse this Qt session file.");
             return;
         }
 
@@ -343,17 +343,17 @@ void QtExperimentalAppShell::openSession() {
     updateWindowTitle();
 }
 
-void QtExperimentalAppShell::saveSessionAs() {
+void QtAppShell::saveSessionAs() {
     const auto path = this->dialogs.saveDocument(this->session.currentPath().value_or(std::filesystem::path("session.vnsession")),
                                                  SESSION_FILTERS);
     if (!path) {
         return;
     }
 
-    const QtExperimentalSessionState sessionState{.viewport = this->window.canvas()->sessionViewportState(),
+    const QtSessionState sessionState{.viewport = this->window.canvas()->sessionViewportState(),
                                                   .linkedDocumentPath = this->documentController.sourcePath()};
     if (!this->session.saveAs(*path, sessionState)) {
-        this->dialogs.showError("Save Failed", "VertexNote could not save the experimental Qt session file.");
+        this->dialogs.showError("Save Failed", "VertexNote could not save the Qt session file.");
         return;
     }
 
@@ -362,26 +362,26 @@ void QtExperimentalAppShell::saveSessionAs() {
     updateWindowTitle();
 }
 
-void QtExperimentalAppShell::markSessionDirty() {
+void QtAppShell::markSessionDirty() {
     if (!this->session.isDirty()) {
         this->session.markDirty(true);
         updateWindowTitle();
     }
 }
 
-void QtExperimentalAppShell::updateEditCommandStates() {
+void QtAppShell::updateEditCommandStates() {
     this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndoGeometryEdit());
     this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedoGeometryEdit());
 }
 
-void QtExperimentalAppShell::setGeometrySnapEnabled(bool enabled) {
+void QtAppShell::setGeometrySnapEnabled(bool enabled) {
     this->window.canvas()->setGeometrySnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", enabled);
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Geometry snap enabled") : QStringLiteral("Geometry snap disabled"), 2500);
 }
 
-void QtExperimentalAppShell::setGridSnapEnabled(bool enabled) {
+void QtAppShell::setGridSnapEnabled(bool enabled) {
     this->window.canvas()->setGridSnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", enabled);
     this->window.statusBar()->showMessage(

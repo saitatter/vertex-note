@@ -1,12 +1,12 @@
 /*
  * VertexNote
  *
- * Experimental Qt shell bootstrap entry point.
+ * Qt shell bootstrap entry point.
  */
 
 #include <QApplication>
 
-#include "QtExperimentalAppShell.h"
+#include "QtAppShell.h"
 
 auto main(int argc, char* argv[]) -> int {
     QApplication app(argc, argv);
@@ -14,7 +14,7 @@ auto main(int argc, char* argv[]) -> int {
     app.setOrganizationName("VertexNote");
     app.setApplicationDisplayName("VertexNote");
 
-    QtExperimentalAppShell shell;
+    QtAppShell shell;
     shell.showMainWindow();
 
     return QApplication::exec();

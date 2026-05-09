@@ -8,7 +8,7 @@
 
 #include "ui/common/IRecentFilesService.h"
 
-class QtExperimentalRecentFilesService: public vn::ui::common::IRecentFilesService {
+class QtRecentFilesService: public vn::ui::common::IRecentFilesService {
 public:
     void setRecentFiles(const std::vector<std::filesystem::path>& paths) override;
     void addRecentFile(const std::filesystem::path& path) override;

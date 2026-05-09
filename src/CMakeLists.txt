@@ -174,7 +174,7 @@ install(TARGETS vertexnote
         COMPONENT vertex-note
         )
 
-if (ENABLE_QT_EXPERIMENTAL)
+if (ENABLE_QT_SHELL)
   add_subdirectory(qt)
 endif ()
 

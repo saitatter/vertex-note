@@ -1,10 +1,10 @@
 /*
  * VertexNote
  *
- * Experimental Qt canvas bootstrap.
+ * Qt canvas bootstrap.
  */
 
-#include "QtExperimentalCanvas.h"
+#include "QtCanvas.h"
 
 #include <algorithm>
 #include <cmath>
@@ -116,8 +116,8 @@ auto snapColor(std::optional<vn::snap::SnapKind> kind) -> QColor {
 
 }  // namespace
 
-QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
-    setObjectName("qtExperimentalCanvas");
+QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
+    setObjectName("vertexNoteQtCanvas");
     setMinimumSize(960, 640);
     setAutoFillBackground(true);
     setMouseTracking(true);
@@ -135,17 +135,17 @@ QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
     newBlankDocument();
 }
 
-void QtExperimentalCanvas::invalidateCanvas() { update(); }
+void QtCanvas::invalidateCanvas() { update(); }
 
-void QtExperimentalCanvas::invalidateRect(double x, double y, double width, double height) {
+void QtCanvas::invalidateRect(double x, double y, double width, double height) {
     update(QRect(static_cast<int>(x), static_cast<int>(y), static_cast<int>(width), static_cast<int>(height)));
 }
 
-void QtExperimentalCanvas::setCanvasCursor(vn::ui::common::CanvasCursor cursor) {
+void QtCanvas::setCanvasCursor(vn::ui::common::CanvasCursor cursor) {
     setCursor(QCursor(toQtCursor(cursor)));
 }
 
-auto QtExperimentalCanvas::viewport() const -> vn::ui::common::CanvasViewport {
+auto QtCanvas::viewport() const -> vn::ui::common::CanvasViewport {
     return {.zoom = this->zoomFactor,
             .scrollX = this->scrollX,
             .scrollY = this->scrollY,
@@ -154,55 +154,55 @@ auto QtExperimentalCanvas::viewport() const -> vn::ui::common::CanvasViewport {
             .devicePixelRatio = devicePixelRatioF()};
 }
 
-void QtExperimentalCanvas::handlePointerEvent(const vn::ui::input::PointerEvent& event) {
+void QtCanvas::handlePointerEvent(const vn::ui::input::PointerEvent& event) {
     updateDebugOverlay(QStringLiteral("pointer x=%1 y=%2 pressure=%3")
                                .arg(event.x, 0, 'f', 1)
                                .arg(event.y, 0, 'f', 1)
                                .arg(event.pressure, 0, 'f', 2));
 }
 
-void QtExperimentalCanvas::handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) {
+void QtCanvas::handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) {
     updateDebugOverlay(QStringLiteral("key code=%1 text=%2").arg(event.key).arg(QString::fromStdString(event.text)));
 }
 
-void QtExperimentalCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& event) {
+void QtCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& event) {
     updateDebugOverlay(QStringLiteral("touch points=%1").arg(static_cast<int>(event.points.size())));
 }
 
-void QtExperimentalCanvas::setDocumentController(QtExperimentalDocumentController* documentController) {
+void QtCanvas::setDocumentController(QtDocumentController* documentController) {
     this->documentController = documentController;
     fitPage(false);
 }
 
-void QtExperimentalCanvas::newBlankDocument() {
+void QtCanvas::newBlankDocument() {
     this->zoomFactor = 1.0;
     this->scrollX = 0.0;
     this->scrollY = 0.0;
     fitPage(false);
-    updateDebugOverlay(QStringLiteral("new experimental document"));
+    updateDebugOverlay(QStringLiteral("new document"));
 }
 
-void QtExperimentalCanvas::setViewportState(double zoom, double scrollX, double scrollY) {
+void QtCanvas::setViewportState(double zoom, double scrollX, double scrollY) {
     this->zoomFactor = clampZoom(zoom);
     this->scrollX = scrollX;
     this->scrollY = scrollY;
     emitViewportUpdate(false);
 }
 
-auto QtExperimentalCanvas::sessionViewportState() const -> QtExperimentalViewportState {
+auto QtCanvas::sessionViewportState() const -> QtViewportState {
     return {.zoom = this->zoomFactor, .scrollX = this->scrollX, .scrollY = this->scrollY};
 }
 
-void QtExperimentalCanvas::zoomIn() { zoomAroundScreenPoint(ZOOM_STEP, rect().center()); }
+void QtCanvas::zoomIn() { zoomAroundScreenPoint(ZOOM_STEP, rect().center()); }
 
-void QtExperimentalCanvas::zoomOut() { zoomAroundScreenPoint(1.0 / ZOOM_STEP, rect().center()); }
+void QtCanvas::zoomOut() { zoomAroundScreenPoint(1.0 / ZOOM_STEP, rect().center()); }
 
-void QtExperimentalCanvas::resetViewport() {
+void QtCanvas::resetViewport() {
     fitPage();
     updateDebugOverlay(QStringLiteral("viewport reset"));
 }
 
-void QtExperimentalCanvas::fitPage(bool edited) {
+void QtCanvas::fitPage(bool edited) {
     const QRectF documentBounds = documentSceneBounds();
     const double padding = 40.0;
     const double availableWidth = std::max(1.0, width() - 2.0 * padding);
@@ -218,27 +218,27 @@ void QtExperimentalCanvas::fitPage(bool edited) {
     emitViewportUpdate(edited);
 }
 
-void QtExperimentalCanvas::panBy(double dx, double dy) {
+void QtCanvas::panBy(double dx, double dy) {
     this->scrollX += dx;
     this->scrollY += dy;
     emitViewportUpdate();
 }
 
-void QtExperimentalCanvas::setGeometrySnapEnabled(bool enabled) {
+void QtCanvas::setGeometrySnapEnabled(bool enabled) {
     this->geometrySnapEnabled = enabled;
     update();
 }
 
-void QtExperimentalCanvas::setGridSnapEnabled(bool enabled) {
+void QtCanvas::setGridSnapEnabled(bool enabled) {
     this->gridSnapEnabled = enabled;
     update();
 }
 
-auto QtExperimentalCanvas::isGeometrySnapEnabled() const -> bool { return this->geometrySnapEnabled; }
+auto QtCanvas::isGeometrySnapEnabled() const -> bool { return this->geometrySnapEnabled; }
 
-auto QtExperimentalCanvas::isGridSnapEnabled() const -> bool { return this->gridSnapEnabled; }
+auto QtCanvas::isGridSnapEnabled() const -> bool { return this->gridSnapEnabled; }
 
-auto QtExperimentalCanvas::deleteSelectedGeometry() -> bool {
+auto QtCanvas::deleteSelectedGeometry() -> bool {
     if (!this->documentController) {
         return false;
     }
@@ -252,7 +252,7 @@ auto QtExperimentalCanvas::deleteSelectedGeometry() -> bool {
     return changed;
 }
 
-auto QtExperimentalCanvas::insertVertexOnSelectedEdge() -> bool {
+auto QtCanvas::insertVertexOnSelectedEdge() -> bool {
     if (!this->documentController) {
         return false;
     }
@@ -266,15 +266,15 @@ auto QtExperimentalCanvas::insertVertexOnSelectedEdge() -> bool {
     return changed;
 }
 
-auto QtExperimentalCanvas::canUndoGeometryEdit() const -> bool {
+auto QtCanvas::canUndoGeometryEdit() const -> bool {
     return this->documentController && this->documentController->canUndoGeometryEdit();
 }
 
-auto QtExperimentalCanvas::canRedoGeometryEdit() const -> bool {
+auto QtCanvas::canRedoGeometryEdit() const -> bool {
     return this->documentController && this->documentController->canRedoGeometryEdit();
 }
 
-auto QtExperimentalCanvas::undoGeometryEdit() -> bool {
+auto QtCanvas::undoGeometryEdit() -> bool {
     if (!this->documentController) {
         return false;
     }
@@ -288,7 +288,7 @@ auto QtExperimentalCanvas::undoGeometryEdit() -> bool {
     return changed;
 }
 
-auto QtExperimentalCanvas::redoGeometryEdit() -> bool {
+auto QtCanvas::redoGeometryEdit() -> bool {
     if (!this->documentController) {
         return false;
     }
@@ -302,7 +302,7 @@ auto QtExperimentalCanvas::redoGeometryEdit() -> bool {
     return changed;
 }
 
-void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
+void QtCanvas::paintEvent(QPaintEvent* event) {
     QWidget::paintEvent(event);
 
     QPainter painter(this);
@@ -333,16 +333,19 @@ void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
     }
 
     painter.setRenderHint(QPainter::Antialiasing, true);
-    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+    const auto pages =
+            this->documentController ? this->documentController->snapshotPages()
+                                     : std::vector<vn::view::render::PageRenderSnapshot>{};
     const auto rects = pageRects();
     for (std::size_t index = 0; index < rects.size(); ++index) {
-        drawPageContents(painter, rects[index], index < pages.size() ? pages[index] : QtExperimentalPageInfo{}, index);
+        drawPageContents(painter, rects[index],
+                         index < pages.size() ? pages[index] : vn::view::render::PageRenderSnapshot{}, index);
     }
 
     painter.resetTransform();
     painter.setPen(QColor(52, 64, 84));
     painter.drawText(QRect(20, 18, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("VertexNote Qt Experimental Shell"));
+                     QStringLiteral("VertexNote Qt Shell"));
     painter.setPen(QColor(102, 112, 133));
     const auto pageCount = this->documentController ? this->documentController->pageCount() : rects.size();
     painter.drawText(QRect(20, 52, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
@@ -360,7 +363,7 @@ void QtExperimentalCanvas::paintEvent(QPaintEvent* event) {
     }
 }
 
-void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
+void QtCanvas::mousePressEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && this->spaceHeld)) {
         beginPan(event->position());
@@ -382,7 +385,7 @@ void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
     QWidget::mousePressEvent(event);
 }
 
-void QtExperimentalCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
+void QtCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (event->button() == Qt::LeftButton) {
         updateGeometryHover(event->position());
@@ -395,7 +398,7 @@ void QtExperimentalCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
     QWidget::mouseDoubleClickEvent(event);
 }
 
-void QtExperimentalCanvas::mouseReleaseEvent(QMouseEvent* event) {
+void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
     if (this->panning && (event->button() == Qt::MiddleButton || event->button() == Qt::LeftButton)) {
         endPan();
@@ -417,7 +420,7 @@ void QtExperimentalCanvas::mouseReleaseEvent(QMouseEvent* event) {
     QWidget::mouseReleaseEvent(event);
 }
 
-void QtExperimentalCanvas::mouseMoveEvent(QMouseEvent* event) {
+void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseMove(*event);
     if (this->panning) {
         const QPointF delta = event->position() - this->lastPanScreenPosition;
@@ -449,7 +452,7 @@ void QtExperimentalCanvas::mouseMoveEvent(QMouseEvent* event) {
     QWidget::mouseMoveEvent(event);
 }
 
-void QtExperimentalCanvas::wheelEvent(QWheelEvent* event) {
+void QtCanvas::wheelEvent(QWheelEvent* event) {
     this->inputAdapter->handleWheel(*event);
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
         const double factor = event->angleDelta().y() >= 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
@@ -464,12 +467,12 @@ void QtExperimentalCanvas::wheelEvent(QWheelEvent* event) {
     event->accept();
 }
 
-void QtExperimentalCanvas::tabletEvent(QTabletEvent* event) {
+void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
     QWidget::tabletEvent(event);
 }
 
-void QtExperimentalCanvas::keyPressEvent(QKeyEvent* event) {
+void QtCanvas::keyPressEvent(QKeyEvent* event) {
     this->inputAdapter->handleKeyPress(*event);
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = true;
@@ -494,7 +497,7 @@ void QtExperimentalCanvas::keyPressEvent(QKeyEvent* event) {
     QWidget::keyPressEvent(event);
 }
 
-void QtExperimentalCanvas::keyReleaseEvent(QKeyEvent* event) {
+void QtCanvas::keyReleaseEvent(QKeyEvent* event) {
     this->inputAdapter->handleKeyRelease(*event);
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = false;
@@ -505,7 +508,7 @@ void QtExperimentalCanvas::keyReleaseEvent(QKeyEvent* event) {
     QWidget::keyReleaseEvent(event);
 }
 
-bool QtExperimentalCanvas::event(QEvent* event) {
+bool QtCanvas::event(QEvent* event) {
     if (event && (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate ||
                   event->type() == QEvent::TouchEnd)) {
         this->inputAdapter->handleTouch(*static_cast<QTouchEvent*>(event));
@@ -515,12 +518,12 @@ bool QtExperimentalCanvas::event(QEvent* event) {
     return QWidget::event(event);
 }
 
-void QtExperimentalCanvas::updateDebugOverlay(QString summary) {
+void QtCanvas::updateDebugOverlay(QString summary) {
     this->lastEventSummary = std::move(summary);
     update();
 }
 
-void QtExperimentalCanvas::emitViewportUpdate(bool edited) {
+void QtCanvas::emitViewportUpdate(bool edited) {
     update();
     Q_EMIT viewportStateChanged();
     Q_EMIT statusHintChanged(QStringLiteral("Zoom %1% | Scroll (%2, %3)")
@@ -532,7 +535,7 @@ void QtExperimentalCanvas::emitViewportUpdate(bool edited) {
     }
 }
 
-void QtExperimentalCanvas::zoomAroundScreenPoint(double factor, const QPointF& screenPoint) {
+void QtCanvas::zoomAroundScreenPoint(double factor, const QPointF& screenPoint) {
     const double oldZoom = this->zoomFactor;
     const double newZoom = clampZoom(oldZoom * factor);
     if (newZoom == oldZoom) {
@@ -547,9 +550,11 @@ void QtExperimentalCanvas::zoomAroundScreenPoint(double factor, const QPointF& s
     emitViewportUpdate();
 }
 
-auto QtExperimentalCanvas::pageRects() const -> std::vector<QRectF> {
+auto QtCanvas::pageRects() const -> std::vector<QRectF> {
     std::vector<QRectF> rects;
-    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+    const auto pages =
+            this->documentController ? this->documentController->snapshotPages()
+                                     : std::vector<vn::view::render::PageRenderSnapshot>{};
     if (pages.empty()) {
         rects.emplace_back(PAGE_STACK_X, PAGE_STACK_Y, 1100.0, 1500.0);
         return rects;
@@ -564,7 +569,7 @@ auto QtExperimentalCanvas::pageRects() const -> std::vector<QRectF> {
     return rects;
 }
 
-auto QtExperimentalCanvas::documentSceneBounds() const -> QRectF {
+auto QtCanvas::documentSceneBounds() const -> QRectF {
     const auto rects = pageRects();
     QRectF bounds = rects.front();
     for (std::size_t i = 1; i < rects.size(); ++i) {
@@ -573,8 +578,8 @@ auto QtExperimentalCanvas::documentSceneBounds() const -> QRectF {
     return bounds.adjusted(-80.0, -80.0, 80.0, 80.0);
 }
 
-void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
-                                            std::size_t pageIndex) const {
+void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
+                                const vn::view::render::PageRenderSnapshot& pageInfo, std::size_t pageIndex) const {
     if (this->backgroundRenderer) {
         vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
         const vn::view::render::RenderRect renderRect{
@@ -630,8 +635,10 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                              .arg(pageInfo.background.annotated ? QStringLiteral("yes") : QStringLiteral("no")));
 }
 
-void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
-    const auto pages = this->documentController ? this->documentController->snapshotPages() : std::vector<QtExperimentalPageInfo>{};
+void QtCanvas::drawOverlayHud(QPainter& painter) const {
+    const auto pages =
+            this->documentController ? this->documentController->snapshotPages()
+                                     : std::vector<vn::view::render::PageRenderSnapshot>{};
     std::size_t geometryCount = 0;
     std::size_t drawableCount = 0;
     for (const auto& page: pages) {
@@ -644,7 +651,7 @@ void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
     }
 
     const QStringList badges = {
-            QStringLiteral("Qt experimental"),
+            QStringLiteral("Qt shell"),
             QStringLiteral("pages %1").arg(static_cast<int>(pages.size())),
             QStringLiteral("drawables %1").arg(static_cast<int>(drawableCount)),
             QStringLiteral("geometry %1").arg(static_cast<int>(geometryCount)),
@@ -669,11 +676,11 @@ void QtExperimentalCanvas::drawOverlayHud(QPainter& painter) const {
     }
 }
 
-auto QtExperimentalCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
+auto QtCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
     return QPointF(this->scrollX + screenPoint.x() / this->zoomFactor, this->scrollY + screenPoint.y() / this->zoomFactor);
 }
 
-auto QtExperimentalCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t> {
+auto QtCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t> {
     const auto rects = pageRects();
     for (std::size_t index = 0; index < rects.size(); ++index) {
         if (rects[index].contains(scenePoint)) {
@@ -683,7 +690,7 @@ auto QtExperimentalCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) cons
     return std::nullopt;
 }
 
-void QtExperimentalCanvas::updateGeometryHover(const QPointF& screenPoint) {
+void QtCanvas::updateGeometryHover(const QPointF& screenPoint) {
     if (!this->documentController) {
         return;
     }
@@ -717,7 +724,7 @@ void QtExperimentalCanvas::updateGeometryHover(const QPointF& screenPoint) {
     update();
 }
 
-void QtExperimentalCanvas::clearGeometryHover() {
+void QtCanvas::clearGeometryHover() {
     if (!this->documentController) {
         return;
     }
@@ -725,7 +732,7 @@ void QtExperimentalCanvas::clearGeometryHover() {
     update();
 }
 
-void QtExperimentalCanvas::selectHoveredGeometry(bool additive) {
+void QtCanvas::selectHoveredGeometry(bool additive) {
     if (!this->documentController) {
         return;
     }
@@ -743,9 +750,9 @@ void QtExperimentalCanvas::selectHoveredGeometry(bool additive) {
     update();
 }
 
-void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
-                                                          const QtExperimentalPageInfo& pageInfo,
-                                                          std::size_t pageIndex) const {
+void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
+                                              const vn::view::render::PageRenderSnapshot& pageInfo,
+                                              std::size_t pageIndex) const {
     if (!this->documentController || !this->geometryRenderer) {
         return;
     }
@@ -756,7 +763,7 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
     const auto& selectedVertexIds = this->documentController->selectedVertexIds();
     const auto& drag = this->documentController->activeGeometryDrag();
 
-    const auto drawEdgeOverlay = [&](const QtExperimentalGeometryHit& geometryHit, const QColor& color, double extraWidth) {
+    const auto drawEdgeOverlay = [&](const QtGeometryHit& geometryHit, const QColor& color, double extraWidth) {
         if (geometryHit.pageIndex != pageIndex || geometryHit.hit.type != vn::view::render::GeometryHitType::Edge) {
             return;
         }
@@ -884,13 +891,13 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
     painter.restore();
 }
 
-void QtExperimentalCanvas::beginPan(const QPointF& position) {
+void QtCanvas::beginPan(const QPointF& position) {
     this->panning = true;
     this->lastPanScreenPosition = position;
     setCursor(Qt::ClosedHandCursor);
 }
 
-void QtExperimentalCanvas::endPan() {
+void QtCanvas::endPan() {
     this->panning = false;
     if (this->spaceHeld) {
         setCursor(Qt::OpenHandCursor);

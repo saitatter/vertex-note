@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Qt preview image renderer for the experimental shell.
+ * Qt preview image renderer for the Qt shell.
  */
 
 #include "QtPreviewImageRenderer.h"

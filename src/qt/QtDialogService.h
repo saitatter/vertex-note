@@ -11,9 +11,9 @@
 class QWidget;
 class QString;
 
-class QtExperimentalDialogService: public vn::ui::common::IDialogService {
+class QtDialogService: public vn::ui::common::IDialogService {
 public:
-    explicit QtExperimentalDialogService(QWidget* parent);
+    explicit QtDialogService(QWidget* parent);
 
 public:
     [[nodiscard]] auto openDocument(const std::vector<vn::ui::common::FileDialogFilter>& filters)

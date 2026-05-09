@@ -8,7 +8,7 @@
 
 #include "ui/common/IClipboardService.h"
 
-class QtExperimentalClipboardService: public vn::ui::common::IClipboardService {
+class QtClipboardService: public vn::ui::common::IClipboardService {
 public:
     void setText(std::string_view text) override;
     [[nodiscard]] auto text() const -> std::string override;

@@ -8,11 +8,11 @@
 
 #include "ui/common/IPluginUiBridge.h"
 
-class QtExperimentalCommandHost;
+class QtCommandHost;
 
-class QtExperimentalPluginUiBridge: public vn::ui::common::IPluginUiBridge {
+class QtPluginUiBridge: public vn::ui::common::IPluginUiBridge {
 public:
-    explicit QtExperimentalPluginUiBridge(QtExperimentalCommandHost* commandHost);
+    explicit QtPluginUiBridge(QtCommandHost* commandHost);
 
 public:
     void registerMenuAction(const vn::ui::common::PluginUiActionDescriptor& action) override;
@@ -20,5 +20,5 @@ public:
     void removeAction(std::string_view id) override;
 
 private:
-    QtExperimentalCommandHost* commandHost = nullptr;
+    QtCommandHost* commandHost = nullptr;
 };

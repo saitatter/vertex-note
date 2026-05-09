@@ -4,7 +4,7 @@
  * Experimental Qt command host bootstrap.
  */
 
-#include "QtExperimentalCommandHost.h"
+#include "QtCommandHost.h"
 
 #include <QAction>
 #include <QKeySequence>
@@ -13,9 +13,9 @@
 #include <QMenuBar>
 #include <QString>
 
-QtExperimentalCommandHost::QtExperimentalCommandHost(QMainWindow* window): window(window) {}
+QtCommandHost::QtCommandHost(QMainWindow* window): window(window) {}
 
-void QtExperimentalCommandHost::registerCommand(vn::ui::common::CommandDescriptor descriptor, CommandHandler handler) {
+void QtCommandHost::registerCommand(vn::ui::common::CommandDescriptor descriptor, CommandHandler handler) {
     auto* action = new QAction(QString::fromStdString(descriptor.text), this->window);
     action->setEnabled(descriptor.enabled);
     action->setCheckable(descriptor.checkable);
@@ -35,31 +35,31 @@ void QtExperimentalCommandHost::registerCommand(vn::ui::common::CommandDescripto
     this->actions.insert_or_assign(std::move(descriptor.id), action);
 }
 
-void QtExperimentalCommandHost::setCommandEnabled(std::string_view id, bool enabled) {
+void QtCommandHost::setCommandEnabled(std::string_view id, bool enabled) {
     if (auto* action = actionFor(id)) {
         action->setEnabled(enabled);
     }
 }
 
-void QtExperimentalCommandHost::setCommandChecked(std::string_view id, bool checked) {
+void QtCommandHost::setCommandChecked(std::string_view id, bool checked) {
     if (auto* action = actionFor(id)) {
         action->setChecked(checked);
     }
 }
 
-auto QtExperimentalCommandHost::hasCommand(std::string_view id) const -> bool {
+auto QtCommandHost::hasCommand(std::string_view id) const -> bool {
     return this->actions.contains(std::string(id));
 }
 
-void QtExperimentalCommandHost::triggerCommand(std::string_view id) {
+void QtCommandHost::triggerCommand(std::string_view id) {
     if (auto* action = actionFor(id)) {
         action->trigger();
     }
 }
 
-auto QtExperimentalCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
+auto QtCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
 
-auto QtExperimentalCommandHost::ensureMenu(std::string_view title) -> QMenu* {
+auto QtCommandHost::ensureMenu(std::string_view title) -> QMenu* {
     const std::string key(title);
     if (auto it = this->menus.find(key); it != this->menus.end()) {
         return it->second;
@@ -70,7 +70,7 @@ auto QtExperimentalCommandHost::ensureMenu(std::string_view title) -> QMenu* {
     return menu;
 }
 
-auto QtExperimentalCommandHost::actionFor(std::string_view id) const -> QAction* {
+auto QtCommandHost::actionFor(std::string_view id) const -> QAction* {
     const auto it = this->actions.find(std::string(id));
     return it == this->actions.end() ? nullptr : it->second;
 }

@@ -14,6 +14,7 @@
 #include "model/Point.h"
 #include "model/PageType.h"
 #include "util/Color.h"
+#include "util/NamespaceAliases.h"
 #include "util/RasterImageData.h"
 #include "RenderContext.h"
 #include "vertexnote/geometry/GeometryTypes.h"
@@ -96,6 +97,13 @@ struct GeometryRenderModel {
 };
 
 using PageDrawableRenderModel = std::variant<StrokeRenderModel, TextRenderModel, ImageRenderModel, GeometryRenderModel>;
+
+struct PageRenderSnapshot {
+    double width = 0.0;
+    double height = 0.0;
+    PageBackgroundRenderModel background;
+    std::vector<PageDrawableRenderModel> drawables;
+};
 
 class StrokeRenderer {
 public:

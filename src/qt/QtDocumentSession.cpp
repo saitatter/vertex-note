@@ -1,10 +1,10 @@
 /*
  * VertexNote
  *
- * Experimental Qt document/session state for the shell migration.
+ * Qt document/session state for the shell migration.
  */
 
-#include "QtExperimentalDocumentSession.h"
+#include "QtDocumentSession.h"
 
 #include <charconv>
 #include <fstream>
@@ -13,16 +13,17 @@
 
 namespace {
 
-constexpr std::string_view SESSION_HEADER = "vertexnote_qt_experimental_session_v1";
+constexpr std::string_view SESSION_HEADER = "vertexnote_qt_session_v1";
+constexpr std::string_view LEGACY_SESSION_HEADER = "vertexnote_qt_experimental_session_v1";
 
 }
 
-void QtExperimentalDocumentSession::newDocument() {
+void QtDocumentSession::newDocument() {
     this->path.reset();
     this->dirty = false;
 }
 
-auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalSessionState> {
+auto QtDocumentSession::openFrom(const std::filesystem::path& path) -> std::optional<QtSessionState> {
     std::ifstream stream(path);
     if (!stream.is_open()) {
         return std::nullopt;
@@ -33,11 +34,11 @@ auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) 
         return std::nullopt;
     }
     trim(line);
-    if (line != SESSION_HEADER) {
+    if (line != SESSION_HEADER && line != LEGACY_SESSION_HEADER) {
         return std::nullopt;
     }
 
-    QtExperimentalSessionState sessionState;
+    QtSessionState sessionState;
     while (std::getline(stream, line)) {
         trim(line);
         if (line.empty()) {
@@ -78,7 +79,7 @@ auto QtExperimentalDocumentSession::openFrom(const std::filesystem::path& path) 
     return sessionState;
 }
 
-auto QtExperimentalDocumentSession::saveAs(const std::filesystem::path& path, const QtExperimentalSessionState& sessionState)
+auto QtDocumentSession::saveAs(const std::filesystem::path& path, const QtSessionState& sessionState)
         -> bool {
     std::ofstream stream(path, std::ios::trunc);
     if (!stream.is_open()) {
@@ -108,24 +109,24 @@ auto QtExperimentalDocumentSession::saveAs(const std::filesystem::path& path, co
     return true;
 }
 
-void QtExperimentalDocumentSession::markDirty(bool dirty) { this->dirty = dirty; }
+void QtDocumentSession::markDirty(bool dirty) { this->dirty = dirty; }
 
-auto QtExperimentalDocumentSession::isDirty() const -> bool { return this->dirty; }
+auto QtDocumentSession::isDirty() const -> bool { return this->dirty; }
 
-auto QtExperimentalDocumentSession::currentPath() const -> const std::optional<std::filesystem::path>& { return this->path; }
+auto QtDocumentSession::currentPath() const -> const std::optional<std::filesystem::path>& { return this->path; }
 
-auto QtExperimentalDocumentSession::displayName() const -> std::string {
+auto QtDocumentSession::displayName() const -> std::string {
     if (!this->path) {
         return "Untitled Qt Session";
     }
     return this->path->filename().string();
 }
 
-auto QtExperimentalDocumentSession::titleText() const -> std::string {
+auto QtDocumentSession::titleText() const -> std::string {
     return this->dirty ? displayName() + " *" : displayName();
 }
 
-auto QtExperimentalDocumentSession::parseDouble(std::string_view value) -> std::optional<double> {
+auto QtDocumentSession::parseDouble(std::string_view value) -> std::optional<double> {
     double parsed{};
     const auto* begin = value.data();
     const auto* end = value.data() + value.size();
@@ -136,7 +137,7 @@ auto QtExperimentalDocumentSession::parseDouble(std::string_view value) -> std::
     return parsed;
 }
 
-void QtExperimentalDocumentSession::trim(std::string& value) {
+void QtDocumentSession::trim(std::string& value) {
     while (!value.empty() && (value.front() == ' ' || value.front() == '\t' || value.front() == '\r')) {
         value.erase(value.begin());
     }

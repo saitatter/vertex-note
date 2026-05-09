@@ -1,24 +1,24 @@
 /*
  * VertexNote
  *
- * Experimental Qt app shell bootstrap.
+ * Qt app shell bootstrap.
  */
 
 #pragma once
 
-#include "QtExperimentalClipboardService.h"
-#include "QtExperimentalDialogService.h"
-#include "QtExperimentalDocumentController.h"
-#include "QtExperimentalDocumentSession.h"
-#include "QtExperimentalMainWindow.h"
-#include "QtExperimentalPluginUiBridge.h"
-#include "QtExperimentalRecentFilesService.h"
-#include "QtExperimentalUpdatePresentationService.h"
+#include "QtClipboardService.h"
+#include "QtDialogService.h"
+#include "QtDocumentController.h"
+#include "QtDocumentSession.h"
+#include "QtMainWindow.h"
+#include "QtPluginUiBridge.h"
+#include "QtRecentFilesService.h"
+#include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
 
-class QtExperimentalAppShell: public vn::ui::common::IAppShell {
+class QtAppShell: public vn::ui::common::IAppShell {
 public:
-    QtExperimentalAppShell();
+    QtAppShell();
 
 public:
     [[nodiscard]] auto commandHost() -> vn::ui::common::ICommandHost* override;
@@ -48,13 +48,13 @@ private:
     void setGridSnapEnabled(bool enabled);
 
 private:
-    QtExperimentalMainWindow window;
-    QtExperimentalClipboardService clipboard;
-    QtExperimentalDialogService dialogs;
-    QtExperimentalRecentFilesService recentFiles;
-    QtExperimentalUpdatePresentationService updates;
-    QtExperimentalPluginUiBridge plugins;
-    QtExperimentalDocumentController documentController;
-    QtExperimentalDocumentSession session;
+    QtMainWindow window;
+    QtClipboardService clipboard;
+    QtDialogService dialogs;
+    QtRecentFilesService recentFiles;
+    QtUpdatePresentationService updates;
+    QtPluginUiBridge plugins;
+    QtDocumentController documentController;
+    QtDocumentSession session;
     bool suppressDirtyTracking = false;
 };

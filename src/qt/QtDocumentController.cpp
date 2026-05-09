@@ -1,10 +1,10 @@
 /*
  * VertexNote
  *
- * Experimental Qt document controller backed by the shared core model.
+ * Qt document controller backed by the shared core model.
  */
 
-#include "QtExperimentalDocumentController.h"
+#include "QtDocumentController.h"
 
 #include <algorithm>
 #include <cctype>
@@ -25,16 +25,10 @@
 #include "vertexnote/snapping/ISnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 #include "vertexnote/snapping/SnapEngine.h"
-#include "view/render/GeometryRenderModelFactory.h"
-#include "view/render/ImageRenderModelFactory.h"
-#include "view/render/PageBackgroundRenderModelFactory.h"
-#include "view/render/PageRasterPreviewFactory.h"
-#include "view/render/StrokeRenderModelFactory.h"
-#include "view/render/TextRenderModelFactory.h"
 
-QtExperimentalDocumentController::QtExperimentalDocumentController() { newBlankDocument(); }
+QtDocumentController::QtDocumentController() { newBlankDocument(); }
 
-void QtExperimentalDocumentController::newBlankDocument() {
+void QtDocumentController::newBlankDocument() {
     this->document = std::make_unique<Document>(&this->documentHandler);
     this->document->lock();
     this->document->addPage(std::make_shared<NotePage>(595.0, 842.0));
@@ -45,7 +39,7 @@ void QtExperimentalDocumentController::newBlankDocument() {
     rebuildPageSnapshots();
 }
 
-auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& path, std::string* errorMessage) -> bool {
+auto QtDocumentController::loadFrom(const std::filesystem::path& path, std::string* errorMessage) -> bool {
     try {
         if (isPdfPath(path)) {
             auto loaded = std::make_unique<Document>(&this->documentHandler);
@@ -80,9 +74,9 @@ auto QtExperimentalDocumentController::loadFrom(const std::filesystem::path& pat
     }
 }
 
-auto QtExperimentalDocumentController::hasDocument() const -> bool { return static_cast<bool>(this->document); }
+auto QtDocumentController::hasDocument() const -> bool { return static_cast<bool>(this->document); }
 
-auto QtExperimentalDocumentController::pageCount() const -> std::size_t {
+auto QtDocumentController::pageCount() const -> std::size_t {
     if (!this->document) {
         return 0U;
     }
@@ -92,29 +86,29 @@ auto QtExperimentalDocumentController::pageCount() const -> std::size_t {
     return count;
 }
 
-auto QtExperimentalDocumentController::snapshotPages() const -> const std::vector<QtExperimentalPageInfo>& {
+auto QtDocumentController::snapshotPages() const -> const std::vector<vn::view::render::PageRenderSnapshot>& {
     return this->pageSnapshots;
 }
 
-auto QtExperimentalDocumentController::sourcePath() const -> const std::optional<std::filesystem::path>& {
+auto QtDocumentController::sourcePath() const -> const std::optional<std::filesystem::path>& {
     return this->loadedPath;
 }
 
-auto QtExperimentalDocumentController::titleText() const -> std::string {
+auto QtDocumentController::titleText() const -> std::string {
     if (this->loadedPath) {
         return this->loadedPath->filename().string();
     }
     return "Untitled Document";
 }
 
-auto QtExperimentalDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                                        double maxScreenDistance) const
-        -> std::optional<QtExperimentalGeometryHit> {
+        -> std::optional<QtGeometryHit> {
     if (pageIndex >= this->pageSnapshots.size()) {
         return std::nullopt;
     }
 
-    std::optional<QtExperimentalGeometryHit> bestHit;
+    std::optional<QtGeometryHit> bestHit;
     for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
         const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
         if (!geometry) {
@@ -127,18 +121,18 @@ auto QtExperimentalDocumentController::hitTestGeometry(std::size_t pageIndex, do
         }
 
         if (!bestHit || hit->screenDistance < bestHit->hit.screenDistance) {
-            bestHit = QtExperimentalGeometryHit{.pageIndex = pageIndex, .hit = *hit};
+            bestHit = QtGeometryHit{.pageIndex = pageIndex, .hit = *hit};
         }
     }
 
     return bestHit;
 }
 
-void QtExperimentalDocumentController::setHoveredGeometry(std::optional<QtExperimentalGeometryHit> hit) {
+void QtDocumentController::setHoveredGeometry(std::optional<QtGeometryHit> hit) {
     this->hoveredGeometryHit = std::move(hit);
 }
 
-void QtExperimentalDocumentController::setSelectedGeometry(std::optional<QtExperimentalGeometryHit> hit, bool additive) {
+void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit, bool additive) {
     if (!additive || !hit || hit->hit.type != vn::view::render::GeometryHitType::Vertex || !this->selectedGeometryHit ||
         this->selectedGeometryHit->pageIndex != hit->pageIndex ||
         this->selectedGeometryHit->hit.objectId != hit->hit.objectId) {
@@ -159,26 +153,26 @@ void QtExperimentalDocumentController::setSelectedGeometry(std::optional<QtExper
     }
 }
 
-void QtExperimentalDocumentController::clearInteractiveGeometryState() {
+void QtDocumentController::clearInteractiveGeometryState() {
     this->hoveredGeometryHit.reset();
     this->selectedGeometryHit.reset();
     this->selectedGeometryVertexIds.clear();
     this->geometryDragState.reset();
 }
 
-auto QtExperimentalDocumentController::hoveredGeometry() const -> const std::optional<QtExperimentalGeometryHit>& {
+auto QtDocumentController::hoveredGeometry() const -> const std::optional<QtGeometryHit>& {
     return this->hoveredGeometryHit;
 }
 
-auto QtExperimentalDocumentController::selectedGeometry() const -> const std::optional<QtExperimentalGeometryHit>& {
+auto QtDocumentController::selectedGeometry() const -> const std::optional<QtGeometryHit>& {
     return this->selectedGeometryHit;
 }
 
-auto QtExperimentalDocumentController::selectedVertexIds() const -> const std::vector<vn::geom::VertexId>& {
+auto QtDocumentController::selectedVertexIds() const -> const std::vector<vn::geom::VertexId>& {
     return this->selectedGeometryVertexIds;
 }
 
-auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimentalGeometryHit& hit) -> bool {
+auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> bool {
     if (hit.hit.type != vn::view::render::GeometryHitType::Vertex) {
         return false;
     }
@@ -190,7 +184,7 @@ auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimen
     if (!preserveSelection) {
         setSelectedGeometry(hit);
     }
-    this->geometryDragState = QtExperimentalGeometryDragState{
+    this->geometryDragState = QtGeometryDragState{
             .pageIndex = hit.pageIndex,
             .objectId = hit.hit.objectId,
             .vertexId = hit.hit.vertexId,
@@ -218,8 +212,8 @@ auto QtExperimentalDocumentController::beginGeometryVertexDrag(const QtExperimen
     return true;
 }
 
-auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom,
-                                                               const QtExperimentalSnapOptions& options) -> bool {
+auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom,
+                                                               const QtSnapOptions& options) -> bool {
     if (!this->geometryDragState || !this->document) {
         return false;
     }
@@ -316,7 +310,7 @@ auto QtExperimentalDocumentController::updateGeometryVertexDrag(double pageX, do
     return changed;
 }
 
-auto QtExperimentalDocumentController::endGeometryVertexDrag() -> bool {
+auto QtDocumentController::endGeometryVertexDrag() -> bool {
     const bool changed = this->geometryDragState && this->geometryDragState->changed;
     if (changed && this->document && this->geometryDragState) {
         this->document->lock();
@@ -335,11 +329,11 @@ auto QtExperimentalDocumentController::endGeometryVertexDrag() -> bool {
     return changed;
 }
 
-auto QtExperimentalDocumentController::activeGeometryDrag() const -> const std::optional<QtExperimentalGeometryDragState>& {
+auto QtDocumentController::activeGeometryDrag() const -> const std::optional<QtGeometryDragState>& {
     return this->geometryDragState;
 }
 
-auto QtExperimentalDocumentController::deleteSelectedGeometry() -> bool {
+auto QtDocumentController::deleteSelectedGeometry() -> bool {
     if (!this->selectedGeometryHit || !this->document) {
         return false;
     }
@@ -390,7 +384,7 @@ auto QtExperimentalDocumentController::deleteSelectedGeometry() -> bool {
     return changed;
 }
 
-auto QtExperimentalDocumentController::insertVertexOnSelectedEdge() -> bool {
+auto QtDocumentController::insertVertexOnSelectedEdge() -> bool {
     if (!this->selectedGeometryHit || !this->document ||
         this->selectedGeometryHit->hit.type != vn::view::render::GeometryHitType::Edge ||
         this->selectedGeometryHit->hit.edgeId == vn::geom::InvalidEdgeId) {
@@ -434,7 +428,7 @@ auto QtExperimentalDocumentController::insertVertexOnSelectedEdge() -> bool {
         insertedHit.point = Point(insertedPoint.x, insertedPoint.y);
         insertedHit.snapKind.reset();
         insertedHit.screenDistance = 0.0;
-        this->selectedGeometryHit = QtExperimentalGeometryHit{.pageIndex = this->selectedGeometryHit->pageIndex,
+        this->selectedGeometryHit = QtGeometryHit{.pageIndex = this->selectedGeometryHit->pageIndex,
                                                               .hit = std::move(insertedHit)};
         this->hoveredGeometryHit = this->selectedGeometryHit;
         rebuildPageSnapshots();
@@ -443,19 +437,19 @@ auto QtExperimentalDocumentController::insertVertexOnSelectedEdge() -> bool {
     return changed;
 }
 
-auto QtExperimentalDocumentController::canUndoGeometryEdit() const -> bool { return !this->geometryUndoHistory.empty(); }
+auto QtDocumentController::canUndoGeometryEdit() const -> bool { return !this->geometryUndoHistory.empty(); }
 
-auto QtExperimentalDocumentController::canRedoGeometryEdit() const -> bool { return !this->geometryRedoHistory.empty(); }
+auto QtDocumentController::canRedoGeometryEdit() const -> bool { return !this->geometryRedoHistory.empty(); }
 
-auto QtExperimentalDocumentController::undoGeometryEditText() const -> std::string {
+auto QtDocumentController::undoGeometryEditText() const -> std::string {
     return this->geometryUndoHistory.empty() ? std::string{} : this->geometryUndoHistory.back().text;
 }
 
-auto QtExperimentalDocumentController::redoGeometryEditText() const -> std::string {
+auto QtDocumentController::redoGeometryEditText() const -> std::string {
     return this->geometryRedoHistory.empty() ? std::string{} : this->geometryRedoHistory.back().text;
 }
 
-auto QtExperimentalDocumentController::undoGeometryEdit() -> bool {
+auto QtDocumentController::undoGeometryEdit() -> bool {
     if (this->geometryUndoHistory.empty()) {
         return false;
     }
@@ -471,7 +465,7 @@ auto QtExperimentalDocumentController::undoGeometryEdit() -> bool {
     return changed;
 }
 
-auto QtExperimentalDocumentController::redoGeometryEdit() -> bool {
+auto QtDocumentController::redoGeometryEdit() -> bool {
     if (this->geometryRedoHistory.empty()) {
         return false;
     }
@@ -487,105 +481,36 @@ auto QtExperimentalDocumentController::redoGeometryEdit() -> bool {
     return changed;
 }
 
-auto QtExperimentalDocumentController::isPdfPath(const std::filesystem::path& path) -> bool {
+auto QtDocumentController::isPdfPath(const std::filesystem::path& path) -> bool {
     return normalizeExtension(path) == ".pdf";
 }
 
-auto QtExperimentalDocumentController::normalizeExtension(const std::filesystem::path& path) -> std::string {
+auto QtDocumentController::normalizeExtension(const std::filesystem::path& path) -> std::string {
     auto extension = path.extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return extension;
 }
 
-void QtExperimentalDocumentController::rebuildPageSnapshots() {
+void QtDocumentController::rebuildPageSnapshots() {
     this->pageSnapshots.clear();
     if (!this->document) {
         return;
     }
-
-    this->document->lock_shared();
-    const auto count = this->document->getPageCount();
-    this->pageSnapshots.reserve(count);
-    for (std::size_t index = 0; index < count; ++index) {
-        auto page = this->document->getPage(index);
-        if (!page) {
-            continue;
-        }
-
-        auto background = vn::view::render::PageBackgroundRenderModelFactory::fromPage(page);
-        if (background.backgroundFormat == PageTypeFormat::Pdf) {
-            background.rasterContent = vn::view::render::createPdfPagePreviewRaster(*this->document, page->getPdfPageNr(),
-                                                                                    page->getWidth(), page->getHeight());
-        } else if (background.backgroundFormat == PageTypeFormat::Image) {
-            background.rasterContent = vn::view::render::createBackgroundImagePreviewRaster(page->getBackgroundImage());
-        }
-
-        std::vector<vn::view::render::PageDrawableRenderModel> drawables;
-        for (const Layer* layer: page->getLayersView()) {
-            if (!layer || !layer->isVisible()) {
-                continue;
-            }
-
-            for (const Element* element: layer->getElementsView()) {
-                if (!element) {
-                    continue;
-                }
-
-                switch (element->getType()) {
-                    case ELEMENT_STROKE: {
-                        const auto* stroke = dynamic_cast<const Stroke*>(element);
-                        if (stroke && stroke->getPointCount() >= 2) {
-                            drawables.emplace_back(vn::view::render::StrokeRenderModelFactory::fromStroke(*stroke));
-                        }
-                        break;
-                    }
-                    case ELEMENT_TEXT: {
-                        const auto* text = dynamic_cast<const Text*>(element);
-                        if (text && !text->getText().empty()) {
-                            drawables.emplace_back(vn::view::render::TextRenderModelFactory::fromText(*text));
-                        }
-                        break;
-                    }
-                    case ELEMENT_IMAGE: {
-                        const auto* image = dynamic_cast<const Image*>(element);
-                        if (image && image->hasData()) {
-                            drawables.emplace_back(vn::view::render::ImageRenderModelFactory::fromImage(*image));
-                        }
-                        break;
-                    }
-                    case ELEMENT_GEOMETRY: {
-                        const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
-                        if (geometry) {
-                            drawables.emplace_back(vn::view::render::GeometryRenderModelFactory::fromGeometryElement(*geometry));
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-        }
-
-        this->pageSnapshots.push_back({.width = page->getWidth(),
-                                       .height = page->getHeight(),
-                                       .background = std::move(background),
-                                       .drawables = std::move(drawables)});
-    }
-    this->document->unlock_shared();
+    this->pageSnapshots = vn::view::render::buildPageRenderSnapshots(*this->document);
 }
 
-void QtExperimentalDocumentController::clearGeometryHistory() {
+void QtDocumentController::clearGeometryHistory() {
     this->geometryUndoHistory.clear();
     this->geometryRedoHistory.clear();
 }
 
-void QtExperimentalDocumentController::pushGeometryHistory(QtExperimentalGeometryHistoryEntry entry) {
+void QtDocumentController::pushGeometryHistory(QtGeometryHistoryEntry entry) {
     this->geometryRedoHistory.clear();
     this->geometryUndoHistory.push_back(std::move(entry));
 }
 
-auto QtExperimentalDocumentController::applyGeometryHistoryEntry(const QtExperimentalGeometryHistoryEntry& entry, bool useAfterState)
+auto QtDocumentController::applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState)
         -> bool {
     if (!this->document) {
         return false;
@@ -606,7 +531,7 @@ auto QtExperimentalDocumentController::applyGeometryHistoryEntry(const QtExperim
     return true;
 }
 
-auto QtExperimentalDocumentController::findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
+auto QtDocumentController::findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
         -> vn::geom::GeometryElement* {
     if (!this->document || pageIndex >= this->document->getPageCount()) {
         return nullptr;
@@ -633,7 +558,7 @@ auto QtExperimentalDocumentController::findMutableGeometryElement(std::size_t pa
     return nullptr;
 }
 
-auto QtExperimentalDocumentController::gridSnapProviderFor(PageTypeFormat format)
+auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format)
         -> std::shared_ptr<const vn::snap::ISnapProvider> {
     switch (format) {
         case PageTypeFormat::Graph:

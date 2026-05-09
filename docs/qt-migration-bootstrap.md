@@ -8,8 +8,8 @@ This document tracks the first executable slices of the Qt migration.
 - `src/core/ui/input/` now contains a Qt-independent input event shape and sink interface.
 - `src/core/view/render/` now contains the first backend-neutral interactive render contracts.
 - The Qt shell now also carries a minimal `QtPainterRenderContext` wrapper beside the Cairo wrapper.
-- `ENABLE_QT_EXPERIMENTAL` adds an optional `Qt Widgets` bootstrap target.
-- The experimental target now builds a runnable Qt shell:
+- `ENABLE_QT_SHELL` adds an optional `Qt Widgets` bootstrap target.
+- The Qt shell target now builds a runnable Qt shell:
   - `QApplication`
   - `QMainWindow`
   - command host bootstrap
@@ -17,12 +17,12 @@ This document tracks the first executable slices of the Qt migration.
   - canvas viewport with translated mouse, pen, wheel, key, and touch input
   - pan / zoom / fit-page interactions
   - real document loading for `.xopp`, `.xoj`, `.xopt`, and `.pdf`
-  - experimental `.vnsession` open/save flow as a viewport sidecar linked to a document path
+  - `.vnsession` open/save flow as a viewport sidecar linked to a document path
   - shared-core page stack preview driven by `Document` and `NotePage`
   - first background preview renderer wired through the backend-neutral render seam
   - GTK page-type previews now consume the same background render model seam through a Cairo preview renderer
-  - experimental Qt canvas now renders cached stroke and text snapshots from real documents
-  - experimental Qt canvas now renders image elements and raster PDF/image page backgrounds
+  - Qt canvas now renders cached stroke and text snapshots from real documents
+  - Qt canvas now renders image elements and raster PDF/image page backgrounds
 
 ## Build
 
@@ -35,7 +35,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 build-qt
 
 Current binary name:
 
-- `vertex-note-qt-experimental`
+- `vertex-note-qt-shell`
 
 Run it with:
 
@@ -45,8 +45,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 ## Intentional Limits
 
-- The shipping GTK application remains the primary shell.
-- The experimental Qt target now opens real core documents, but it does not yet host `Control`, editing tools, or full `.xopp` workflow parity.
+- The shipping GTK application remains the primary shell for now.
+- The Qt target now opens real core documents, but it does not yet host `Control`, editing tools, or full `.xopp` workflow parity.
 - The canvas now renders the real notebook page stack shape plus early stroke/text/image content snapshots and raster PDF/image backgrounds, but it still does not share the production Cairo notebook renderer yet.
 - The render seam is still early; background preview now routes through a renderer contract, while Cairo remains the active production renderer.
 

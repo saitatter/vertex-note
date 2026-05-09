@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Qt preview stroke renderer for the experimental shell.
+ * Qt preview stroke renderer for the Qt shell.
  */
 
 #include "QtPreviewStrokeRenderer.h"

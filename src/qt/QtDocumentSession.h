@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Experimental Qt document/session state for the shell migration.
+ * Qt document/session state for the shell migration.
  */
 
 #pragma once
@@ -10,22 +10,22 @@
 #include <optional>
 #include <string>
 
-struct QtExperimentalViewportState {
+struct QtViewportState {
     double zoom = 1.0;
     double scrollX = 0.0;
     double scrollY = 0.0;
 };
 
-struct QtExperimentalSessionState {
-    QtExperimentalViewportState viewport;
+struct QtSessionState {
+    QtViewportState viewport;
     std::optional<std::filesystem::path> linkedDocumentPath;
 };
 
-class QtExperimentalDocumentSession {
+class QtDocumentSession {
 public:
     void newDocument();
-    auto openFrom(const std::filesystem::path& path) -> std::optional<QtExperimentalSessionState>;
-    auto saveAs(const std::filesystem::path& path, const QtExperimentalSessionState& sessionState) -> bool;
+    auto openFrom(const std::filesystem::path& path) -> std::optional<QtSessionState>;
+    auto saveAs(const std::filesystem::path& path, const QtSessionState& sessionState) -> bool;
     void markDirty(bool dirty);
 
     [[nodiscard]] auto isDirty() const -> bool;

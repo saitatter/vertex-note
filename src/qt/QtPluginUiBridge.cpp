@@ -4,13 +4,13 @@
  * Experimental Qt plugin UI bridge.
  */
 
-#include "QtExperimentalPluginUiBridge.h"
+#include "QtPluginUiBridge.h"
 
-#include "QtExperimentalCommandHost.h"
+#include "QtCommandHost.h"
 
-QtExperimentalPluginUiBridge::QtExperimentalPluginUiBridge(QtExperimentalCommandHost* commandHost): commandHost(commandHost) {}
+QtPluginUiBridge::QtPluginUiBridge(QtCommandHost* commandHost): commandHost(commandHost) {}
 
-void QtExperimentalPluginUiBridge::registerMenuAction(const vn::ui::common::PluginUiActionDescriptor& action) {
+void QtPluginUiBridge::registerMenuAction(const vn::ui::common::PluginUiActionDescriptor& action) {
     if (!this->commandHost) {
         return;
     }
@@ -22,11 +22,11 @@ void QtExperimentalPluginUiBridge::registerMenuAction(const vn::ui::common::Plug
                                        []() {});
 }
 
-void QtExperimentalPluginUiBridge::registerToolbarAction(const vn::ui::common::PluginUiActionDescriptor& action) {
+void QtPluginUiBridge::registerToolbarAction(const vn::ui::common::PluginUiActionDescriptor& action) {
     registerMenuAction(action);
 }
 
-void QtExperimentalPluginUiBridge::removeAction(std::string_view id) {
+void QtPluginUiBridge::removeAction(std::string_view id) {
     if (this->commandHost && this->commandHost->hasCommand(id)) {
         this->commandHost->setCommandEnabled(id, false);
     }

@@ -15,9 +15,9 @@ class QMainWindow;
 class QMenu;
 class QAction;
 
-class QtExperimentalCommandHost: public vn::ui::common::ICommandHost {
+class QtCommandHost: public vn::ui::common::ICommandHost {
 public:
-    explicit QtExperimentalCommandHost(QMainWindow* window);
+    explicit QtCommandHost(QMainWindow* window);
 
 public:
     void registerCommand(vn::ui::common::CommandDescriptor descriptor, CommandHandler handler) override;

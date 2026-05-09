@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Qt preview background renderer for the experimental shell.
+ * Qt preview background renderer for the Qt shell.
  */
 
 #pragma once

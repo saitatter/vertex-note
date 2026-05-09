@@ -29,7 +29,7 @@ function Configure-VertexNote {
 }
 
 function Configure-VertexNoteQt {
-    Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_EXPERIMENTAL=ON -DCMAKE_PREFIX_PATH=/mingw64"
+    Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DCMAKE_PREFIX_PATH=/mingw64"
 }
 
 function Build-VertexNote {
@@ -37,7 +37,7 @@ function Build-VertexNote {
 }
 
 function Build-VertexNoteQt {
-    Invoke-Mingw64 "cmake --build build/mingw64-qt --target vertexnote-qt-experimental"
+    Invoke-Mingw64 "cmake --build build/mingw64-qt --target vertexnote-qt-shell"
 }
 
 function Build-Tests {
@@ -73,7 +73,7 @@ switch ($Task) {
     "run-qt" {
         Configure-VertexNoteQt
         Build-VertexNoteQt
-        Invoke-Mingw64 "./build/mingw64-qt/vertex-note-qt-experimental.exe"
+        Invoke-Mingw64 "./build/mingw64-qt/vertex-note-qt-shell.exe"
     }
     "all" {
         Configure-VertexNote
