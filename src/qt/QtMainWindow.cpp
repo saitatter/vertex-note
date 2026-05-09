@@ -27,6 +27,9 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->pageSidebarWidget = new QtPageSidebar(this);
     addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
 
+    this->toolPaletteWidget = new QtToolPalette(this);
+    this->toolPaletteWidget->setVisible(false);  // Hidden until a drawing tool is selected
+
     statusBar()->showMessage(QStringLiteral("Qt shell ready"));
 }
 
@@ -39,3 +42,5 @@ auto QtMainWindow::mainToolBar() -> QToolBar* { return this->toolBar; }
 auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget; }
 
 auto QtMainWindow::pageSidebar() -> QtPageSidebar* { return this->pageSidebarWidget; }
+
+auto QtMainWindow::toolPalette() -> QtToolPalette* { return this->toolPaletteWidget; }

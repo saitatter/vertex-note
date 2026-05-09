@@ -132,6 +132,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 7. ✓ Page background dialog with colour picker and pattern dropdown.
 9. ✓ Export: PDF via `QPdfWriter`, PNG via `QImage` at configurable scale.
 10. ✓ Page sidebar dock with rendered thumbnails and click-to-scroll navigation.
+12. ✓ Toolbar palette with colour picker, pen width spinner, pressure toggle.
 
 ## Next Slices
 
@@ -139,9 +140,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 6. ✅ Layer panel UI and layer operations.
 7. ✅ Page templates, background colour/pattern dialogs.
-8. PDF annotation overlay (pen/text on PDF pages).
+8. ✅ PDF annotation overlay — raster preview via `PdfPage::renderPreviewRaster`.
 9. ✅ Export (PDF, PNG) via QPdfWriter / QImage.
 10. ✅ Sidebar (page thumbnails with rendered previews, click-to-scroll).
 11. Plugin system, fullscreen/presentation modes.
-12. Toolbar with tool palette, colour picker, font selector, floating
-    toolbox.
+12. ✅ Toolbar with colour picker, pen width spinner, pressure toggle.

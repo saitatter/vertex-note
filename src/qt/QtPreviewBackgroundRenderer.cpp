@@ -194,26 +194,35 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
             break;
         }
         case PageTypeFormat::Pdf: {
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(QColor(232, 238, 247));
-            painter->drawRoundedRect(
-                    QRectF(pageRect.left() + 20.0, pageRect.top() + 20.0, pageRect.width() - 40.0, 54.0), 4.0, 4.0);
-            painter->setPen(QColor(82, 97, 118));
-            painter->drawText(
-                    QRectF(pageRect.left() + 34.0, pageRect.top() + 22.0, pageRect.width() - 68.0, 50.0),
-                    Qt::AlignLeft | Qt::AlignVCenter,
-                    QStringLiteral("PDF background page %1").arg(static_cast<int>(page.pdfPageNumber + 1)));
+            // Raster content was already drawn above if available.
+            // Show placeholder only when raster preview is missing.
+            if (page.rasterContent.empty()) {
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(QColor(232, 238, 247));
+                painter->drawRoundedRect(
+                        QRectF(pageRect.left() + 20.0, pageRect.top() + 20.0, pageRect.width() - 40.0, 54.0), 4.0,
+                        4.0);
+                painter->setPen(QColor(82, 97, 118));
+                painter->drawText(
+                        QRectF(pageRect.left() + 34.0, pageRect.top() + 22.0, pageRect.width() - 68.0, 50.0),
+                        Qt::AlignLeft | Qt::AlignVCenter,
+                        QStringLiteral("PDF background page %1").arg(static_cast<int>(page.pdfPageNumber + 1)));
+            }
             break;
         }
         case PageTypeFormat::Image: {
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(QColor(242, 245, 250));
-            painter->drawRoundedRect(
-                    QRectF(pageRect.left() + 20.0, pageRect.top() + 20.0, pageRect.width() - 40.0, 54.0), 4.0, 4.0);
-            painter->setPen(QColor(82, 97, 118));
-            painter->drawText(
-                    QRectF(pageRect.left() + 34.0, pageRect.top() + 22.0, pageRect.width() - 68.0, 50.0),
-                    Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Image background"));
+            // Raster content was already drawn above if available.
+            if (page.rasterContent.empty()) {
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(QColor(242, 245, 250));
+                painter->drawRoundedRect(
+                        QRectF(pageRect.left() + 20.0, pageRect.top() + 20.0, pageRect.width() - 40.0, 54.0), 4.0,
+                        4.0);
+                painter->setPen(QColor(82, 97, 118));
+                painter->drawText(
+                        QRectF(pageRect.left() + 34.0, pageRect.top() + 22.0, pageRect.width() - 68.0, 50.0),
+                        Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("Image background"));
+            }
             break;
         }
         case PageTypeFormat::Plain:

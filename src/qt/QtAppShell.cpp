@@ -356,6 +356,43 @@ void QtAppShell::wireWindowState() {
                          this->window.canvas()->update();
                      });
 
+    // Tool palette → canvas tool state
+    QObject::connect(this->window.toolPalette(), &QtToolPalette::colorChanged, &this->window,
+                     [this](Color color) {
+                         auto& ts = this->window.canvas()->toolState();
+                         switch (ts.activeTool) {
+                             case QtToolType::Pen:
+                                 ts.penColor = color;
+                                 break;
+                             case QtToolType::Highlighter:
+                                 ts.highlighterColor = color;
+                                 break;
+                             default:
+                                 break;
+                         }
+                     });
+
+    QObject::connect(this->window.toolPalette(), &QtToolPalette::widthChanged, &this->window,
+                     [this](double width) {
+                         auto& ts = this->window.canvas()->toolState();
+                         switch (ts.activeTool) {
+                             case QtToolType::Pen:
+                                 ts.penWidth = width;
+                                 break;
+                             case QtToolType::Highlighter:
+                                 ts.highlighterWidth = width;
+                                 break;
+                             case QtToolType::Eraser:
+                                 ts.eraserWidth = width;
+                                 break;
+                             default:
+                                 break;
+                         }
+                     });
+
+    QObject::connect(this->window.toolPalette(), &QtToolPalette::pressureToggled, &this->window,
+                     [this](bool enabled) { this->window.canvas()->toolState().pressureSensitive = enabled; });
+
     updateEditCommandStates();
 }
 
@@ -390,6 +427,10 @@ void QtAppShell::rebuildToolbar() {
             }
         }
     }
+
+    // Tool palette widget after tool buttons
+    toolBar->addSeparator();
+    toolBar->addWidget(this->window.toolPalette());
 }
 
 void QtAppShell::updateWindowTitle() {
@@ -515,6 +556,7 @@ void QtAppShell::setGridSnapEnabled(bool enabled) {
 void QtAppShell::selectTool(QtToolType tool) {
     this->window.canvas()->setActiveTool(tool);
     updateToolCommandStates();
+    this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
     this->window.statusBar()->showMessage(
             QString::fromStdString("Tool: " + this->window.canvas()->toolState().activeToolName()), 2500);
 }

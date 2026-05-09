@@ -45,6 +45,8 @@ set(vertexnote_qt_sources
         QtPageSidebar.cpp
         QtDocumentExporter.h
         QtDocumentExporter.cpp
+        QtToolPalette.h
+        QtToolPalette.cpp
 )
 
 add_executable(vertexnote-qt-shell ${vertexnote_qt_sources})
