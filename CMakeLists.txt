@@ -20,7 +20,13 @@ endif()
 
 ## Project related variables
 file(STRINGS pyproject.toml VERTEX_NOTE_VERSION_LINE REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+\"")
+if(NOT VERTEX_NOTE_VERSION_LINE)
+    message(FATAL_ERROR "Could not extract VertexNote version from pyproject.toml")
+endif()
 string(REGEX REPLACE "^version = \"([0-9]+\\.[0-9]+\\.[0-9]+)\"$" "\\1" VERTEX_NOTE_VERSION "${VERTEX_NOTE_VERSION_LINE}")
+if(NOT VERTEX_NOTE_VERSION)
+    message(FATAL_ERROR "Parsed VertexNote version is empty")
+endif()
 
 project(VertexNote
         VERSION ${VERTEX_NOTE_VERSION}
@@ -33,7 +39,8 @@ set(VERSION_SUFFIX "+dev")
 set(PROJECT_VERSION "${PROJECT_VERSION}${VERSION_SUFFIX}")
 set(vertexnote_VERSION ${PROJECT_VERSION})
 set(CMAKE_PROJECT_VERSION ${PROJECT_VERSION})
-set(PROJECT_CONTACT "https://github.com/saitatter/vertex-note/issues")
+set(PROJECT_CONTACT "saitatter@users.noreply.github.com")
+set(PROJECT_ISSUES_URL "https://github.com/saitatter/vertex-note/issues")
 set(VERTEX_NOTE_APP_ID "app.vertexnote.VertexNote")
 set(VERTEX_NOTE_BINARY_NAME "vertex-note")
 set(VERTEX_NOTE_WRAPPER_BINARY_NAME "vertex-note-wrapper")

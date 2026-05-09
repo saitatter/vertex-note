@@ -1,10 +1,10 @@
 # VertexNote Architecture Notes
 
-VertexNote is a long-term fork of VertexNote focused on CAD-inspired technical note-taking.
-The fork must preserve existing VertexNote behavior while adding precise, object-based geometry
+VertexNote is a long-term fork of Xournal++ focused on CAD-inspired technical note-taking.
+The fork must preserve existing Xournal++ behavior while adding precise, object-based geometry
 features incrementally.
 
-## Current VertexNote Subsystems
+## Current Xournal++-Derived Subsystems
 
 - Input dispatch starts in `src/core/gui/PageView.cpp`, where `PageView` selects a tool handler.
 - Freehand strokes are handled by `src/core/control/tools/StrokeHandler.*`.
@@ -20,7 +20,7 @@ features incrementally.
 
 ## Architectural Rule
 
-Do not turn `Stroke` into a CAD object. Keep existing VertexNote content stroke-based.
+Do not turn `Stroke` into a CAD object. Keep existing Xournal++ content stroke-based.
 Add VertexNote geometry as object-based elements that can generate stroke-compatible fallback
 representations for older `.xopp` readers.
 
@@ -209,13 +209,13 @@ Continuous drags should collapse into one undo action with old/new snapshots.
 
 ## File Compatibility
 
-For compatibility with older VertexNote:
+For compatibility with older Xournal++:
 
 1. Save a normal stroke fallback for each geometry object.
 2. Save VertexNote extension metadata that references the fallback by stable ID.
 3. On load, VertexNote should prefer the geometry metadata and regenerate fallback strokes as needed.
 
-Old VertexNote versions can display the fallback strokes. They will not preserve VertexNote metadata
+Old Xournal++ versions can display the fallback strokes. They will not preserve VertexNote metadata
 after saving, which should be documented as a compatibility limitation.
 
 ## Roadmap

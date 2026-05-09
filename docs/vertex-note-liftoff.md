@@ -1,6 +1,6 @@
 # VertexNote Lift-Off Plan
 
-This document tracks the rebrand from the inherited VertexNote application surface to
+This document tracks the rebrand from the inherited Xournal++ application surface to
 VertexNote. The goal is a clean product identity without breaking existing `.xopp`
 documents or upstream-derived internals that still need incremental refactors.
 
@@ -36,7 +36,7 @@ documents or upstream-derived internals that still need incremental refactors.
 ## Incremental Lift-Off Phases
 
 1. Public UI text
-   - Rename visible dialogs, menu strings, toolbar group labels, and docs from VertexNote
+   - Rename visible dialogs, menu strings, toolbar group labels, and docs from Xournal++
      to VertexNote where the text is not legal attribution or compatibility language.
 
 2. App/package identity

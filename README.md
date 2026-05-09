@@ -8,15 +8,15 @@
 ![Cairo](https://img.shields.io/badge/Rendering-Cairo-8A2BE2)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-> CAD-inspired technical note-taking based on VertexNote, with precision geometry, vertex editing, snapping, and future lightweight 3D wireframe tools.
+> CAD-inspired technical note-taking based on Xournal++, with precision geometry, vertex editing, snapping, and future lightweight 3D wireframe tools.
 
-VertexNote is a long-term fork of **VertexNote**. The goal is not to replace VertexNote's handwriting workflow, but to preserve it and add a clean object-based geometry layer for technical notes, diagrams, engineering sketches, measurements, construction lines, and precise click-based drawing.
+VertexNote is a long-term fork of **Xournal++**. The goal is not to replace Xournal++'s handwriting workflow, but to preserve it and add a clean object-based geometry layer for technical notes, diagrams, engineering sketches, measurements, construction lines, and precise click-based drawing.
 
 ---
 
 ## ✨ Goals
 
-- Preserve existing VertexNote note-taking, PDF annotation, handwriting, image, text, LaTeX, audio, export, and plugin behavior
+- Preserve existing Xournal++ note-taking, PDF annotation, handwriting, image, text, LaTeX, audio, export, and plugin behavior
 - Add explicit vertices, edges, and object-based geometric primitives
 - Support snapping to grid points, custom vertices, endpoints, midpoints, projections, and intersections
 - Support line and polyline creation from discrete clicks, not only drag gestures
@@ -47,7 +47,7 @@ VertexNote is in early foundation work.
 
 ## 🧱 Architecture
 
-VertexNote keeps VertexNote's existing stroke model for handwritten content and adds a separate object-based geometry model.
+VertexNote keeps Xournal++'s existing stroke model for handwritten content and adds a separate object-based geometry model.
 
 ### Stroke-based systems stay stroke-based
 
@@ -113,7 +113,7 @@ See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and ma
 
 - Add click-based line and polyline tools
 - Add object-based rectangle, arc, and circle tools
-- Keep existing VertexNote drag tools unchanged
+- Keep existing Xournal++ drag tools unchanged
 
 ### Phase 4: Editable Constraints
 
@@ -133,7 +133,7 @@ See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and ma
 
 ## ⚙️ Build From Source
 
-VertexNote currently inherits the VertexNote build system.
+VertexNote currently inherits the Xournal++ build system.
 
 ```bash
 git clone https://github.com/saitatter/vertex-note.git
@@ -142,7 +142,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are required. Until VertexNote has dedicated build docs, use the upstream VertexNote setup guides as the baseline:
+GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are required. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
 
 - Linux setup: `linux-setup/`
 - macOS setup: `mac-setup/`
@@ -156,7 +156,7 @@ VertexNote uses **semantic-release** with Conventional Commits. Releases are pub
 
 - Use Conventional Commits: `feat: ...`, `fix: ...`, `chore: ...`
 - Breaking changes: use `!` or a `BREAKING CHANGE:` footer
-- Release tags use the `vertex-note-v{version}` format to avoid collisions with inherited VertexNote tags
+- Release tags use the `vertex-note-v{version}` format to avoid collisions with inherited Xournal++ tags
 - Release notes are grouped with emoji categories
 - Changelog generation is configured through `pyproject.toml` and `templates/CHANGELOG.md.j2`
 
@@ -190,7 +190,7 @@ When touching geometry, add focused tests before integrating the code into rende
 PRs are welcome once the public fork is connected. Please:
 
 - Keep commits small and conventional
-- Preserve existing VertexNote behavior unless the change is explicitly VertexNote-related
+- Preserve existing Xournal++ behavior unless the change is explicitly VertexNote-related
 - Prefer incremental refactors over rewrites
 - Add tests for geometry model, snapping, serialization, undo/redo, and user-facing regressions
 - Document architectural tradeoffs when touching shared model or rendering paths
@@ -199,11 +199,11 @@ PRs are welcome once the public fork is connected. Please:
 
 ## 📄 License
 
-GPL-2.0-or-later, inherited from VertexNote.
+GPL-2.0-or-later, inherited from Xournal++.
 
 ---
 
 ## 🙏 Credits
 
-- VertexNote is based on **VertexNote** by the VertexNote team and contributors
+- VertexNote is based on **Xournal++** by the Xournal++ team and contributors
 - VertexNote itself builds on ideas and code from the original Xournal project

@@ -8,9 +8,9 @@
 
 ## Project Context
 
-- VertexNote is a long-term fork of VertexNote for CAD-inspired technical note-taking.
-- The stack is C++, GTK3, Cairo, CMake, and the existing VertexNote architecture.
-- Preserve existing VertexNote behavior unless a change is explicitly part of the VertexNote roadmap.
+- VertexNote is a long-term fork of Xournal++ for CAD-inspired technical note-taking.
+- The stack is C++, GTK3, Cairo, CMake, and the existing Xournal++ architecture.
+- Preserve existing Xournal++ behavior unless a change is explicitly part of the VertexNote roadmap.
 - App code lives in `src/core`; tests live in `test/unit_tests`.
 - VertexNote-specific geometry code lives under `src/core/vertexnote`.
 
@@ -37,14 +37,14 @@
 ## C++ Style
 
 - Target C++20.
-- Prefer existing VertexNote patterns and utilities over new framework-style abstractions.
+- Prefer existing Xournal++ patterns and utilities over new framework-style abstractions.
 - Keep ownership explicit with `std::unique_ptr`, references, and existing document/layer ownership conventions.
 - Use stable IDs for VertexNote geometry objects, vertices, edges, and constraints.
 - Avoid broad cross-subsystem changes until the model API is covered by tests.
 
 ## GTK/Cairo UI Rules
 
-- Keep existing VertexNote UI behavior intact while introducing VertexNote tools.
+- Keep existing Xournal++ UI behavior intact while introducing VertexNote tools.
 - Avoid blocking GTK event handling during pointer interaction.
 - Use overlay views for active tool previews.
 - Use Cairo rendering paths that can be cached and invalidated by bounds.
@@ -58,6 +58,6 @@
 
 ## Packaging and Updates
 
-- Keep upstream VertexNote packaging changes minimal and intentional.
+- Keep upstream Xournal++ packaging changes minimal and intentional.
 - Semantic release owns version tags and changelog generation.
 - Binary release asset workflows should be added only after the fork's build matrix is known to work.
