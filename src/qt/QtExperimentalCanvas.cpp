@@ -292,6 +292,12 @@ void QtExperimentalCanvas::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         updateGeometryHover(event->position());
         selectHoveredGeometry();
+        if (this->documentController && this->documentController->selectedGeometry() &&
+            this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
+            if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
+                setCursor(Qt::ClosedHandCursor);
+            }
+        }
         event->accept();
         return;
     }
@@ -302,6 +308,18 @@ void QtExperimentalCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
     if (this->panning && (event->button() == Qt::MiddleButton || event->button() == Qt::LeftButton)) {
         endPan();
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && this->documentController && this->documentController->activeGeometryDrag()) {
+        const bool changed = this->documentController->endGeometryVertexDrag();
+        if (!this->spaceHeld) {
+            setCursor(Qt::CrossCursor);
+        }
+        update();
+        if (changed) {
+            Q_EMIT documentEdited();
+        }
         event->accept();
         return;
     }
@@ -319,6 +337,20 @@ void QtExperimentalCanvas::mouseMoveEvent(QMouseEvent* event) {
         emitViewportUpdate();
         event->accept();
         return;
+    }
+    if (this->documentController && this->documentController->activeGeometryDrag()) {
+        const auto& drag = *this->documentController->activeGeometryDrag();
+        const auto rects = pageRects();
+        if (drag.pageIndex < rects.size()) {
+            const QPointF scenePoint = screenToScene(event->position());
+            const auto& pageRect = rects[drag.pageIndex];
+            const double pageX = scenePoint.x() - pageRect.x();
+            const double pageY = scenePoint.y() - pageRect.y();
+            static_cast<void>(this->documentController->updateGeometryVertexDrag(pageX, pageY, this->zoomFactor));
+            update();
+            event->accept();
+            return;
+        }
     }
     updateGeometryHover(event->position());
     QWidget::mouseMoveEvent(event);
@@ -618,6 +650,7 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
     vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
     const auto& hovered = this->documentController->hoveredGeometry();
     const auto& selected = this->documentController->selectedGeometry();
+    const auto& drag = this->documentController->activeGeometryDrag();
 
     const auto drawEdgeOverlay = [&](const QtExperimentalGeometryHit& geometryHit, const QColor& color, double extraWidth) {
         if (geometryHit.pageIndex != pageIndex || geometryHit.hit.type != vn::view::render::GeometryHitType::Edge) {
@@ -696,10 +729,35 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
         break;
     }
 
-    const auto indicator = hovered ? hovered : selected;
-    if (indicator && indicator->pageIndex == pageIndex) {
-        const QPointF center(rect.x() + indicator->hit.point.x, rect.y() + indicator->hit.point.y);
-        const QColor color = snapColor(indicator->hit.snapKind);
+    const QPointF indicatorCenter = [&]() -> QPointF {
+        if (drag && drag->pageIndex == pageIndex) {
+            const auto& point = drag->snapKind ? drag->snapPoint : drag->currentPosition;
+            return QPointF(rect.x() + point.x, rect.y() + point.y);
+        }
+        if (hovered && hovered->pageIndex == pageIndex) {
+            return QPointF(rect.x() + hovered->hit.point.x, rect.y() + hovered->hit.point.y);
+        }
+        return selected && selected->pageIndex == pageIndex
+                       ? QPointF(rect.x() + selected->hit.point.x, rect.y() + selected->hit.point.y)
+                       : QPointF();
+    }();
+    const auto indicatorKind = [&]() -> std::optional<vn::snap::SnapKind> {
+        if (drag && drag->pageIndex == pageIndex) {
+            return drag->snapKind;
+        }
+        if (hovered && hovered->pageIndex == pageIndex) {
+            return hovered->hit.snapKind;
+        }
+        if (selected && selected->pageIndex == pageIndex) {
+            return selected->hit.snapKind;
+        }
+        return std::nullopt;
+    }();
+    const bool hasIndicator = (drag && drag->pageIndex == pageIndex) || (hovered && hovered->pageIndex == pageIndex) ||
+                              (selected && selected->pageIndex == pageIndex);
+    if (hasIndicator) {
+        const QPointF center = indicatorCenter;
+        const QColor color = snapColor(indicatorKind);
         painter.setPen(QPen(QColor(255, 255, 255, 235), 3.2));
         painter.setBrush(QColor(color.red(), color.green(), color.blue(), 40));
         painter.drawEllipse(center, 4.8, 4.8);
@@ -708,7 +766,8 @@ void QtExperimentalCanvas::drawGeometryInteractionOverlay(QPainter& painter, con
         painter.drawLine(QPointF(center.x() - 4.8, center.y()), QPointF(center.x() + 4.8, center.y()));
         painter.drawLine(QPointF(center.x(), center.y() - 4.8), QPointF(center.x(), center.y() + 4.8));
 
-        const QString label = snapLabel(indicator->hit.snapKind);
+        const QString label = drag && drag->pageIndex == pageIndex && drag->snapKind ? snapLabel(drag->snapKind)
+                                                                                      : snapLabel(indicatorKind);
         QFontMetrics metrics(painter.font());
         const int labelWidth = metrics.horizontalAdvance(label) + 10;
         const QRectF badge(center.x() + 10.0, center.y() - 22.0, labelWidth, 18.0);

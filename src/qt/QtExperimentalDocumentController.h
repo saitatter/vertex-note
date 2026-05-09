@@ -14,8 +14,14 @@
 
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
+#include "vertexnote/geometry/GeometryTypes.h"
+#include "vertexnote/snapping/SnapTypes.h"
 #include "view/render/GeometryHitTest.h"
 #include "view/render/Renderers.h"
+
+namespace vn::geom {
+class GeometryElement;
+}
 
 struct QtExperimentalPageInfo {
     double width = 0.0;
@@ -27,6 +33,17 @@ struct QtExperimentalPageInfo {
 struct QtExperimentalGeometryHit {
     std::size_t pageIndex = 0U;
     vn::view::render::GeometryHitResult hit;
+};
+
+struct QtExperimentalGeometryDragState {
+    std::size_t pageIndex = 0U;
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    vn::geom::VertexId vertexId = vn::geom::InvalidVertexId;
+    vn::geom::Vec2 originalPosition;
+    vn::geom::Vec2 currentPosition;
+    std::optional<vn::snap::SnapKind> snapKind;
+    vn::geom::Vec2 snapPoint;
+    bool changed = false;
 };
 
 class QtExperimentalDocumentController {
@@ -49,11 +66,17 @@ public:
     void clearInteractiveGeometryState();
     [[nodiscard]] auto hoveredGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtExperimentalGeometryHit>&;
+    [[nodiscard]] auto beginGeometryVertexDrag(const QtExperimentalGeometryHit& hit) -> bool;
+    [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom) -> bool;
+    [[nodiscard]] auto endGeometryVertexDrag() -> bool;
+    [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtExperimentalGeometryDragState>&;
 
 private:
     static auto isPdfPath(const std::filesystem::path& path) -> bool;
     static auto normalizeExtension(const std::filesystem::path& path) -> std::string;
     void rebuildPageSnapshots();
+    [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
+            -> vn::geom::GeometryElement*;
 
 private:
     DocumentHandler documentHandler;
@@ -62,4 +85,5 @@ private:
     std::vector<QtExperimentalPageInfo> pageSnapshots;
     std::optional<QtExperimentalGeometryHit> hoveredGeometryHit;
     std::optional<QtExperimentalGeometryHit> selectedGeometryHit;
+    std::optional<QtExperimentalGeometryDragState> geometryDragState;
 };
