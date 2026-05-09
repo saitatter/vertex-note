@@ -95,3 +95,16 @@ TEST(VertexNoteGeometrySpatialIndex, returnsSegmentsCrossingNegativeCoordinates)
     ASSERT_EQ(result.size(), 1U);
     EXPECT_EQ(result.front(), 0U);
 }
+
+TEST(VertexNoteGeometrySpatialIndex, ignoresQueriesCoveringTooManyCells) {
+    const std::vector<IndexedSegment> segments{
+            IndexedSegment{1, 1, Vec2{0.0, 0.0}, Vec2{10.0, 0.0}},
+    };
+
+    GeometrySpatialIndex index(1.0);
+    index.rebuild(segments);
+
+    EXPECT_TRUE(index.querySegmentIndices(SpatialBounds{0.0, 0.0, 2048.0, 2048.0}).empty());
+    EXPECT_TRUE(index.querySegmentPairs(SpatialBounds{0.0, 0.0, 2048.0, 2048.0}).empty());
+    EXPECT_TRUE(index.queryPointIndices(SpatialBounds{0.0, 0.0, 2048.0, 2048.0}).empty());
+}

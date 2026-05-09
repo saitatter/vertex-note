@@ -342,11 +342,13 @@ private:
                             message += "\n";
                             message += error->message;
                             self->setErrorState(message);
-                        } else if (response && (vn::update::parseGithubRelease(*response))) {
-                            auto release = vn::update::parseGithubRelease(*response);
-                            self->setReleaseState(std::move(*release));
                         } else {
-                            self->setErrorState(_("GitHub returned release data that VertexNote could not parse."));
+                            auto release = response ? vn::update::parseGithubRelease(*response) : std::nullopt;
+                            if (release) {
+                                self->setReleaseState(std::move(*release));
+                            } else {
+                                self->setErrorState(_("GitHub returned release data that VertexNote could not parse."));
+                            }
                         }
                     }
 

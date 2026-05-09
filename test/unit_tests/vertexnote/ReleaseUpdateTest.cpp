@@ -50,3 +50,25 @@ TEST(VertexNoteReleaseUpdate, rejectsPayloadsWithoutReleaseIdentity) {
     EXPECT_FALSE(parseGithubRelease(R"json({"name":"missing tag"})json"));
     EXPECT_FALSE(parseGithubRelease(R"json({"tag_name":"vertex-note-v0.3.0"})json"));
 }
+
+TEST(VertexNoteReleaseUpdate, parsesUnicodeEscapesAndIgnoresNestedFieldNames) {
+    constexpr auto payload = R"json({
+      "metadata": {
+        "tag_name": "wrong-tag",
+        "html_url": "https://example.invalid/nested"
+      },
+      "tag_name": "vertex-note-v0.4.0",
+      "html_url": "https://github.com/saitatter/vertex-note/releases/tag/vertex-note-v0.4.0",
+      "body": "Emoji: \ud83d\ude80 and accent: \u00e9 and literal \"tag_name\": keep this text",
+      "draft": false,
+      "prerelease": false,
+      "assets": []
+    })json";
+
+    const auto release = parseGithubRelease(payload);
+    ASSERT_TRUE(release);
+    EXPECT_EQ(release->tagName, "vertex-note-v0.4.0");
+    EXPECT_EQ(release->body,
+              std::string("Emoji: ") + "\xF0\x9F\x9A\x80" + " and accent: " + "\xC3\xA9" +
+                      " and literal \"tag_name\": keep this text");
+}

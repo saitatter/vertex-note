@@ -68,7 +68,8 @@ private:
 
 private:
     [[nodiscard]] auto cellFor(double coordinate) const -> int;
-    [[nodiscard]] auto cellsFor(const SpatialBounds& bounds) const -> std::vector<CellKey>;
+    [[nodiscard]] auto cellsFor(const SpatialBounds& bounds, std::size_t maxCellsPerAxis,
+                                std::size_t maxTotalCells) const -> std::vector<CellKey>;
 
 private:
     double cellSize = 64.0;

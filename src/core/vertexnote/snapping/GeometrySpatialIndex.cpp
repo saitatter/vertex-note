@@ -7,9 +7,11 @@
 #include "GeometrySpatialIndex.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -18,6 +20,9 @@ namespace vn::snap {
 namespace {
 constexpr double DEFAULT_CELL_SIZE = 64.0;
 constexpr double BOUNDS_EPSILON = 0.000001;
+constexpr std::size_t MAX_QUERY_CELLS_PER_AXIS = 512U;
+constexpr std::size_t MAX_QUERY_TOTAL_CELLS = MAX_QUERY_CELLS_PER_AXIS * MAX_QUERY_CELLS_PER_AXIS;
+constexpr std::size_t MAX_REBUILD_TOTAL_CELLS = 1U << 20U;
 
 [[nodiscard]] auto normalizedCellSize(double cellSize) -> double {
     return cellSize > BOUNDS_EPSILON ? cellSize : DEFAULT_CELL_SIZE;
@@ -49,7 +54,7 @@ void GeometrySpatialIndex::rebuildSegments(std::span<const IndexedSegment> segme
     this->segmentCells.clear();
 
     for (std::size_t index = 0; index < segments.size(); ++index) {
-        for (const auto& cell: this->cellsFor(segmentBounds(segments[index]))) {
+        for (const auto& cell: this->cellsFor(segmentBounds(segments[index]), 0U, MAX_REBUILD_TOTAL_CELLS)) {
             this->segmentCells[cell].push_back(index);
         }
     }
@@ -67,7 +72,7 @@ void GeometrySpatialIndex::rebuildPoints(std::span<const IndexedPoint> points) {
 auto GeometrySpatialIndex::queryPointIndices(const SpatialBounds& bounds) const -> std::vector<std::size_t> {
     std::vector<std::size_t> result;
 
-    for (const auto& cell: this->cellsFor(bounds)) {
+    for (const auto& cell: this->cellsFor(bounds, MAX_QUERY_CELLS_PER_AXIS, MAX_QUERY_TOTAL_CELLS)) {
         const auto it = this->pointCells.find(cell);
         if (it == this->pointCells.end()) {
             continue;
@@ -85,7 +90,7 @@ auto GeometrySpatialIndex::querySegmentIndices(const SpatialBounds& bounds) cons
     std::vector<std::size_t> result;
     std::unordered_set<std::size_t> seen;
 
-    for (const auto& cell: this->cellsFor(bounds)) {
+    for (const auto& cell: this->cellsFor(bounds, MAX_QUERY_CELLS_PER_AXIS, MAX_QUERY_TOTAL_CELLS)) {
         const auto it = this->segmentCells.find(cell);
         if (it == this->segmentCells.end()) {
             continue;
@@ -106,7 +111,7 @@ auto GeometrySpatialIndex::querySegmentPairs(const SpatialBounds& bounds) const
     std::vector<std::pair<std::size_t, std::size_t>> result;
     std::unordered_set<std::pair<std::size_t, std::size_t>, SegmentPairHash> seenPairs;
 
-    for (const auto& cell: this->cellsFor(bounds)) {
+    for (const auto& cell: this->cellsFor(bounds, MAX_QUERY_CELLS_PER_AXIS, MAX_QUERY_TOTAL_CELLS)) {
         const auto it = this->segmentCells.find(cell);
         if (it == this->segmentCells.end()) {
             continue;
@@ -140,15 +145,33 @@ auto GeometrySpatialIndex::cellFor(double coordinate) const -> int {
     return static_cast<int>(std::floor(coordinate / this->cellSize));
 }
 
-auto GeometrySpatialIndex::cellsFor(const SpatialBounds& bounds) const -> std::vector<CellKey> {
+auto GeometrySpatialIndex::cellsFor(const SpatialBounds& bounds, std::size_t maxCellsPerAxis,
+                                    std::size_t maxTotalCells) const -> std::vector<CellKey> {
     const int minCellX = this->cellFor(std::min(bounds.minX, bounds.maxX));
     const int maxCellX = this->cellFor(std::max(bounds.minX, bounds.maxX));
     const int minCellY = this->cellFor(std::min(bounds.minY, bounds.maxY));
     const int maxCellY = this->cellFor(std::max(bounds.minY, bounds.maxY));
 
+    const auto countX = static_cast<std::int64_t>(maxCellX) - static_cast<std::int64_t>(minCellX) + 1;
+    const auto countY = static_cast<std::int64_t>(maxCellY) - static_cast<std::int64_t>(minCellY) + 1;
+    if (countX <= 0 || countY <= 0) {
+        return {};
+    }
+
+    const auto countXSize = static_cast<std::size_t>(countX);
+    const auto countYSize = static_cast<std::size_t>(countY);
+    if ((maxCellsPerAxis != 0U && (countXSize > maxCellsPerAxis || countYSize > maxCellsPerAxis)) ||
+        (countYSize != 0U && countXSize > std::numeric_limits<std::size_t>::max() / countYSize)) {
+        return {};
+    }
+
+    const auto totalCells = countXSize * countYSize;
+    if (maxTotalCells != 0U && totalCells > maxTotalCells) {
+        return {};
+    }
+
     std::vector<CellKey> result;
-    result.reserve(static_cast<std::size_t>(maxCellX - minCellX + 1) *
-                   static_cast<std::size_t>(maxCellY - minCellY + 1));
+    result.reserve(totalCells);
     for (int y = minCellY; y <= maxCellY; ++y) {
         for (int x = minCellX; x <= maxCellX; ++x) {
             result.push_back(CellKey{x, y});
