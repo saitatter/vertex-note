@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 #include "model/Point.h"
@@ -432,6 +433,26 @@ auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(i
 auto GeometryObject::containsEdge(EdgeId id) const -> bool { return edge(id) != nullptr; }
 
 void GeometryObject::cleanupDanglingVertices() {
+    // Build a set of all vertex IDs referenced by edges and constraints (O(E + C))
+    // so the vertex sweep below is O(V) instead of O(V * (E + C)).
+    std::unordered_set<VertexId> referenced;
+    for (const auto& edge: this->edgeList) {
+        referenced.insert(edge.start);
+        referenced.insert(edge.end);
+        for (auto cid: edge.controls) {
+            referenced.insert(cid);
+        }
+    }
+    for (const auto& constraint: this->constraintList) {
+        for (auto vid: constraint.vertices) {
+            referenced.insert(vid);
+        }
+    }
+
+    this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
+                                          [&referenced](const Vertex& v) { return !referenced.contains(v.id); }),
+                           this->vertexList.end());
+
     this->constraintList.erase(
             std::remove_if(this->constraintList.begin(), this->constraintList.end(),
                            [this](const Constraint& constraint) {
@@ -439,22 +460,6 @@ void GeometryObject::cleanupDanglingVertices() {
                                        constraint.vertices, [this](VertexId vertexId) { return !containsVertex(vertexId); });
                            }),
             this->constraintList.end());
-
-    this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
-                                          [this](const Vertex& vertex) {
-                                              const bool referencedByEdge =
-                                                      std::ranges::any_of(this->edgeList, [&vertex](const Edge& edge) {
-                                                          return edge.start == vertex.id || edge.end == vertex.id ||
-                                                                 std::ranges::find(edge.controls, vertex.id) != edge.controls.end();
-                                                      });
-                                              const bool referencedByConstraint =
-                                                      std::ranges::any_of(this->constraintList, [&vertex](const Constraint& constraint) {
-                                                          return std::ranges::find(constraint.vertices, vertex.id) !=
-                                                                 constraint.vertices.end();
-                                                      });
-                                              return !referencedByEdge && !referencedByConstraint;
-                                          }),
-                           this->vertexList.end());
 }
 
 auto GeometryObject::nextVertexId() -> VertexId { return this->nextLocalVertexId++; }
