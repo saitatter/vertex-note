@@ -59,7 +59,7 @@ SettingsDialog::SettingsDialog(GladeSearchpath* gladeSearchPath, Settings* setti
     gtk_box_append(GTK_BOX(builder.get("zoomVBox")), callib);
     gtk_widget_show(callib);
 
-    GtkWidget* preview = xoj::helper::createPreviewImage(PageType{PageTypeFormat::Lined});
+    GtkWidget* preview = vn::helper::createPreviewImage(PageType{PageTypeFormat::Lined});
     gtk_box_append(GTK_BOX(builder.get("pagePreviewImage")), preview);
     gtk_widget_show(preview);
 
@@ -495,7 +495,7 @@ void SettingsDialog::load() {
                 bool active = gtk_check_button_get_active(GTK_CHECK_BUTTON(btn));
                 gtk_widget_set_sensitive(GTK_WIDGET(slider), !active);
                 if (active) {
-                    auto dpi = xoj::util::gtk::getWidgetDPI(GTK_WIDGET(slider));
+                    auto dpi = vn::util::gtk::getWidgetDPI(GTK_WIDGET(slider));
                     gtk_range_set_value(GTK_RANGE(slider), dpi.value_or(Util::DPI_NORMALIZATION_FACTOR));
                 }
             }),
@@ -504,7 +504,7 @@ void SettingsDialog::load() {
     if (auto dpi = settings->getDisplayDpi(); dpi == -1) {
         gtk_check_button_set_active(GTK_CHECK_BUTTON(builder.get("zoomCallibAutomaticCb")), true);
         g_signal_connect(zoomCallibSlider, "realize", G_CALLBACK(+[](GtkWidget* slider, gpointer) {
-                             auto dpi = xoj::util::gtk::getWidgetDPI(slider);
+                             auto dpi = vn::util::gtk::getWidgetDPI(slider);
                              gtk_range_set_value(GTK_RANGE(slider), dpi.value_or(Util::DPI_NORMALIZATION_FACTOR));
                          }),
                          nullptr);

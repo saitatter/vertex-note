@@ -74,7 +74,7 @@ static std::tuple<GtkWidget*, std::vector<ShowLayerEntry>, std::vector<std::pair
          * RadioButton's and GAction don't work as expected in GTK3
          * To circumvent this, we have our own GAction/RadioButton interactions
          */
-        xoj::util::gtk::setRadioButtonActionName(GTK_RADIO_BUTTON(btn), "win", Action_toString(Action::LAYER_ACTIVE));
+        vn::util::gtk::setRadioButtonActionName(GTK_RADIO_BUTTON(btn), "win", Action_toString(Action::LAYER_ACTIVE));
 
         // Callback to hide the popover when a new layer is selected
         auto sig = g_signal_connect_object(btn, "toggled", G_CALLBACK(+[](GtkToggleButton*, gpointer popover) {

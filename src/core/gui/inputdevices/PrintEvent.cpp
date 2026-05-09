@@ -3,7 +3,7 @@
 #include <bitset>
 #include <iomanip>
 
-using namespace xoj::input;
+using namespace vn::input;
 
 
 struct TimeToReadable {

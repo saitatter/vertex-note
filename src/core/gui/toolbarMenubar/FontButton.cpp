@@ -64,7 +64,7 @@ auto FontButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
         gtk_box_append(GTK_BOX(box), gtk_label_new(getToolDisplayName().c_str()));
         gtk_actionable_set_action_name(GTK_ACTIONABLE(proxy),
                                        (std::string("win.") + Action_toString(Action::SELECT_FONT)).c_str());
-        xoj::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
+        vn::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());

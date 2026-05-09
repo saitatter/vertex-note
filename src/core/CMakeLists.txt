@@ -13,8 +13,9 @@ add_library(vertexnote-core STATIC ${vertexnote_sources})
 target_compile_features(vertexnote-core PUBLIC ${PROJECT_CXX_FEATURES})
 target_compile_features(vertexnote-core PUBLIC cxx_std_20)
 target_link_libraries(vertexnote-core
-        PRIVATE xoj::util
-        PUBLIC xoj::defaults xoj::external_modules
+        PRIVATE vertexnote::util
+        PUBLIC vertexnote::defaults vertexnote::external_modules
         )
 target_include_directories(vertexnote-core PUBLIC ${vertexnote_include_dirs})
 add_library(xoj::core ALIAS vertexnote-core)
+add_library(vertexnote::core ALIAS vertexnote-core)

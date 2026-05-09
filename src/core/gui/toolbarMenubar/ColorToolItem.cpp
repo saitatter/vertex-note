@@ -28,7 +28,7 @@ auto ColorToolItem::createItem(bool) -> xoj::util::WidgetSPtr {
     auto actionName = std::string("win.") + Action_toString(Action::TOOL_COLOR);
     gtk_actionable_set_action_name(GTK_ACTIONABLE(btn), actionName.data());
     gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), target.get());
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
 
     gtk_widget_set_tooltip_text(btn, this->namedColor.getName().c_str());
     gtk_button_set_child(GTK_BUTTON(btn), getNewToolIcon());
@@ -53,7 +53,7 @@ auto ColorToolItem::createItem(bool) -> xoj::util::WidgetSPtr {
         if (target) {
             gtk_actionable_set_action_target_value(GTK_ACTIONABLE(proxy), target.get());
         }
-        xoj::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
+        vn::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());

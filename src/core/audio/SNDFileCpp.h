@@ -59,3 +59,7 @@ inline auto make_snd_file(fs::path const& file, int mode, SF_INFO* info) {
 }
 
 }  // namespace xoj::audio
+
+namespace vn {
+namespace audio = xoj::audio;
+}

@@ -38,12 +38,12 @@ GtkWidget* createEntryWithoutPreview(const char* label, size_t entryNb, const st
     gtk_label_set_wrap(GTK_LABEL(labelWidget), true);
     gtk_label_set_justify(GTK_LABEL(labelWidget), GTK_JUSTIFY_CENTER);
     gtk_label_set_max_width_chars(GTK_LABEL(labelWidget), 1);
-    gtk_widget_set_size_request(labelWidget, xoj::helper::PREVIEW_WIDTH, xoj::helper::PREVIEW_HEIGHT);
+    gtk_widget_set_size_request(labelWidget, vn::helper::PREVIEW_WIDTH, vn::helper::PREVIEW_HEIGHT);
 
     gtk_button_set_child(GTK_BUTTON(button), labelWidget);
     gtk_actionable_set_action_name(GTK_ACTIONABLE(button), prefixedActionName.data());
     gtk_actionable_set_action_target_value(GTK_ACTIONABLE(button), xoj::util::makeGVariantSPtr(entryNb).get());
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(button));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(button));
     return button;
 }
 
@@ -92,12 +92,12 @@ GtkWidget* createEntryWithPreview(const PageTypeInfo* pti, size_t entryNb, const
     // gtk_box_append(GTK_BOX(label), gtk_label_new(pti->name.c_str()));
     // gtk_button_set_child(GTK_BUTTON(button), label);
 
-    GtkWidget* preview = xoj::helper::createPreviewImage(pti->page);
+    GtkWidget* preview = vn::helper::createPreviewImage(pti->page);
     gtk_widget_set_tooltip_text(preview, pti->name.c_str());
     gtk_button_set_child(GTK_BUTTON(button), preview);  // takes ownership of preview
     gtk_actionable_set_action_name(GTK_ACTIONABLE(button), prefixedActionName.data());
     gtk_actionable_set_action_target_value(GTK_ACTIONABLE(button), xoj::util::makeGVariantSPtr(entryNb).get());
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(button));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(button));
     return button;
 }
 
@@ -290,8 +290,8 @@ GtkWidget* PageTypeSelectionPopover::createPopover() const {
     orientationButtons[GTK_ORIENTATION_HORIZONTAL] = createOrientationButton(
             prefixedOrientationActionName, GTK_ORIENTATION_HORIZONTAL, "xopp-orientation-landscape");
 
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(orientationButtons[GTK_ORIENTATION_VERTICAL]));
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(orientationButtons[GTK_ORIENTATION_HORIZONTAL]));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(orientationButtons[GTK_ORIENTATION_VERTICAL]));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(orientationButtons[GTK_ORIENTATION_HORIZONTAL]));
 
     gtk_box_append(orientationFormatBox, orientationButtons[GTK_ORIENTATION_VERTICAL]);
     gtk_box_append(orientationFormatBox, orientationButtons[GTK_ORIENTATION_HORIZONTAL]);

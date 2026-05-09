@@ -37,7 +37,7 @@ auto ToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
     gtk_actionable_set_action_name(GTK_ACTIONABLE(btn), (std::string("win.") + Action_toString(action)).c_str());
     if (target) {
         gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), target.get());
-        xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
+        vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
     }
 
     // For the sake of deprecated GtkToolbar, wrap the button in a GtkToolItem
@@ -95,7 +95,7 @@ auto ToolButton::createItem(bool horizontal) -> xoj::util::WidgetSPtr {
         if (target) {
             gtk_actionable_set_action_target_value(GTK_ACTIONABLE(proxy), target.get());
         }
-        xoj::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
+        vn::util::gtk::fixActionableInitialSensitivity(GTK_ACTIONABLE(proxy));
         return proxy;
     };
     gtk_tool_item_set_proxy_menu_item(it, "", createProxy());

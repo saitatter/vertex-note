@@ -11,6 +11,7 @@ cmake_policy(VERSION 3.13)
 add_library(defaults INTERFACE)
 target_include_directories(defaults INTERFACE ${PROJECT_BINARY_DIR}/src)
 add_library(xoj::defaults ALIAS defaults)
+add_library(vertexnote::defaults ALIAS defaults)
 if (MSVC) # clang-cl.exe, cl.exe
   target_compile_definitions(defaults INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN)
   target_compile_options(defaults INTERFACE -utf-8)
@@ -74,7 +75,7 @@ set_source_files_properties(
 
 add_dependencies(vertexnote-wrapper vertexnote-wrapper-resource)
 target_link_libraries(vertexnote-wrapper
-        PUBLIC xoj::defaults xoj::util xoj::external_modules)
+        PUBLIC vertexnote::defaults vertexnote::util vertexnote::external_modules)
 set_target_properties(vertexnote-wrapper PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
         OUTPUT_NAME "${VERTEX_NOTE_WRAPPER_BINARY_NAME}"
         MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
@@ -88,7 +89,7 @@ target_include_directories(vertexnote-wrapper PUBLIC "${CMAKE_CURRENT_SOURCE_DIR
 ##############################
 
 add_executable(vertexnote exe/VertexNote.cpp)
-target_link_libraries(vertexnote PRIVATE xoj::core xoj::util)
+target_link_libraries(vertexnote PRIVATE vertexnote::core vertexnote::util)
 set_target_properties(vertexnote PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
         OUTPUT_NAME "${VERTEX_NOTE_BINARY_NAME}"
         MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>

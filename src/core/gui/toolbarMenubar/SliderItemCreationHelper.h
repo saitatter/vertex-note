@@ -71,7 +71,7 @@ public:
                 }),
                 slider, GConnectFlags(0));
 
-        xoj::util::gtk::setWidgetFollowActionEnabled(GTK_WIDGET(slider), G_ACTION(self->gAction.get()));
+        vn::util::gtk::setWidgetFollowActionEnabled(GTK_WIDGET(slider), G_ACTION(self->gAction.get()));
 
         if constexpr (FinalSliderType::DISPLAY_VALUE) {
             gtk_scale_set_draw_value(GTK_SCALE(slider), true);

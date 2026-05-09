@@ -58,7 +58,7 @@ file (GLOB_RECURSE test-units-sources
 
 # Define test-units target
 add_executable (test-units EXCLUDE_FROM_ALL ${test-units-sources})
-target_link_libraries (test-units xoj::core xoj::util gtest)
+target_link_libraries (test-units vertexnote::core vertexnote::util gtest)
 target_compile_features(test-units PRIVATE cxx_std_20)
 target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 
@@ -73,7 +73,7 @@ file (GLOB_RECURSE test-gtk-sources
 
 # Define test-gtk-integration target
 add_executable (test-gtk-integration EXCLUDE_FROM_ALL ${test-gtk-sources})
-target_link_libraries (test-gtk-integration xoj::core xoj::util gtest_main gtest)
+target_link_libraries (test-gtk-integration vertexnote::core vertexnote::util gtest_main gtest)
 target_compile_features(test-gtk-integration PRIVATE cxx_std_20)
 target_include_directories(test-gtk-integration PRIVATE "${PROJECT_BINARY_DIR}/test")
 
@@ -104,6 +104,6 @@ gtest_discover_tests(test-gtk-integration
 
 file (GLOB_RECURSE benchmarks-sources benchmarks/*.cpp)
 add_executable (benchmarks EXCLUDE_FROM_ALL ${benchmarks-sources})
-target_link_libraries (benchmarks xoj::core xoj::util gtest_main gtest)
+target_link_libraries (benchmarks vertexnote::core vertexnote::util gtest_main gtest)
 target_include_directories(benchmarks PRIVATE "${PROJECT_BINARY_DIR}/test")
 target_compile_options(benchmarks PRIVATE "-O2") # Always optimize for benchmarks

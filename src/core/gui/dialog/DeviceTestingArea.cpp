@@ -276,7 +276,7 @@ DeviceTestingArea::DeviceTestingArea(GladeSearchpath* gladeSearchPath, GtkBox* p
     touchIndicators[4].reset(builder.get("touch-5"), xoj::util::ref);
 
     inputContext->connect(drawingArea.get(), /* connectKeyboardHandler */ false, [data = data.get()](GdkEvent* e) {
-        xoj::input::printGdkEvent(data->allGdkEvents, e, data->timeReference);
+        vn::input::printGdkEvent(data->allGdkEvents, e, data->timeReference);
     });
 
     gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(drawingArea.get()), draw, &data->lastEvs, nullptr);
@@ -301,7 +301,7 @@ bool DeviceTestingArea::handle(const InputEvent& e, HandlerType handlerType) {
         }
     }
     data->log << "Handler " << handlerTypeToString[handlerType] << " received:\n";
-    xoj::input::printEvent(data->log, e, data->timeReference);
+    vn::input::printEvent(data->log, e, data->timeReference);
 
     if (e.type != MOTION_EVENT || e.device != data->lastMotionDevice) {
         if (data->nbOfConsecutiveMotionEvents > 1) {
@@ -316,11 +316,11 @@ bool DeviceTestingArea::handle(const InputEvent& e, HandlerType handlerType) {
             data->lastMotionDevice = nullptr;
         }
         data->ellipsizedLog << "Handler " << handlerTypeToString[handlerType] << " received:\n";
-        xoj::input::printEvent(data->ellipsizedLog, e, data->timeReference);
+        vn::input::printEvent(data->ellipsizedLog, e, data->timeReference);
     } else {
         if (data->nbOfConsecutiveMotionEvents == 0) {
             data->ellipsizedLog << "Handler " << handlerTypeToString[handlerType] << " received:\n";
-            xoj::input::printEvent(data->ellipsizedLog, e, data->timeReference);
+            vn::input::printEvent(data->ellipsizedLog, e, data->timeReference);
             data->lastMotionDevice = e.device;
         }
         data->nbOfConsecutiveMotionEvents++;

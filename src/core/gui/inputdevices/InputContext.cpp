@@ -311,7 +311,7 @@ void InputContext::printDebug(GdkEvent* event) {
         } else {
             std::cout << "Device Class:\t: none (source device is NULL)\n";
         }
-        xoj::input::printGdkEvent(std::cout, event, 0);
+        vn::input::printGdkEvent(std::cout, event, 0);
     };
 
 #ifndef DEBUG_INPUT_PRINT_ALL_MOTION_EVENTS

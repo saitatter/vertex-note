@@ -39,7 +39,7 @@ GtkWidget* createPreviewGrid(const std::vector<std::unique_ptr<PageTypeInfo>>& p
         gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(entry), true);
         gtk_actionable_set_action_name(GTK_ACTIONABLE(entry), prefixedActionName.data());
         gtk_actionable_set_action_target_value(GTK_ACTIONABLE(entry), xoj::util::makeGVariantSPtr(n++).get());
-        GtkWidget* preview = xoj::helper::createPreviewImage(pageInfo->page);
+        GtkWidget* preview = vn::helper::createPreviewImage(pageInfo->page);
         gtk_widget_set_tooltip_text(preview, pageInfo->name.c_str());
         gtk_container_add(GTK_CONTAINER(entry), preview);  // takes ownership of preview
         if (gridX >= PAGE_TYPES_PER_ROW) {

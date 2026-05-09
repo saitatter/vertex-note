@@ -15,7 +15,7 @@ static GtkWidget* createEmptyButton(GSimpleAction* a, const ComboToolButton::Ent
     GtkWidget* btn = gtk_toggle_button_new();
     gtk_actionable_set_action_name(GTK_ACTIONABLE(btn), (std::string("win.") + g_action_get_name(G_ACTION(a))).c_str());
     gtk_actionable_set_action_target_value(GTK_ACTIONABLE(btn), e.target.get());
-    xoj::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
+    vn::util::gtk::setToggleButtonUnreleasable(GTK_TOGGLE_BUTTON(btn));
     gtk_widget_set_tooltip_text(btn, e.name.c_str());
     gtk_widget_set_can_focus(btn, false);  // todo(gtk4) not necessary anymore
     return btn;

@@ -23,7 +23,7 @@ GtkWidget* StylePopoverFactory::createPopover() const {
     auto appendItem = [&](const StylePopoverFactory::Entry& e) {
         GtkWidget* btn = gtk_radio_button_new_from_widget(group);
         group = GTK_RADIO_BUTTON(btn);
-        xoj::util::gtk::setRadioButtonActionName(GTK_RADIO_BUTTON(btn), "win", actionName);
+        vn::util::gtk::setRadioButtonActionName(GTK_RADIO_BUTTON(btn), "win", actionName);
         g_signal_connect_object(btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer popover) {
                                     gtk_popover_popdown(GTK_POPOVER(popover));
                                 }),

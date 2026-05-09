@@ -201,3 +201,7 @@ namespace xoj::tool {
 /// \return Whether the provided tool is used for selecting objects on a PDF.
 bool isPdfSelectionTool(ToolType toolType);
 }  // namespace xoj::tool
+
+namespace vn {
+namespace tool = xoj::tool;
+}

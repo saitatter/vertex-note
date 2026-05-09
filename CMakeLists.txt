@@ -289,6 +289,7 @@ target_link_options(external_modules INTERFACE
         $<$<AND:$<NOT:$<PLATFORM_ID:Windows>>,$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>>:-rdynamic>
         )
 add_library(xoj::external_modules ALIAS external_modules)
+add_library(vertexnote::external_modules ALIAS external_modules)
 
 ## Additional features ##
 

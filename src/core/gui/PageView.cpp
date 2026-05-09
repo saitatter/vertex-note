@@ -731,7 +731,7 @@ auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
     }
 
     ToolType toolType = control->getToolHandler()->getActiveTool()->getToolType();
-    if (xoj::tool::isPdfSelectionTool(toolType)) {
+    if (vn::tool::isPdfSelectionTool(toolType)) {
         const double zoom = xournal->getZoom();
         // Attempt PDF selection
         auto& pdfDoc = this->xournal->getDocument()->getPdfDocument();

@@ -14,24 +14,24 @@ namespace xoj::util::gtk {
 static GAction* findAction(GtkActionable* w) {
     const char* name = gtk_actionable_get_action_name(w);
     if (!name) {
-        g_warning("xoj::util::gtk::findAction: No action name set");
+        g_warning("vn::util::gtk::findAction: No action name set");
         return nullptr;
     }
     std::string_view namesv = name;
     size_t dotpos = namesv.find(".");
     if (dotpos == std::string_view::npos) {
-        g_warning("xoj::util::gtk::findAction: Action name is not of the form \"namespace.name\": %s", name);
+        g_warning("vn::util::gtk::findAction: Action name is not of the form \"namespace.name\": %s", name);
         return nullptr;
     }
     std::string groupname(namesv.substr(0, dotpos));
     GActionGroup* win = gtk_widget_get_action_group(GTK_WIDGET(w), groupname.c_str());
     if (!win) {
         // Most likely the widget just got removed from the toplevel
-        g_debug("xoj::util::gtk::findAction: could not find action group \"%s\"", groupname.data());
+        g_debug("vn::util::gtk::findAction: could not find action group \"%s\"", groupname.data());
         return nullptr;
     }
     if (!G_IS_ACTION_MAP(win)) {
-        g_warning("xoj::util::gtk::findAction: GActionGroup is not a GActionMap");
+        g_warning("vn::util::gtk::findAction: GActionGroup is not a GActionMap");
         return nullptr;
     }
     auto shortname = namesv.substr(dotpos + 1);
