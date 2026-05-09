@@ -1,4 +1,10 @@
 # Changelog
+## vertex-note-v0.3.1 (2026-05-09)
+
+### 🐛 Fixes
+* Restore linux thumbnailer packaging source list ([e912862](https://github.com/saitatter/vertex-note/commit/e9128627fd2c0816ff82e582a0464843c169438f))
+
+
 ## vertex-note-v0.3.0 (2026-05-09)
 
 ### ✨ Features
