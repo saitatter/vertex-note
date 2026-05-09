@@ -197,17 +197,29 @@ auto GeometryElement::distanceTo(double x, double y) const -> double {
 
     const Vec2 point{x, y};
     for (const auto& edge: this->object.edges()) {
-        if (edge.kind != EdgeKind::ConstructionLine) {
+        if (edge.kind == EdgeKind::ConstructionLine) {
+            const auto* start = this->object.vertex(edge.start);
+            const auto* end = this->object.vertex(edge.end);
+            if (!start || !end) {
+                continue;
+            }
+
+            distance = std::min(distance, distanceToInfiniteLine(point, start->position, end->position));
+            continue;
+        }
+
+        if (edge.kind != EdgeKind::ConstructionCircle || edge.controls.empty()) {
             continue;
         }
 
         const auto* start = this->object.vertex(edge.start);
-        const auto* end = this->object.vertex(edge.end);
-        if (!start || !end) {
+        const auto* center = this->object.vertex(edge.controls.front());
+        if (!start || !center) {
             continue;
         }
 
-        distance = std::min(distance, distanceToInfiniteLine(point, start->position, end->position));
+        const double radius = std::hypot(start->position.x - center->position.x, start->position.y - center->position.y);
+        distance = std::min(distance, std::abs(std::hypot(point.x - center->position.x, point.y - center->position.y) - radius));
     }
 
     if (distance == std::numeric_limits<double>::max()) {

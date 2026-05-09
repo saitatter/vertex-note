@@ -700,6 +700,7 @@ struct ActionPropDrawingTypes {
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_CIRCLE, false);
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_ARC, false);
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_CONSTRUCTION_LINE, false);
+        actionDB->setActionState(Action::TOOL_DRAW_VERTEX_CONSTRUCTION_CIRCLE, false);
 
         g_simple_action_set_state(ga, p);
         bool enabled = g_variant_get_boolean(p);
@@ -737,6 +738,9 @@ struct ActionProperties<Action::TOOL_DRAW_VERTEX_ARC>: ActionPropDrawingTypes<DR
 template <>
 struct ActionProperties<Action::TOOL_DRAW_VERTEX_CONSTRUCTION_LINE>:
         ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_CONSTRUCTION_LINE> {};
+template <>
+struct ActionProperties<Action::TOOL_DRAW_VERTEX_CONSTRUCTION_CIRCLE>:
+        ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_CONSTRUCTION_CIRCLE> {};
 
 template <>
 struct ActionProperties<Action::SETSQUARE> {

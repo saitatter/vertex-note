@@ -19,6 +19,7 @@ using namespace vn::view;
 
 namespace {
 constexpr std::array<double, 2> ConstructionDash{8.0, 6.0};
+constexpr double ConstructionCenterlineInsetRatio = 0.6;
 
 auto drawExtendedLine(cairo_t* cr, vn::geom::Vec2 start, vn::geom::Vec2 end) -> void {
     double clipMinX = 0.0;
@@ -44,6 +45,15 @@ auto drawExtendedLine(cairo_t* cr, vn::geom::Vec2 start, vn::geom::Vec2 end) -> 
     cairo_line_to(cr, start.x + unitX * extent, start.y + unitY * extent);
     cairo_stroke(cr);
 }
+
+auto drawConstructionCircleHelper(cairo_t* cr, vn::geom::Vec2 center, double radius) -> void {
+    const double helperExtent = radius * ConstructionCenterlineInsetRatio;
+    cairo_move_to(cr, center.x - helperExtent, center.y);
+    cairo_line_to(cr, center.x + helperExtent, center.y);
+    cairo_move_to(cr, center.x, center.y - helperExtent);
+    cairo_line_to(cr, center.x, center.y + helperExtent);
+    cairo_stroke(cr);
+}
 }
 
 GeometryElementView::GeometryElementView(const vn::geom::GeometryElement* geometry): geometry(geometry) {}
@@ -67,19 +77,24 @@ void GeometryElementView::draw(const Context& ctx) const {
             continue;
         }
 
-        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine ||
+            edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
             cairo_set_dash(ctx.cr, ConstructionDash.data(), static_cast<int>(ConstructionDash.size()), 0.0);
         } else {
             cairo_set_dash(ctx.cr, nullptr, 0, 0);
         }
 
-        if (edge.kind == vn::geom::EdgeKind::Arc && !edge.controls.empty()) {
+        if ((edge.kind == vn::geom::EdgeKind::Arc || edge.kind == vn::geom::EdgeKind::ConstructionCircle) &&
+            !edge.controls.empty()) {
             const auto* center = object.vertex(edge.controls.front());
             if (center) {
                 const double radius = std::hypot(start->position.x - center->position.x, start->position.y - center->position.y);
                 if (edge.start == edge.end) {
                     cairo_arc(ctx.cr, center->position.x, center->position.y, radius, 0.0, 2.0 * M_PI);
                     cairo_stroke(ctx.cr);
+                    if (edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
+                        drawConstructionCircleHelper(ctx.cr, center->position, radius);
+                    }
                     continue;
                 }
 
@@ -92,6 +107,9 @@ void GeometryElementView::draw(const Context& ctx) const {
                 }
                 cairo_arc(ctx.cr, center->position.x, center->position.y, radius, startAngle, endAngle);
                 cairo_stroke(ctx.cr);
+                if (edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
+                    drawConstructionCircleHelper(ctx.cr, center->position, radius);
+                }
                 continue;
             }
         }

@@ -121,6 +121,25 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackForConstructionLine) {
     EXPECT_DOUBLE_EQ(stroke->getPoint(1).y, 7.0);
 }
 
+TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForConstructionCircle) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{8.0, 8.0});
+    const auto radiusPoint = object.addVertex(Vec2{12.0, 8.0});
+    object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 16U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 4.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 4.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 12.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 12.0);
+}
+
 TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     GeometryObject object(42);
     auto a = object.addVertex(Vec2{1.0, 2.0});

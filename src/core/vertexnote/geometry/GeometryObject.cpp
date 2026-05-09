@@ -192,7 +192,9 @@ auto GeometryObject::bounds() const -> std::optional<Bounds> {
         return std::nullopt;
     }
 
-    if (std::ranges::any_of(this->edgeList, [](const Edge& edge) { return edge.kind == EdgeKind::Arc; })) {
+    if (std::ranges::any_of(this->edgeList, [](const Edge& edge) {
+            return edge.kind == EdgeKind::Arc || edge.kind == EdgeKind::ConstructionCircle;
+        })) {
         auto points = toPolyline();
         if (points.empty()) {
             return std::nullopt;
@@ -206,7 +208,8 @@ auto GeometryObject::bounds() const -> std::optional<Bounds> {
             result.maxY = std::max(result.maxY, point.y);
         }
         for (const auto& edge: this->edgeList) {
-            if (edge.kind != EdgeKind::Arc || edge.start != edge.end || edge.controls.empty()) {
+            if ((edge.kind != EdgeKind::Arc && edge.kind != EdgeKind::ConstructionCircle) || edge.start != edge.end ||
+                edge.controls.empty()) {
                 continue;
             }
 
@@ -247,7 +250,7 @@ auto GeometryObject::toPolyline() const -> std::vector<Vec2> {
             continue;
         }
 
-        if (edge.kind == EdgeKind::Arc && !edge.controls.empty()) {
+        if ((edge.kind == EdgeKind::Arc || edge.kind == EdgeKind::ConstructionCircle) && !edge.controls.empty()) {
             const auto* centerVertex = vertex(edge.controls.front());
             if (centerVertex) {
                 appendArcPolyline(points, centerVertex->position, startVertex->position, endVertex->position,

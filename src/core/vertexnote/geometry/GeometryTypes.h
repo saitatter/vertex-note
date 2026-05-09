@@ -64,6 +64,7 @@ enum class EdgeKind {
     Arc,
     CubicBezier,
     ConstructionLine,
+    ConstructionCircle,
 };
 
 struct Edge {

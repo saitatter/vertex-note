@@ -57,6 +57,21 @@ TEST(VertexNoteGeometryXoppMetadata, roundTripsConstructionLineKind) {
     EXPECT_EQ(restored->edge(30)->kind, EdgeKind::ConstructionLine);
 }
 
+TEST(VertexNoteGeometryXoppMetadata, roundTripsConstructionCircleKind) {
+    GeometryObject object(42);
+    auto center = object.addVertexWithId(10, Vec2{4.0, 4.0}, VertexFlags::Explicit);
+    auto radiusPoint = object.addVertexWithId(20, Vec2{7.0, 4.0}, VertexFlags::Explicit);
+    object.addEdgeWithId(30, EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    const auto metadata = vn::io::serializeGeometryStrokeMetadata(object);
+    std::string error;
+    auto restored = vn::io::parseGeometryStrokeMetadata(metadata, &error);
+
+    ASSERT_TRUE(restored.has_value()) << error;
+    ASSERT_NE(restored->edge(30), nullptr);
+    EXPECT_EQ(restored->edge(30)->kind, EdgeKind::ConstructionCircle);
+}
+
 TEST(VertexNoteGeometryXoppMetadata, rejectsUnsupportedFormat) {
     vn::io::GeometryStrokeMetadata metadata;
     metadata.format = "geometry-v99";

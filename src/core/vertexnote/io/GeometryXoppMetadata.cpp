@@ -22,6 +22,7 @@ constexpr std::string_view LineEdgeName = "line";
 constexpr std::string_view ArcEdgeName = "arc";
 constexpr std::string_view CubicBezierEdgeName = "cubic-bezier";
 constexpr std::string_view ConstructionLineEdgeName = "construction-line";
+constexpr std::string_view ConstructionCircleEdgeName = "construction-circle";
 
 constexpr std::string_view CoincidentConstraintName = "coincident";
 constexpr std::string_view HorizontalConstraintName = "horizontal";
@@ -44,6 +45,8 @@ auto edgeKindName(geom::EdgeKind kind) -> std::string_view {
             return CubicBezierEdgeName;
         case geom::EdgeKind::ConstructionLine:
             return ConstructionLineEdgeName;
+        case geom::EdgeKind::ConstructionCircle:
+            return ConstructionCircleEdgeName;
     }
     return LineEdgeName;
 }
@@ -60,6 +63,9 @@ auto parseEdgeKind(std::string_view name) -> std::optional<geom::EdgeKind> {
     }
     if (name == ConstructionLineEdgeName) {
         return geom::EdgeKind::ConstructionLine;
+    }
+    if (name == ConstructionCircleEdgeName) {
+        return geom::EdgeKind::ConstructionCircle;
     }
     return std::nullopt;
 }

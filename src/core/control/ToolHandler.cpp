@@ -58,7 +58,8 @@ void ToolHandler::initTools() {
             TOOL_CAP_COLOR | TOOL_CAP_SIZE | TOOL_CAP_RULER | TOOL_CAP_RECTANGLE | TOOL_CAP_ELLIPSE | TOOL_CAP_ARROW |
                     TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_RECOGNIZER |
                     TOOL_CAP_VERTEX_POLYLINE | TOOL_CAP_VERTEX_RECTANGLE | TOOL_CAP_VERTEX_CIRCLE |
-                    TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE | TOOL_CAP_FILL | TOOL_CAP_LINE_STYLE,
+                    TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE |
+                    TOOL_CAP_VERTEX_CONSTRUCTION_CIRCLE | TOOL_CAP_FILL | TOOL_CAP_LINE_STYLE,
             thickness);
 
     thickness[TOOL_SIZE_VERY_FINE] = 1;
@@ -80,7 +81,8 @@ void ToolHandler::initTools() {
             TOOL_CAP_COLOR | TOOL_CAP_SIZE | TOOL_CAP_RULER | TOOL_CAP_RECTANGLE | TOOL_CAP_ELLIPSE | TOOL_CAP_ARROW |
                     TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_RECOGNIZER |
                     TOOL_CAP_VERTEX_POLYLINE | TOOL_CAP_VERTEX_RECTANGLE | TOOL_CAP_VERTEX_CIRCLE |
-                    TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE | TOOL_CAP_FILL,
+                    TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE |
+                    TOOL_CAP_VERTEX_CONSTRUCTION_CIRCLE | TOOL_CAP_FILL,
             thickness);
 
     tools[TOOL_TEXT - TOOL_PEN] =
@@ -453,7 +455,8 @@ void ToolHandler::saveSettings() const {
                                                    TOOL_CAP_ARROW | TOOL_CAP_DOUBLE_ARROW | TOOL_CAP_RECOGNIZER |
                                                    TOOL_CAP_SPLINE | TOOL_CAP_VERTEX_LINE | TOOL_CAP_VERTEX_POLYLINE |
                                                    TOOL_CAP_VERTEX_RECTANGLE | TOOL_CAP_VERTEX_CIRCLE |
-                                                   TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE;
+                                                   TOOL_CAP_VERTEX_ARC | TOOL_CAP_VERTEX_CONSTRUCTION_LINE |
+                                                   TOOL_CAP_VERTEX_CONSTRUCTION_CIRCLE;
         if (tool->capabilities & SHAPE_CAPS) {
             st.setString("drawingType", drawingTypeToString(tool->getDrawingType()).data());
         }
@@ -635,7 +638,8 @@ auto ToolHandler::isSinglePageTool() const -> bool {
              drawingType == DRAWING_TYPE_SPLINE || drawingType == DRAWING_TYPE_VERTEX_LINE ||
              drawingType == DRAWING_TYPE_VERTEX_POLYLINE || drawingType == DRAWING_TYPE_VERTEX_RECTANGLE ||
              drawingType == DRAWING_TYPE_VERTEX_CIRCLE || drawingType == DRAWING_TYPE_VERTEX_ARC ||
-             drawingType == DRAWING_TYPE_VERTEX_CONSTRUCTION_LINE)) ||
+             drawingType == DRAWING_TYPE_VERTEX_CONSTRUCTION_LINE ||
+             drawingType == DRAWING_TYPE_VERTEX_CONSTRUCTION_CIRCLE)) ||
            toolType == TOOL_SELECT_RECT || toolType == TOOL_SELECT_REGION || toolType == TOOL_SELECT_MULTILAYER_RECT ||
            toolType == TOOL_SELECT_MULTILAYER_REGION || toolType == TOOL_SELECT_OBJECT ||
            toolType == TOOL_DRAW_RECT || toolType == TOOL_DRAW_ELLIPSE || toolType == TOOL_DRAW_COORDINATE_SYSTEM ||
