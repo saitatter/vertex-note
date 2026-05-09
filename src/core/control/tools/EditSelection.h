@@ -339,6 +339,7 @@ private:
     [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
     [[nodiscard]] auto snapGeometryVertexDragPosition(vn::geom::Vec2 modelPosition, bool alt, double zoom)
             -> vn::geom::Vec2;
+    [[nodiscard]] auto applyGeometryConstraints(vn::geom::GeometryObject& object) const -> bool;
     void rebuildGeometrySnapEngine();
     void clearGeometrySnapState();
     void clearGeometryVertexSelection();
@@ -433,6 +434,7 @@ private:  // DATA
     std::vector<vn::geom::VertexId> activeGeometryVertices;
     std::vector<vn::geom::Vec2> activeGeometryVertexStartPositions;
     std::vector<vn::geom::Vec2> activeGeometryVertexCurrentPositions;
+    std::optional<vn::geom::GeometryObject> activeGeometryBeforeDrag;
     bool activeGeometryVertexMoved = false;
     vn::geom::GeometryElement* hoveredGeometryVertexElement = nullptr;
     vn::geom::VertexId hoveredGeometryVertex = vn::geom::InvalidVertexId;

@@ -40,6 +40,7 @@
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 #include "view/overlays/SnapIndicatorViewHelper.h"
+#include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 
@@ -541,7 +542,15 @@ void EditSelection::mouseUp() {
     if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
         if (this->activeGeometryElement && this->activeGeometryVertexMoved &&
             this->activeGeometryVertices.size() == this->activeGeometryVertexCurrentPositions.size()) {
-            if (this->activeGeometryVertices.size() > 1U) {
+            const bool useTopologyUndo = this->activeGeometryBeforeDrag &&
+                                         !this->activeGeometryBeforeDrag->constraints().empty();
+            if (useTopologyUndo) {
+                this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+                        this->sourcePage, this->activeGeometryElement, *this->activeGeometryBeforeDrag,
+                        this->activeGeometryElement->geometry(),
+                        this->activeGeometryVertices.size() > 1U ? _("Move constrained geometry vertices")
+                                                                 : _("Move constrained geometry vertex")));
+            } else if (this->activeGeometryVertices.size() > 1U) {
                 this->undo->addUndoAction(std::make_unique<GeometryVertexMoveUndoAction>(
                         this->sourcePage, this->activeGeometryElement, this->activeGeometryVertices,
                         this->activeGeometryVertexStartPositions, this->activeGeometryVertexCurrentPositions));
@@ -609,6 +618,7 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
             }
             this->activeGeometryVertexMoved = false;
             rebuildGeometrySnapEngine();
+            this->activeGeometryBeforeDrag = this->activeGeometryElement->geometry();
         }
     } else if (type == CURSOR_SELECTION_GEOMETRY_EDGE) {
         clearGeometrySnapState();
@@ -653,6 +663,16 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
             const vn::geom::Vec2 next{start.x + delta.x, start.y + delta.y};
             changed = this->activeGeometryElement->setVertexPosition(this->activeGeometryVertices[i], next) || changed;
             this->activeGeometryVertexCurrentPositions.push_back(next);
+        }
+        changed = applyGeometryConstraints(this->activeGeometryElement->geometry()) || changed;
+
+        for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
+            if (const auto* vertex = this->activeGeometryElement->geometry().vertex(this->activeGeometryVertices[i])) {
+                this->activeGeometryVertexCurrentPositions[i] = vertex->position;
+                if (this->activeGeometryVertices[i] == this->activeGeometryVertex) {
+                    this->activeGeometryVertexCurrent = vertex->position;
+                }
+            }
         }
 
         if (changed) {
@@ -1005,6 +1025,15 @@ auto EditSelection::snapGeometryVertexDragPosition(vn::geom::Vec2 modelPosition,
     return {snapped.x, snapped.y};
 }
 
+auto EditSelection::applyGeometryConstraints(vn::geom::GeometryObject& object) const -> bool {
+    if (object.constraints().empty()) {
+        return false;
+    }
+
+    const vn::constraints::GeometryConstraintSolver solver;
+    return solver.apply(object).changed;
+}
+
 void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
     this->x += dx;
     this->y += dy;
@@ -1043,6 +1072,7 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
     for (const auto vertex: this->activeGeometryVertices) {
         changed = after.removeVertex(vertex) || changed;
     }
+    changed = applyGeometryConstraints(after) || changed;
 
     if (!changed) {
         return false;
@@ -1068,13 +1098,13 @@ auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
     }
 
     const auto before = this->hoveredGeometryElement->geometry();
-    auto inserted =
-            this->hoveredGeometryElement->insertVertexOnEdge(this->hoveredGeometryEdge, this->hoveredGeometryInsertPosition);
+    auto after = before;
+    auto inserted = after.insertVertexOnEdge(this->hoveredGeometryEdge, this->hoveredGeometryInsertPosition);
     if (!inserted) {
         return false;
     }
-
-    const auto after = this->hoveredGeometryElement->geometry();
+    (void) applyGeometryConstraints(after);
+    this->hoveredGeometryElement->replaceGeometry(after);
     this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
             this->sourcePage, this->hoveredGeometryElement, before, after, _("Insert geometry vertex")));
 
@@ -1700,6 +1730,7 @@ void EditSelection::clearGeometryVertexSelection() {
     clearGeometrySnapState();
     this->geometrySnapProvider.reset();
     this->geometrySnapEngine.clearProviders();
+    this->activeGeometryBeforeDrag.reset();
     this->activeGeometryElement = nullptr;
     this->activeGeometryVertex = vn::geom::InvalidVertexId;
     this->activeGeometryVertexStart = {};
