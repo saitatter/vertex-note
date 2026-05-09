@@ -106,6 +106,10 @@ private:
     void setPenLineStyle(const std::string& style);
     void setStrokeFill(int fillOpacity);
     void selectFont();
+    void setPenSize(int sizeIndex);
+    void setEraserSize(int sizeIndex);
+    void setEraserType(QtEraserMode mode);
+    void setHighlighterSize(int sizeIndex);
 
     // Phase 13: Navigation history & layer navigation
     void navigateBack();
@@ -119,6 +123,24 @@ private:
     // Phase 14: Annotated page navigation
     void gotoNextAnnotatedPage();
     void gotoPrevAnnotatedPage();
+
+    // View & UI toggles
+    void togglePairedPages();
+    void toggleToolbarVisibility();
+    void toggleMenubarVisibility();
+    void toggleSidebarVisibility();
+    void setLayoutVertical(bool vertical);
+    void setLayoutRtl(bool rtl);
+    void setLayoutBtt(bool btt);
+
+    // Journal extras
+    void addPageAtEnd();
+    void deleteLayer();
+    void paperFormatDialog();
+
+    // Edit extras
+    void moveSelectionLayerUp();
+    void moveSelectionLayerDown();
 
 private:
     QtMainWindow window;

@@ -17,6 +17,7 @@
 #include <QFontDialog>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QShortcut>
 #include <QStatusBar>
@@ -91,140 +92,549 @@ void QtAppShell::setMainWindowTitle(std::string_view title) {
 }
 
 void QtAppShell::registerBootstrapCommands() {
-    this->window.commandHost()->registerCommand(
-            {.id = "app.new",
-             .text = "New",
-             .tooltip = "Create a new Qt session",
-             .shortcut = "Ctrl+N",
-             .menu = "File"},
+    auto* ch = this->window.commandHost();
+
+    // =====================================================================
+    // Menu 1: File
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "app.new", .text = "New", .tooltip = "Create a new document", .shortcut = "Ctrl+N", .menu = "File"},
             [this]() { newSession(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "app.open",
-             .text = "Open...",
-             .tooltip = "Open a Qt session or a VertexNote document",
-             .shortcut = "Ctrl+O",
-             .menu = "File"},
+    ch->registerCommand(
+            {.id = "app.open", .text = "Open...", .tooltip = "Open a document", .shortcut = "Ctrl+O", .menu = "File"},
             [this]() { openSession(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "app.save-as",
-             .text = "Save As...",
-             .tooltip = "Save the current Qt viewport session sidecar",
-             .shortcut = "Ctrl+Shift+S",
-             .menu = "File"},
+    // TODO: Recent Documents submenu (dynamic)
+    ch->addMenuSeparator("File");
+    ch->registerCommand(
+            {.id = "file.save", .text = "Save", .tooltip = "Save the document", .shortcut = "Ctrl+S", .menu = "File"},
+            [this]() { saveDocument(); });
+    ch->registerCommand(
+            {.id = "app.save-as", .text = "Save As...", .tooltip = "Save to a new file", .shortcut = "Ctrl+Shift+S", .menu = "File"},
             [this]() { saveSessionAs(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "app.quit",
-             .text = "Quit",
-             .tooltip = "Close VertexNote",
-             .shortcut = "Ctrl+Q",
-             .menu = "File"},
+    ch->addMenuSeparator("File");
+    ch->registerCommand(
+            {.id = "export.pdf", .text = "Export as PDF...", .tooltip = "Export all pages as PDF", .menu = "File"},
+            [this]() { exportPdf(); });
+    ch->registerCommand(
+            {.id = "export.png", .text = "Export as...", .tooltip = "Export current page as image", .shortcut = "Ctrl+E", .menu = "File"},
+            [this]() { exportPng(); });
+    ch->addMenuSeparator("File");
+    ch->registerCommand(
+            {.id = "file.print", .text = "Print...", .tooltip = "Print the document", .shortcut = "Ctrl+P", .menu = "File"},
+            [this]() { printDocument(); });
+    ch->addMenuSeparator("File");
+    ch->registerCommand(
+            {.id = "app.quit", .text = "Quit", .tooltip = "Close VertexNote", .shortcut = "Ctrl+Q", .menu = "File"},
             [this]() { requestQuit(); });
 
-    this->window.commandHost()->registerCommand(
-            {.id = "app.check-updates",
-             .text = "Check for Updates",
-             .tooltip = "Show the Qt updater surface",
-             .menu = "Help"},
-            [this]() {
-                this->updates.showCheckingForUpdates();
-                this->updates.showUpToDate("qt-bootstrap");
-            });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "app.about-qt-shell",
-             .text = "About Qt Shell",
-             .tooltip = "Show the Qt shell status",
-             .menu = "Help"},
-            [this]() {
-                this->dialogs.showInfo("VertexNote Qt Shell",
-                                       "Qt shell bootstrap is active.\n\n"
-                                       "Current slice includes neutral UI services, input translation, a Qt painter "
-                                       "render seam, real document-backed page previews, and a "
-                                       "viewport session flow with pan/zoom.");
-            });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.zoom-in",
-             .text = "Zoom In",
-             .tooltip = "Zoom in on the Qt canvas",
-             .shortcut = "Ctrl+=",
-             .menu = "View"},
-            [this]() { this->window.canvas()->zoomIn(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.zoom-out",
-             .text = "Zoom Out",
-             .tooltip = "Zoom out on the Qt canvas",
-             .shortcut = "Ctrl+-",
-             .menu = "View"},
-            [this]() { this->window.canvas()->zoomOut(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.zoom-reset",
-             .text = "Reset View",
-             .tooltip = "Reset the canvas viewport",
-             .shortcut = "Ctrl+0",
-             .menu = "View"},
-            [this]() { this->window.canvas()->resetViewport(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.fit-page",
-             .text = "Fit Page",
-             .tooltip = "Fit the page into the Qt canvas",
-             .shortcut = "Ctrl+9",
-             .menu = "View"},
-            [this]() { this->window.canvas()->fitPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.undo-geometry",
-             .text = "Undo",
-             .tooltip = "Undo the last edit",
-             .shortcut = "Ctrl+Z",
-             .menu = "Edit",
-             .enabled = this->window.canvas()->canUndo()},
+    // =====================================================================
+    // Menu 2: Edit
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "edit.undo-geometry", .text = "Undo", .tooltip = "Undo the last edit", .shortcut = "Ctrl+Z",
+             .menu = "Edit", .enabled = this->window.canvas()->canUndo()},
             [this]() {
                 if (this->window.canvas()->performUndo()) {
                     this->window.statusBar()->showMessage(QStringLiteral("Undid edit"), 3000);
                     updateEditCommandStates();
                 }
             });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.redo-geometry",
-             .text = "Redo",
-             .tooltip = "Redo the last edit",
-             .shortcut = "Ctrl+Y",
-             .menu = "Edit",
-             .enabled = this->window.canvas()->canRedo()},
+    ch->registerCommand(
+            {.id = "edit.redo-geometry", .text = "Redo", .tooltip = "Redo the last edit", .shortcut = "Ctrl+Y",
+             .menu = "Edit", .enabled = this->window.canvas()->canRedo()},
             [this]() {
                 if (this->window.canvas()->performRedo()) {
                     this->window.statusBar()->showMessage(QStringLiteral("Redid edit"), 3000);
                     updateEditCommandStates();
                 }
             });
+    ch->addMenuSeparator("Edit");
+    ch->registerCommand(
+            {.id = "edit.cut", .text = "Cut", .tooltip = "Cut selected elements", .shortcut = "Ctrl+X", .menu = "Edit"},
+            [this]() { cutSelection(); });
+    ch->registerCommand(
+            {.id = "edit.copy", .text = "Copy", .tooltip = "Copy selected elements", .shortcut = "Ctrl+C", .menu = "Edit"},
+            [this]() { copySelection(); });
+    ch->registerCommand(
+            {.id = "edit.paste", .text = "Paste", .tooltip = "Paste from clipboard", .shortcut = "Ctrl+V", .menu = "Edit"},
+            [this]() { pasteClipboard(); });
+    ch->addMenuSeparator("Edit");
+    ch->registerCommand(
+            {.id = "edit.select-all", .text = "Select All", .tooltip = "Select all elements on the current page",
+             .shortcut = "Ctrl+A", .menu = "Edit"},
+            [this]() { selectAll(); });
+    ch->registerCommand(
+            {.id = "edit.find", .text = "Find...", .tooltip = "Search for text", .shortcut = "Ctrl+F", .menu = "Edit"},
+            [this]() { findText(); });
+    ch->registerCommand(
+            {.id = "edit.delete", .text = "Delete", .tooltip = "Delete selected elements", .shortcut = "Delete", .menu = "Edit"},
+            [this]() { deleteSelection(); });
+    ch->addMenuSeparator("Edit");
 
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.insert-vertex",
-             .text = "Insert Vertex on Edge",
-             .tooltip = "Insert a geometry vertex on the selected Qt edge",
-             .shortcut = "Insert",
-             .menu = "Edit"},
+    // Arrange Selection submenu
+    ch->registerCommand(
+            {.id = "edit.bring-to-front", .text = "Bring to Front", .tooltip = "Bring to front", .shortcut = "Ctrl+Shift+F",
+             .menu = "Edit>Arrange Selection"},
+            [this]() { bringToFront(); });
+    ch->registerCommand(
+            {.id = "edit.bring-forward", .text = "Bring Forward", .tooltip = "Move forward one step",
+             .menu = "Edit>Arrange Selection"},
+            [this]() { bringForward(); });
+    ch->registerCommand(
+            {.id = "edit.send-backward", .text = "Send Backward", .tooltip = "Move backward one step",
+             .menu = "Edit>Arrange Selection"},
+            [this]() { sendBackward(); });
+    ch->registerCommand(
+            {.id = "edit.send-to-back", .text = "Send to Back", .tooltip = "Send to back", .shortcut = "Ctrl+Shift+B",
+             .menu = "Edit>Arrange Selection"},
+            [this]() { sendToBack(); });
+
+    ch->registerCommand(
+            {.id = "edit.move-selection-layer-up", .text = "Move Selection Layer Up",
+             .tooltip = "Move selected elements up one layer", .menu = "Edit"},
+            [this]() { moveSelectionLayerUp(); });
+    ch->registerCommand(
+            {.id = "edit.move-selection-layer-down", .text = "Move Selection Layer Down",
+             .tooltip = "Move selected elements down one layer", .menu = "Edit"},
+            [this]() { moveSelectionLayerDown(); });
+    ch->addMenuSeparator("Edit");
+
+    // Snapping toggles
+    ch->registerCommand(
+            {.id = "view.toggle-geometry-snap", .text = "Geometry Snapping", .tooltip = "Toggle geometry snapping",
+             .menu = "Edit", .checkable = true, .checked = this->window.canvas()->isGeometrySnapEnabled()},
+            [this]() { setGeometrySnapEnabled(!this->window.canvas()->isGeometrySnapEnabled()); });
+    ch->registerCommand(
+            {.id = "view.toggle-grid-snap", .text = "Grid Snapping", .tooltip = "Toggle grid snapping",
+             .menu = "Edit", .checkable = true, .checked = this->window.canvas()->isGridSnapEnabled()},
+            [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
+    ch->addMenuSeparator("Edit");
+
+    // Geometry Constraints submenu
+    ch->registerCommand(
+            {.id = "constraint.coincident", .text = "Coincident", .tooltip = "Merge vertices", .shortcut = "Ctrl+Alt+C",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Coincident); });
+    ch->registerCommand(
+            {.id = "constraint.horizontal", .text = "Horizontal", .tooltip = "Force horizontal", .shortcut = "Ctrl+Alt+H",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Horizontal); });
+    ch->registerCommand(
+            {.id = "constraint.vertical", .text = "Vertical", .tooltip = "Force vertical", .shortcut = "Ctrl+Alt+V",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Vertical); });
+    ch->registerCommand(
+            {.id = "constraint.fixed-length", .text = "Fixed Length", .tooltip = "Set fixed edge length", .shortcut = "Ctrl+Alt+L",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::FixedLength); });
+    ch->registerCommand(
+            {.id = "constraint.edit-length", .text = "Edit Fixed Length...", .tooltip = "Edit constraint value", .shortcut = "Ctrl+Alt+E",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { editFixedLengthConstraint(); });
+    ch->registerCommand(
+            {.id = "constraint.radius", .text = "Radius", .tooltip = "Set fixed radius", .shortcut = "Ctrl+Alt+R",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Radius); });
+    ch->registerCommand(
+            {.id = "constraint.parallel", .text = "Parallel", .tooltip = "Force parallel edges", .shortcut = "Ctrl+Alt+P",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Parallel); });
+    ch->registerCommand(
+            {.id = "constraint.perpendicular", .text = "Perpendicular", .tooltip = "Force perpendicular", .shortcut = "Ctrl+Alt+Shift+P",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Perpendicular); });
+    ch->registerCommand(
+            {.id = "constraint.delete", .text = "Delete Constraints", .tooltip = "Remove constraints", .shortcut = "Ctrl+Alt+Delete",
+             .menu = "Edit>Geometry Constraints"},
+            [this]() { deleteConstraints(); });
+    ch->addMenuSeparator("Edit");
+    ch->registerCommand(
+            {.id = "app.settings", .text = "Preferences...", .tooltip = "Open settings", .menu = "Edit"},
+            [this]() { showSettingsDialog(); });
+
+    // =====================================================================
+    // Menu 3: View
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "view.paired-pages", .text = "Pair Pages", .tooltip = "Display pages side by side",
+             .menu = "View", .checkable = true},
+            [this]() { togglePairedPages(); });
+    ch->registerCommand(
+            {.id = "view.presentation", .text = "Presentation Mode", .tooltip = "Fullscreen presentation",
+             .shortcut = "F5", .menu = "View", .checkable = true},
+            [this]() { togglePresentationMode(); });
+    ch->registerCommand(
+            {.id = "view.fullscreen", .text = "Fullscreen", .tooltip = "Toggle fullscreen",
+             .shortcut = "F11", .menu = "View", .checkable = true},
+            [this]() { toggleFullscreen(); });
+    ch->addMenuSeparator("View");
+    ch->registerCommand(
+            {.id = "view.show-toolbar", .text = "Show Toolbars", .tooltip = "Toggle toolbar visibility",
+             .shortcut = "F9", .menu = "View", .checkable = true, .checked = true},
+            [this]() { toggleToolbarVisibility(); });
+    ch->registerCommand(
+            {.id = "view.show-menubar", .text = "Show Menubar", .tooltip = "Toggle menubar visibility",
+             .shortcut = "F10", .menu = "View", .checkable = true, .checked = true},
+            [this]() { toggleMenubarVisibility(); });
+    ch->registerCommand(
+            {.id = "view.show-sidebar", .text = "Show Sidebar", .tooltip = "Toggle sidebar visibility",
+             .shortcut = "F12", .menu = "View", .checkable = true, .checked = true},
+            [this]() { toggleSidebarVisibility(); });
+    ch->addMenuSeparator("View");
+
+    // Layout submenu
+    ch->registerCommand(
+            {.id = "view.layout-horizontal", .text = "Horizontal", .tooltip = "Horizontal page layout",
+             .menu = "View>Layout", .checkable = true, .checked = true},
+            [this]() { setLayoutVertical(false); });
+    ch->registerCommand(
+            {.id = "view.layout-vertical", .text = "Vertical", .tooltip = "Vertical page layout",
+             .menu = "View>Layout", .checkable = true},
+            [this]() { setLayoutVertical(true); });
+    ch->addMenuSeparator("View>Layout");
+    ch->registerCommand(
+            {.id = "view.layout-ltr", .text = "Left to Right", .tooltip = "Left to right reading order",
+             .menu = "View>Layout", .checkable = true, .checked = true},
+            [this]() { setLayoutRtl(false); });
+    ch->registerCommand(
+            {.id = "view.layout-rtl", .text = "Right to Left", .tooltip = "Right to left reading order",
+             .menu = "View>Layout", .checkable = true},
+            [this]() { setLayoutRtl(true); });
+    ch->addMenuSeparator("View>Layout");
+    ch->registerCommand(
+            {.id = "view.layout-ttb", .text = "Top to Bottom", .tooltip = "Top to bottom page order",
+             .menu = "View>Layout", .checkable = true, .checked = true},
+            [this]() { setLayoutBtt(false); });
+    ch->registerCommand(
+            {.id = "view.layout-btt", .text = "Bottom to Top", .tooltip = "Bottom to top page order",
+             .menu = "View>Layout", .checkable = true},
+            [this]() { setLayoutBtt(true); });
+
+    ch->addMenuSeparator("View");
+    ch->registerCommand(
+            {.id = "view.zoom-in", .text = "Zoom In", .tooltip = "Zoom in", .shortcut = "Ctrl+=", .menu = "View"},
+            [this]() { this->window.canvas()->zoomIn(); });
+    ch->registerCommand(
+            {.id = "view.zoom-out", .text = "Zoom Out", .tooltip = "Zoom out", .shortcut = "Ctrl+-", .menu = "View"},
+            [this]() { this->window.canvas()->zoomOut(); });
+    ch->registerCommand(
+            {.id = "view.zoom-100", .text = "Normal Size", .tooltip = "Zoom to 100%", .shortcut = "Ctrl+1", .menu = "View"},
+            [this]() { this->window.canvas()->zoomToActualSize(); this->window.canvas()->update(); });
+    ch->registerCommand(
+            {.id = "view.fit-page", .text = "Zoom to Fit", .tooltip = "Fit page in window", .shortcut = "Ctrl+9", .menu = "View"},
+            [this]() { this->window.canvas()->fitPage(); });
+    ch->registerCommand(
+            {.id = "view.fit-width", .text = "Fit Width", .tooltip = "Fit page width", .shortcut = "Ctrl+8", .menu = "View"},
+            [this]() { this->window.canvas()->fitWidth(); this->window.canvas()->update(); });
+    ch->registerCommand(
+            {.id = "view.zoom-reset", .text = "Reset View", .tooltip = "Reset viewport", .shortcut = "Ctrl+0", .menu = "View"},
+            [this]() { this->window.canvas()->resetViewport(); });
+
+    // =====================================================================
+    // Menu 4: Navigation
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "nav.first-page", .text = "First Page", .tooltip = "Go to first page", .shortcut = "Ctrl+Home", .menu = "Navigation"},
+            [this]() { goToFirstPage(); });
+    ch->registerCommand(
+            {.id = "nav.prev-page", .text = "Previous Page", .tooltip = "Go to previous page", .shortcut = "Ctrl+PgUp", .menu = "Navigation"},
+            [this]() { goToPreviousPage(); });
+    ch->registerCommand(
+            {.id = "nav.back", .text = "Jump Back", .tooltip = "Go back in navigation history", .shortcut = "Alt+Left", .menu = "Navigation"},
+            [this]() { navigateBack(); });
+    ch->registerCommand(
+            {.id = "nav.goto-page", .text = "Go to Page...", .tooltip = "Jump to specific page", .shortcut = "Ctrl+G", .menu = "Navigation"},
+            [this]() { goToPageDialog(); });
+    ch->registerCommand(
+            {.id = "nav.forward", .text = "Jump Forward", .tooltip = "Go forward in navigation history", .shortcut = "Alt+Right", .menu = "Navigation"},
+            [this]() { navigateForward(); });
+    ch->registerCommand(
+            {.id = "nav.next-page", .text = "Next Page", .tooltip = "Go to next page", .shortcut = "Ctrl+PgDown", .menu = "Navigation"},
+            [this]() { goToNextPage(); });
+    ch->registerCommand(
+            {.id = "nav.last-page", .text = "Last Page", .tooltip = "Go to last page", .shortcut = "Ctrl+End", .menu = "Navigation"},
+            [this]() { goToLastPage(); });
+    ch->addMenuSeparator("Navigation");
+    ch->registerCommand(
+            {.id = "layer.goto-prev", .text = "Previous Layer", .tooltip = "Switch to layer below", .shortcut = "Shift+PgDown", .menu = "Navigation"},
+            [this]() { gotoPrevLayer(); });
+    ch->registerCommand(
+            {.id = "layer.goto-next", .text = "Next Layer", .tooltip = "Switch to layer above", .shortcut = "Shift+PgUp", .menu = "Navigation"},
+            [this]() { gotoNextLayer(); });
+    ch->registerCommand(
+            {.id = "layer.goto-top", .text = "Top Layer", .tooltip = "Switch to topmost layer", .menu = "Navigation"},
+            [this]() { gotoTopLayer(); });
+    ch->addMenuSeparator("Navigation");
+    ch->registerCommand(
+            {.id = "nav.next-annotated", .text = "Next Annotated Page", .tooltip = "Jump to next annotated page",
+             .shortcut = "Ctrl+Shift+PgDown", .menu = "Navigation"},
+            [this]() { gotoNextAnnotatedPage(); });
+    ch->registerCommand(
+            {.id = "nav.prev-annotated", .text = "Previous Annotated Page", .tooltip = "Jump to previous annotated page",
+             .shortcut = "Ctrl+Shift+PgUp", .menu = "Navigation"},
+            [this]() { gotoPrevAnnotatedPage(); });
+
+    // =====================================================================
+    // Menu 5: Journal
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "page.add-before", .text = "New Page Before", .tooltip = "Add page before current", .menu = "Journal"},
+            [this]() { addPageBefore(); });
+    ch->registerCommand(
+            {.id = "page.add", .text = "New Page After", .tooltip = "Add page after current", .shortcut = "Ctrl+D", .menu = "Journal"},
+            [this]() { addPage(); });
+    ch->registerCommand(
+            {.id = "page.add-end", .text = "New Page at End", .tooltip = "Add page at end of document", .menu = "Journal"},
+            [this]() { addPageAtEnd(); });
+    ch->registerCommand(
+            {.id = "page.duplicate", .text = "Duplicate Page", .tooltip = "Duplicate the current page", .menu = "Journal"},
+            [this]() { duplicatePage(); });
+    ch->addMenuSeparator("Journal");
+    ch->registerCommand(
+            {.id = "page.delete", .text = "Delete Page", .tooltip = "Delete the current page", .shortcut = "Ctrl+Shift+Delete", .menu = "Journal"},
+            [this]() { deletePage(); });
+    ch->addMenuSeparator("Journal");
+    ch->registerCommand(
+            {.id = "layer.add-above", .text = "Add Layer Above", .tooltip = "Add layer above current", .shortcut = "Ctrl+L", .menu = "Journal"},
+            [this]() { addLayerAbove(); });
+    ch->registerCommand(
+            {.id = "layer.add-below", .text = "Add Layer Below", .tooltip = "Add layer below current", .menu = "Journal"},
+            [this]() { addLayerBelow(); });
+    ch->registerCommand(
+            {.id = "page.delete-layer", .text = "Delete Layer", .tooltip = "Delete the current layer", .shortcut = "Ctrl+Shift+L", .menu = "Journal"},
+            [this]() { deleteLayer(); });
+    ch->registerCommand(
+            {.id = "layer.merge-down", .text = "Merge Layer Down", .tooltip = "Merge into layer below", .shortcut = "Ctrl+M", .menu = "Journal"},
+            [this]() { mergeLayerDown(); });
+    ch->registerCommand(
+            {.id = "layer.rename", .text = "Rename Layer...", .tooltip = "Rename the current layer", .shortcut = "Ctrl+R", .menu = "Journal"},
+            [this]() { renameLayerDialog(); });
+    ch->addMenuSeparator("Journal");
+    ch->registerCommand(
+            {.id = "page.format", .text = "Paper Format...", .tooltip = "Set page size and orientation", .menu = "Journal"},
+            [this]() { paperFormatDialog(); });
+    ch->registerCommand(
+            {.id = "page.background", .text = "Paper Color...", .tooltip = "Change page background color", .menu = "Journal"},
+            [this]() { showBackgroundDialog(); });
+
+    // =====================================================================
+    // Menu 6: Tools
+    // =====================================================================
+    // Drawing tools
+    ch->registerCommand(
+            {.id = "tool.pen", .text = "Pen", .tooltip = "Draw freehand strokes", .shortcut = "Ctrl+Shift+P",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Pen},
+            [this]() { selectTool(QtToolType::Pen); });
+    ch->registerCommand(
+            {.id = "tool.eraser", .text = "Eraser", .tooltip = "Erase strokes", .shortcut = "Ctrl+Shift+E",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Eraser},
+            [this]() { selectTool(QtToolType::Eraser); });
+    ch->registerCommand(
+            {.id = "tool.highlighter", .text = "Highlighter", .tooltip = "Draw highlight strokes", .shortcut = "Ctrl+Shift+H",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Highlighter},
+            [this]() { selectTool(QtToolType::Highlighter); });
+    ch->registerCommand(
+            {.id = "tool.text", .text = "Text", .tooltip = "Insert or edit text", .shortcut = "Ctrl+Shift+T",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Text},
+            [this]() { selectTool(QtToolType::Text); });
+    ch->registerCommand(
+            {.id = "edit.insert-image", .text = "Image", .tooltip = "Insert image from file", .shortcut = "Ctrl+Shift+I", .menu = "Tools"},
+            [this]() { insertImage(); });
+    ch->addMenuSeparator("Tools");
+
+    // Drawing Type submenu
+    ch->registerCommand(
+            {.id = "tool.draw-rectangle", .text = "Draw Rectangle", .tooltip = "Draw a rectangle", .shortcut = "Ctrl+2",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
+            [this]() { selectTool(QtToolType::DrawRectangle); });
+    ch->registerCommand(
+            {.id = "tool.draw-ellipse", .text = "Draw Ellipse", .tooltip = "Draw an ellipse", .shortcut = "Ctrl+3",
+             .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::DrawEllipse); });
+    ch->registerCommand(
+            {.id = "tool.draw-arrow", .text = "Draw Arrow", .tooltip = "Draw an arrow", .shortcut = "Ctrl+4",
+             .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::DrawArrow); });
+    ch->registerCommand(
+            {.id = "tool.draw-double-arrow", .text = "Draw Double Arrow", .tooltip = "Draw a double-headed arrow", .shortcut = "Ctrl+5",
+             .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::DrawDoubleArrow); });
+    ch->registerCommand(
+            {.id = "tool.draw-coordinate-system", .text = "Draw Coordinate System", .tooltip = "Draw X-Y axes", .shortcut = "Ctrl+6",
+             .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::DrawCoordinateSystem); });
+    ch->registerCommand(
+            {.id = "tool.draw-line", .text = "Draw Line", .tooltip = "Draw a straight line", .shortcut = "Ctrl+7",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
+            [this]() { selectTool(QtToolType::DrawLine); });
+    ch->registerCommand(
+            {.id = "tool.draw-spline", .text = "Draw Spline", .tooltip = "Draw a smooth spline curve", .shortcut = "Ctrl+8",
+             .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::DrawSpline); });
+    ch->addMenuSeparator("Tools>Drawing Type");
+    ch->registerCommand(
+            {.id = "tool.draw-circle", .text = "Draw Vertex Circle", .tooltip = "Draw a geometry circle", .shortcut = "Ctrl+9",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
+            [this]() { selectTool(QtToolType::DrawCircle); });
+    ch->registerCommand(
+            {.id = "tool.draw-arc", .text = "Draw Vertex Arc", .tooltip = "Draw a geometry arc", .shortcut = "Ctrl+0",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
+            [this]() { selectTool(QtToolType::DrawArc); });
+    ch->registerCommand(
+            {.id = "tool.draw-construction-line", .text = "Draw Construction Line", .tooltip = "Draw a construction guide line", .shortcut = "Ctrl+Shift+0",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
+            [this]() { selectTool(QtToolType::DrawConstructionLine); });
+    ch->registerCommand(
+            {.id = "tool.draw-construction-circle", .text = "Draw Construction Circle", .tooltip = "Draw a construction guide circle",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
+            [this]() { selectTool(QtToolType::DrawConstructionCircle); });
+    ch->registerCommand(
+            {.id = "tool.draw-polyline", .text = "Draw Polyline", .tooltip = "Draw a multi-segment line",
+             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
+            [this]() { selectTool(QtToolType::DrawPolyline); });
+    ch->addMenuSeparator("Tools");
+
+    // Selection tools
+    ch->registerCommand(
+            {.id = "tool.select", .text = "Select Rectangle", .tooltip = "Rectangle selection", .shortcut = "Ctrl+Shift+R",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::SelectRect},
+            [this]() { selectTool(QtToolType::SelectRect); });
+    ch->registerCommand(
+            {.id = "tool.select-region", .text = "Select Region", .tooltip = "Free-form selection", .shortcut = "Ctrl+Shift+G",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::SelectRegion); });
+    ch->registerCommand(
+            {.id = "tool.select-multilayer-rect", .text = "Select Multi-Layer Rect", .tooltip = "Rectangle selection across layers",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::SelectMultiLayerRect); });
+    ch->registerCommand(
+            {.id = "tool.select-multilayer-region", .text = "Select Multi-Layer Region", .tooltip = "Free-form selection across layers",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::SelectMultiLayerRegion); });
+    ch->registerCommand(
+            {.id = "tool.select-object", .text = "Select Object", .tooltip = "Select individual objects", .shortcut = "Ctrl+Shift+O",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::SelectObject); });
+    ch->registerCommand(
+            {.id = "tool.vertical-space", .text = "Vertical Space", .tooltip = "Insert vertical space", .shortcut = "Ctrl+Shift+V",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::VerticalSpace); });
+    ch->registerCommand(
+            {.id = "tool.hand", .text = "Hand Tool", .tooltip = "Pan the canvas", .shortcut = "Ctrl+Shift+A",
+             .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Hand},
+            [this]() { selectTool(QtToolType::Hand); });
+    ch->addMenuSeparator("Tools");
+
+    // Pen Options submenu
+    ch->registerCommand(
+            {.id = "pen.size-very-fine", .text = "Very Fine", .tooltip = "Very fine pen", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenSize(0); });
+    ch->registerCommand(
+            {.id = "pen.size-fine", .text = "Fine", .tooltip = "Fine pen", .menu = "Tools>Pen Options", .checkable = true, .checked = true},
+            [this]() { setPenSize(1); });
+    ch->registerCommand(
+            {.id = "pen.size-medium", .text = "Medium", .tooltip = "Medium pen", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenSize(2); });
+    ch->registerCommand(
+            {.id = "pen.size-thick", .text = "Thick", .tooltip = "Thick pen", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenSize(3); });
+    ch->registerCommand(
+            {.id = "pen.size-very-thick", .text = "Very Thick", .tooltip = "Very thick pen", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenSize(4); });
+    ch->addMenuSeparator("Tools>Pen Options");
+    ch->registerCommand(
+            {.id = "pen.line-solid", .text = "Standard", .tooltip = "Solid line", .menu = "Tools>Pen Options", .checkable = true, .checked = true},
+            [this]() { setPenLineStyle("plain"); });
+    ch->registerCommand(
+            {.id = "pen.line-dash", .text = "Dashed", .tooltip = "Dashed line", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenLineStyle("dash"); });
+    ch->registerCommand(
+            {.id = "pen.line-dashdot", .text = "Dash-Dotted", .tooltip = "Dash-dot line", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenLineStyle("dashdot"); });
+    ch->registerCommand(
+            {.id = "pen.line-dot", .text = "Dotted", .tooltip = "Dotted line", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() { setPenLineStyle("dot"); });
+    ch->addMenuSeparator("Tools>Pen Options");
+    ch->registerCommand(
+            {.id = "pen.fill-toggle", .text = "Fill", .tooltip = "Toggle fill", .menu = "Tools>Pen Options", .checkable = true},
+            [this]() {
+                auto& ts = this->window.canvas()->toolState();
+                ts.fillEnabled = !ts.fillEnabled;
+                this->window.commandHost()->setCommandChecked("pen.fill-toggle", ts.fillEnabled);
+            });
+
+    // Eraser Options submenu
+    ch->registerCommand(
+            {.id = "eraser.size-very-fine", .text = "Very Fine", .tooltip = "Very fine eraser", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserSize(0); });
+    ch->registerCommand(
+            {.id = "eraser.size-fine", .text = "Fine", .tooltip = "Fine eraser", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserSize(1); });
+    ch->registerCommand(
+            {.id = "eraser.size-medium", .text = "Medium", .tooltip = "Medium eraser", .menu = "Tools>Eraser Options", .checkable = true, .checked = true},
+            [this]() { setEraserSize(2); });
+    ch->registerCommand(
+            {.id = "eraser.size-thick", .text = "Thick", .tooltip = "Thick eraser", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserSize(3); });
+    ch->registerCommand(
+            {.id = "eraser.size-very-thick", .text = "Very Thick", .tooltip = "Very thick eraser", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserSize(4); });
+    ch->addMenuSeparator("Tools>Eraser Options");
+    ch->registerCommand(
+            {.id = "eraser.type-standard", .text = "Standard", .tooltip = "Standard eraser", .menu = "Tools>Eraser Options", .checkable = true, .checked = true},
+            [this]() { setEraserType(QtEraserMode::Standard); });
+    ch->registerCommand(
+            {.id = "eraser.type-whiteout", .text = "Whiteout", .tooltip = "White-out eraser", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserType(QtEraserMode::Whiteout); });
+    ch->registerCommand(
+            {.id = "eraser.type-delete-stroke", .text = "Delete Strokes", .tooltip = "Delete entire strokes", .menu = "Tools>Eraser Options", .checkable = true},
+            [this]() { setEraserType(QtEraserMode::DeleteStroke); });
+
+    // Highlighter Options submenu
+    ch->registerCommand(
+            {.id = "highlighter.size-very-fine", .text = "Very Fine", .tooltip = "Very fine highlighter", .menu = "Tools>Highlighter Options", .checkable = true},
+            [this]() { setHighlighterSize(0); });
+    ch->registerCommand(
+            {.id = "highlighter.size-fine", .text = "Fine", .tooltip = "Fine highlighter", .menu = "Tools>Highlighter Options", .checkable = true},
+            [this]() { setHighlighterSize(1); });
+    ch->registerCommand(
+            {.id = "highlighter.size-medium", .text = "Medium", .tooltip = "Medium highlighter", .menu = "Tools>Highlighter Options", .checkable = true, .checked = true},
+            [this]() { setHighlighterSize(2); });
+    ch->registerCommand(
+            {.id = "highlighter.size-thick", .text = "Thick", .tooltip = "Thick highlighter", .menu = "Tools>Highlighter Options", .checkable = true},
+            [this]() { setHighlighterSize(3); });
+    ch->registerCommand(
+            {.id = "highlighter.size-very-thick", .text = "Very Thick", .tooltip = "Very thick highlighter", .menu = "Tools>Highlighter Options", .checkable = true},
+            [this]() { setHighlighterSize(4); });
+    ch->addMenuSeparator("Tools>Highlighter Options");
+    ch->registerCommand(
+            {.id = "highlighter.fill-toggle", .text = "Fill", .tooltip = "Toggle highlighter fill", .menu = "Tools>Highlighter Options", .checkable = true},
+            [this]() {
+                auto& ts = this->window.canvas()->toolState();
+                ts.highlighterFillEnabled = !ts.highlighterFillEnabled;
+                this->window.commandHost()->setCommandChecked("highlighter.fill-toggle", ts.highlighterFillEnabled);
+            });
+    ch->addMenuSeparator("Tools");
+
+    // Other tool items
+    ch->registerCommand(
+            {.id = "edit.select-font", .text = "Text Font...", .tooltip = "Select font for text tool", .shortcut = "Ctrl+Shift+F", .menu = "Tools"},
+            [this]() { selectFont(); });
+    ch->addMenuSeparator("Tools");
+
+    // Geometry editing
+    ch->registerCommand(
+            {.id = "edit.insert-vertex", .text = "Insert Vertex on Edge", .tooltip = "Insert vertex on selected edge",
+             .shortcut = "Insert", .menu = "Tools"},
             [this]() {
                 if (this->window.canvas()->insertVertexOnSelectedEdge()) {
                     this->window.statusBar()->showMessage(QStringLiteral("Inserted geometry vertex"), 3000);
                     updateEditCommandStates();
                 }
             });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.delete-geometry",
-             .text = "Delete Selected Geometry",
-             .tooltip = "Delete the selected Qt geometry vertex or edge",
-             .shortcut = "Delete",
-             .menu = "Edit"},
+    ch->registerCommand(
+            {.id = "edit.delete-geometry", .text = "Delete Selected Geometry", .tooltip = "Delete selected geometry",
+             .menu = "Tools"},
             [this]() {
                 if (this->window.canvas()->deleteSelectedGeometry()) {
                     this->window.statusBar()->showMessage(QStringLiteral("Deleted selected geometry"), 3000);
@@ -232,624 +642,23 @@ void QtAppShell::registerBootstrapCommands() {
                 }
             });
 
-    this->window.commandHost()->registerCommand(
-            {.id = "view.toggle-geometry-snap",
-             .text = "Geometry Snap",
-             .tooltip = "Toggle geometry snapping in the Qt shell",
-             .menu = "View",
-             .checkable = true,
-             .checked = this->window.canvas()->isGeometrySnapEnabled()},
-            [this]() { setGeometrySnapEnabled(!this->window.canvas()->isGeometrySnapEnabled()); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.toggle-grid-snap",
-             .text = "Grid Snap",
-             .tooltip = "Toggle grid snapping in the Qt shell",
-             .menu = "View",
-             .checkable = true,
-             .checked = this->window.canvas()->isGridSnapEnabled()},
-            [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
-
-    // Tool selection commands
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.hand",
-             .text = "Hand Tool",
-             .tooltip = "Pan the canvas with click and drag",
-             .shortcut = "H",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::Hand},
-            [this]() { selectTool(QtToolType::Hand); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.pen",
-             .text = "Pen",
-             .tooltip = "Draw freehand strokes",
-             .shortcut = "P",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::Pen},
-            [this]() { selectTool(QtToolType::Pen); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.eraser",
-             .text = "Eraser",
-             .tooltip = "Draw white-out strokes",
-             .shortcut = "E",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::Eraser},
-            [this]() { selectTool(QtToolType::Eraser); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.highlighter",
-             .text = "Highlighter",
-             .tooltip = "Draw semi-transparent highlight strokes",
-             .shortcut = "G",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::Highlighter},
-            [this]() { selectTool(QtToolType::Highlighter); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.select",
-             .text = "Select",
-             .tooltip = "Select elements with click or rubber-band rectangle",
-             .shortcut = "S",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::SelectRect},
-            [this]() { selectTool(QtToolType::SelectRect); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.background",
-             .text = "Page Background...",
-             .tooltip = "Change the page background colour and pattern",
-             .menu = "Edit"},
-            [this]() { showBackgroundDialog(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "export.pdf",
-             .text = "Export PDF...",
-             .tooltip = "Export all pages as a PDF file",
-             .shortcut = "Ctrl+Shift+P",
-             .menu = "File"},
-            [this]() { exportPdf(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "export.png",
-             .text = "Export PNG...",
-             .tooltip = "Export the current page as a PNG image",
-             .shortcut = "Ctrl+Shift+E",
-             .menu = "File"},
-            [this]() { exportPng(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.fullscreen",
-             .text = "Fullscreen",
-             .tooltip = "Toggle fullscreen mode",
-             .shortcut = "F11",
-             .menu = "View",
-             .checkable = true},
-            [this]() { toggleFullscreen(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.presentation",
-             .text = "Presentation Mode",
-             .tooltip = "Toggle presentation mode (fullscreen, no sidebar, fit page)",
-             .shortcut = "F5",
-             .menu = "View",
-             .checkable = true},
-            [this]() { togglePresentationMode(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "file.save",
-             .text = "Save Document",
-             .tooltip = "Save the document as .xopp",
-             .shortcut = "Ctrl+S",
-             .menu = "File"},
-            [this]() { saveDocument(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "file.print",
-             .text = "Print...",
-             .tooltip = "Print the current document",
-             .shortcut = "Ctrl+P",
-             .menu = "File"},
-            [this]() { printDocument(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.add",
-             .text = "Add Page",
-             .tooltip = "Add a blank page after the current page",
-             .menu = "Edit"},
-            [this]() { addPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.delete",
-             .text = "Delete Page",
-             .tooltip = "Delete the current page",
-             .menu = "Edit"},
-            [this]() { deletePage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.duplicate",
-             .text = "Duplicate Page",
-             .tooltip = "Duplicate the current page",
-             .menu = "Edit"},
-            [this]() { duplicatePage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.find",
-             .text = "Find Text...",
-             .tooltip = "Search for text in the document",
-             .shortcut = "Ctrl+F",
-             .menu = "Edit"},
-            [this]() { findText(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.insert-image",
-             .text = "Insert Image...",
-             .tooltip = "Insert an image from a file",
-             .menu = "Edit"},
-            [this]() { insertImage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.text",
-             .text = "Text",
-             .tooltip = "Insert or edit text on the canvas",
-             .shortcut = "T",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::Text},
-            [this]() { selectTool(QtToolType::Text); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "app.settings",
-             .text = "Preferences...",
-             .tooltip = "Open the settings dialog",
-             .menu = "Edit"},
-            [this]() { showSettingsDialog(); });
-
-    // ---- Shape drawing tools ----
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-line",
-             .text = "Line",
-             .tooltip = "Draw a straight line (click start, release at end)",
-             .shortcut = "L",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
-            [this]() { selectTool(QtToolType::DrawLine); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-rectangle",
-             .text = "Rectangle",
-             .tooltip = "Draw a rectangle (click corner, release at opposite corner)",
-             .shortcut = "R",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
-            [this]() { selectTool(QtToolType::DrawRectangle); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-circle",
-             .text = "Circle",
-             .tooltip = "Draw a circle (click centre, release at edge)",
-             .shortcut = "C",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
-            [this]() { selectTool(QtToolType::DrawCircle); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-arc",
-             .text = "Arc",
-             .tooltip = "Draw an arc (click center, click start, click end)",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
-            [this]() { selectTool(QtToolType::DrawArc); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-polyline",
-             .text = "Polyline",
-             .tooltip = "Draw a polyline (click to add points, double-click to finish)",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
-            [this]() { selectTool(QtToolType::DrawPolyline); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-construction-line",
-             .text = "Construction Line",
-             .tooltip = "Draw a construction line (non-printing guide)",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
-            [this]() { selectTool(QtToolType::DrawConstructionLine); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "tool.draw-construction-circle",
-             .text = "Construction Circle",
-             .tooltip = "Draw a construction circle (non-printing guide)",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
-            [this]() { selectTool(QtToolType::DrawConstructionCircle); });
-
-    // ---- Geometry constraints ----
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.coincident",
-             .text = "Coincident Constraint",
-             .tooltip = "Merge selected vertices to the same point",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Coincident); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.horizontal",
-             .text = "Horizontal Constraint",
-             .tooltip = "Force an edge or vertex pair to be horizontal",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Horizontal); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.vertical",
-             .text = "Vertical Constraint",
-             .tooltip = "Force an edge or vertex pair to be vertical",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Vertical); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.fixed-length",
-             .text = "Fixed Length Constraint",
-             .tooltip = "Set a fixed length on an edge",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::FixedLength); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.radius",
-             .text = "Radius Constraint",
-             .tooltip = "Set a fixed radius on a circle or arc",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Radius); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.parallel",
-             .text = "Parallel Constraint",
-             .tooltip = "Force two line edges to be parallel",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Parallel); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.perpendicular",
-             .text = "Perpendicular Constraint",
-             .tooltip = "Force two line edges to be perpendicular",
-             .menu = "Tools"},
-            [this]() { applyConstraint(vn::geom::ConstraintKind::Perpendicular); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.delete",
-             .text = "Delete Constraints",
-             .tooltip = "Remove constraints touching selected geometry",
-             .menu = "Tools"},
-            [this]() { deleteConstraints(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "constraint.edit-length",
-             .text = "Edit Constraint Value...",
-             .tooltip = "Edit the value of a fixed-length or radius constraint",
-             .menu = "Tools"},
-            [this]() { editFixedLengthConstraint(); });
-
-    // ---- Phase 7: Clipboard & element operations ----
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.delete",
-             .text = "Delete",
-             .tooltip = "Delete selected elements",
-             .shortcut = "Delete",
-             .menu = "Edit"},
-            [this]() { deleteSelection(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.select-all",
-             .text = "Select All",
-             .tooltip = "Select all elements on the current page",
-             .shortcut = "Ctrl+A",
-             .menu = "Edit"},
-            [this]() { selectAll(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.copy",
-             .text = "Copy",
-             .tooltip = "Copy selected elements to clipboard",
-             .shortcut = "Ctrl+C",
-             .menu = "Edit"},
-            [this]() { copySelection(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.cut",
-             .text = "Cut",
-             .tooltip = "Cut selected elements to clipboard",
-             .shortcut = "Ctrl+X",
-             .menu = "Edit"},
-            [this]() { cutSelection(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.paste",
-             .text = "Paste",
-             .tooltip = "Paste elements from clipboard",
-             .shortcut = "Ctrl+V",
-             .menu = "Edit"},
-            [this]() { pasteClipboard(); });
-
-    // ---- Phase 8: Page navigation ----
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.first-page",
-             .text = "First Page",
-             .tooltip = "Go to the first page",
-             .shortcut = "Home",
-             .menu = "View"},
-            [this]() { goToFirstPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.last-page",
-             .text = "Last Page",
-             .tooltip = "Go to the last page",
-             .shortcut = "End",
-             .menu = "View"},
-            [this]() { goToLastPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.next-page",
-             .text = "Next Page",
-             .tooltip = "Go to the next page",
-             .shortcut = "PgDown",
-             .menu = "View"},
-            [this]() { goToNextPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.prev-page",
-             .text = "Previous Page",
-             .tooltip = "Go to the previous page",
-             .shortcut = "PgUp",
-             .menu = "View"},
-            [this]() { goToPreviousPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.goto-page",
-             .text = "Go to Page...",
-             .tooltip = "Jump to a specific page number",
-             .shortcut = "Ctrl+G",
-             .menu = "View"},
-            [this]() { goToPageDialog(); });
-
-    // ---- Phase 9: Layer operations ----
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.copy",
-             .text = "Copy Layer",
-             .tooltip = "Duplicate the current layer",
-             .menu = "Edit"},
-            [this]() { copyLayer(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.merge-down",
-             .text = "Merge Layer Down",
-             .tooltip = "Merge the current layer into the one below",
-             .menu = "Edit"},
-            [this]() { mergeLayerDown(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.show-all",
-             .text = "Show All Layers",
-             .tooltip = "Make all layers visible",
-             .menu = "View"},
-            [this]() { showAllLayers(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.hide-all",
-             .text = "Hide All Layers",
-             .tooltip = "Hide all layers",
-             .menu = "View"},
-            [this]() { hideAllLayers(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.rename",
-             .text = "Rename Layer...",
-             .tooltip = "Rename the current layer",
-             .menu = "Edit"},
-            [this]() { renameLayerDialog(); });
-
-    // ---- Phase 10: Page operations ----
-    this->window.commandHost()->registerCommand(
-            {.id = "page.add-before",
-             .text = "Add Page Before",
-             .tooltip = "Add a blank page before the current page",
-             .menu = "Edit"},
-            [this]() { addPageBefore(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.move-up",
-             .text = "Move Page Up",
-             .tooltip = "Move the current page towards the beginning",
-             .menu = "Edit"},
-            [this]() { movePageUp(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "page.move-down",
-             .text = "Move Page Down",
-             .tooltip = "Move the current page towards the end",
-             .menu = "Edit"},
-            [this]() { movePageDown(); });
-
-    // ---- Phase 11: Z-order & zoom ----
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.bring-to-front",
-             .text = "Bring to Front",
-             .tooltip = "Bring selected elements to the front",
-             .shortcut = "Ctrl+Shift+F",
-             .menu = "Edit"},
-            [this]() { bringToFront(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.send-to-back",
-             .text = "Send to Back",
-             .tooltip = "Send selected elements to the back",
-             .shortcut = "Ctrl+Shift+B",
-             .menu = "Edit"},
-            [this]() { sendToBack(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.bring-forward",
-             .text = "Bring Forward",
-             .tooltip = "Move selected elements forward one step",
-             .menu = "Edit"},
-            [this]() { bringForward(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.send-backward",
-             .text = "Send Backward",
-             .tooltip = "Move selected elements backward one step",
-             .menu = "Edit"},
-            [this]() { sendBackward(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.fit-width",
-             .text = "Fit Width",
-             .tooltip = "Zoom to fit the page width in the viewport",
-             .shortcut = "Ctrl+8",
-             .menu = "View"},
-            [this]() { this->window.canvas()->fitWidth(); this->window.canvas()->update(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "view.zoom-100",
-             .text = "Actual Size",
-             .tooltip = "Zoom to 100% (actual size)",
-             .shortcut = "Ctrl+1",
-             .menu = "View"},
-            [this]() { this->window.canvas()->zoomToActualSize(); this->window.canvas()->update(); });
-
-    // ---- Phase 12: Pen styling ----
-    this->window.commandHost()->registerCommand(
-            {.id = "pen.line-solid",
-             .text = "Solid Line",
-             .tooltip = "Set pen line style to solid",
-             .menu = "Tools",
-             .checkable = true,
-             .checked = true},
-            [this]() { setPenLineStyle("plain"); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "pen.line-dash",
-             .text = "Dashed Line",
-             .tooltip = "Set pen line style to dashed",
-             .menu = "Tools",
-             .checkable = true},
-            [this]() { setPenLineStyle("dash"); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "pen.line-dashdot",
-             .text = "Dash-Dot Line",
-             .tooltip = "Set pen line style to dash-dot",
-             .menu = "Tools",
-             .checkable = true},
-            [this]() { setPenLineStyle("dashdot"); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "pen.line-dot",
-             .text = "Dotted Line",
-             .tooltip = "Set pen line style to dotted",
-             .menu = "Tools",
-             .checkable = true},
-            [this]() { setPenLineStyle("dot"); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "pen.fill-toggle",
-             .text = "Toggle Fill",
-             .tooltip = "Toggle stroke fill on/off",
-             .menu = "Tools"},
+    // =====================================================================
+    // Menu 7: Help
+    // =====================================================================
+    ch->registerCommand(
+            {.id = "app.check-updates", .text = "Check for Updates", .tooltip = "Check for new versions", .menu = "Help"},
             [this]() {
-                auto& ts = this->window.canvas()->toolState();
-                ts.fillEnabled = !ts.fillEnabled;
-                this->window.commandHost()->setCommandChecked("pen.fill-toggle", ts.fillEnabled);
-                this->window.statusBar()->showMessage(
-                        ts.fillEnabled ? QStringLiteral("Fill enabled") : QStringLiteral("Fill disabled"), 3000);
+                this->updates.showCheckingForUpdates();
+                this->updates.showUpToDate("qt-bootstrap");
             });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "edit.select-font",
-             .text = "Font...",
-             .tooltip = "Select font for text tool",
-             .menu = "Edit"},
-            [this]() { selectFont(); });
-
-    // Phase 13: Navigation history
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.back",
-             .text = "Navigate Back",
-             .tooltip = "Go back in navigation history",
-             .shortcut = "Alt+Left",
-             .menu = "Navigate"},
-            [this]() { navigateBack(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.forward",
-             .text = "Navigate Forward",
-             .tooltip = "Go forward in navigation history",
-             .shortcut = "Alt+Right",
-             .menu = "Navigate"},
-            [this]() { navigateForward(); });
-
-    // Phase 13: Layer navigation
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.goto-next",
-             .text = "Next Layer",
-             .tooltip = "Switch to the layer above current",
-             .menu = "Layer"},
-            [this]() { gotoNextLayer(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.goto-prev",
-             .text = "Previous Layer",
-             .tooltip = "Switch to the layer below current",
-             .menu = "Layer"},
-            [this]() { gotoPrevLayer(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.goto-top",
-             .text = "Top Layer",
-             .tooltip = "Switch to the topmost layer",
-             .menu = "Layer"},
-            [this]() { gotoTopLayer(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.add-above",
-             .text = "New Layer Above",
-             .tooltip = "Add a new layer above the current layer",
-             .menu = "Layer"},
-            [this]() { addLayerAbove(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "layer.add-below",
-             .text = "New Layer Below",
-             .tooltip = "Add a new layer below the current layer",
-             .menu = "Layer"},
-            [this]() { addLayerBelow(); });
-
-    // Phase 14: Annotated page navigation
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.next-annotated",
-             .text = "Next Annotated Page",
-             .tooltip = "Jump to next page with annotations",
-             .menu = "Navigate"},
-            [this]() { gotoNextAnnotatedPage(); });
-
-    this->window.commandHost()->registerCommand(
-            {.id = "nav.prev-annotated",
-             .text = "Previous Annotated Page",
-             .tooltip = "Jump to previous page with annotations",
-             .menu = "Navigate"},
-            [this]() { gotoPrevAnnotatedPage(); });
+    ch->registerCommand(
+            {.id = "app.about-qt-shell", .text = "About VertexNote", .tooltip = "About this application", .menu = "Help"},
+            [this]() {
+                this->dialogs.showInfo("About VertexNote",
+                                       "VertexNote Qt Shell\n\n"
+                                       "A modern note-taking application with geometry, "
+                                       "PDF annotation, and handwriting support.");
+            });
 }
 
 void QtAppShell::wireWindowState() {
@@ -1164,10 +973,20 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
+    this->window.commandHost()->setCommandChecked("tool.select-region", active == QtToolType::SelectRegion);
+    this->window.commandHost()->setCommandChecked("tool.select-multilayer-rect", active == QtToolType::SelectMultiLayerRect);
+    this->window.commandHost()->setCommandChecked("tool.select-multilayer-region", active == QtToolType::SelectMultiLayerRegion);
+    this->window.commandHost()->setCommandChecked("tool.select-object", active == QtToolType::SelectObject);
+    this->window.commandHost()->setCommandChecked("tool.vertical-space", active == QtToolType::VerticalSpace);
     this->window.commandHost()->setCommandChecked("tool.text", active == QtToolType::Text);
     this->window.commandHost()->setCommandChecked("tool.draw-line", active == QtToolType::DrawLine);
     this->window.commandHost()->setCommandChecked("tool.draw-rectangle", active == QtToolType::DrawRectangle);
     this->window.commandHost()->setCommandChecked("tool.draw-circle", active == QtToolType::DrawCircle);
+    this->window.commandHost()->setCommandChecked("tool.draw-ellipse", active == QtToolType::DrawEllipse);
+    this->window.commandHost()->setCommandChecked("tool.draw-arrow", active == QtToolType::DrawArrow);
+    this->window.commandHost()->setCommandChecked("tool.draw-double-arrow", active == QtToolType::DrawDoubleArrow);
+    this->window.commandHost()->setCommandChecked("tool.draw-coordinate-system", active == QtToolType::DrawCoordinateSystem);
+    this->window.commandHost()->setCommandChecked("tool.draw-spline", active == QtToolType::DrawSpline);
     this->window.commandHost()->setCommandChecked("tool.draw-arc", active == QtToolType::DrawArc);
     this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
@@ -2037,4 +1856,158 @@ void QtAppShell::gotoPrevAnnotatedPage() {
         }
     }
     this->window.statusBar()->showMessage(QStringLiteral("No previous annotated pages"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Pen/eraser/highlighter size and type
+// ---------------------------------------------------------------------------
+
+namespace {
+constexpr std::array<double, 5> PEN_SIZES = {0.40, 0.85, 1.41, 3.54, 5.00};
+constexpr std::array<double, 5> ERASER_SIZES = {3.00, 5.00, 8.50, 14.00, 20.00};
+constexpr std::array<double, 5> HIGHLIGHTER_SIZES = {3.00, 5.00, 8.50, 14.00, 20.00};
+
+const std::array<const char*, 5> PEN_SIZE_IDS = {
+        "pen.size-very-fine", "pen.size-fine", "pen.size-medium", "pen.size-thick", "pen.size-very-thick"};
+const std::array<const char*, 5> ERASER_SIZE_IDS = {
+        "eraser.size-very-fine", "eraser.size-fine", "eraser.size-medium", "eraser.size-thick", "eraser.size-very-thick"};
+const std::array<const char*, 5> HIGHLIGHTER_SIZE_IDS = {
+        "highlighter.size-very-fine", "highlighter.size-fine", "highlighter.size-medium", "highlighter.size-thick", "highlighter.size-very-thick"};
+}  // namespace
+
+void QtAppShell::setPenSize(int sizeIndex) {
+    if (sizeIndex < 0 || sizeIndex >= 5) return;
+    this->window.canvas()->toolState().penWidth = PEN_SIZES[static_cast<std::size_t>(sizeIndex)];
+    for (int i = 0; i < 5; ++i) {
+        this->window.commandHost()->setCommandChecked(PEN_SIZE_IDS[static_cast<std::size_t>(i)], i == sizeIndex);
+    }
+    this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
+}
+
+void QtAppShell::setEraserSize(int sizeIndex) {
+    if (sizeIndex < 0 || sizeIndex >= 5) return;
+    this->window.canvas()->toolState().eraserWidth = ERASER_SIZES[static_cast<std::size_t>(sizeIndex)];
+    for (int i = 0; i < 5; ++i) {
+        this->window.commandHost()->setCommandChecked(ERASER_SIZE_IDS[static_cast<std::size_t>(i)], i == sizeIndex);
+    }
+    this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
+}
+
+void QtAppShell::setEraserType(QtEraserMode mode) {
+    this->window.canvas()->toolState().eraserMode = mode;
+    this->window.commandHost()->setCommandChecked("eraser.type-standard", mode == QtEraserMode::Standard);
+    this->window.commandHost()->setCommandChecked("eraser.type-whiteout", mode == QtEraserMode::Whiteout);
+    this->window.commandHost()->setCommandChecked("eraser.type-delete-stroke", mode == QtEraserMode::DeleteStroke);
+}
+
+void QtAppShell::setHighlighterSize(int sizeIndex) {
+    if (sizeIndex < 0 || sizeIndex >= 5) return;
+    this->window.canvas()->toolState().highlighterWidth = HIGHLIGHTER_SIZES[static_cast<std::size_t>(sizeIndex)];
+    for (int i = 0; i < 5; ++i) {
+        this->window.commandHost()->setCommandChecked(HIGHLIGHTER_SIZE_IDS[static_cast<std::size_t>(i)], i == sizeIndex);
+    }
+    this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
+}
+
+// ---------------------------------------------------------------------------
+// View & UI toggles
+// ---------------------------------------------------------------------------
+
+void QtAppShell::togglePairedPages() {
+    // TODO: implement paired pages layout
+    this->window.statusBar()->showMessage(QStringLiteral("Paired pages not yet implemented"), 3000);
+}
+
+void QtAppShell::toggleToolbarVisibility() {
+    auto* toolbar = this->window.mainToolBar();
+    const bool visible = !toolbar->isVisible();
+    toolbar->setVisible(visible);
+    this->window.commandHost()->setCommandChecked("view.show-toolbar", visible);
+}
+
+void QtAppShell::toggleMenubarVisibility() {
+    auto* menubar = this->window.menuBar();
+    const bool visible = !menubar->isVisible();
+    menubar->setVisible(visible);
+    this->window.commandHost()->setCommandChecked("view.show-menubar", visible);
+}
+
+void QtAppShell::toggleSidebarVisibility() {
+    auto* sidebar = this->window.pageSidebar();
+    auto* layers = this->window.layerPanel();
+    const bool visible = !sidebar->isVisible();
+    sidebar->setVisible(visible);
+    layers->setVisible(visible);
+    this->window.commandHost()->setCommandChecked("view.show-sidebar", visible);
+}
+
+void QtAppShell::setLayoutVertical(bool vertical) {
+    // TODO: implement layout direction switching in canvas
+    this->window.commandHost()->setCommandChecked("view.layout-horizontal", !vertical);
+    this->window.commandHost()->setCommandChecked("view.layout-vertical", vertical);
+    this->window.statusBar()->showMessage(
+            vertical ? QStringLiteral("Vertical layout") : QStringLiteral("Horizontal layout"), 3000);
+}
+
+void QtAppShell::setLayoutRtl(bool rtl) {
+    this->window.commandHost()->setCommandChecked("view.layout-ltr", !rtl);
+    this->window.commandHost()->setCommandChecked("view.layout-rtl", rtl);
+    this->window.statusBar()->showMessage(
+            rtl ? QStringLiteral("Right to left") : QStringLiteral("Left to right"), 3000);
+}
+
+void QtAppShell::setLayoutBtt(bool btt) {
+    this->window.commandHost()->setCommandChecked("view.layout-ttb", !btt);
+    this->window.commandHost()->setCommandChecked("view.layout-btt", btt);
+    this->window.statusBar()->showMessage(
+            btt ? QStringLiteral("Bottom to top") : QStringLiteral("Top to bottom"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Journal extras
+// ---------------------------------------------------------------------------
+
+void QtAppShell::addPageAtEnd() {
+    if (!this->documentController.hasDocument()) return;
+    const auto pageCount = this->documentController.pageCount();
+    this->documentController.addPageAfter(pageCount > 0 ? pageCount - 1 : 0);
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page added at end"), 3000);
+}
+
+void QtAppShell::deleteLayer() {
+    if (!this->documentController.hasDocument()) return;
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    const auto layerCount = this->documentController.layerCount(pageIndex);
+    if (layerCount <= 1) {
+        this->window.statusBar()->showMessage(QStringLiteral("Cannot delete the only layer"), 3000);
+        return;
+    }
+    const auto layerIndex = this->documentController.selectedLayerIndex(pageIndex);
+    this->documentController.removeLayer(pageIndex, layerIndex);
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Layer deleted"), 3000);
+}
+
+void QtAppShell::paperFormatDialog() {
+    // TODO: implement full paper format dialog (page size, orientation)
+    this->window.statusBar()->showMessage(QStringLiteral("Paper format dialog not yet implemented"), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// Edit extras
+// ---------------------------------------------------------------------------
+
+void QtAppShell::moveSelectionLayerUp() {
+    // TODO: implement move-selection-layer-up via document controller
+    this->window.statusBar()->showMessage(QStringLiteral("Move selection layer up not yet implemented"), 3000);
+}
+
+void QtAppShell::moveSelectionLayerDown() {
+    // TODO: implement move-selection-layer-down via document controller
+    this->window.statusBar()->showMessage(QStringLiteral("Move selection layer down not yet implemented"), 3000);
 }

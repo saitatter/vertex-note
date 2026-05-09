@@ -17,15 +17,25 @@ enum class QtToolType {
     Highlighter,
     Text,
     SelectRect,
+    SelectRegion,
+    SelectMultiLayerRect,
+    SelectMultiLayerRegion,
+    SelectObject,
+    VerticalSpace,
     DrawLine,
     DrawRectangle,
     DrawCircle,
+    DrawEllipse,
+    DrawArrow,
+    DrawDoubleArrow,
+    DrawCoordinateSystem,
+    DrawSpline,
     DrawArc,
     DrawPolyline,
     DrawConstructionLine,
     DrawConstructionCircle,
 };
-enum class QtEraserMode { WholeStroke, Segment };
+enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 
 struct QtToolState {
     QtToolType activeTool = QtToolType::Hand;
@@ -35,10 +45,11 @@ struct QtToolState {
     double highlighterWidth = 8.50;
     double eraserWidth = 8.50;
     bool pressureSensitive = true;
-    QtEraserMode eraserMode = QtEraserMode::WholeStroke;
+    QtEraserMode eraserMode = QtEraserMode::Standard;
     std::string penLineStyle = "plain";
     bool fillEnabled = false;
     int fillOpacity = 128;
+    bool highlighterFillEnabled = false;
     std::string fontName = "Sans";
     double fontSize = 12.0;
 
@@ -49,10 +60,20 @@ struct QtToolState {
             case QtToolType::Eraser: return "Eraser";
             case QtToolType::Highlighter: return "Highlighter";
             case QtToolType::Text: return "Text";
-            case QtToolType::SelectRect: return "Select";
+            case QtToolType::SelectRect: return "Select Rectangle";
+            case QtToolType::SelectRegion: return "Select Region";
+            case QtToolType::SelectMultiLayerRect: return "Select Multi-Layer Rect";
+            case QtToolType::SelectMultiLayerRegion: return "Select Multi-Layer Region";
+            case QtToolType::SelectObject: return "Select Object";
+            case QtToolType::VerticalSpace: return "Vertical Space";
             case QtToolType::DrawLine: return "Line";
             case QtToolType::DrawRectangle: return "Rectangle";
             case QtToolType::DrawCircle: return "Circle";
+            case QtToolType::DrawEllipse: return "Ellipse";
+            case QtToolType::DrawArrow: return "Arrow";
+            case QtToolType::DrawDoubleArrow: return "Double Arrow";
+            case QtToolType::DrawCoordinateSystem: return "Coordinate System";
+            case QtToolType::DrawSpline: return "Spline";
             case QtToolType::DrawArc: return "Arc";
             case QtToolType::DrawPolyline: return "Polyline";
             case QtToolType::DrawConstructionLine: return "Construction Line";
@@ -66,6 +87,11 @@ struct QtToolState {
             case QtToolType::DrawLine:
             case QtToolType::DrawRectangle:
             case QtToolType::DrawCircle:
+            case QtToolType::DrawEllipse:
+            case QtToolType::DrawArrow:
+            case QtToolType::DrawDoubleArrow:
+            case QtToolType::DrawCoordinateSystem:
+            case QtToolType::DrawSpline:
             case QtToolType::DrawArc:
             case QtToolType::DrawPolyline:
             case QtToolType::DrawConstructionLine:

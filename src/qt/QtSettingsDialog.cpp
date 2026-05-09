@@ -54,7 +54,7 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, QWidget* parent): 
     toolsLayout->addRow(QStringLiteral("Pressure sensitive by default:"), this->pressureCheck);
 
     this->eraserModeCombo = new QComboBox(toolsPage);
-    this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::WholeStroke));
+    this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::Standard));
     this->eraserModeCombo->addItem(QStringLiteral("Segment"), static_cast<int>(QtEraserMode::Segment));
     this->eraserModeCombo->setCurrentIndex(current.defaultEraserMode == QtEraserMode::Segment ? 1 : 0);
     toolsLayout->addRow(QStringLiteral("Default eraser mode:"), this->eraserModeCombo);
@@ -123,7 +123,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .defaultEraserWidth = this->eraserWidthSpin->value(),
             .defaultPressureSensitive = this->pressureCheck->isChecked(),
             .defaultEraserMode = this->eraserModeCombo->currentIndex() == 1 ? QtEraserMode::Segment
-                                                                            : QtEraserMode::WholeStroke,
+                                                                            : QtEraserMode::Standard,
             .defaultPageWidth = this->pageWidthSpin->value(),
             .defaultPageHeight = this->pageHeightSpin->value(),
             .undoHistoryLimit = this->undoLimitSpin->value(),

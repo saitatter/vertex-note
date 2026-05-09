@@ -70,10 +70,26 @@ void QtCommandHost::removeCommand(std::string_view id) {
 
 auto QtCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
 
-auto QtCommandHost::ensureMenu(std::string_view title) -> QMenu* {
-    const std::string key(title);
+void QtCommandHost::addMenuSeparator(std::string_view menuPath) {
+    auto* menu = ensureMenu(menuPath);
+    menu->addSeparator();
+}
+
+auto QtCommandHost::ensureMenu(std::string_view menuPath) -> QMenu* {
+    const std::string key(menuPath);
     if (auto it = this->menus.find(key); it != this->menus.end()) {
         return it->second;
+    }
+
+    // Check for submenu separator '>'
+    const auto sep = key.find('>');
+    if (sep != std::string::npos) {
+        auto* parent = ensureMenu(key.substr(0, sep));
+        auto* sub = parent->addMenu(
+                QString::fromUtf8(key.data() + static_cast<std::ptrdiff_t>(sep) + 1,
+                                  static_cast<int>(key.size() - sep - 1)));
+        this->menus.emplace(key, sub);
+        return sub;
     }
 
     auto* menu = this->window->menuBar()->addMenu(QString::fromUtf8(key.data(), static_cast<int>(key.size())));

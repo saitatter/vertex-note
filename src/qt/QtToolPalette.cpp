@@ -51,7 +51,7 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     this->segmentCheck->setToolTip(QStringLiteral("Segment eraser — split strokes instead of deleting whole strokes"));
     this->segmentCheck->setVisible(false);
     connect(this->segmentCheck, &QCheckBox::toggled, this, [this](bool checked) {
-        Q_EMIT eraserModeChanged(checked ? QtEraserMode::Segment : QtEraserMode::WholeStroke);
+        Q_EMIT eraserModeChanged(checked ? QtEraserMode::Segment : QtEraserMode::Standard);
     });
     layout->addWidget(this->segmentCheck);
 

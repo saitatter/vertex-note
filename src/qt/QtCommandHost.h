@@ -27,9 +27,10 @@ public:
     void triggerCommand(std::string_view id) override;
     void removeCommand(std::string_view id);
     [[nodiscard]] auto actionForCommand(std::string_view id) const -> QAction*;
+    void addMenuSeparator(std::string_view menuPath);
 
 private:
-    [[nodiscard]] auto ensureMenu(std::string_view title) -> QMenu*;
+    [[nodiscard]] auto ensureMenu(std::string_view menuPath) -> QMenu*;
     [[nodiscard]] auto actionFor(std::string_view id) const -> QAction*;
 
 private:

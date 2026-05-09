@@ -20,7 +20,7 @@ struct QtSettings {
     double defaultHighlighterWidth = 8.50;
     double defaultEraserWidth = 8.50;
     bool defaultPressureSensitive = true;
-    QtEraserMode defaultEraserMode = QtEraserMode::WholeStroke;
+    QtEraserMode defaultEraserMode = QtEraserMode::Standard;
     double defaultPageWidth = 595.0;
     double defaultPageHeight = 842.0;
     int undoHistoryLimit = 50;

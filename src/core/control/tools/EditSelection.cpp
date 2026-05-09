@@ -33,6 +33,7 @@
 #include "model/Point.h"                          // for Point
 #include "model/NotePage.h"                        // for NotePage
 #include "undo/ArrangeUndoAction.h"               // for ArrangeUndoAction
+#include "undo/DeleteUndoAction.h"                // for DeleteUndoAction
 #include "undo/GeometryTopologyUndoAction.h"
 #include "undo/GeometryVertexMoveUndoAction.h"
 #include "undo/InsertUndoAction.h"                // for InsertsUndoAction
@@ -1195,10 +1196,19 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
         return false;
     }
 
-    this->activeGeometryElement->replaceGeometry(after);
-    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
-            this->sourcePage, this->activeGeometryElement, before, after,
-            this->activeGeometryVertices.size() > 1U ? _("Delete geometry vertices") : _("Delete geometry vertex")));
+    if (after.vertices().empty() && after.edges().empty()) {
+        // Geometry became empty — remove the element from the layer entirely
+        auto pos = this->sourceLayer->removeElement(this->activeGeometryElement);
+        auto deleteAction = std::make_unique<DeleteUndoAction>(this->sourcePage, false);
+        deleteAction->addElement(this->sourceLayer, std::move(pos.e), pos.pos);
+        this->undo->addUndoAction(std::move(deleteAction));
+    } else {
+        this->activeGeometryElement->replaceGeometry(after);
+        this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+                this->sourcePage, this->activeGeometryElement, before, after,
+                this->activeGeometryVertices.size() > 1U ? _("Delete geometry vertices")
+                                                         : _("Delete geometry vertex")));
+    }
     clearGeometryVertexSelection();
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
@@ -1225,10 +1235,18 @@ auto EditSelection::deleteActiveGeometryEdge() -> bool {
         return false;
     }
 
-    this->activeGeometryElement->replaceGeometry(after);
-    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
-            this->sourcePage, this->activeGeometryElement, before, after,
-            this->activeGeometryEdges.size() > 1U ? _("Delete geometry edges") : _("Delete geometry edge")));
+    if (after.vertices().empty() && after.edges().empty()) {
+        // Geometry became empty — remove the element from the layer entirely
+        auto pos = this->sourceLayer->removeElement(this->activeGeometryElement);
+        auto deleteAction = std::make_unique<DeleteUndoAction>(this->sourcePage, false);
+        deleteAction->addElement(this->sourceLayer, std::move(pos.e), pos.pos);
+        this->undo->addUndoAction(std::move(deleteAction));
+    } else {
+        this->activeGeometryElement->replaceGeometry(after);
+        this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+                this->sourcePage, this->activeGeometryElement, before, after,
+                this->activeGeometryEdges.size() > 1U ? _("Delete geometry edges") : _("Delete geometry edge")));
+    }
     clearGeometryVertexSelection();
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
@@ -1853,7 +1871,7 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
     cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
     const auto& geometry = highlightedElement->geometry();
 
-    auto drawEdge = [&](const vn::geom::Edge& edge, double alpha, double widthScale) {
+    auto drawEdge = [&](const vn::geom::Edge& edge, double alpha, double lineWidth) {
         const auto* start = geometry.vertex(edge.start);
         const auto* end = geometry.vertex(edge.end);
         if (!start || !end) {
@@ -1867,7 +1885,7 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
 
         GdkRGBA color = selectionColor;
         color.alpha *= alpha;
-        cairo_set_line_width(cr, std::max(2.0, static_cast<double>(this->btnWidth) * widthScale));
+        cairo_set_line_width(cr, lineWidth);
         if (edge.kind == vn::geom::EdgeKind::ConstructionLine ||
             edge.kind == vn::geom::EdgeKind::ConstructionCircle) {
             constexpr std::array<double, 2> dash{6.0, 4.0};
@@ -1949,7 +1967,7 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
                 highlightedElement == this->hoveredGeometryElement && edge.id == this->hoveredGeometryEdge;
         const bool edgeSelected = isGeometryEdgeSelected(highlightedElement, edge.id);
         drawEdge(edge, edgeHovered ? 1.0 : edgeSelected ? 0.85 : 0.45,
-                 edgeHovered ? 0.5 : edgeSelected ? 0.4 : 0.28);
+                 edgeHovered ? 4.0 : edgeSelected ? 3.0 : 2.0);
     }
     cairo_restore(cr);
 }
@@ -2169,19 +2187,33 @@ bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
                 }
 
                 const bool fullCircle = edge.start == edge.end;
-                const double queryAngle = std::atan2(queryY - centerY, queryX - centerX);
+                bool withinSweep = true;
                 if (!fullCircle) {
+                    const double queryAngle = std::atan2(queryY - centerY, queryX - centerX);
                     const double startAngle = std::atan2(startY - centerY, startX - centerX);
                     const double endAngle = std::atan2(endY - centerY, endX - centerX);
-                    if (!SelectionFactory::angleWithinSweep(queryAngle, startAngle, endAngle)) {
-                        continue;
-                    }
+                    withinSweep = SelectionFactory::angleWithinSweep(queryAngle, startAngle, endAngle);
                 }
 
-                distance = std::abs(queryRadius - radius) * zoom;
-                const double scale = radius / queryRadius;
-                projectedX = centerX + (queryX - centerX) * scale;
-                projectedY = centerY + (queryY - centerY) * scale;
+                if (withinSweep) {
+                    distance = std::abs(queryRadius - radius) * zoom;
+                    const double scale = radius / queryRadius;
+                    projectedX = centerX + (queryX - centerX) * scale;
+                    projectedY = centerY + (queryY - centerY) * scale;
+                } else {
+                    // Outside angular sweep — fall back to distance to arc endpoints
+                    const double dStart = std::hypot(queryX - startX, queryY - startY) * zoom;
+                    const double dEnd = std::hypot(queryX - endX, queryY - endY) * zoom;
+                    if (dStart <= dEnd) {
+                        distance = dStart;
+                        projectedX = startX;
+                        projectedY = startY;
+                    } else {
+                        distance = dEnd;
+                        projectedX = endX;
+                        projectedY = endY;
+                    }
+                }
             } else {
                 continue;
             }
