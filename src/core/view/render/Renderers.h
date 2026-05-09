@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "model/Point.h"
@@ -38,6 +39,7 @@ struct PageBackgroundRenderModel {
     std::string backgroundName;
     std::size_t layerCount = 0;
     std::size_t pdfPageNumber = 0;
+    std::string rasterContentPng;
 };
 
 struct StrokeRenderModel {
@@ -61,6 +63,16 @@ struct TextRenderModel {
     bool inEditing = false;
 };
 
+struct ImageRenderModel {
+    std::string encodedBytes;
+    double x = 0.0;
+    double y = 0.0;
+    double width = 0.0;
+    double height = 0.0;
+};
+
+using PageDrawableRenderModel = std::variant<StrokeRenderModel, TextRenderModel, ImageRenderModel>;
+
 class StrokeRenderer {
 public:
     virtual ~StrokeRenderer() = default;
@@ -76,7 +88,7 @@ public:
 class ImageRenderer {
 public:
     virtual ~ImageRenderer() = default;
-    virtual void draw(const Image& image, RenderContext& context) const = 0;
+    virtual void draw(const ImageRenderModel& image, RenderContext& context) const = 0;
 };
 
 class BackgroundRenderer {

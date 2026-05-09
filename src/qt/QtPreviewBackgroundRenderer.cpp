@@ -8,7 +8,9 @@
 
 #include <algorithm>
 
+#include <QByteArray>
 #include <QColor>
+#include <QImage>
 #include <QPainter>
 #include <QPen>
 #include <QPointF>
@@ -47,6 +49,13 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
     const double zoom = std::max(context.scaleFactor(), 0.001);
     const QColor ruling(134, 177, 255);
     const QColor margin(255, 79, 129);
+
+    if (!page.rasterContentPng.empty()) {
+        QImage raster;
+        if (raster.loadFromData(QByteArray(page.rasterContentPng.data(), static_cast<qsizetype>(page.rasterContentPng.size())))) {
+            painter->drawImage(pageRect, raster);
+        }
+    }
 
     switch (page.backgroundFormat) {
         case PageTypeFormat::Graph:

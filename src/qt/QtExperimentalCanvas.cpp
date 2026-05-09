@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <type_traits>
 
 #include <QCursor>
 #include <QEvent>
@@ -24,6 +25,7 @@
 #include <QWheelEvent>
 
 #include "QtPreviewBackgroundRenderer.h"
+#include "QtPreviewImageRenderer.h"
 #include "QtPreviewStrokeRenderer.h"
 #include "QtPreviewTextRenderer.h"
 #include "view/render/QtPainterRenderContext.h"
@@ -74,6 +76,7 @@ QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
     setPalette(palette);
     this->inputAdapter = std::make_unique<QtInputAdapter>(this);
     this->backgroundRenderer = std::make_unique<vn::view::render::QtPreviewBackgroundRenderer>();
+    this->imageRenderer = std::make_unique<vn::view::render::QtPreviewImageRenderer>();
     this->strokeRenderer = std::make_unique<vn::view::render::QtPreviewStrokeRenderer>();
     this->textRenderer = std::make_unique<vn::view::render::QtPreviewTextRenderer>();
     newBlankDocument();
@@ -377,15 +380,25 @@ void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rec
                 .height = rect.height(),
         };
         this->backgroundRenderer->draw(pageInfo.background, renderRect, renderContext);
-        if (this->strokeRenderer) {
-            for (const auto& stroke: pageInfo.strokes) {
-                this->strokeRenderer->draw(stroke, renderContext);
-            }
-        }
-        if (this->textRenderer) {
-            for (const auto& text: pageInfo.texts) {
-                this->textRenderer->draw(text, renderContext);
-            }
+        for (const auto& drawable: pageInfo.drawables) {
+            std::visit(
+                    [this, &renderContext](const auto& model) {
+                        using Model = std::decay_t<decltype(model)>;
+                        if constexpr (std::is_same_v<Model, vn::view::render::StrokeRenderModel>) {
+                            if (this->strokeRenderer) {
+                                this->strokeRenderer->draw(model, renderContext);
+                            }
+                        } else if constexpr (std::is_same_v<Model, vn::view::render::TextRenderModel>) {
+                            if (this->textRenderer) {
+                                this->textRenderer->draw(model, renderContext);
+                            }
+                        } else if constexpr (std::is_same_v<Model, vn::view::render::ImageRenderModel>) {
+                            if (this->imageRenderer) {
+                                this->imageRenderer->draw(model, renderContext);
+                            }
+                        }
+                    },
+                    drawable);
         }
     }
 

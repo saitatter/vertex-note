@@ -20,8 +20,7 @@ struct QtExperimentalPageInfo {
     double width = 0.0;
     double height = 0.0;
     vn::view::render::PageBackgroundRenderModel background;
-    std::vector<vn::view::render::StrokeRenderModel> strokes;
-    std::vector<vn::view::render::TextRenderModel> texts;
+    std::vector<vn::view::render::PageDrawableRenderModel> drawables;
 };
 
 class QtExperimentalDocumentController {
