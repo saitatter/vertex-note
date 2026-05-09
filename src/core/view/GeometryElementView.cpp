@@ -19,6 +19,31 @@ using namespace vn::view;
 
 namespace {
 constexpr std::array<double, 2> ConstructionDash{8.0, 6.0};
+
+auto drawExtendedLine(cairo_t* cr, vn::geom::Vec2 start, vn::geom::Vec2 end) -> void {
+    double clipMinX = 0.0;
+    double clipMinY = 0.0;
+    double clipMaxX = 0.0;
+    double clipMaxY = 0.0;
+    cairo_clip_extents(cr, &clipMinX, &clipMinY, &clipMaxX, &clipMaxY);
+
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    const double length = std::hypot(dx, dy);
+    if (length == 0.0) {
+        cairo_move_to(cr, start.x, start.y);
+        cairo_line_to(cr, end.x, end.y);
+        cairo_stroke(cr);
+        return;
+    }
+
+    const double extent = std::hypot(clipMaxX - clipMinX, clipMaxY - clipMinY) + length;
+    const double unitX = dx / length;
+    const double unitY = dy / length;
+    cairo_move_to(cr, start.x - unitX * extent, start.y - unitY * extent);
+    cairo_line_to(cr, start.x + unitX * extent, start.y + unitY * extent);
+    cairo_stroke(cr);
+}
 }
 
 GeometryElementView::GeometryElementView(const vn::geom::GeometryElement* geometry): geometry(geometry) {}
@@ -71,8 +96,12 @@ void GeometryElementView::draw(const Context& ctx) const {
             }
         }
 
-        cairo_move_to(ctx.cr, start->position.x, start->position.y);
-        cairo_line_to(ctx.cr, end->position.x, end->position.y);
-        cairo_stroke(ctx.cr);
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            drawExtendedLine(ctx.cr, start->position, end->position);
+        } else {
+            cairo_move_to(ctx.cr, start->position.x, start->position.y);
+            cairo_line_to(ctx.cr, end->position.x, end->position.y);
+            cairo_stroke(ctx.cr);
+        }
     }
 }

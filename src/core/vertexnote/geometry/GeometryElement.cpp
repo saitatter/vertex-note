@@ -43,6 +43,43 @@ auto distanceToSegment(Vec2 point, Vec2 start, Vec2 end) -> double {
     return std::hypot(point.x - projection.x, point.y - projection.y);
 }
 
+auto distanceToInfiniteLine(Vec2 point, Vec2 start, Vec2 end) -> double {
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    const double length = std::hypot(dx, dy);
+    if (length == 0.0) {
+        return std::hypot(point.x - start.x, point.y - start.y);
+    }
+
+    return std::abs((point.x - start.x) * dy - (point.y - start.y) * dx) / length;
+}
+
+auto expandedLineIntersectsRect(Vec2 start, Vec2 end, double x, double y, double width, double height, double padding)
+        -> bool {
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    if (dx == 0.0 && dy == 0.0) {
+        return start.x >= x - padding && start.x <= x + width + padding && start.y >= y - padding &&
+               start.y <= y + height + padding;
+    }
+
+    const double minX = x - padding;
+    const double minY = y - padding;
+    const double maxX = x + width + padding;
+    const double maxY = y + height + padding;
+
+    const std::array<Vec2, 4> corners = {{{minX, minY}, {maxX, minY}, {maxX, maxY}, {minX, maxY}}};
+    double minSide = std::numeric_limits<double>::infinity();
+    double maxSide = -std::numeric_limits<double>::infinity();
+    for (const auto& corner: corners) {
+        const double side = (corner.x - start.x) * dy - (corner.y - start.y) * dx;
+        minSide = std::min(minSide, side);
+        maxSide = std::max(maxSide, side);
+    }
+
+    return minSide <= 0.0 && maxSide >= 0.0;
+}
+
 }  // namespace
 
 GeometryElement::GeometryElement(): Element(ELEMENT_GEOMETRY) {}
@@ -118,16 +155,63 @@ void GeometryElement::rotate(double x0, double y0, double th) {
     this->sizeCalculated = false;
 }
 
-auto GeometryElement::distanceTo(double x, double y) const -> double {
-    const auto polyline = this->object.toPolyline();
-    if (polyline.size() < 2U) {
-        return Element::distanceTo(x, y);
+auto GeometryElement::intersectsArea(double x, double y, double width, double height) const -> bool {
+    if (Element::intersectsArea(x, y, width, height)) {
+        return true;
     }
 
+    const double padding = std::max(0.5 * this->strokeWidth, 0.001);
+    for (const auto& edge: this->object.edges()) {
+        if (edge.kind != EdgeKind::ConstructionLine) {
+            continue;
+        }
+
+        const auto* start = this->object.vertex(edge.start);
+        const auto* end = this->object.vertex(edge.end);
+        if (!start || !end) {
+            continue;
+        }
+
+        if (expandedLineIntersectsRect(start->position, end->position, x, y, width, height, padding)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+auto GeometryElement::intersectsArea(const GdkRectangle* src) const -> bool {
+    return intersectsArea(src->x, src->y, src->width, src->height);
+}
+
+auto GeometryElement::distanceTo(double x, double y) const -> double {
+    const auto polyline = this->object.toPolyline();
     double distance = std::numeric_limits<double>::max();
+
+    if (polyline.size() >= 2U) {
+        const Vec2 point{x, y};
+        for (auto it = std::next(polyline.begin()); it != polyline.end(); ++it) {
+            distance = std::min(distance, distanceToSegment(point, *std::prev(it), *it));
+        }
+    }
+
     const Vec2 point{x, y};
-    for (auto it = std::next(polyline.begin()); it != polyline.end(); ++it) {
-        distance = std::min(distance, distanceToSegment(point, *std::prev(it), *it));
+    for (const auto& edge: this->object.edges()) {
+        if (edge.kind != EdgeKind::ConstructionLine) {
+            continue;
+        }
+
+        const auto* start = this->object.vertex(edge.start);
+        const auto* end = this->object.vertex(edge.end);
+        if (!start || !end) {
+            continue;
+        }
+
+        distance = std::min(distance, distanceToInfiniteLine(point, start->position, end->position));
+    }
+
+    if (distance == std::numeric_limits<double>::max()) {
+        return Element::distanceTo(x, y);
     }
 
     return std::max(0.0, distance - 0.5 * this->strokeWidth);

@@ -7,6 +7,7 @@
 #include "ConstructionLineByClicksView.h"
 
 #include <array>
+#include <cmath>
 
 #include <cairo.h>
 
@@ -20,6 +21,31 @@ using namespace vn::view;
 
 namespace {
 constexpr std::array<double, 2> ConstructionDash{8.0, 6.0};
+
+auto drawExtendedPreviewLine(cairo_t* cr, Point start, Point end) -> void {
+    double clipMinX = 0.0;
+    double clipMinY = 0.0;
+    double clipMaxX = 0.0;
+    double clipMaxY = 0.0;
+    cairo_clip_extents(cr, &clipMinX, &clipMinY, &clipMaxX, &clipMaxY);
+
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    const double length = std::hypot(dx, dy);
+    if (length == 0.0) {
+        cairo_move_to(cr, start.x, start.y);
+        cairo_line_to(cr, end.x, end.y);
+        cairo_stroke(cr);
+        return;
+    }
+
+    const double extent = std::hypot(clipMaxX - clipMinX, clipMaxY - clipMinY) + length;
+    const double unitX = dx / length;
+    const double unitY = dy / length;
+    cairo_move_to(cr, start.x - unitX * extent, start.y - unitY * extent);
+    cairo_line_to(cr, start.x + unitX * extent, start.y + unitY * extent);
+    cairo_stroke(cr);
+}
 }
 
 ConstructionLineByClicksView::ConstructionLineByClicksView(const ConstructionLineByClicksHandler* handler,
@@ -44,9 +70,7 @@ void ConstructionLineByClicksView::draw(cairo_t* cr) const {
     cairo_set_line_width(cr, this->handler->getStrokeWidth());
     cairo_set_dash(cr, ConstructionDash.data(), static_cast<int>(ConstructionDash.size()), 0.0);
     Util::cairo_set_source_rgbi(cr, this->handler->getStrokeColor());
-    cairo_move_to(cr, start.x, start.y);
-    cairo_line_to(cr, current.x, current.y);
-    cairo_stroke(cr);
+    drawExtendedPreviewLine(cr, start, current);
     drawSnapIndicator(cr, current, this->handler->getCurrentSnapKind());
 }
 

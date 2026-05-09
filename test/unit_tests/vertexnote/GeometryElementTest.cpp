@@ -50,6 +50,18 @@ auto makeCircleElement() -> GeometryElement {
     return element;
 }
 
+auto makeConstructionLineElement() -> GeometryElement {
+    GeometryObject object(44);
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+    auto b = object.addVertex(Vec2{5.0, 2.0});
+    object.addEdge(vn::geom::EdgeKind::ConstructionLine, a, b);
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
 }  // namespace
 
 TEST(VertexNoteGeometryElement, exposesGeometryElementType) {
@@ -81,6 +93,20 @@ TEST(VertexNoteGeometryElement, computesBoundsForFullCircleArc) {
     EXPECT_DOUBLE_EQ(element.getY(), 5.0);
     EXPECT_DOUBLE_EQ(element.getElementWidth(), 10.0);
     EXPECT_DOUBLE_EQ(element.getElementHeight(), 10.0);
+}
+
+TEST(VertexNoteGeometryElement, computesDistanceToInfiniteConstructionLine) {
+    GeometryElement element = makeConstructionLineElement();
+
+    EXPECT_DOUBLE_EQ(element.distanceTo(20.0, 2.0), 0.0);
+    EXPECT_DOUBLE_EQ(element.distanceTo(20.0, 5.0), 2.0);
+}
+
+TEST(VertexNoteGeometryElement, intersectsAreaAlongInfiniteConstructionLine) {
+    GeometryElement element = makeConstructionLineElement();
+
+    EXPECT_TRUE(element.intersectsArea(19.0, 1.0, 2.0, 2.0));
+    EXPECT_FALSE(element.intersectsArea(19.0, 6.0, 2.0, 2.0));
 }
 
 TEST(VertexNoteGeometryElement, movesGeometryAndCachedBounds) {
