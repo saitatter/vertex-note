@@ -222,6 +222,14 @@ else ()
     message(STATUS "Disable GtkSourceView TeX syntax highlighting")
 endif ()
 
+option(ENABLE_QT_EXPERIMENTAL "Build the experimental Qt Widgets shell bootstrap" OFF)
+if (ENABLE_QT_EXPERIMENTAL)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    message(STATUS "Enable experimental Qt Widgets shell bootstrap")
+else ()
+    message(STATUS "Disable experimental Qt Widgets shell bootstrap")
+endif ()
+
 option(ENABLE_FLOAT_FROM_CHARS "Use floating point std::from_chars for parsing doubles" ON)
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles([[

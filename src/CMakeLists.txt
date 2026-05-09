@@ -174,4 +174,8 @@ install(TARGETS vertexnote
         COMPONENT vertex-note
         )
 
+if (ENABLE_QT_EXPERIMENTAL)
+  add_subdirectory(qt)
+endif ()
+
 add_subdirectory(xoj-preview-extractor)
