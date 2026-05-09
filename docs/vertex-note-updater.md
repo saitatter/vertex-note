@@ -54,11 +54,15 @@ latest VertexNote release and a concise changelog inside the application.
 
 ## Network Strategy
 
-Preferred first path: GLib/GIO async network APIs, because they are already available
-through GTK dependencies and do not require introducing a new dependency.
+Current path:
 
-Fallback path: if GIO HTTP support is not reliable on all targets, add a small optional
-dependency (`libsoup` or `curl`) in a separate commit with packaging updates.
+- Windows uses WinHTTP for the release fetch, so packaged builds do not depend on
+  external GIO TLS modules being present at runtime.
+- Linux and macOS keep the lightweight GIO/TLS fetch path already available through
+  GTK dependencies.
+
+Fallback path: if the non-Windows GIO HTTP path is not reliable on all targets, add a
+small optional dependency (`libsoup`) in a separate commit with packaging updates.
 
 Rules:
 

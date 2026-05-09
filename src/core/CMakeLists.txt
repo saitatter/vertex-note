@@ -14,6 +14,7 @@ target_compile_features(vertexnote-core PUBLIC ${PROJECT_CXX_FEATURES})
 target_compile_features(vertexnote-core PUBLIC cxx_std_20)
 target_link_libraries(vertexnote-core
         PRIVATE vertexnote::util
+                $<$<PLATFORM_ID:Windows>:winhttp>
         PUBLIC vertexnote::defaults vertexnote::external_modules
         )
 target_include_directories(vertexnote-core PUBLIC ${vertexnote_include_dirs})
