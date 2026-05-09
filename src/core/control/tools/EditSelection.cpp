@@ -2037,13 +2037,10 @@ void EditSelection::drawGeometrySnapIndicator(cairo_t* cr, double zoom, const ca
         return;
     }
 
-    double indicatorX = this->activeGeometrySnapPoint.x * zoom;
-    double indicatorY = this->activeGeometrySnapPoint.y * zoom;
-    cairo_matrix_transform_point(&this->cmatrix, &indicatorX, &indicatorY);
-
     cairo_save(cr);
     cairo_set_matrix(cr, &baseMatrix);
-    vn::view::drawSnapIndicator(cr, Point(indicatorX, indicatorY), this->activeGeometrySnapKind);
+    vn::view::drawSnapIndicator(cr, Point(this->activeGeometrySnapPoint.x * zoom, this->activeGeometrySnapPoint.y * zoom),
+                                this->activeGeometrySnapKind);
     cairo_restore(cr);
 }
 

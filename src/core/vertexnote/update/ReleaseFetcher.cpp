@@ -1,5 +1,6 @@
 #include "ReleaseFetcher.h"
 
+#include <array>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -17,7 +18,6 @@
 #else
 #include <gio/gio.h>
 
-#include <array>
 #include <charconv>
 #include <cctype>
 #include <optional>
@@ -160,13 +160,13 @@ auto fetchWithWinHttp() -> std::string {
             break;
         }
 
-        std::string chunk(static_cast<std::size_t>(availableBytes), '\0');
+        std::array<char, 8192> buffer{};
         DWORD bytesRead = 0;
-        if (!WinHttpReadData(request.get(), chunk.data(), availableBytes, &bytesRead)) {
+        const auto bytesToRead = std::min<DWORD>(availableBytes, static_cast<DWORD>(buffer.size()));
+        if (!WinHttpReadData(request.get(), buffer.data(), bytesToRead, &bytesRead)) {
             throw std::runtime_error(formatWinHttpError(GetLastError()));
         }
-        chunk.resize(bytesRead);
-        response += chunk;
+        response.append(buffer.data(), static_cast<std::size_t>(bytesRead));
     }
 
     return response;
