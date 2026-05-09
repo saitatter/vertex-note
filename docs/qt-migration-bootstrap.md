@@ -50,6 +50,24 @@ This document tracks the executable slices of the Qt migration.
   - Drag vertices with grid and geometry snapping.
   - Insert vertex on edge, delete selected geometry.
   - Local undo/redo history for geometry edits.
+- **Tool system** (`QtToolState`):
+  - Tool types: Hand, Pen, Eraser, Highlighter, Text, SelectRect.
+  - Tool commands with keyboard shortcuts (H, P, E, G) and toolbar buttons.
+  - Per-tool state: color, width, pressure sensitivity.
+- **Stroke drawing**:
+  - Pressure-sensitive input from mouse and tablet (Wacom) devices.
+  - Pen and Highlighter tools create `Stroke` elements on the active layer.
+  - Active stroke rendered live during drawing via `QPainterPath`.
+  - Minimum distance filtering between points.
+- **Whole-stroke eraser**:
+  - Eraser tool deletes strokes that intersect the eraser path.
+  - Uses `Stroke::intersects()` for precise hit testing.
+  - All strokes erased in one drag are batched into a single undo entry.
+- **Unified undo/redo**:
+  - Supports geometry edits, stroke creation, and stroke erasure.
+  - Stroke undo removes from layer, redo re-inserts at original position.
+  - Erase undo re-inserts all removed strokes at original z-order.
+  - Erase redo re-removes by saved element pointers.
 
 ## Build
 
@@ -73,47 +91,36 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 ## Intentional Limits
 
 - The shipping GTK application remains the primary shell for now.
-- The Qt target opens real core documents and supports geometry editing,
-  but does not yet host `Control`, drawing tools, or full editing workflow
-  parity.
+- The Qt target opens real core documents and supports drawing and erasing,
+  but does not host the GTK `Control` class (too tightly coupled). Instead,
+  tool management and undo/redo are implemented Qt-natively using the same
+  core model objects (`Stroke`, `Layer`, `Document`).
 - Preview renderers are simplified (no pressure curves, no arc/bezier
   geometry, no grid/ruled/dotted background patterns).
-- Undo/redo is local to geometry edits; the core `UndoRedoHandler` is not
-  wired yet.
+- No segment eraser — only whole-stroke deletion.
 - No layer management, selection system, sidebar, or tool palette in the
   Qt shell.
 
 ## Next Slices
 
-### Phase 1 — Core Control wiring (enable basic editing)
-
-1. Instantiate `Control` in `QtAppShell` and map `ICommandHost` commands
-   to `Control` methods (`selectTool`, `save`, `openFile`, `newFile`, …).
-2. Create a `ToolInputBridge` that routes neutral `IInputEventSink` events
-   to `Control`'s tool handlers (pen, eraser, text, shape, selection).
-3. Wire `UndoRedoHandler` so all edits (not only geometry) flow through
-   the shared undo stack.
-4. Implement basic tool switching through the command host (pen,
-   highlighter, eraser, text, selection).
-
 ### Phase 2 — Production rendering & selection
 
-5. Extend `StrokeRenderer` for pressure-sensitive curves, cap styles, and
+1. Extend `StrokeRenderer` for pressure-sensitive curves, cap styles, and
    dash patterns.
-6. Extend `BackgroundRenderer` for grid/ruled/dotted/graph patterns.
-7. Implement full `TextRenderer` with Pango/Qt layout parity.
-8. Wire the element selection system (`EditSelection`) and overlay
+2. Extend `BackgroundRenderer` for grid/ruled/dotted/graph patterns.
+3. Implement full `TextRenderer` with Pango/Qt layout parity.
+4. Wire the element selection system (`EditSelection`) and overlay
    rendering (selection handles, resize grips).
-9. Route interactive notebook painting through the render contracts so GTK
+5. Route interactive notebook painting through the render contracts so GTK
    and Qt share page rendering logic.
 
 ### Phase 3 — Feature parity & polish
 
-10. Layer panel UI and layer operations.
-11. Page templates, background colour/pattern dialogs.
-12. PDF annotation overlay (pen/text on PDF pages).
-13. Export (PDF, PNG), print.
-14. Sidebar (page thumbnails, search).
-15. Plugin system, fullscreen/presentation modes.
-16. Toolbar with tool palette, colour picker, font selector, floating
+6. Layer panel UI and layer operations.
+7. Page templates, background colour/pattern dialogs.
+8. PDF annotation overlay (pen/text on PDF pages).
+9. Export (PDF, PNG), print.
+10. Sidebar (page thumbnails, search).
+11. Plugin system, fullscreen/presentation modes.
+12. Toolbar with tool palette, colour picker, font selector, floating
     toolbox.
