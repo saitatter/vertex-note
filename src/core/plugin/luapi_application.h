@@ -94,7 +94,7 @@ static std::tuple<std::optional<std::string>,       // Error
         getElementsFromHelper(Control* control, const std::string& type, ElementType elType) {
     std::vector<std::tuple<const Element*, std::optional<size_t>, std::optional<size_t>>> elements = {};
     if (type == "all") {
-        auto sel = control->getWindow()->getXournal()->getSelection();
+        auto sel = control->getWindow()->getNoteView()->getSelection();
         if (sel) {
             control->clearSelection();  // otherwise texts in the selection won't be recognized
         }
@@ -114,7 +114,7 @@ static std::tuple<std::optional<std::string>,       // Error
             }
         }
     } else if (type == "page") {
-        auto sel = control->getWindow()->getXournal()->getSelection();
+        auto sel = control->getWindow()->getNoteView()->getSelection();
         if (sel) {
             control->clearSelection();  // otherwise texts in the selection won't be recognized
         }
@@ -132,7 +132,7 @@ static std::tuple<std::optional<std::string>,       // Error
             layerID++;
         }
     } else if (type == "layer") {
-        auto sel = control->getWindow()->getXournal()->getSelection();
+        auto sel = control->getWindow()->getNoteView()->getSelection();
         if (sel) {
             control->clearSelection();  // otherwise texts in the selection won't be recognized
         }
@@ -143,7 +143,7 @@ static std::tuple<std::optional<std::string>,       // Error
             }
         }
     } else if (type == "selection") {
-        auto sel = control->getWindow()->getXournal()->getSelection();
+        auto sel = control->getWindow()->getNoteView()->getSelection();
         if (sel) {
             auto v = sel->getElementsView();
             for (auto e = v.begin(); e != v.end(); ++e) {
@@ -2415,7 +2415,7 @@ static int applib_getToolInfo(lua_State* L) {
         lua_setfield(L, -2, "color");                                // insert
         // results in {font={name="fontname", size=0}, color=0x0}
     } else if (strcmp(mode, "selection") == 0) {
-        auto sel = control->getWindow()->getXournal()->getSelection();
+        auto sel = control->getWindow()->getNoteView()->getSelection();
         if (!sel) {
             return luaL_error(L, "There is no selection! ");
         }
@@ -3465,8 +3465,8 @@ static int applib_getFolder(lua_State* L) {
 static int applib_clearSelection(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
     Control* control = plugin->getControl();
-    VertexNoteView* xournal = control->getWindow()->getXournal();
-    xournal->clearSelection();
+    VertexNoteView* noteView = control->getWindow()->getNoteView();
+    noteView->clearSelection();
     return 0;
 }
 
@@ -3486,9 +3486,9 @@ static int applib_addToSelection(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
     Control* control = plugin->getControl();
     PageRef page = control->getCurrentPage();
-    VertexNoteView* xournal = control->getWindow()->getXournal();
-    EditSelection* sel = xournal->getSelection();
-    PageView* view = xournal->getViewFor(control->getCurrentPageNo());
+    VertexNoteView* noteView = control->getWindow()->getNoteView();
+    EditSelection* sel = noteView->getSelection();
+    PageView* view = noteView->getViewFor(control->getCurrentPageNo());
 
     std::unordered_set<void*> refs;
     // stack now contains: -1 => table
@@ -3515,7 +3515,7 @@ static int applib_addToSelection(lua_State* L) {
 
     auto newSel = sel ? SelectionFactory::addElementsFromActiveLayer(control, sel, insertionOrder) :
                         SelectionFactory::createFromElementsOnActiveLayer(control, page, view, insertionOrder);
-    xournal->setSelection(newSel.release());
+    noteView->setSelection(newSel.release());
 
     return 0;
 }
@@ -3953,3 +3953,5 @@ inline int luaopen_app(lua_State* L) {
 
     return 1;
 }
+
+

@@ -53,6 +53,7 @@ void PenInputHandler::updateLastEvent(InputEvent const& event) {
 }
 
 void PenInputHandler::handleScrollEvent(InputEvent const& event) {
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
     // use root coordinates as reference point because
     // scrolling changes window relative coordinates
     // see github Gnome/evince@1adce5486b10e763bed869
@@ -68,8 +69,7 @@ void PenInputHandler::handleScrollEvent(InputEvent const& event) {
         this->scrollOffsetVector = this->scrollStartPosition - event.absolute;
 
         Util::execInUiThread([&]() {
-            this->inputContext->getXournal()->layout->scrollRelative(this->scrollOffsetVector.x,
-                                                                     this->scrollOffsetVector.y);
+            noteWidget->layout->scrollRelative(this->scrollOffsetVector.x, this->scrollOffsetVector.y);
 
             // Scrolling done, so reset our counters
             this->scrollOffsetVector = vn::util::Point<double>(0., 0.);
@@ -110,9 +110,9 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
 
     this->penInWidget = true;
 
-    GtkVertexNote* xournal = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
 
-    VertexNoteCursor* cursor = xournal->view->getCursor();
+    VertexNoteCursor* cursor = noteWidget->view->getCursor();
     cursor->setMouseDown(true);
 
 
@@ -124,7 +124,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
     this->sequenceStartPage = currentPage;
 
     // hand tool don't change the selection, so you can scroll e.g. with your touchscreen without remove the selection
-    bool changeSelection = xournal->selection && toolHandler->getToolType() != TOOL_HAND;
+    bool changeSelection = noteWidget->selection && toolHandler->getToolType() != TOOL_HAND;
     if ((event.state & GDK_SHIFT_MASK)) {
         // When tap single selection is enabled
         if (toolHandler->supportsTapFilter() && inputContext->getSettings()->getStrokeFilterEnabled()) {
@@ -136,25 +136,25 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
         }
     }
     if (changeSelection) {
-        EditSelection* selection = xournal->selection;
+        EditSelection* selection = noteWidget->selection;
 
         PageView* view = selection->getView();
         PositionInputData selectionPos = this->getInputDataRelativeToCurrentPage(view, event);
 
         // Check if event modifies selection instead of page
         CursorSelectionType selType =
-                selection->getSelectionTypeForPos(selectionPos.x, selectionPos.y, xournal->view->getZoom());
+                selection->getSelectionTypeForPos(selectionPos.x, selectionPos.y, noteWidget->view->getZoom());
         if (selType) {
 
             if (selType == CURSOR_SELECTION_MOVE && modifier3) {
                 selection->copySelection();
             }
 
-            xournal->selection->mouseDown(selType, selectionPos.x, selectionPos.y);
+            noteWidget->selection->mouseDown(selType, selectionPos.x, selectionPos.y);
             return true;
         }
 
-        xournal->view->clearSelection();
+        noteWidget->view->clearSelection();
         changeTool(event);
         // stop early to prevent drawing when clicking outside of the selection with the intention of deselecting
         if (toolHandler->isDrawingTool()) {
@@ -287,7 +287,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
 
-    GtkVertexNote* xournal = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
     ToolHandler* toolHandler = this->inputContext->getToolHandler();
 
     this->changeTool(event);
@@ -301,28 +301,28 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
     bool isShiftDown = (event.state & GDK_SHIFT_MASK);
-    bool handleSelectionMove = xournal->selection != nullptr;
+    bool handleSelectionMove = noteWidget->selection != nullptr;
 
-    if (xournal->selection && isSelectToolTypeSingleLayer(toolHandler->getToolType()) &&
-        !xournal->selection->isMoving()) {
+    if (noteWidget->selection && isSelectToolTypeSingleLayer(toolHandler->getToolType()) &&
+        !noteWidget->selection->isMoving()) {
         if (isShiftDown || this->deviceClassPressed) {
             handleSelectionMove = false;
             // Cursor mode to match the multiple-selection mode
-            xournal->view->getCursor()->setMouseSelectionType(CURSOR_SELECTION_NONE);
+            noteWidget->view->getCursor()->setMouseSelectionType(CURSOR_SELECTION_NONE);
         }
     }
 
     if (handleSelectionMove) {
-        EditSelection* selection = xournal->selection;
+        EditSelection* selection = noteWidget->selection;
         PageView* view = selection->getView();
 
         PositionInputData pos = this->getInputDataRelativeToCurrentPage(view, event);
 
-        if (xournal->selection->isMoving()) {
+        if (noteWidget->selection->isMoving()) {
             selection->mouseMove(pos.x, pos.y, pos.isAltDown());
         } else if (!isShiftDown) {
-            CursorSelectionType selType = selection->getSelectionTypeForPos(pos.x, pos.y, xournal->view->getZoom());
-            xournal->view->getCursor()->setMouseSelectionType(selType);
+            CursorSelectionType selType = selection->getSelectionTypeForPos(pos.x, pos.y, noteWidget->view->getZoom());
+            noteWidget->view->getCursor()->setMouseSelectionType(selType);
         }
         return true;
     }
@@ -364,7 +364,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
     // Update the cursor
-    xournal->view->getCursor()->setInsidePage(currentPage != nullptr);
+    noteWidget->view->getCursor()->setInsidePage(currentPage != nullptr);
 
     // Selections and single-page elements will always work on one page so we need to handle them differently
     if (this->sequenceStartPage && toolHandler->isSinglePageTool()) {
@@ -401,10 +401,10 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
 }
 
 auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
-    GtkVertexNote* xournal = inputContext->getXournal();
-    VertexNoteCursor* cursor = xournal->view->getCursor();
+    GtkVertexNote* noteWidget = inputContext->getXournal();
+    VertexNoteCursor* cursor = noteWidget->view->getCursor();
     ToolHandler* toolHandler = inputContext->getToolHandler();
-    EditSelection* selection = xournal->view->getSelection();
+    EditSelection* selection = noteWidget->view->getSelection();
 
     cursor->setMouseDown(false);
 
@@ -414,7 +414,7 @@ auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
     if (toolHandler->supportsTapFilter()) {
         if (inputContext->getSettings()->getStrokeFilterEnabled()) {
             // Tapping/Clicking in the selection delete button should still delete the selection
-            cancelAction |= (event.state & GDK_SHIFT_MASK) && xournal->selection != nullptr && !selection->isDeleting();
+            cancelAction |= (event.state & GDK_SHIFT_MASK) && noteWidget->selection != nullptr && !selection->isDeleting();
         }
     }
 
@@ -467,8 +467,8 @@ auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
     }
 
     // Reset the selection
-    EditSelection* tmpSelection = xournal->selection;
-    xournal->selection = nullptr;
+    EditSelection* tmpSelection = noteWidget->selection;
+    noteWidget->selection = nullptr;
     this->sequenceStartPage = nullptr;
 
     if (toolHandler->pointActiveToolToToolbarTool()) {
@@ -477,7 +477,7 @@ auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
 
     // we need this workaround so it's possible to select something with the middle button
     if (tmpSelection) {
-        xournal->view->setSelection(tmpSelection);
+        noteWidget->view->setSelection(tmpSelection);
     }
 
     this->inputRunning = false;
@@ -561,8 +561,8 @@ void PenInputHandler::actionLeaveWindow(InputEvent const& event) {
 
             while (!this->penInWidget) {
                 Util::execInUiThread([&]() {
-                    GtkVertexNote* xournal = this->inputContext->getXournal();
-                    xournal->layout->scrollRelative(offsetX, offsetY);
+                    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+                    noteWidget->layout->scrollRelative(offsetX, offsetY);
                 });
 
                 // sleep for half a second until we scroll again
@@ -583,3 +583,4 @@ void PenInputHandler::actionEnterWindow(InputEvent const& event) {
         }
     }
 }
+

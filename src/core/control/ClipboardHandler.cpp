@@ -41,7 +41,7 @@ ClipboardHandler::ClipboardHandler(ClipboardListener* listener, GtkWidget* widge
 
 ClipboardHandler::~ClipboardHandler() { g_signal_handler_disconnect(this->clipboard, this->handlerId); }
 
-static GdkAtom atomXournal = gdk_atom_intern_static_string("application/xournal");
+static GdkAtom atomVertexNoteDocument = gdk_atom_intern_static_string("application/xournal");
 
 auto ClipboardHandler::paste() -> bool {
     /* Request targets again, since the owner-change signal is not emitted on MacOS and under X11 with no XFIXES
@@ -51,7 +51,7 @@ auto ClipboardHandler::paste() -> bool {
                                    reinterpret_cast<GtkClipboardReceivedFunc>(receivedClipboardContents), this);
 
     if (this->containsXournal) {
-        gtk_clipboard_request_contents(this->clipboard, atomXournal,
+        gtk_clipboard_request_contents(this->clipboard, atomVertexNoteDocument,
                                        reinterpret_cast<GtkClipboardReceivedFunc>(pasteClipboardContents), this);
         return true;
     }
@@ -115,7 +115,7 @@ public:
         } else if (atomSvg1 == target || atomSvg2 == target) {
             gtk_selection_data_set(selection, target, 8, reinterpret_cast<guchar const*>(contents->svg.c_str()),
                                    static_cast<gint>(contents->svg.length()));
-        } else if (atomXournal == target) {
+        } else if (atomVertexNoteDocument == target) {
             gtk_selection_data_set(selection, target, 8, reinterpret_cast<guchar*>(contents->str->str),
                                    static_cast<gint>(contents->str->len));
         }
@@ -141,7 +141,7 @@ auto ClipboardHandler::copy() -> bool {
     }
 
     /////////////////////////////////////////////////////////////////
-    // prepare xournal contents
+    // prepare note document contents
     /////////////////////////////////////////////////////////////////
 
     ObjectOutputStream out(new BinObjectEncoding());
@@ -226,7 +226,7 @@ auto ClipboardHandler::copy() -> bool {
     gtk_target_list_add_image_targets(list, 0, true);
     gtk_target_list_add(list, atomSvg1, 0, 0);
     gtk_target_list_add(list, atomSvg2, 0, 0);
-    gtk_target_list_add(list, atomXournal, 0, 0);
+    gtk_target_list_add(list, atomVertexNoteDocument, 0, 0);
 
     targets = gtk_target_table_new_from_list(list, &n_targets);
 
@@ -301,7 +301,7 @@ auto gtk_selection_data_targets_include_xournal(GtkSelectionData* selection_data
 
     if (gtk_selection_data_get_targets(selection_data, &targets, &n_targets)) {
         for (int i = 0; i < n_targets; i++) {
-            if (targets[i] == atomXournal) {
+            if (targets[i] == atomVertexNoteDocument) {
                 result = true;
                 break;
             }

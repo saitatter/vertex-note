@@ -25,8 +25,8 @@ NavigationHistory::NavState NavigationHistory::captureState() const {
         return state;
     }
 
-    auto* xournal = win->getXournal();
-    if (!xournal) {
+    auto* noteView = win->getNoteView();
+    if (!noteView) {
         return state;
     }
 
@@ -42,7 +42,7 @@ NavigationHistory::NavState NavigationHistory::captureState() const {
         return state;
     }
 
-    std::unique_ptr<vn::util::Rectangle<double>> visibleRect(xournal->getVisibleRect(pageNo));
+    std::unique_ptr<vn::util::Rectangle<double>> visibleRect(noteView->getVisibleRect(pageNo));
     if (visibleRect) {
         state.rect = *visibleRect;
     }
@@ -198,3 +198,5 @@ void NavigationHistory::navigate(int dir) {
 
     updateActions();
 }
+
+

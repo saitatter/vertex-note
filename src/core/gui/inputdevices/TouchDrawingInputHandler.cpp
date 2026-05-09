@@ -99,12 +99,12 @@ auto TouchDrawingInputHandler::handleImpl(InputEvent const& event) -> bool {
     // let an alternate handler (e.g. TouchInputHandler) decide
     // what to do...
     if (this->deviceClassPressed && event.type == MOTION_EVENT && toolHandler->getToolType() != TOOL_HAND) {
-        GtkVertexNote* xournal = inputContext->getXournal();
+        GtkVertexNote* noteWidget = inputContext->getXournal();
 
         this->inputContext->getView()->getCursor()->setRotationAngle(event.relative.x);
 
         this->actionMotion(event);
-        VertexNoteCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = noteWidget->view->getCursor();
         cursor->updateCursor();
 
         return true;
@@ -156,3 +156,4 @@ void TouchDrawingInputHandler::updateKineticScrollingEnabled() {
         mainWindow->setGtkTouchscreenScrollingEnabled(toolHandler->getToolType() == TOOL_HAND);
     }
 }
+

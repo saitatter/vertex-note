@@ -8,7 +8,7 @@
 
 struct NamedColor;
 
-const char* ATTACH_DRAG_DROP_DATA = "XOJ_DRAG_DROP_DATA";
+const char* ATTACH_DRAG_DROP_DATA = "VERTEX_NOTE_DRAG_DROP_DATA";
 
 void ToolitemDragDrop::attachMetadata(GtkWidget* w, int id, AbstractToolItem* ait) {
     ToolItemDragDropData* d = g_new(ToolItemDragDropData, 1);

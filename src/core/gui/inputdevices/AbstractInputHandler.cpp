@@ -60,12 +60,12 @@ auto AbstractInputHandler::getPageAtCurrentPosition(InputEvent const& event) con
         return nullptr;
     }
 
-    GtkVertexNote* xournal = this->inputContext->getXournal();
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
 
     int x = round_cast<int>(event.relative.x);
     int y = round_cast<int>(event.relative.y);
 
-    return xournal->layout->getPageViewAt(x, y);
+    return noteWidget->layout->getPageViewAt(x, y);
 }
 
 /**
@@ -96,3 +96,4 @@ auto AbstractInputHandler::getInputDataRelativeToCurrentPage(PageView* page, Inp
 void AbstractInputHandler::onBlock() {}
 
 void AbstractInputHandler::onUnblock() {}
+

@@ -330,7 +330,7 @@ void Control::initWindow(MainWindow* win) {
 
     toolLineStyleChanged();
 
-    this->clipboardHandler = new ClipboardHandler(this, win->getXournal()->getWidget());
+    this->clipboardHandler = new ClipboardHandler(this, win->getNoteView()->getWidget());
 
     this->enableAutosave(settings->isAutosaveEnabled());
 }
@@ -409,14 +409,14 @@ bool Control::toggleGeometryTool() {
     if (!needsNewGeometryTool) {
         return false;
     }
-    const auto view = this->win->getXournal()->getViewFor(getCurrentPageNo());
-    const auto* xournal = GTK_VERTEX_NOTE(this->win->getXournal()->getWidget());
+    const auto view = this->win->getNoteView()->getViewFor(getCurrentPageNo());
+    const auto* noteWidget = GTK_VERTEX_NOTE(this->win->getNoteView()->getWidget());
     auto tool = new ToolClass();
     view->addOverlayView(std::make_unique<ViewClass>(tool, view, zoom));
     this->geometryTool = std::unique_ptr<GeometryTool>(tool);
     this->geometryToolController = std::make_unique<ControllerClass>(view, tool);
     auto geometryToolInputHandler =
-            std::make_unique<InputHandlerClass>(this->win->getXournal(), geometryToolController.get());
+            std::make_unique<InputHandlerClass>(this->win->getNoteView(), geometryToolController.get());
     Range range = view->getVisiblePart();
     if (range.isValid()) {
         double originX = (range.minX + range.maxX) * .5;
@@ -425,7 +425,7 @@ bool Control::toggleGeometryTool() {
     } else {
         geometryToolController->translate({view->getWidth() * .5, view->getHeight() * .5});
     }
-    xournal->input->setGeometryToolInputHandler(std::move(geometryToolInputHandler));
+    noteWidget->input->setGeometryToolInputHandler(std::move(geometryToolInputHandler));
     geometryTool->notify();
     return true;
 }
@@ -433,8 +433,8 @@ bool Control::toggleGeometryTool() {
 void Control::resetGeometryTool() {
     this->geometryToolController.reset();
     this->geometryTool.reset();
-    auto* xournal = GTK_VERTEX_NOTE(this->win->getXournal()->getWidget());
-    xournal->input->resetGeometryToolInputHandler();
+    auto* noteWidget = GTK_VERTEX_NOTE(this->win->getNoteView()->getWidget());
+    noteWidget->input->resetGeometryToolInputHandler();
 }
 
 void Control::showFloatingToolbox(int x, int y) {
@@ -448,21 +448,21 @@ void Control::showFloatingToolbox(int x, int y) {
 }
 
 auto Control::copy() -> bool {
-    if (this->win && this->win->getXournal()->copy()) {
+    if (this->win && this->win->getNoteView()->copy()) {
         return true;
     }
     return this->clipboardHandler->copy();
 }
 
 auto Control::cut() -> bool {
-    if (this->win && this->win->getXournal()->cut()) {
+    if (this->win && this->win->getNoteView()->cut()) {
         return true;
     }
     return this->clipboardHandler->cut();
 }
 
 auto Control::paste() -> bool {
-    if (this->win && this->win->getXournal()->paste()) {
+    if (this->win && this->win->getNoteView()->paste()) {
         return true;
     }
     return this->clipboardHandler->paste();
@@ -511,7 +511,7 @@ void Control::selectAlpha(OpacityFeature feature) {
 void Control::clearSelectionEndText() {
     clearSelection();
     if (win) {
-        win->getXournal()->endTextAllPages();
+        win->getNoteView()->endTextAllPages();
     }
 }
 
@@ -521,10 +521,10 @@ void Control::selectAllOnPage() {
         return;
     }
 
-    win->getXournal()->clearSelection();
+    win->getNoteView()->clearSelection();
 
     this->doc->lock();
-    PageView* view = win->getXournal()->getViewFor(pageNr);
+    PageView* view = win->getNoteView()->getViewFor(pageNr);
     if (view == nullptr) {
         this->doc->unlock();
         return;
@@ -548,12 +548,12 @@ void Control::selectAllOnPage() {
 
         page->fireRangeChanged(rg);
 
-        win->getXournal()->setSelection(sel.release());
+        win->getNoteView()->setSelection(sel.release());
     }
 }
 
 void Control::reorderSelection(EditSelection::OrderChange change) {
-    EditSelection* sel = win->getXournal()->getSelection();
+    EditSelection* sel = win->getNoteView()->getSelection();
     if (!sel) {
         return;
     }
@@ -646,7 +646,7 @@ void Control::setToolDrawingType(DrawingType type) {
         if (hasPendingInputDrawingType(previousType)) {
             // Multi-click tools keep an active input handler between clicks.
             if (win) {
-                win->getXournal()->endPendingInputAllPages();
+                win->getNoteView()->endPendingInputAllPages();
             }
         }
         this->toolHandler->setDrawingType(type);
@@ -758,7 +758,7 @@ void Control::deletePage() {
     }
 
     scrollHandler->scrollToPage(pNr);
-    this->win->getXournal()->forceUpdatePagenumbers();
+    this->win->getNoteView()->forceUpdatePagenumbers();
 }
 
 void Control::duplicatePage() {
@@ -1026,7 +1026,7 @@ void Control::changePageBackgroundColor() {
 
 void Control::setViewPairedPages(bool enabled) {
     settings->setShowPairedPages(enabled);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
@@ -1082,58 +1082,58 @@ void Control::setViewPresentationMode(bool enabled) {
     // TODO Figure out how to replace this
     // fireEnableAction(ACTION_TOOL_HAND, !enabled);
 
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setPairsOffset(int numOffset) {
     settings->setPairsOffset(numOffset);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setViewColumns(int numColumns) {
     settings->setViewColumns(numColumns);
     settings->setViewFixedRows(false);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setViewRows(int numRows) {
     settings->setViewRows(numRows);
     settings->setViewFixedRows(true);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setViewLayoutVert(bool vert) {
     settings->setViewLayoutVert(vert);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setViewLayoutR2L(bool r2l) {
     settings->setViewLayoutR2L(r2l);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 void Control::setViewLayoutB2T(bool b2t) {
     settings->setViewLayoutB2T(b2t);
-    win->getXournal()->layoutPages();
+    win->getNoteView()->layoutPages();
     scrollHandler->scrollToPage(getCurrentPageNo());
 }
 
 auto Control::getCurrentPageNo() const -> size_t {
     if (this->win) {
-        return this->win->getXournal()->getCurrentPage();
+        return this->win->getNoteView()->getCurrentPage();
     }
     return 0;
 }
 
 auto Control::searchTextOnPage(const std::string& text, size_t pageNumber, size_t index, size_t* occurrences,
                                PdfRectangle* matchRect) -> bool {
-    return getWindow()->getXournal()->searchTextOnPage(text, pageNumber, index, occurrences, matchRect);
+    return getWindow()->getNoteView()->searchTextOnPage(text, pageNumber, index, occurrences, matchRect);
 }
 
 auto Control::getCurrentPage() -> PageRef {
@@ -1164,18 +1164,18 @@ void Control::selectTool(ToolType type) {
     // keep text-selection when switching from text to seletion tool
     auto oldTool = getToolHandler()->getActiveTool();
     if (oldTool && win && isSelectToolType(type) && oldTool->getToolType() == ToolType::TOOL_TEXT &&
-        this->win->getXournal()->getTextEditor() && !(this->win->getXournal()->getTextEditor()->bufferEmpty())) {
-        auto xournal = this->win->getXournal();
-        Text* textobj = xournal->getTextEditor()->getTextElement();
+        this->win->getNoteView()->getTextEditor() && !(this->win->getNoteView()->getTextEditor()->bufferEmpty())) {
+        auto noteView = this->win->getNoteView();
+        Text* textobj = noteView->getTextEditor()->getTextElement();
         clearSelectionEndText();
 
         auto pageNr = getCurrentPageNo();
-        PageView* view = xournal->getViewFor(pageNr);
+        PageView* view = noteView->getViewFor(pageNr);
         xoj_assert(view != nullptr);
         PageRef page = view->getPage();
         auto sel = SelectionFactory::createFromElementOnActiveLayer(this, page, view, textobj);
 
-        xournal->setSelection(sel.release());
+        noteView->setSelection(sel.release());
     }
 
     toolHandler->selectTool(type);
@@ -1254,12 +1254,12 @@ void Control::toolChanged() {
 
     if (type != TOOL_TEXT) {
         if (win) {
-            win->getXournal()->endTextAllPages();
+            win->getNoteView()->endTextAllPages();
         }
     }
     if (!hasPendingInputDrawingType(toolHandler->getDrawingType())) {
         if (win) {
-            win->getXournal()->endPendingInputAllPages();
+            win->getNoteView()->endPendingInputAllPages();
         }
     }
 }
@@ -1309,7 +1309,7 @@ auto Control::getLineStyleToSelect() -> std::optional<string> const {
         return style;
     }
 
-    const EditSelection* sel = win->getXournal()->getSelection();
+    const EditSelection* sel = win->getNoteView()->getSelection();
     if (!sel) {
         return style;
     }
@@ -1347,7 +1347,7 @@ void Control::toolColorChanged() {
 
 void Control::changeColorOfSelection() {
     if (this->win && toolHandler->hasCapability(TOOL_CAP_COLOR)) {
-        EditSelection* sel = this->win->getXournal()->getSelection();
+        EditSelection* sel = this->win->getNoteView()->getSelection();
         if (sel) {
             undoRedo->addUndoAction(sel->setColor(toolHandler->getColor()));
         }
@@ -1400,10 +1400,10 @@ void Control::showSettings() {
             [ctrl = this, settingsBeforeDialog]() {
                 Settings* settings = ctrl->getSettings();
                 MainWindow* win = ctrl->win;
-                VertexNoteView* xournal = win->getXournal();
+                VertexNoteView* noteView = win->getNoteView();
                 // note which settings have changed and act accordingly
                 if (settingsBeforeDialog.selectionColor != settings->getBorderColor()) {
-                    xournal->forceUpdatePagenumbers();
+                    noteView->forceUpdatePagenumbers();
                 }
 
                 if (!settings->getUnlimitedScrolling() &&
@@ -1413,7 +1413,7 @@ void Control::showSettings() {
                      settingsBeforeDialog.horizontalSpaceAmountRight != settings->getAddHorizontalSpaceAmountRight() ||
                      settingsBeforeDialog.verticalSpaceAmountBelow != settings->getAddVerticalSpaceAmountBelow() ||
                      settingsBeforeDialog.horizontalSpaceAmountLeft != settings->getAddHorizontalSpaceAmountLeft())) {
-                    xournal->layoutPages();
+                    noteView->layoutPages();
                     double const xChange =
                             (settings->getAddHorizontalSpace() ? settings->getAddHorizontalSpaceAmountLeft() : 0) -
                             (settingsBeforeDialog.horizontalSpace ? settingsBeforeDialog.horizontalSpaceAmountLeft : 0);
@@ -1444,7 +1444,7 @@ void Control::showSettings() {
                                                           settingsBeforeDialog.verticalSpaceAmountAbove :
                                                           0);
 
-                    xournal->layoutPages();
+                    noteView->layoutPages();
                     win->getLayout()->scrollRelative(xChange, yChange);
                 }
 
@@ -1488,7 +1488,7 @@ void Control::showSettings() {
                     ctrl->getSidebar()->layout();
                 }
 
-                xournal->getHandRecognition()->reload();
+                noteView->getHandRecognition()->reload();
                 ctrl->win->updateColorscheme();
 
                 ctrl->getActionDatabase()->setActionState(Action::TOGGLE_TOUCH_DRAWING,
@@ -1844,7 +1844,7 @@ void Control::fileLoaded(int scrollToPage) {
     }
 
     updateWindowTitle();
-    win->getXournal()->forceUpdatePagenumbers();
+    win->getNoteView()->forceUpdatePagenumbers();
     getCursor()->updateCursor();
     updatePageActions();
 }
@@ -2402,7 +2402,7 @@ void Control::clipboardPaste(ElementPtr e) {
         return;
     }
 
-    PageView* view = win->getXournal()->getViewFor(pageNr);
+    PageView* view = win->getNoteView()->getViewFor(pageNr);
     if (view == nullptr) {
         return;
     }
@@ -2412,7 +2412,7 @@ void Control::clipboardPaste(ElementPtr e) {
     Layer* layer = page->getSelectedLayer();
     this->doc->unlock_shared();
 
-    win->getXournal()->getPasteTarget(x, y);
+    win->getNoteView()->getPasteTarget(x, y);
 
     double width = e->getElementWidth();
     double height = e->getElementHeight();
@@ -2426,7 +2426,7 @@ void Control::clipboardPaste(ElementPtr e) {
     undoRedo->addUndoAction(std::make_unique<InsertUndoAction>(page, layer, e.get()));
     auto sel = SelectionFactory::createFromFloatingElement(this, page, layer, view, std::move(e));
 
-    win->getXournal()->setSelection(sel.release());
+    win->getNoteView()->setSelection(sel.release());
 }
 
 void Control::registerPluginToolButtons(ToolMenuHandler* toolMenuHandler) {
@@ -2443,7 +2443,7 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
     PageRef page = this->doc->getPage(pNr);
     Layer* layer = page->getSelectedLayer();
 
-    PageView* view = win->getXournal()->getViewFor(pNr);
+    PageView* view = win->getNoteView()->getViewFor(pNr);
 
     if (!view || !page) {
         this->doc->unlock();
@@ -2500,7 +2500,7 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
         double x = 0;
         double y = 0;
         // calculate x/y of paste target, see clipboardPaste(Element* e)
-        win->getXournal()->getPasteTarget(x, y);
+        win->getNoteView()->getPasteTarget(x, y);
 
         x = std::max(0.0, x - selection->getWidth() / 2);
         y = std::max(0.0, y - selection->getHeight() / 2);
@@ -2513,7 +2513,7 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
         // update all Elements (same procedure as moving a element selection by hand and releasing the mouse button)
         selection->mouseUp();
 
-        win->getXournal()->setSelection(selection.release());
+        win->getNoteView()->setSelection(selection.release());
     } catch (const std::exception& e) {
         g_warning("could not paste, Exception occurred: %s", e.what());
         Stacktrace::printStacktrace();
@@ -2525,7 +2525,7 @@ void Control::moveSelectionToLayer(size_t layerNo) {
     if (layerNo >= currentP->getLayerCount()) {
         return;
     }
-    auto selection = getWindow()->getXournal()->getSelection();
+    auto selection = getWindow()->getNoteView()->getSelection();
     if (!selection) {
         return;
     }
@@ -2544,13 +2544,13 @@ void Control::moveSelectionToLayer(size_t layerNo) {
 
 void Control::deleteSelection() {
     if (win) {
-        win->getXournal()->deleteSelection();
+        win->getNoteView()->deleteSelection();
     }
 }
 
 void Control::clearSelection() {
     if (this->win) {
-        this->win->getXournal()->clearSelection();
+        this->win->getNoteView()->clearSelection();
         this->win->getPdfToolbox()->userCancelSelection();
     }
 }
@@ -2570,7 +2570,7 @@ void Control::setCopyCutEnabled(bool enabled) { this->clipboardHandler->setCopyC
 void Control::setFill(bool fill) {
     EditSelection* sel = nullptr;
     if (this->win) {
-        sel = this->win->getXournal()->getSelection();
+        sel = this->win->getNoteView()->getSelection();
     }
 
     if (sel) {
@@ -2583,8 +2583,8 @@ void Control::setFill(bool fill) {
 void Control::setLineStyle(const string& style) {
     LineStyle stl = StrokeStyle::parseStyle(style);
 
-    if (this->win && this->win->getXournal()->getSelection()) {
-        undoRedo->addUndoAction(this->win->getXournal()->getSelection()->setLineStyle(stl));
+    if (this->win && this->win->getNoteView()->getSelection()) {
+        undoRedo->addUndoAction(this->win->getNoteView()->getSelection()->setLineStyle(stl));
     } else if (this->toolHandler->getActiveTool()->getToolType() != TOOL_PEN) {
         this->selectTool(TOOL_PEN);
     }
@@ -2603,7 +2603,7 @@ void Control::setEraserType(EraserType type) {
 void Control::setToolSize(ToolSize size) {
     EditSelection* sel = nullptr;
     if (this->win) {
-        sel = this->win->getXournal()->getSelection();
+        sel = this->win->getNoteView()->getSelection();
     }
 
     if (sel) {
@@ -2618,7 +2618,7 @@ void Control::fontChanged(const NoteFont& font) {
     settings->setFont(font);
 
     if (this->win) {
-        if (EditSelection* sel = this->win->getXournal()->getSelection(); sel) {
+        if (EditSelection* sel = this->win->getNoteView()->getSelection(); sel) {
             undoRedo->addUndoAction(UndoActionPtr(sel->setFont(font)));
         }
     }
@@ -2680,7 +2680,7 @@ void Control::setVertexNoteGridSnapping(bool enable) {
 
 auto Control::getTextEditor() -> TextEditor* {
     if (this->win) {
-        return this->win->getXournal()->getTextEditor();
+        return this->win->getNoteView()->getTextEditor();
     }
     return nullptr;
 }
@@ -2734,3 +2734,5 @@ auto Control::loadPaletteFromSettings() -> void {
         this->palette->load_default();
     }
 }
+
+

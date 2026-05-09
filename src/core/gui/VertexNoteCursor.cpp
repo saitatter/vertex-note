@@ -212,8 +212,8 @@ void VertexNoteCursor::updateCursor() {
         return;
     }
 
-    VertexNoteView* xournal = win->getXournal();
-    if (!xournal) {
+    VertexNoteView* noteView = win->getNoteView();
+    if (!noteView) {
         return;
     }
 
@@ -324,12 +324,12 @@ void VertexNoteCursor::updateCursor() {
         }
     }
 
-    GdkWindow* window = gtk_widget_get_window(xournal->getWidget());
+    GdkWindow* window = gtk_widget_get_window(noteView->getWidget());
     if (window) {
         if (cursor != nullptr) {
             gdk_window_set_cursor(window, cursor);
         }
-        gtk_widget_set_sensitive(xournal->getWidget(), !this->busy);
+        gtk_widget_set_sensitive(noteView->getWidget(), !this->busy);
     }
     // Performance removal!
     // If this line is ever required, make sure this function is never called, when the cursor is not set.
@@ -377,7 +377,7 @@ auto VertexNoteCursor::getResizeCursor(double deltaAngle) -> GdkCursor* {
     GdkPixbuf* pixbuf = gdk_pixbuf_get_from_surface(crCursor, 0, 0, RESIZE_CURSOR_SIZE, RESIZE_CURSOR_SIZE);
     cairo_surface_destroy(crCursor);
     GdkCursor* cursor =
-            gdk_cursor_new_from_pixbuf(gtk_widget_get_display(control->getWindow()->getXournal()->getWidget()), pixbuf,
+            gdk_cursor_new_from_pixbuf(gtk_widget_get_display(control->getWindow()->getNoteView()->getWidget()), pixbuf,
                                        RESIZE_CURSOR_SIZE / 2, RESIZE_CURSOR_SIZE / 2);
     g_object_unref(pixbuf);
     return cursor;
@@ -523,7 +523,7 @@ auto VertexNoteCursor::createHighlighterOrPenCursor(double alpha) -> GdkCursor* 
     GdkPixbuf* pixbuf = gdk_pixbuf_get_from_surface(crCursor, 0, 0, width, height);
     cairo_surface_destroy(crCursor);
     GdkCursor* gdkCursor = gdk_cursor_new_from_pixbuf(
-            gtk_widget_get_display(control->getWindow()->getXournal()->getWidget()), pixbuf, centerX, centerY);
+            gtk_widget_get_display(control->getWindow()->getNoteView()->getWidget()), pixbuf, centerX, centerY);
     g_object_unref(pixbuf);
     return gdkCursor;
 }
@@ -539,12 +539,12 @@ void VertexNoteCursor::setCursor(guint cursorID) {
         return;
     }
 
-    VertexNoteView* xournal = win->getXournal();
-    if (!xournal) {
+    VertexNoteView* noteView = win->getNoteView();
+    if (!noteView) {
         return;
     }
 
-    GdkWindow* window = gtk_widget_get_window(xournal->getWidget());
+    GdkWindow* window = gtk_widget_get_window(noteView->getWidget());
     if (!window) {
         return;
     }
@@ -568,7 +568,7 @@ void VertexNoteCursor::setCursor(guint cursorID) {
     }
 
     this->currentCursor = cursorID;
-    gdk_window_set_cursor(gtk_widget_get_window(xournal->getWidget()), cursor);
+    gdk_window_set_cursor(gtk_widget_get_window(noteView->getWidget()), cursor);
     gdk_window_set_cursor(window, cursor);
     if (cursor) {
         g_object_unref(cursor);
@@ -644,8 +644,10 @@ auto VertexNoteCursor::createCustomDrawDirCursor(int size, bool shift, bool ctrl
     GdkPixbuf* pixbuf = gdk_pixbuf_get_from_surface(crCursor, 0, 0, width, height);
     cairo_surface_destroy(crCursor);
     GdkCursor* cursor = gdk_cursor_new_from_pixbuf(
-            gtk_widget_get_display(control->getWindow()->getXournal()->getWidget()), pixbuf, centerX, centerY);
+            gtk_widget_get_display(control->getWindow()->getNoteView()->getWidget()), pixbuf, centerX, centerY);
     g_object_unref(pixbuf);
 
     return cursor;
 }
+
+

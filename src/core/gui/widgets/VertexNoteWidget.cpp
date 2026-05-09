@@ -45,23 +45,23 @@ static void gtk_vertex_note_get_property(GObject* object, guint prop_id, GValue*
 
 auto gtk_vertex_note_new(VertexNoteView* view, InputContext* inputContext, GtkAdjustment* vadj, GtkAdjustment* hadj)
         -> GtkWidget* {
-    GtkVertexNote* xoj = GTK_VERTEX_NOTE(g_object_new(gtk_vertex_note_get_type(), nullptr));
-    xoj->view = view;
-    xoj->scrollHandling = inputContext->getScrollHandling();
-    xoj->layout = new Layout(view, inputContext->getScrollHandling());
-    xoj->selection = nullptr;
-    xoj->input = inputContext;
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(g_object_new(gtk_vertex_note_get_type(), nullptr));
+    noteWidget->view = view;
+    noteWidget->scrollHandling = inputContext->getScrollHandling();
+    noteWidget->layout = new Layout(view, inputContext->getScrollHandling());
+    noteWidget->selection = nullptr;
+    noteWidget->input = inputContext;
 
     // Scrollable interface
-    xoj->vadjustment = GTK_ADJUSTMENT(g_object_ref(vadj));
-    xoj->hadjustment = GTK_ADJUSTMENT(g_object_ref(hadj));
-    xoj->vscroll_policy = GTK_SCROLL_NATURAL;
-    xoj->hscroll_policy = GTK_SCROLL_NATURAL;
+    noteWidget->vadjustment = GTK_ADJUSTMENT(g_object_ref(vadj));
+    noteWidget->hadjustment = GTK_ADJUSTMENT(g_object_ref(hadj));
+    noteWidget->vscroll_policy = GTK_SCROLL_NATURAL;
+    noteWidget->hscroll_policy = GTK_SCROLL_NATURAL;
 
 
-    xoj->input->connect(GTK_WIDGET(xoj));
+    noteWidget->input->connect(GTK_WIDGET(noteWidget));
 
-    return GTK_WIDGET(xoj);
+    return GTK_WIDGET(noteWidget);
 }
 
 enum { PROP_0, PROP_HADJUSTMENT, PROP_VADJUSTMENT, PROP_HSCROLL_POLICY, PROP_VSCROLL_POLICY };
@@ -108,10 +108,10 @@ auto gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p) -> v
     g_return_val_if_fail(widget != nullptr, nullptr);
     g_return_val_if_fail(GTK_IS_VERTEX_NOTE(widget), nullptr);
 
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
 
-    GtkAdjustment* vadj = xournal->scrollHandling->getVertical();
-    GtkAdjustment* hadj = xournal->scrollHandling->getHorizontal();
+    GtkAdjustment* vadj = noteWidget->scrollHandling->getVertical();
+    GtkAdjustment* hadj = noteWidget->scrollHandling->getHorizontal();
 
     GdkRectangle r2;
     r2.x = static_cast<int>(gtk_adjustment_get_value(hadj));
@@ -136,7 +136,7 @@ auto gtk_vertex_note_get_visible_area(GtkWidget* widget, const PageView* p) -> v
     r3.x -= r1.x;
     r3.y -= r1.y;
 
-    double zoom = xournal->view->getZoom();
+    double zoom = noteWidget->view->getZoom();
 
     if (r3.x < 0 || r3.y < 0) {
         g_warning("VertexNoteWidget:gtk_vertex_note_get_visible_area: intersection rectangle coordinates are negative which "
@@ -151,28 +151,28 @@ auto gtk_vertex_note_get_layout(GtkWidget* widget) -> Layout* {
     g_return_val_if_fail(widget != nullptr, nullptr);
     g_return_val_if_fail(GTK_IS_VERTEX_NOTE(widget), nullptr);
 
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
-    return xournal->layout;
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
+    return noteWidget->layout;
 }
 
-static void gtk_vertex_note_init(GtkVertexNote* xournal) {
-    GtkWidget* widget = GTK_WIDGET(xournal);
+static void gtk_vertex_note_init(GtkVertexNote* noteWidget) {
+    GtkWidget* widget = GTK_WIDGET(noteWidget);
 
     gtk_widget_set_can_focus(widget, true);
 }
 
 static void gtk_vertex_note_get_preferred_width(GtkWidget* widget, gint* minimal_width, gint* natural_width) {
     g_return_if_fail(GTK_IS_VERTEX_NOTE(widget));
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
-    g_return_if_fail(xournal->layout);
-    *minimal_width = *natural_width = xournal->layout->getMinimalPixelWidth();
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
+    g_return_if_fail(noteWidget->layout);
+    *minimal_width = *natural_width = noteWidget->layout->getMinimalPixelWidth();
 }
 
 static void gtk_vertex_note_get_preferred_height(GtkWidget* widget, gint* minimal_height, gint* natural_height) {
     g_return_if_fail(GTK_IS_VERTEX_NOTE(widget));
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
-    g_return_if_fail(xournal->layout);
-    *minimal_height = *natural_height = xournal->layout->getMinimalPixelHeight();
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
+    g_return_if_fail(noteWidget->layout);
+    *minimal_height = *natural_height = noteWidget->layout->getMinimalPixelHeight();
 }
 
 /**
@@ -190,10 +190,10 @@ static void gtk_vertex_note_size_allocate(GtkWidget* widget, GtkAllocation* allo
                                allocation->height);
     }
 
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
 
-    gtk_adjustment_set_page_size(xournal->hadjustment, allocation->width);
-    gtk_adjustment_set_page_size(xournal->vadjustment, allocation->height);
+    gtk_adjustment_set_page_size(noteWidget->hadjustment, allocation->width);
+    gtk_adjustment_set_page_size(noteWidget->vadjustment, allocation->height);
 
     gtk_vertex_note_get_layout(widget)->recomputeCenteringPadding(allocation->width, allocation->height);
 }
@@ -227,9 +227,9 @@ static void gtk_vertex_note_realize(GtkWidget* widget) {
     gtk_widget_register_window(widget, win);
 }
 
-static void gtk_vertex_note_draw_shadow(GtkVertexNote* xournal, cairo_t* cr, int left, int top, int width, int height,
+static void gtk_vertex_note_draw_shadow(GtkVertexNote* noteWidget, cairo_t* cr, int left, int top, int width, int height,
                                     bool selected) {
-    Settings* settings = xournal->view->getControl()->getSettings();
+    Settings* settings = noteWidget->view->getControl()->getSettings();
     bool showShadow = settings->isShowPageShadow();
     if (selected) {
         if (showShadow) {
@@ -293,26 +293,26 @@ static auto gtk_vertex_note_draw(GtkWidget* widget, cairo_t* cr) -> gboolean {
     }
 #endif
 
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(widget);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(widget);
 
-    cairo_translate(cr, -gtk_adjustment_get_value(xournal->hadjustment),
-                    -gtk_adjustment_get_value(xournal->vadjustment));
+    cairo_translate(cr, -gtk_adjustment_get_value(noteWidget->hadjustment),
+                    -gtk_adjustment_get_value(noteWidget->vadjustment));
 
     Range clip;
     cairo_clip_extents(cr, &clip.minX, &clip.minY, &clip.maxX, &clip.maxY);
 
     // Draw background
-    Settings* settings = xournal->view->getControl()->getSettings();
+    Settings* settings = noteWidget->view->getControl()->getSettings();
     Util::cairo_set_source_rgbi(cr, settings->getBackgroundColor());
     cairo_paint(cr);
 
     // Add a padding for the shadow of the pages
     clip.addPadding(10);
 
-    const auto& views = xournal->view->getViewPages();
+    const auto& views = noteWidget->view->getViewPages();
     // Store the pages to release the layout mutex ASAP
     std::vector<std::pair<size_t, vn::util::Point<int>>> pages;
-    xournal->layout->forEachEntriesIntersectingRange(
+    noteWidget->layout->forEachEntriesIntersectingRange(
             clip, [&](size_t index, const Range&, vn::util::Point<int> pos) { pages.emplace_back(index, pos); });
 
     for (auto [index, pos]: pages) {
@@ -320,7 +320,7 @@ static auto gtk_vertex_note_draw(GtkWidget* widget, cairo_t* cr) -> gboolean {
         int pw = pv->getDisplayWidth();
         int ph = pv->getDisplayHeight();
 
-        gtk_vertex_note_draw_shadow(xournal, cr, pos.x, pos.y, pw, ph, pv->isSelected());
+        gtk_vertex_note_draw_shadow(noteWidget, cr, pos.x, pos.y, pw, ph, pv->isSelected());
 
         cairo_save(cr);
         cairo_translate(cr, pos.x, pos.y);
@@ -329,14 +329,14 @@ static auto gtk_vertex_note_draw(GtkWidget* widget, cairo_t* cr) -> gboolean {
         cairo_restore(cr);
     }
 
-    if (xournal->selection) {
+    if (noteWidget->selection) {
         cairo_save(cr);
-        double zoom = xournal->view->getZoom();
+        double zoom = noteWidget->view->getZoom();
 
-        auto pos = xournal->selection->getView()->getPixelPosition();
+        auto pos = noteWidget->selection->getView()->getPixelPosition();
         cairo_translate(cr, pos.x, pos.y);
 
-        xournal->selection->paint(cr, zoom);
+        noteWidget->selection->paint(cr, zoom);
         cairo_restore(cr);
     }
 
@@ -354,46 +354,46 @@ static auto gtk_vertex_note_draw(GtkWidget* widget, cairo_t* cr) -> gboolean {
 static void gtk_vertex_note_dispose(GObject* object) {
     g_return_if_fail(object != nullptr);
     g_return_if_fail(GTK_IS_VERTEX_NOTE(object));
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(object);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(object);
 
-    g_object_unref(xournal->vadjustment);
-    xournal->vadjustment = nullptr;
-    g_object_unref(xournal->hadjustment);
-    xournal->hadjustment = nullptr;
+    g_object_unref(noteWidget->vadjustment);
+    noteWidget->vadjustment = nullptr;
+    g_object_unref(noteWidget->hadjustment);
+    noteWidget->hadjustment = nullptr;
 
-    delete xournal->selection;
-    xournal->selection = nullptr;
+    delete noteWidget->selection;
+    noteWidget->selection = nullptr;
 
-    delete xournal->layout;
-    xournal->layout = nullptr;
+    delete noteWidget->layout;
+    noteWidget->layout = nullptr;
 
-    delete xournal->input;
-    xournal->input = nullptr;
+    delete noteWidget->input;
+    noteWidget->input = nullptr;
 
     G_OBJECT_CLASS(gtk_vertex_note_parent_class)->dispose(object);
 }
 
 static void gtk_vertex_note_set_property(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec) {
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(object);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(object);
 
     switch (prop_id) {
         case PROP_HADJUSTMENT:
-            xournal->hadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
+            noteWidget->hadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
             break;
         case PROP_VADJUSTMENT:
-            xournal->vadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
+            noteWidget->vadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
             break;
         case PROP_HSCROLL_POLICY:
-            if (xournal->hscroll_policy != g_value_get_enum(value)) {
-                xournal->hscroll_policy = static_cast<GtkScrollablePolicy>(g_value_get_enum(value));
-                gtk_widget_queue_resize(GTK_WIDGET(xournal));
+            if (noteWidget->hscroll_policy != g_value_get_enum(value)) {
+                noteWidget->hscroll_policy = static_cast<GtkScrollablePolicy>(g_value_get_enum(value));
+                gtk_widget_queue_resize(GTK_WIDGET(noteWidget));
                 g_object_notify_by_pspec(object, pspec);
             }
             break;
         case PROP_VSCROLL_POLICY:
-            if (xournal->vscroll_policy != g_value_get_enum(value)) {
-                xournal->vscroll_policy = static_cast<GtkScrollablePolicy>(g_value_get_enum(value));
-                gtk_widget_queue_resize(GTK_WIDGET(xournal));
+            if (noteWidget->vscroll_policy != g_value_get_enum(value)) {
+                noteWidget->vscroll_policy = static_cast<GtkScrollablePolicy>(g_value_get_enum(value));
+                gtk_widget_queue_resize(GTK_WIDGET(noteWidget));
                 g_object_notify_by_pspec(object, pspec);
             }
             break;
@@ -403,23 +403,24 @@ static void gtk_vertex_note_set_property(GObject* object, guint prop_id, const G
     }
 }
 static void gtk_vertex_note_get_property(GObject* object, guint prop_id, GValue* value, GParamSpec* pspec) {
-    GtkVertexNote* xournal = GTK_VERTEX_NOTE(object);
+    GtkVertexNote* noteWidget = GTK_VERTEX_NOTE(object);
 
     switch (prop_id) {
         case PROP_HADJUSTMENT:
-            g_value_set_object(value, xournal->hadjustment);
+            g_value_set_object(value, noteWidget->hadjustment);
             break;
         case PROP_VADJUSTMENT:
-            g_value_set_object(value, xournal->vadjustment);
+            g_value_set_object(value, noteWidget->vadjustment);
             break;
         case PROP_HSCROLL_POLICY:
-            g_value_set_enum(value, xournal->hscroll_policy);
+            g_value_set_enum(value, noteWidget->hscroll_policy);
             break;
         case PROP_VSCROLL_POLICY:
-            g_value_set_enum(value, xournal->vscroll_policy);
+            g_value_set_enum(value, noteWidget->vscroll_policy);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
             break;
     }
 }
+

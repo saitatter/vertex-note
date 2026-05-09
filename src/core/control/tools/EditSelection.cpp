@@ -234,8 +234,8 @@ EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& 
     this->contents->replaceInsertionOrder(std::move(elts));
 
     cairo_matrix_init_identity(&this->cmatrix);
-    this->view->getXournal()->getCursor()->setRotationAngle(0);
-    this->view->getXournal()->getCursor()->setMirror(false);
+    this->view->getNoteView()->getCursor()->setRotationAngle(0);
+    this->view->getNoteView()->getCursor()->setMirror(false);
 
     for (const auto& e: contents->getElementsView()) {
         this->preserveAspectRatio = this->preserveAspectRatio || e->rescaleOnlyAspectRatio();
@@ -290,7 +290,7 @@ void EditSelection::finalizeSelection() {
             this->contents->makeMoveEffective(this->getRect(), this->snappedBounds, this->preserveAspectRatio);
 
 
-    auto* doc = view->getXournal()->getControl()->getDocument();
+    auto* doc = view->getNoteView()->getControl()->getDocument();
     doc->lock();
 
     Layer* destinationLayer = this->view->getPage()->getSelectedLayer();
@@ -315,7 +315,7 @@ void EditSelection::finalizeSelection() {
     this->view->rerenderRect(this->x - addW / 2.0, this->y - addH / 2.0, this->width + addW, this->height + addH);
 
     // This is needed if the selection not was 100% on a page
-    this->view->getXournal()->repaintSelection(true);
+    this->view->getNoteView()->repaintSelection(true);
 }
 
 auto EditSelection::makeMoveEffective() -> InsertionOrder {
@@ -512,7 +512,7 @@ auto EditSelection::rearrangeInsertionOrder(const OrderChange change) -> UndoAct
  */
 void EditSelection::mouseUp() {
     if (this->mouseDownType == CURSOR_SELECTION_DELETE) {
-        this->view->getXournal()->deleteSelection();
+        this->view->getNoteView()->deleteSelection();
         return;
     }
 
@@ -527,7 +527,7 @@ void EditSelection::mouseUp() {
         this->activeGeometryVertex = vn::geom::InvalidVertexId;
         this->activeGeometryVertexMoved = false;
         this->mouseDownType = CURSOR_SELECTION_NONE;
-        this->view->getXournal()->repaintSelection();
+        this->view->getNoteView()->repaintSelection();
         return;
     }
 
@@ -553,7 +553,7 @@ void EditSelection::mouseUp() {
 }
 
 void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
-    double zoom = this->view->getXournal()->getZoom();
+    double zoom = this->view->getNoteView()->getZoom();
 
     this->mouseDownType = type;
     if (type != CURSOR_SELECTION_GEOMETRY_VERTEX) {
@@ -574,7 +574,7 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
 }
 
 void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
-    double zoom = this->view->getXournal()->getZoom();
+    double zoom = this->view->getNoteView()->getZoom();
 
     if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_VERTEX) {
         if (!this->activeGeometryElement || this->activeGeometryVertex == vn::geom::InvalidVertexId) {
@@ -593,7 +593,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
             this->activeGeometryVertexCurrent = modelPosition;
             this->activeGeometryVertexMoved = true;
             this->contents->invalidateViewBuffer();
-            this->view->getXournal()->repaintSelection();
+            this->view->getNoteView()->repaintSelection();
         }
         return;
     }
@@ -643,7 +643,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
 
         double angle = atan2(rdy, rdx);
         this->rotation = angle;
-        this->view->getXournal()->getCursor()->setRotationAngle(180 / M_PI * angle);
+        this->view->getNoteView()->getCursor()->setRotationAngle(180 / M_PI * angle);
     } else {
         // Translate mouse position into rotated coordinate system:
         double rx = mouseX;
@@ -719,21 +719,21 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
                             f;
                 scaleShift(xSide ? f : 1, ySide ? f : 1, xSide == -1, ySide == -1);
 
-                this->view->getXournal()->getCursor()->setMirror(this->width * this->height < 0);
+                this->view->getNoteView()->getCursor()->setMirror(this->width * this->height < 0);
             }
         }
     }
 
-    this->view->getXournal()->repaintSelection();
+    this->view->getNoteView()->repaintSelection();
 
     if (this->mouseDownType == CURSOR_SELECTION_MOVE) {
         PageView* v = getPageViewUnderCursor();
 
         if (v && v != this->view) {
-            VertexNoteView* xournal = this->view->getXournal();
-            const auto pageNr = xournal->getControl()->getDocument()->indexOf(v->getPage());
+            VertexNoteView* noteView = this->view->getNoteView();
+            const auto pageNr = noteView->getControl()->getDocument()->indexOf(v->getPage());
 
-            xournal->pageSelected(pageNr);
+            noteView->pageSelected(pageNr);
 
             translateToView(v);
         }
@@ -759,7 +759,7 @@ void EditSelection::scaleShift(double fx, double fy, bool changeLeft, bool chang
     double cx = this->snappedBounds.x + this->snappedBounds.width / 2;
     double cy = this->snappedBounds.y + this->snappedBounds.height / 2;
     // transform it back with old rotation center
-    double zoom = this->view->getXournal()->getZoom();
+    double zoom = this->view->getNoteView()->getZoom();
     double cxRot = cx * zoom;
     double cyRot = cy * zoom;
     cairo_matrix_t inv = this->cmatrix;
@@ -772,7 +772,7 @@ void EditSelection::scaleShift(double fx, double fy, bool changeLeft, bool chang
 }
 
 auto EditSelection::getPageViewUnderCursor() -> PageView* {
-    double zoom = view->getXournal()->getZoom();
+    double zoom = view->getNoteView()->getZoom();
 
     // get grabbing hand position
     auto p = this->view->getPixelPosition();
@@ -780,7 +780,7 @@ auto EditSelection::getPageViewUnderCursor() -> PageView* {
     double hy = p.y + (this->snappedBounds.y + this->relMousePosY) * zoom;
 
 
-    Layout* layout = this->view->getXournal()->getLayout();
+    Layout* layout = this->view->getNoteView()->getLayout();
     PageView* v = layout->getPageViewAt(static_cast<int>(hx), static_cast<int>(hy));
 
     return v;
@@ -791,7 +791,7 @@ auto EditSelection::getPageViewUnderCursor() -> PageView* {
  * and set the attribute view to the new view
  */
 void EditSelection::translateToView(PageView* v) {
-    double zoom = view->getXournal()->getZoom();
+    double zoom = view->getNoteView()->getZoom();
 
     double ox = this->snappedBounds.x - this->x;
     double oy = this->snappedBounds.y - this->y;
@@ -840,7 +840,7 @@ auto EditSelection::isDeleting() const -> bool { return this->mouseDownType == C
  */
 
 void EditSelection::updateMatrix() {
-    double zoom = this->view->getXournal()->getZoom();
+    double zoom = this->view->getNoteView()->getZoom();
     // store rotation matrix for pointer use; the center of the rotation is the center of the bounding box
     double rx = (this->snappedBounds.x + this->snappedBounds.width / 2) * zoom;
     double ry = (this->snappedBounds.y + this->snappedBounds.height / 2) * zoom;
@@ -863,10 +863,10 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
         PageView* v = getPageViewUnderCursor();
 
         if (v && v != this->view) {
-            VertexNoteView* xournal = this->view->getXournal();
-            const auto pageNr = xournal->getControl()->getDocument()->indexOf(v->getPage());
+            VertexNoteView* noteView = this->view->getNoteView();
+            const auto pageNr = noteView->getControl()->getDocument()->indexOf(v->getPage());
 
-            xournal->pageSelected(pageNr);
+            noteView->pageSelected(pageNr);
 
             translateToView(v);
         }
@@ -875,7 +875,7 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
                                       CURSOR_SELECTION_MOVE);
     }
 
-    this->view->getXournal()->repaintSelection();
+    this->view->getNoteView()->repaintSelection();
 }
 
 void EditSelection::setEdgePan(bool pan) {
@@ -891,16 +891,16 @@ void EditSelection::setEdgePan(bool pan) {
 bool EditSelection::isEdgePanning() const { return this->edgePanHandler; }
 
 bool EditSelection::handleEdgePan(EditSelection* self) {
-    if (self->view->getXournal()->getControl()->getZoomControl()->isZoomPresentationMode()) {
+    if (self->view->getNoteView()->getControl()->getZoomControl()->isZoomPresentationMode()) {
         self->edgePanHandler.consume();
         self->edgePanInhibitNext = false;
         return false;
     }
 
 
-    Layout* layout = self->view->getXournal()->getLayout();
-    const Settings* const settings = self->getView()->getXournal()->getControl()->getSettings();
-    const double zoom = self->view->getXournal()->getZoom();
+    Layout* layout = self->view->getNoteView()->getLayout();
+    const Settings* const settings = self->getView()->getNoteView()->getControl()->getSettings();
+    const double zoom = self->view->getNoteView()->getZoom();
 
     // Helper function to compute scroll amount for a single dimension, based on visible region and selection bbox
     const auto computeScrollAmt = [&](double visMin, double visLen, double bboxMin, double bboxLen, double layoutSize,
@@ -973,8 +973,8 @@ bool EditSelection::handleEdgePan(EditSelection* self) {
         self->moveSelection(translateX, translateY);
 
         if (PageView* v = self->getPageViewUnderCursor(); v && v != self->view) {
-            VertexNoteView* xournal = self->view->getXournal();
-            xournal->pageSelected(xournal->getControl()->getDocument()->indexOf(v->getPage()));
+            VertexNoteView* noteView = self->view->getNoteView();
+            noteView->pageSelected(noteView->getControl()->getDocument()->indexOf(v->getPage()));
 
             self->translateToView(v);
         }
@@ -995,7 +995,7 @@ bool EditSelection::handleEdgePan(EditSelection* self) {
 
 auto EditSelection::getBoundingBoxInView() const -> Rectangle<double> {
     auto viewpos = this->view->getPixelPosition();
-    double zoom = this->view->getXournal()->getZoom();
+    double zoom = this->view->getNoteView()->getZoom();
 
     double sin = std::sin(this->rotation);
     double cos = std::cos(this->rotation);
@@ -1013,7 +1013,7 @@ void EditSelection::ensureWithinVisibleArea() {
     const Rectangle<double> viewRect = this->getBoundingBoxInView();
     // need to modify this to take into account the position
     // of the object, plus typecast because PageView takes ints
-    this->view->getXournal()->ensureRectIsVisible(static_cast<int>(viewRect.x), static_cast<int>(viewRect.y),
+    this->view->getNoteView()->ensureRectIsVisible(static_cast<int>(viewRect.x), static_cast<int>(viewRect.y),
                                                   static_cast<int>(viewRect.width), static_cast<int>(viewRect.height));
 }
 
@@ -1150,7 +1150,7 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
     gdk_cairo_set_source_rgba(cr, &applied);
     cairo_fill(cr);
 
-    ToolHandler* toolHandler = view->getXournal()->getControl()->getToolHandler();
+    ToolHandler* toolHandler = view->getNoteView()->getControl()->getToolHandler();
     if (toolHandler->getToolType() != TOOL_HAND) {
         cairo_set_dash(cr, nullptr, 0, 0);
         if (!this->preserveAspectRatio) {
@@ -1389,3 +1389,5 @@ void EditSelection::readSerialized(ObjectInputStream& in) {
 
     in.endObject();
 }
+
+

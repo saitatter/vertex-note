@@ -24,7 +24,7 @@ MouseInputHandler::~MouseInputHandler() = default;
 
 auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
     // Only handle events when there is no active gesture
-    GtkVertexNote* xournal = inputContext->getXournal();
+    GtkVertexNote* noteWidget = inputContext->getXournal();
 
     // Determine the pressed states of devices and associate them to the current event
     setPressedState(event);
@@ -55,7 +55,7 @@ auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
     if (event.type == MOTION_EVENT)  // mouse or pen moved
     {
         this->actionMotion(event);
-        VertexNoteCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = noteWidget->view->getCursor();
         cursor->setInvisible(false);
         cursor->updateCursor();
     }
@@ -92,8 +92,8 @@ auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
 
 void MouseInputHandler::setPressedState(InputEvent const& event) {
     PageView* currentPage = getPageAtCurrentPosition(event);
-
-    this->inputContext->getXournal()->view->getCursor()->setInsidePage(currentPage != nullptr);
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    noteWidget->view->getCursor()->setInsidePage(currentPage != nullptr);
 
     if (event.type == BUTTON_PRESS_EVENT)  // mouse button pressed or pen touching surface
     {
@@ -163,7 +163,8 @@ void MouseInputHandler::setPressedState(InputEvent const& event) {
 auto MouseInputHandler::changeTool(InputEvent const& event) -> bool {
     Settings* settings = this->inputContext->getSettings();
     ToolHandler* toolHandler = this->inputContext->getToolHandler();
-    bool isClickOnSelection = this->inputContext->getXournal()->selection;
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    bool isClickOnSelection = noteWidget->selection;
     bool toolChanged = false;
 
     if (!isClickOnSelection) {
@@ -194,3 +195,4 @@ auto MouseInputHandler::changeTool(InputEvent const& event) -> bool {
 }
 
 void MouseInputHandler::onBlock() {}
+

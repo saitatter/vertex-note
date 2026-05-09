@@ -49,7 +49,7 @@ void GeometryToolController::scale(double f) {
 
 
 void GeometryToolController::markOrigin() {
-    const auto control = view->getXournal()->getControl();
+    const auto control = view->getNoteView()->getControl();
     const auto h = control->getToolHandler();
     auto cross = std::make_unique<Stroke>();
     cross->setWidth(h->getToolThickness(TOOL_PEN)[TOOL_SIZE_FINE]);
@@ -79,8 +79,8 @@ void GeometryToolController::markOrigin() {
 }
 
 void GeometryToolController::addStrokeToLayer() {
-    const auto xournal = view->getXournal();
-    const auto control = xournal->getControl();
+    const auto noteView = view->getNoteView();
+    const auto control = noteView->getControl();
     const auto doc = control->getDocument();
     const auto page = view->getPage();
 
@@ -95,11 +95,11 @@ void GeometryToolController::addStrokeToLayer() {
     const Rectangle<double> rect{ptr->getX(), ptr->getY(), ptr->getElementWidth(), ptr->getElementHeight()};
     view->rerenderRect(rect.x, rect.y, rect.width, rect.height);
     geometryTool->setStroke(nullptr);
-    xournal->getCursor()->updateCursor();
+    noteView->getCursor()->updateCursor();
 }
 
 void GeometryToolController::initializeStroke() {
-    const auto h = view->getXournal()->getControl()->getToolHandler();
+    const auto h = view->getNoteView()->getControl()->getToolHandler();
     stroke = std::make_unique<Stroke>();
     geometryTool->setStroke(stroke.get());
     stroke->setWidth(h->getThickness());
@@ -125,3 +125,5 @@ void GeometryToolController::initializeStroke() {
 auto GeometryToolController::getPage() const -> const PageRef { return view->getPage(); }
 
 auto GeometryToolController::getView() const -> PageView* { return view; }
+
+

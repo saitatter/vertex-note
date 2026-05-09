@@ -29,7 +29,7 @@ StylusInputHandler::~StylusInputHandler() = default;
 
 auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
     // Only handle events when there is no active gesture
-    GtkVertexNote* xournal = inputContext->getXournal();
+    GtkVertexNote* noteWidget = inputContext->getXournal();
 
     // Determine the pressed states of devices and associate them to the current event
     setPressedState(event);
@@ -81,7 +81,7 @@ auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
         } else {
             this->actionMotion(event);
         }
-        VertexNoteCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = noteWidget->view->getCursor();
         cursor->setInvisible(false);
         cursor->updateCursor();
     }
@@ -138,8 +138,8 @@ auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
 
 void StylusInputHandler::setPressedState(InputEvent const& event) {
     PageView* currentPage = getPageAtCurrentPosition(event);
-
-    this->inputContext->getXournal()->view->getCursor()->setInsidePage(currentPage != nullptr);
+    GtkVertexNote* noteWidget = this->inputContext->getXournal();
+    noteWidget->view->getCursor()->setInsidePage(currentPage != nullptr);
 
     if (event.type == BUTTON_PRESS_EVENT)  // mouse button pressed or pen touching surface
     {
@@ -207,3 +207,4 @@ auto StylusInputHandler::changeTool(InputEvent const& event) -> bool {
 
     return true;
 }
+
