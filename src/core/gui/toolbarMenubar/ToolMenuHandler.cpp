@@ -320,6 +320,22 @@ void ToolMenuHandler::initToolItems() {
                          "snapping-grid", _("VertexNote Geometry Snapping"));
     emplaceCustomItemTgl("VERTEXNOTE_GRID_SNAPPING", Cat::MISC, Action::VERTEXNOTE_GRID_SNAPPING, "snapping-grid",
                          _("VertexNote Grid Snapping"));
+    emplaceCustomItem("CONSTRAINT_COINCIDENT", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_COINCIDENT, "object-select",
+                      _("Apply coincident constraint"));
+    emplaceCustomItem("CONSTRAINT_HORIZONTAL", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_HORIZONTAL, "draw-line",
+                      _("Apply horizontal constraint"));
+    emplaceCustomItem("CONSTRAINT_VERTICAL", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_VERTICAL, "draw-line",
+                      _("Apply vertical constraint"));
+    emplaceCustomItem("CONSTRAINT_FIXED_LENGTH", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_FIXED_LENGTH,
+                      "draw-coordinate-system", _("Apply fixed-length constraint"));
+    emplaceCustomItem("CONSTRAINT_EDIT_FIXED_LENGTH", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_EDIT_FIXED_LENGTH,
+                      "draw-coordinate-system", _("Edit fixed-length constraint"));
+    emplaceCustomItem("CONSTRAINT_PARALLEL", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_PARALLEL, "draw-line",
+                      _("Apply parallel constraint"));
+    emplaceCustomItem("CONSTRAINT_PERPENDICULAR", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_PERPENDICULAR,
+                      "draw-coordinate-system", _("Apply perpendicular constraint"));
+    emplaceCustomItem("CONSTRAINT_DELETE", Cat::MISC, Action::VERTEXNOTE_CONSTRAINT_DELETE, "edit-delete",
+                      _("Delete matching constraints"));
 
     /*
      * Menu View

@@ -277,6 +277,7 @@ struct ActionProperties<Action::VERTEXNOTE_GRID_SNAPPING> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_COINCIDENT> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>C", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Coincident);
     }
@@ -284,6 +285,7 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_COINCIDENT> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_HORIZONTAL> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>H", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Horizontal);
     }
@@ -291,6 +293,7 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_HORIZONTAL> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_VERTICAL> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>V", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Vertical);
     }
@@ -298,6 +301,7 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_VERTICAL> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_FIXED_LENGTH> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>L", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::FixedLength);
     }
@@ -305,11 +309,13 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_FIXED_LENGTH> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_EDIT_FIXED_LENGTH> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>E", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->editSelectedFixedLengthConstraint(); }
 };
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PARALLEL> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>P", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Parallel);
     }
@@ -317,6 +323,7 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PARALLEL> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PERPENDICULAR> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt><Shift>P", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
         ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Perpendicular);
     }
@@ -324,6 +331,7 @@ struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PERPENDICULAR> {
 
 template <>
 struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_DELETE> {
+    static constexpr const char* accelerators[] = {"<Ctrl><Alt>Delete", nullptr};
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->deleteSelectedGeometryConstraints(); }
 };
 
