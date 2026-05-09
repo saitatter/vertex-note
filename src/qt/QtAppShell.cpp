@@ -11,11 +11,14 @@
 
 #include <QApplication>
 #include <QAction>
+#include <QFileDialog>
+#include <QMessageBox>
 #include <QStatusBar>
 #include <QString>
 #include <QToolBar>
 
 #include "QtBackgroundDialog.h"
+#include "QtPageSidebar.h"
 
 namespace {
 
@@ -36,10 +39,17 @@ QtAppShell::QtAppShell():
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
     this->window.layerPanel()->setDocumentController(&this->documentController);
+
+    // Wire page sidebar
+    auto* sidebar = this->window.pageSidebar();
+    sidebar->setDocumentController(&this->documentController);
+    sidebar->setContentRenderer(this->window.canvas()->contentRenderer());
+
     registerBootstrapCommands();
     wireWindowState();
     rebuildToolbar();
     this->window.canvas()->newBlankDocument();
+    sidebar->refresh();
     updateWindowTitle();
 }
 
@@ -288,6 +298,22 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Change the page background colour and pattern",
              .menu = "Edit"},
             [this]() { showBackgroundDialog(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "export.pdf",
+             .text = "Export PDF...",
+             .tooltip = "Export all pages as a PDF file",
+             .shortcut = "Ctrl+Shift+P",
+             .menu = "File"},
+            [this]() { exportPdf(); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "export.png",
+             .text = "Export PNG...",
+             .tooltip = "Export the current page as a PNG image",
+             .shortcut = "Ctrl+Shift+E",
+             .menu = "File"},
+            [this]() { exportPng(); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -304,6 +330,7 @@ void QtAppShell::wireWindowState() {
                          }
                          updateEditCommandStates();
                          this->window.layerPanel()->refresh();
+                         this->window.pageSidebar()->refresh();
                      });
 
     QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
@@ -312,6 +339,21 @@ void QtAppShell::wireWindowState() {
                          if (!this->suppressDirtyTracking) {
                              markSessionDirty();
                          }
+                     });
+
+    // Sidebar page selection → scroll canvas to that page
+    QObject::connect(this->window.pageSidebar(), &QtPageSidebar::pageSelected, &this->window,
+                     [this](std::size_t pageIndex) {
+                         // Scroll canvas so the selected page is visible at the top
+                         const auto& pages = this->documentController.snapshotPages();
+                         double y = 0.0;
+                         constexpr double PAGE_GAP = 20.0;
+                         for (std::size_t i = 0; i < pageIndex && i < pages.size(); ++i) {
+                             y += pages[i].height + PAGE_GAP;
+                         }
+                         this->window.canvas()->setViewportState(
+                                 this->window.canvas()->sessionViewportState().zoom, 0.0, y);
+                         this->window.canvas()->update();
                      });
 
     updateEditCommandStates();
@@ -364,6 +406,7 @@ void QtAppShell::newSession() {
     this->suppressDirtyTracking = false;
     updateEditCommandStates();
     this->window.layerPanel()->refresh();
+    this->window.pageSidebar()->refresh();
     this->window.statusBar()->showMessage(QStringLiteral("Created a blank document"), 3000);
     updateWindowTitle();
 }
@@ -399,6 +442,7 @@ void QtAppShell::openSession() {
         this->recentFiles.addRecentFile(*path);
         updateEditCommandStates();
         this->window.layerPanel()->refresh();
+        this->window.pageSidebar()->refresh();
         this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path->filename().string()), 4000);
         updateWindowTitle();
         return;
@@ -417,6 +461,7 @@ void QtAppShell::openSession() {
     this->recentFiles.addRecentFile(*path);
     updateEditCommandStates();
     this->window.layerPanel()->refresh();
+    this->window.pageSidebar()->refresh();
     this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path->filename().string()), 4000);
     updateWindowTitle();
 }
@@ -506,4 +551,63 @@ void QtAppShell::showBackgroundDialog() {
     this->window.canvas()->update();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page background updated"), 3000);
+}
+
+void QtAppShell::exportPdf() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Export PDF"),
+                                                          QString(), QStringLiteral("PDF Files (*.pdf)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    auto* renderer = this->window.canvas()->contentRenderer();
+    if (!renderer) {
+        return;
+    }
+
+    QtDocumentExporter exp(renderer);
+    std::string errorMsg;
+    const auto& pages = this->documentController.snapshotPages();
+    if (exp.exportPdf(filePath.toStdString(), pages, &errorMsg)) {
+        this->window.statusBar()->showMessage(QStringLiteral("PDF exported successfully"), 3000);
+    } else {
+        QMessageBox::warning(&this->window, QStringLiteral("Export Failed"),
+                             QString::fromStdString(errorMsg));
+    }
+}
+
+void QtAppShell::exportPng() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Export PNG"),
+                                                          QString(), QStringLiteral("PNG Images (*.png)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    auto* renderer = this->window.canvas()->contentRenderer();
+    if (!renderer) {
+        return;
+    }
+
+    // Export page 0 (current single-page focus)
+    const auto& pages = this->documentController.snapshotPages();
+    if (pages.empty()) {
+        return;
+    }
+
+    QtDocumentExporter exp(renderer);
+    std::string errorMsg;
+    if (exp.exportPng(filePath.toStdString(), pages[0], 2.0, &errorMsg)) {
+        this->window.statusBar()->showMessage(QStringLiteral("PNG exported successfully"), 3000);
+    } else {
+        QMessageBox::warning(&this->window, QStringLiteral("Export Failed"),
+                             QString::fromStdString(errorMsg));
+    }
 }

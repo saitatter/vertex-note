@@ -67,6 +67,9 @@ public:
     [[nodiscard]] auto performUndo() -> bool;
     [[nodiscard]] auto performRedo() -> bool;
 
+    // Content renderer (shared for sidebar thumbnails / export)
+    [[nodiscard]] auto contentRenderer() const -> vn::view::render::PageContentRenderer*;
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;

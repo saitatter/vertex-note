@@ -126,15 +126,22 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 5. ✓ Shared `PageContentRenderer` routes drawables through abstract
    renderer interfaces; active stroke preview uses the same pipeline.
 
+### Phase 3 — Feature parity & polish (partial) ✓
+
+6. ✓ Layer panel dock widget with visibility toggles, add/remove/reorder.
+7. ✓ Page background dialog with colour picker and pattern dropdown.
+9. ✓ Export: PDF via `QPdfWriter`, PNG via `QImage` at configurable scale.
+10. ✓ Page sidebar dock with rendered thumbnails and click-to-scroll navigation.
+
 ## Next Slices
 
 ### Phase 3 — Feature parity & polish
 
-6. Layer panel UI and layer operations.
-7. Page templates, background colour/pattern dialogs.
+6. ✅ Layer panel UI and layer operations.
+7. ✅ Page templates, background colour/pattern dialogs.
 8. PDF annotation overlay (pen/text on PDF pages).
-9. Export (PDF, PNG), print.
-10. Sidebar (page thumbnails, search).
+9. ✅ Export (PDF, PNG) via QPdfWriter / QImage.
+10. ✅ Sidebar (page thumbnails with rendered previews, click-to-scroll).
 11. Plugin system, fullscreen/presentation modes.
 12. Toolbar with tool palette, colour picker, font selector, floating
     toolbox.

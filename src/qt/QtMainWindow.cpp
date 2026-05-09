@@ -24,6 +24,9 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->layerPanelWidget = new QtLayerPanel(this);
     addDockWidget(Qt::RightDockWidgetArea, this->layerPanelWidget);
 
+    this->pageSidebarWidget = new QtPageSidebar(this);
+    addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
+
     statusBar()->showMessage(QStringLiteral("Qt shell ready"));
 }
 
@@ -34,3 +37,5 @@ auto QtMainWindow::commandHost() -> QtCommandHost* { return &this->commandRegist
 auto QtMainWindow::mainToolBar() -> QToolBar* { return this->toolBar; }
 
 auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget; }
+
+auto QtMainWindow::pageSidebar() -> QtPageSidebar* { return this->pageSidebarWidget; }

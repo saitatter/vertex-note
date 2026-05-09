@@ -11,6 +11,7 @@
 #include "QtCanvas.h"
 #include "QtCommandHost.h"
 #include "QtLayerPanel.h"
+#include "QtPageSidebar.h"
 
 class QToolBar;
 
@@ -22,10 +23,12 @@ public:
     [[nodiscard]] auto commandHost() -> QtCommandHost*;
     [[nodiscard]] auto mainToolBar() -> QToolBar*;
     [[nodiscard]] auto layerPanel() -> QtLayerPanel*;
+    [[nodiscard]] auto pageSidebar() -> QtPageSidebar*;
 
 private:
     QtCanvas* canvasWidget = nullptr;
     QToolBar* toolBar = nullptr;
     QtLayerPanel* layerPanelWidget = nullptr;
+    QtPageSidebar* pageSidebarWidget = nullptr;
     QtCommandHost commandRegistry;
 };

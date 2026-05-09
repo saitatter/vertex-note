@@ -1074,6 +1074,10 @@ auto QtCanvas::performRedo() -> bool {
     return changed;
 }
 
+auto QtCanvas::contentRenderer() const -> vn::view::render::PageContentRenderer* {
+    return this->pageContentRenderer.get();
+}
+
 // ---------------------------------------------------------------------------
 // Stroke input
 // ---------------------------------------------------------------------------

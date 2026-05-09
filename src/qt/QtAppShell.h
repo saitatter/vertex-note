@@ -9,6 +9,7 @@
 #include "QtClipboardService.h"
 #include "QtDialogService.h"
 #include "QtDocumentController.h"
+#include "QtDocumentExporter.h"
 #include "QtDocumentSession.h"
 #include "QtMainWindow.h"
 #include "QtPluginUiBridge.h"
@@ -50,6 +51,8 @@ private:
     void selectTool(QtToolType tool);
     void updateToolCommandStates();
     void showBackgroundDialog();
+    void exportPdf();
+    void exportPng();
 
 private:
     QtMainWindow window;
@@ -60,5 +63,6 @@ private:
     QtPluginUiBridge plugins;
     QtDocumentController documentController;
     QtDocumentSession session;
+    std::unique_ptr<QtDocumentExporter> exporter;
     bool suppressDirtyTracking = false;
 };
