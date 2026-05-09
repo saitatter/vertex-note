@@ -18,7 +18,7 @@
 #include "StavesBackgroundView.h"                   // for StavesBackground...
 #include "TransparentCheckerboardBackgroundView.h"  // for TransparentCheck...
 
-using namespace xoj::view;
+using namespace vn::view;
 
 auto BackgroundView::createRuled(double width, double height, Color backgroundColor, const PageType& pt,
                                  double lineWidthFactor) -> std::unique_ptr<BackgroundView> {

@@ -9,7 +9,7 @@
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 SelectorView::SelectorView(const Selector* selector, Repaintable* parent, Color selectorColor):
         OverlayView(parent), selector(selector), selectorColor(selectorColor) {
@@ -50,7 +50,7 @@ void SelectorView::on(SelectorView::FlagDirtyRegionRequest, Range rg) {
     this->parent->flagDirtyRegion(rg);
 }
 
-void xoj::view::SelectorView::deleteOn(xoj::view::SelectorView::DeleteViewsRequest, Range rg) {
+void vn::view::SelectorView::deleteOn(vn::view::SelectorView::DeleteViewsRequest, Range rg) {
     rg.addPadding(BORDER_WIDTH_IN_PIXELS / this->parent->getZoom());
     this->parent->deleteOverlayView(this, rg);
 }

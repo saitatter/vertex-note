@@ -12,7 +12,7 @@
 #pragma once
 
 class Layer;
-namespace xoj::view {
+namespace vn::view {
 class Context;
 
 class LayerView {

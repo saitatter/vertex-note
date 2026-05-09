@@ -18,13 +18,13 @@
 #include "model/PageRef.h"  // for ConstPageRef
 #include "util/Color.h"     // for Color
 
+#include "view/ViewNamespaceAliases.h"
 #include "BackgroundFlags.h"
 
 class PdfCache;
 class PageType;
 
-namespace xoj {
-namespace view {
+namespace vn::view {
 class BackgroundView {
 public:
     BackgroundView(double pageWidth, double pageHeight): pageWidth(pageWidth), pageHeight(pageHeight) {}
@@ -41,12 +41,11 @@ public:
                                                                      const PageType& pt, double lineWidthFactor = 1.0);
 
     [[nodiscard]] static std::unique_ptr<BackgroundView> createForPage(ConstPageRef page,
-                                                                       xoj::view::BackgroundFlags bgFlags,
+                                                                       vn::view::BackgroundFlags bgFlags,
                                                                        PdfCache* pdfCache = nullptr);
 
 protected:
     double pageWidth;
     double pageHeight;
 };
-};  // namespace view
-};  // namespace xoj
+};  // namespace vn::view

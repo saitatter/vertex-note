@@ -6,7 +6,7 @@
 #include "model/BackgroundImage.h"           // for BackgroundImage
 #include "view/background/BackgroundView.h"  // for BackgroundView, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 ImageBackgroundView::ImageBackgroundView(double pageWidth, double pageHeight, const BackgroundImage& image):
         BackgroundView(pageWidth, pageHeight), image(image) {}

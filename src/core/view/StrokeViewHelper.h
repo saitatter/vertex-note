@@ -18,7 +18,7 @@
 class LineStyle;
 class Point;
 
-namespace xoj::view::StrokeViewHelper {
+namespace vn::view::StrokeViewHelper {
 
 /**
  * @brief Simply adds the points to a cairo context, as a single path

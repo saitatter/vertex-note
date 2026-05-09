@@ -8,7 +8,7 @@
 
 #include "util/raii/CairoWrappers.h"
 
-namespace xoj::view {
+namespace vn::view {
 
 namespace {
 
@@ -165,4 +165,4 @@ void drawSnapIndicator(cairo_t* cr, const Point& point, std::optional<vn::snap::
     cairo_show_text(cr, label);
 }
 
-}  // namespace xoj::view
+}  // namespace vn::view

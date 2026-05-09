@@ -8,7 +8,7 @@
 
 class Element;
 
-using namespace xoj::view;
+using namespace vn::view;
 
 ElementContainerView::ElementContainerView(const ElementContainer* container): container(container) {}
 

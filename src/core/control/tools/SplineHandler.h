@@ -35,7 +35,7 @@ template <class T>
 class DispatchPool;
 };
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class Repaintable;
 class SplineToolView;

@@ -13,7 +13,7 @@
 
 #include "view/ViewNamespaceAliases.h"
 
-namespace xoj::view {
+namespace vn::view {
 
 enum PDFBackgroundTreatment : bool { SHOW_PDF_BACKGROUND = true, HIDE_PDF_BACKGROUND = false };
 enum ImageBackgroundTreatment : bool { SHOW_IMAGE_BACKGROUND = true, HIDE_IMAGE_BACKGROUND = false };
@@ -36,4 +36,4 @@ static constexpr BackgroundFlags BACKGROUND_SHOW_ALL = {SHOW_PDF_BACKGROUND, SHO
 static constexpr BackgroundFlags BACKGROUND_FORCE_PAINT_BACKGROUND_COLOR_ONLY = {
         HIDE_PDF_BACKGROUND, HIDE_IMAGE_BACKGROUND, HIDE_RULING_BACKGROUND, FORCE_AT_LEAST_BACKGROUND_COLOR,
         FORCE_VISIBLE};
-}  // namespace xoj::view
+}  // namespace vn::view

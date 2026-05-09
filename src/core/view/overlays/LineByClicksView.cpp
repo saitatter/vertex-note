@@ -14,7 +14,7 @@
 #include "view/Repaintable.h"
 #include "view/overlays/SnapIndicatorViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 LineByClicksView::LineByClicksView(const LineByClicksHandler* handler, Repaintable* parent):
         ToolView(parent), handler(handler) {

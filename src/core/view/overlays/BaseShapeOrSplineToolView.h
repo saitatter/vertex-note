@@ -19,7 +19,7 @@
 
 class InputHandler;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class BaseShapeOrSplineToolView: public BaseStrokeToolView {

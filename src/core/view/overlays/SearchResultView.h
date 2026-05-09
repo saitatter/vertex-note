@@ -19,7 +19,7 @@
 class OverlayBase;
 class SearchControl;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class SearchResultView final: public OverlayView, public xoj::util::Listener<SearchResultView> {

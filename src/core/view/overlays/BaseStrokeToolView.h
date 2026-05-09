@@ -19,7 +19,7 @@
 
 class Stroke;
 
-namespace xoj::view {
+namespace vn::view {
 class Mask;
 class Repaintable;
 

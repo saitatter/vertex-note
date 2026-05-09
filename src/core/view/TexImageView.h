@@ -15,7 +15,7 @@
 
 class TexImage;
 
-class xoj::view::TexImageView: public xoj::view::ElementView {
+class vn::view::TexImageView: public vn::view::ElementView {
 public:
     TexImageView(const TexImage* texImage);
     virtual ~TexImageView();

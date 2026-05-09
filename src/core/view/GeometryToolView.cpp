@@ -9,7 +9,7 @@
 
 #include "StrokeView.h"  // for StrokeView
 
-using namespace xoj::view;
+using namespace vn::view;
 
 GeometryToolView::GeometryToolView(const GeometryTool* geometryTool, Repaintable* parent, ZoomControl* zoomControl):
         ToolView(parent), geometryTool(geometryTool), zoomControl(zoomControl) {
@@ -39,8 +39,8 @@ bool GeometryToolView::isViewOf(const OverlayBase* overlay) const { return overl
 
 void GeometryToolView::drawTemporaryStroke(cairo_t* cr) const {
     if (geometryTool->getStroke()) {
-        auto context = xoj::view::Context::createDefault(cr);
-        xoj::view::StrokeView strokeView(geometryTool->getStroke());
+        auto context = vn::view::Context::createDefault(cr);
+        vn::view::StrokeView strokeView(geometryTool->getStroke());
         strokeView.draw(context);
     }
 }

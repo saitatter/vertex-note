@@ -39,7 +39,7 @@ class ZoomControl;
  * of the longest side of the setsquare.
  */
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class SetsquareView: public GeometryToolView {

@@ -15,7 +15,7 @@
 #include "view/Repaintable.h"
 #include "view/StrokeViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 StrokeToolView::StrokeToolView(const StrokeHandler* strokeHandler, const Stroke& stroke, Repaintable* parent):
         BaseStrokeToolView(parent, stroke), strokeHandler(strokeHandler), pointBuffer(stroke.getPointVector()) {

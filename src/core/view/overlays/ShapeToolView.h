@@ -20,7 +20,7 @@ class BaseShapeHandler;
 class OverlayBase;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class ShapeToolView final: public BaseShapeOrSplineToolView, public xoj::util::Listener<ShapeToolView> {

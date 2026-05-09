@@ -25,7 +25,7 @@ class ZoomControl;
 class LaserPointerHandler;
 class StrokeHandler;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 class StrokeToolView;
 

@@ -37,7 +37,7 @@ template <class T>
 class DispatchPool;
 }
 
-namespace xoj::view {
+namespace vn::view {
 class GeometryToolView;
 };
 

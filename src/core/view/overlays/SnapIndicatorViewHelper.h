@@ -13,8 +13,8 @@
 #include "model/Point.h"
 #include "vertexnote/snapping/SnapTypes.h"
 
-namespace xoj::view {
+namespace vn::view {
 
 void drawSnapIndicator(cairo_t* cr, const Point& point, std::optional<vn::snap::SnapKind> kind);
 
-}  // namespace xoj::view
+}  // namespace vn::view

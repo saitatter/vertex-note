@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class IsoGraphBackgroundView: public BaseIsometricBackgroundView {
 public:
     IsoGraphBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

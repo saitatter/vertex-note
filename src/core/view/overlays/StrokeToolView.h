@@ -25,7 +25,7 @@ class Range;
 class Stroke;
 class OverlayBase;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class StrokeToolView: public BaseStrokeToolView, public xoj::util::Listener<StrokeToolView> {

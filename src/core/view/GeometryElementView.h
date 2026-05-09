@@ -12,7 +12,7 @@ namespace vn::geom {
 class GeometryElement;
 }
 
-class xoj::view::GeometryElementView: public xoj::view::ElementView {
+class vn::view::GeometryElementView: public vn::view::ElementView {
 public:
     explicit GeometryElementView(const vn::geom::GeometryElement* geometry);
     ~GeometryElementView() override = default;

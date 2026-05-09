@@ -5,7 +5,7 @@
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 SearchResultView::SearchResultView(const SearchControl* searchControl, Repaintable* parent, Color frameColor,
                                    Color frameHighlightColor):

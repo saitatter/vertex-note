@@ -16,7 +16,7 @@
 
 class OverlayBase;
 
-using namespace xoj::view;
+using namespace vn::view;
 
 SplineToolView::SplineToolView(const SplineHandler* splineHandler, Repaintable* parent):
         BaseShapeOrSplineToolView(splineHandler, parent), splineHandler(splineHandler) {

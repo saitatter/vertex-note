@@ -12,7 +12,7 @@
 
 #include "filesystem.h"  // for path
 
-using namespace xoj::view;
+using namespace vn::view;
 
 TextView::TextView(const Text* text): text(text) {}
 

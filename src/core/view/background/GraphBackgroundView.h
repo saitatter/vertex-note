@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class GraphBackgroundView: public OneColorBackgroundView {
 public:
     GraphBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

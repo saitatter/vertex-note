@@ -26,7 +26,7 @@ class Stroke;
 class PositionInputData;
 struct KeyEvent;
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class Repaintable;
 };  // namespace vn::view

@@ -19,7 +19,7 @@
 
 class Point;
 
-namespace xoj::view {
+namespace vn::view {
 class StrokeContour final {
 public:
     explicit StrokeContour(const std::vector<Point>& path);
@@ -43,4 +43,4 @@ private:
     const std::vector<Point>& path;
     const std::vector<double>& dashPattern;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

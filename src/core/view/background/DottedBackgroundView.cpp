@@ -8,7 +8,7 @@
 #include "view/background/PlainBackgroundView.h"     // for PlainBackgroundView
 
 using namespace background_config_strings;
-using namespace xoj::view;
+using namespace vn::view;
 
 DottedBackgroundView::DottedBackgroundView(double pageWidth, double pageHeight, Color backgroundColor,
                                            const BackgroundConfig& config):

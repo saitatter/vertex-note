@@ -5,7 +5,7 @@
 #include "model/Image.h"  // for Image
 #include "view/View.h"    // for Context, OPACITY_NO_AUDIO, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 ImageView::ImageView(const Image* image): image(image) {}
 

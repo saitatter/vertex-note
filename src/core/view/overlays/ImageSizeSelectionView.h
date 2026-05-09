@@ -20,7 +20,7 @@
 class ImageSizeSelection;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class ImageSizeSelectionView: public OverlayView, public xoj::util::Listener<ImageSizeSelectionView> {

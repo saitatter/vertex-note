@@ -6,7 +6,7 @@
 #include "util/Assert.h"                     // for xoj_assert
 #include "view/background/BackgroundView.h"  // for BackgroundView, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 PdfBackgroundView::PdfBackgroundView(double pageWidth, double pageHeight, size_t pageNo, PdfCache* pdfCache):
         BackgroundView(pageWidth, pageHeight), pageNo(pageNo), pdfCache(pdfCache) {}

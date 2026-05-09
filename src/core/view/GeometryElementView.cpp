@@ -12,7 +12,7 @@
 #include "util/raii/CairoWrappers.h"
 #include "vertexnote/geometry/GeometryElement.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 GeometryElementView::GeometryElementView(const vn::geom::GeometryElement* geometry): geometry(geometry) {}
 

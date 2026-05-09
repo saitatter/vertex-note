@@ -18,7 +18,7 @@
 
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 
 /**
  * @brief Mask class: a cairo surface and its context to draw on, with the later purpose of blitting or using as a

@@ -22,7 +22,7 @@
 #include "pdf/base/PdfPage.h"  // for PdfPagePtr, PdfRectangle
 #include "util/DispatchPool.h"
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class Repaintable;
 class SearchResultView;

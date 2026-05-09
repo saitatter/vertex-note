@@ -61,22 +61,22 @@ void DocumentView::finializeDrawing() {
 /**
  * Draw the background
  */
-void DocumentView::drawBackground(xoj::view::BackgroundFlags bgFlags) const {
-    auto bgView = xoj::view::BackgroundView::createForPage(page, bgFlags, pdfCache);
+void DocumentView::drawBackground(vn::view::BackgroundFlags bgFlags) const {
+    auto bgView = vn::view::BackgroundView::createForPage(page, bgFlags, pdfCache);
     bgView->draw(cr);
 }
 
 void DocumentView::drawPage(ConstPageRef page, cairo_t* cr, bool dontRenderEditingStroke,
-                            xoj::view::BackgroundFlags flags) {
+                            vn::view::BackgroundFlags flags) {
     initDrawing(page, cr, dontRenderEditingStroke);
 
     drawBackground(flags);
 
-    xoj::view::Context context{cr, (xoj::view::NonAudioTreatment)this->markAudioStroke,
-                               (xoj::view::EditionTreatment) !this->dontRenderEditingStroke, xoj::view::NORMAL_COLOR};
+    vn::view::Context context{cr, (vn::view::NonAudioTreatment)this->markAudioStroke,
+                               (vn::view::EditionTreatment) !this->dontRenderEditingStroke, vn::view::NORMAL_COLOR};
     for (const Layer* layer: page->getLayersView()) {
         if (layer->isVisible()) {
-            xoj::view::LayerView layerView(layer);
+            vn::view::LayerView layerView(layer);
             layerView.draw(context);
         }
     }
@@ -86,7 +86,7 @@ void DocumentView::drawPage(ConstPageRef page, cairo_t* cr, bool dontRenderEditi
 
 
 void DocumentView::drawLayersOfPage(const LayerRangeVector& layerRange, ConstPageRef page, cairo_t* cr,
-                                    bool dontRenderEditingStroke, xoj::view::BackgroundFlags flags) {
+                                    bool dontRenderEditingStroke, vn::view::BackgroundFlags flags) {
     initDrawing(page, cr, dontRenderEditingStroke);
 
     drawBackground(flags);
@@ -104,10 +104,10 @@ void DocumentView::drawLayersOfPage(const LayerRangeVector& layerRange, ConstPag
         }
     }
 
-    xoj::view::Context context{cr, (xoj::view::NonAudioTreatment)this->markAudioStroke,
-                               (xoj::view::EditionTreatment) !this->dontRenderEditingStroke, xoj::view::NORMAL_COLOR};
+    vn::view::Context context{cr, (vn::view::NonAudioTreatment)this->markAudioStroke,
+                               (vn::view::EditionTreatment) !this->dontRenderEditingStroke, vn::view::NORMAL_COLOR};
     for (auto&& [_, l]: visibleLayers) {
-        xoj::view::LayerView layerView(l);
+        vn::view::LayerView layerView(l);
         layerView.draw(context);
     }
 

@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class BaseIsometricBackgroundView: public OneColorBackgroundView {
 public:
     BaseIsometricBackgroundView(double pageWidth, double pageHeight, Color backgroundColor,

@@ -11,8 +11,8 @@
 
 #pragma once
 
-namespace xoj::view {}
+namespace vn::view {}
 
-namespace vn {
-namespace view = xoj::view;
+namespace xoj {
+namespace view = vn::view;
 }

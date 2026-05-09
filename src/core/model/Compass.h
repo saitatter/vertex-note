@@ -20,7 +20,7 @@
  * translated. User coordinates are specified in cm.
  */
 
-namespace xoj::view {
+namespace vn::view {
 class CompassView;
 };
 

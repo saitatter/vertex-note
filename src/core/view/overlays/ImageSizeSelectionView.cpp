@@ -5,7 +5,7 @@
 #include "util/raii/CairoWrappers.h"           // for cairo_save
 #include "view/Repaintable.h"                  // for Repaintable
 
-using namespace xoj::view;
+using namespace vn::view;
 
 
 ImageSizeSelectionView::ImageSizeSelectionView(const ImageSizeSelection* imageSizeSelection, Repaintable* parent,

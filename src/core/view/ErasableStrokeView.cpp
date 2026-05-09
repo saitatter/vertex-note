@@ -22,7 +22,7 @@
 #include "config-debug.h"  // for DEBUG_ERASABLE_STROKE_BOXES
 
 using vn::util::Rectangle;
-using namespace xoj::view;
+using namespace vn::view;
 
 ErasableStrokeView::ErasableStrokeView(const ErasableStroke& erasableStroke): erasableStroke(erasableStroke) {}
 

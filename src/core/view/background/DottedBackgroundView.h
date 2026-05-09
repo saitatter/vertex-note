@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class DottedBackgroundView: public OneColorBackgroundView {
 public:
     DottedBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

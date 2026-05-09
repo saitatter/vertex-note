@@ -15,11 +15,12 @@
 
 #include <cairo.h>  // for cairo_t
 
+#include "view/ViewNamespaceAliases.h"
+
 class ErasableStroke;
 class Range;
 
-namespace xoj {
-namespace view {
+namespace vn::view {
 class Mask;
 
 class ErasableStrokeView {
@@ -53,10 +54,9 @@ private:
      * @param box The range delimiting the mask
      * @param zoom A zoom ratio to apply to the mask
      */
-    xoj::view::Mask createMask(cairo_t* target, const Range& box, double zoom) const;
+    vn::view::Mask createMask(cairo_t* target, const Range& box, double zoom) const;
 
 private:
     const ErasableStroke& erasableStroke;
 };
-};  // namespace view
-};  // namespace xoj
+};  // namespace vn::view

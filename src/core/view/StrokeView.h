@@ -17,7 +17,7 @@
 
 class Stroke;
 
-class xoj::view::StrokeView: public xoj::view::ElementView {
+class vn::view::StrokeView: public vn::view::ElementView {
 public:
     StrokeView(const Stroke* s);
     ~StrokeView() = default;

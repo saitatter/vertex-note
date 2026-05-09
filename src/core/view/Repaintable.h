@@ -20,7 +20,7 @@ template <typename T>
 class Rectangle;
 };
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class ToolView;
 
@@ -67,4 +67,4 @@ public:
      */
     virtual void deleteOverlayView(OverlayView* v, const Range& rg) = 0;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

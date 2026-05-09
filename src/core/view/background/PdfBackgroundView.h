@@ -15,12 +15,12 @@
 
 #include <cairo.h>  // for cairo_t
 
+#include "view/ViewNamespaceAliases.h"
 #include "BackgroundView.h"  // for BackgroundView
 
 class PdfCache;
 
-namespace xoj {
-namespace view {
+namespace vn::view {
 
 class PdfBackgroundView: public BackgroundView {
 public:
@@ -37,5 +37,4 @@ private:
     PdfCache* pdfCache = nullptr;
 };
 
-};  // namespace view
-};  // namespace xoj
+};  // namespace vn::view

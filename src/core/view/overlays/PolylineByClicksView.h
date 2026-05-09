@@ -13,7 +13,7 @@ class OverlayBase;
 class PolylineByClicksHandler;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class PolylineByClicksView final: public ToolView, public xoj::util::Listener<PolylineByClicksView> {
@@ -40,4 +40,4 @@ private:
     const PolylineByClicksHandler* handler;
 };
 
-}  // namespace xoj::view
+}  // namespace vn::view

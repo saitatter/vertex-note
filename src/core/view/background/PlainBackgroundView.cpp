@@ -5,7 +5,7 @@
 #include "util/safe_casts.h"                 // for ceil_cast, floor_cast
 #include "view/background/BackgroundView.h"  // for BackgroundView, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 PlainBackgroundView::PlainBackgroundView(double pageWidth, double pageHeight, Color backgroundColor):
         BackgroundView(pageWidth, pageHeight), backgroundColor(backgroundColor) {}

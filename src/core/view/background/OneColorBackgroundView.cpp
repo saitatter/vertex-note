@@ -7,7 +7,7 @@
 #include "view/background/PlainBackgroundView.h"  // for PlainBackgroundView
 
 using namespace background_config_strings;
-using namespace xoj::view;
+using namespace vn::view;
 
 OneColorBackgroundView::OneColorBackgroundView(double pageWidth, double pageHeight, Color backgroundColor,
                                                const BackgroundConfig& config, double defaultLineWidth,
@@ -23,7 +23,7 @@ OneColorBackgroundView::OneColorBackgroundView(double pageWidth, double pageHeig
     }
 }
 
-void xoj::view::OneColorBackgroundView::multiplyLineWidth(double factor) { lineWidth *= factor; }
+void vn::view::OneColorBackgroundView::multiplyLineWidth(double factor) { lineWidth *= factor; }
 
 Color OneColorBackgroundView::getColorOr(const BackgroundConfig& config, const std::string& str,
                                          const Color& defaultColor) {

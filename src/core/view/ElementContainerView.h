@@ -13,7 +13,7 @@
 
 class ElementContainer;
 
-namespace xoj::view {
+namespace vn::view {
 class Context;
 
 class ElementContainerView {

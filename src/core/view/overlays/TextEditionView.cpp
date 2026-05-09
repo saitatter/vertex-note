@@ -6,7 +6,7 @@
 #include "util/raii/CairoWrappers.h"
 #include "view/Repaintable.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 TextEditionView::TextEditionView(const TextEditor* textEditor, Repaintable* parent):
         ToolView(parent), textEditor(textEditor) {

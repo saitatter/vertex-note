@@ -24,7 +24,7 @@
 
 class SetsquareInputHandler;
 
-namespace xoj::view {
+namespace vn::view {
 class SetsquareView;
 };
 

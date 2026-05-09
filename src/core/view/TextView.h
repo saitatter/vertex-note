@@ -22,7 +22,7 @@
 
 class Text;
 
-class xoj::view::TextView: public xoj::view::ElementView {
+class vn::view::TextView: public vn::view::ElementView {
 public:
     TextView(const Text* t);
     virtual ~TextView();

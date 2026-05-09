@@ -29,11 +29,11 @@ template <class T>
 class DispatchPool;
 }
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class PolylineByClicksView;
 class Repaintable;
-}  // namespace xoj::view
+}  // namespace vn::view
 
 class PolylineByClicksHandler final: public InputHandler {
 public:

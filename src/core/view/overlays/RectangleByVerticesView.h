@@ -13,7 +13,7 @@ class OverlayBase;
 class Range;
 class RectangleByVerticesHandler;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class RectangleByVerticesView final: public ToolView, public xoj::util::Listener<RectangleByVerticesView> {
@@ -40,4 +40,4 @@ private:
     const RectangleByVerticesHandler* handler;
 };
 
-}  // namespace xoj::view
+}  // namespace vn::view

@@ -9,7 +9,7 @@
 #include "view/Repaintable.h"
 #include "view/StrokeViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 static const Point& setupFirstPoint(const Stroke& s) {
     const auto& pts = s.getPointVector();

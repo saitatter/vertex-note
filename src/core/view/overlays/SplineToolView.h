@@ -24,7 +24,7 @@ class OverlayBase;
 class Range;
 class ZoomControl;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class SplineToolView:

@@ -24,7 +24,7 @@ class Range;
 class Settings;
 class ZoomControl;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class VerticalToolView final: public ToolView, public ZoomListener, public xoj::util::Listener<VerticalToolView> {

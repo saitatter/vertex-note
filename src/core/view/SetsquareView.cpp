@@ -18,7 +18,7 @@
 
 #include "StrokeView.h"  // for StrokeView
 
-using namespace xoj::view;
+using namespace vn::view;
 
 // all lengths are in centimeter
 constexpr double FONT_SIZE = .2;

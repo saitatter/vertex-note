@@ -7,7 +7,7 @@
 #include "view/Repaintable.h"
 #include "view/View.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 VerticalToolView::VerticalToolView(const VerticalToolHandler* handler, Repaintable* parent, ZoomControl* zoomControl,
                                    const Settings* settings):
@@ -45,8 +45,8 @@ void VerticalToolView::drawWithoutDrawingAids(cairo_t* cr) const {
     if (!mask.isInitialized()) {
         // Initialize the mask on first call, when changing sides or upon zoom change
         mask = createMask(cr);
-        xoj::view::ElementContainerView v(this->toolHandler);
-        v.draw(xoj::view::Context::createDefault(mask.get()));
+        vn::view::ElementContainerView v(this->toolHandler);
+        v.draw(vn::view::Context::createDefault(mask.get()));
     }
 
     cairo_translate(cr, 0, toolHandler->getEndY() - toolHandler->getStartY());

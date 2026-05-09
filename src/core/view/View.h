@@ -15,10 +15,11 @@
 
 #include <gtk/gtk.h>
 
+#include "view/ViewNamespaceAliases.h"
+
 class Element;
 
-namespace xoj {
-namespace view {
+namespace vn::view {
 
 enum NonAudioTreatment : bool { FADE_OUT_NON_AUDIO_ = true, NORMAL_NON_AUDIO = false };
 enum EditionTreatment : bool { SHOW_CURRENT_EDITING = true, HIDE_CURRENT_EDITING = false };
@@ -49,9 +50,4 @@ class StrokeView;
 class TextView;
 
 constexpr double OPACITY_NO_AUDIO = 0.3;
-};  // namespace view
-};  // namespace xoj
-
-namespace vn {
-namespace view = xoj::view;
-}
+};  // namespace vn::view

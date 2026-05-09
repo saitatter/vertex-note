@@ -6,7 +6,7 @@
 
 class Range;
 
-using namespace xoj::view;
+using namespace vn::view;
 
 PdfElementSelectionView::PdfElementSelectionView(const PdfElemSelection* selection, Repaintable* parent,
                                                  Color selectionColor):

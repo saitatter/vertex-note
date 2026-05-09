@@ -24,7 +24,7 @@ template <typename T>
 class Rectangle;
 };
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class TextEditionView final: public ToolView, public xoj::util::Listener<TextEditionView> {

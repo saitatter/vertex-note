@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class IsoDottedBackgroundView: public BaseIsometricBackgroundView {
 public:
     IsoDottedBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

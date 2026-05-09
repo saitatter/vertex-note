@@ -11,7 +11,7 @@
 #include "DebugShowRepaintBounds.h"  // for IF_DEBUG_REPAINT
 #include "View.h"                    // for Context, ElementView
 
-using namespace xoj::view;
+using namespace vn::view;
 
 LayerView::LayerView(const Layer* layer): layer(layer) {}
 

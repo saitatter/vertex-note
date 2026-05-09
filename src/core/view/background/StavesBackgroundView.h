@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class StavesBackgroundView: public OneColorBackgroundView {
 public:
     StavesBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

@@ -9,7 +9,7 @@
 #include "model/TexImage.h"  // for TexImage
 #include "view/View.h"       // for Context, OPACITY_NO_AUDIO, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 TexImageView::TexImageView(const TexImage* texImage): texImage(texImage) {}
 

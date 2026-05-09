@@ -7,7 +7,7 @@
 #include "util/Color.h"
 #include "util/Util.h"  // for cairo_set_dash_from_vector
 
-using namespace xoj::view;
+using namespace vn::view;
 
 /**
  * @brief To avoid rendering artefact (due to antialiasing?) we add a padding when clearing out the mask (for filled

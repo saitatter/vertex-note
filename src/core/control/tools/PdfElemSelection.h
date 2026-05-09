@@ -28,7 +28,7 @@
 class Range;
 class Control;
 
-namespace xoj::view {
+namespace vn::view {
 class PdfElementSelectionView;
 };
 

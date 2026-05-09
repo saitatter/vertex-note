@@ -10,7 +10,7 @@
 
 #include "config-debug.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 #ifdef DEBUG_MASKS
 #include <string>

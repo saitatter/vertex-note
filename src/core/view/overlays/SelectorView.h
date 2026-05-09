@@ -19,7 +19,7 @@
 class Selector;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class SelectorView: public OverlayView, public xoj::util::Listener<SelectorView> {

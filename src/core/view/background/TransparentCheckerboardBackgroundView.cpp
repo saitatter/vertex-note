@@ -2,7 +2,7 @@
 
 #include "view/background/BackgroundView.h"  // for BackgroundView, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 TransparentCheckerboardBackgroundView::TransparentCheckerboardBackgroundView(double pageWidth, double pageHeight):
         BackgroundView(pageWidth, pageHeight), pattern(createPattern()) {}

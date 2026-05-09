@@ -19,7 +19,7 @@
 
 #include "BackgroundView.h"  // for BackgroundView
 
-namespace xoj::view {
+namespace vn::view {
 class PlainBackgroundView: public BackgroundView {
 public:
     PlainBackgroundView(double pageWidth, double pageHeight, Color backgroundColor);

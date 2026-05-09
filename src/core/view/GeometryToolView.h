@@ -30,7 +30,7 @@ class ZoomControl;
  * @brief A class that renders a geometry tool
  */
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 constexpr double rad(double n) { return n * M_PI / 180.; }
@@ -130,4 +130,4 @@ private:
     mutable Mask mask;
     ZoomControl* zoomControl;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

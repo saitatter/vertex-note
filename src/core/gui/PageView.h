@@ -53,10 +53,10 @@ class TexImage;
 class PdfRectangle;
 class PdfPage;
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class ToolView;
-}  // namespace xoj::view
+}  // namespace vn::view
 
 class PageView: public LegacyRedrawable, public PageListener, public vn::view::Repaintable {
 public:

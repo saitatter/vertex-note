@@ -13,7 +13,7 @@ class LineByClicksHandler;
 class OverlayBase;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class LineByClicksView final: public ToolView, public xoj::util::Listener<LineByClicksView> {
@@ -40,4 +40,4 @@ private:
     const LineByClicksHandler* handler;
 };
 
-}  // namespace xoj::view
+}  // namespace vn::view

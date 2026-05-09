@@ -19,7 +19,7 @@
 
 #include "StrokeToolView.h"
 
-namespace xoj::view {
+namespace vn::view {
 class StrokeToolFilledHighlighterView;
 
 /**

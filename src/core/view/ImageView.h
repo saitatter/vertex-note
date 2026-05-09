@@ -15,7 +15,7 @@
 
 class Image;
 
-class xoj::view::ImageView: public xoj::view::ElementView {
+class vn::view::ImageView: public vn::view::ElementView {
 public:
     ImageView(const Image* image);
     virtual ~ImageView();

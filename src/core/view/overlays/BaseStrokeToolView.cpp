@@ -10,7 +10,7 @@
 #include "view/Repaintable.h"
 #include "view/overlays/OverlayView.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 BaseStrokeToolView::BaseStrokeToolView(Repaintable* parent, const Stroke& stroke):
         ToolView(parent),

@@ -8,7 +8,7 @@
 #include "util/raii/CairoWrappers.h"
 #include "view/StrokeViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 StrokeToolFilledHighlighterView::StrokeToolFilledHighlighterView(const StrokeHandler* strokeHandler,
                                                                  const Stroke& stroke, Repaintable* parent):

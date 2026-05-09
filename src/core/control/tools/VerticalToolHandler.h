@@ -34,7 +34,7 @@ struct KeyEvent;
 
 using ElementPtr = std::unique_ptr<Element>;
 
-namespace xoj::view {
+namespace vn::view {
 class OverlayView;
 class Repaintable;
 class VerticalToolView;

@@ -20,7 +20,7 @@ class OverlayBase;
 class PdfElemSelection;
 class Range;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class PdfElementSelectionView final: public OverlayView, public xoj::util::Listener<PdfElementSelectionView> {

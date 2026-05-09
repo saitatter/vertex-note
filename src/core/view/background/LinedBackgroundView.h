@@ -18,7 +18,7 @@
 
 #include "RuledBackgroundView.h"  // for RuledBackgroundView
 
-namespace xoj::view {
+namespace vn::view {
 class LinedBackgroundView: public RuledBackgroundView {
 public:
     LinedBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

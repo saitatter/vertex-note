@@ -16,7 +16,7 @@
 #include "view/Repaintable.h"
 #include "view/overlays/SnapIndicatorViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 PolylineByClicksView::PolylineByClicksView(const PolylineByClicksHandler* handler, Repaintable* parent):
         ToolView(parent), handler(handler) {

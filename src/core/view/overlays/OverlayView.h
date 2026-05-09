@@ -17,7 +17,7 @@
 
 class OverlayBase;
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 class OverlayView {
 public:
@@ -44,4 +44,4 @@ public:
      */
     virtual void drawWithoutDrawingAids(cairo_t* cr) const { this->draw(cr); }
 };
-};  // namespace xoj::view
+};  // namespace vn::view

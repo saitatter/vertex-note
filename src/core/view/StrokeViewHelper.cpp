@@ -8,7 +8,7 @@
 #include "util/PairView.h"
 #include "util/Util.h"  // for cairo_set_dash_from_vector
 
-void xoj::view::StrokeViewHelper::pathToCairo(cairo_t* cr, const std::vector<Point>& pts) {
+void vn::view::StrokeViewHelper::pathToCairo(cairo_t* cr, const std::vector<Point>& pts) {
     for_first_then_each(
             pts, [cr](auto const& first) { cairo_move_to(cr, first.x, first.y); },
             [cr](auto const& other) { cairo_line_to(cr, other.x, other.y); });
@@ -17,7 +17,7 @@ void xoj::view::StrokeViewHelper::pathToCairo(cairo_t* cr, const std::vector<Poi
 /**
  * No pressure sensitivity, one line is drawn
  */
-void xoj::view::StrokeViewHelper::drawNoPressure(cairo_t* cr, const std::vector<Point>& pts, const double strokeWidth,
+void vn::view::StrokeViewHelper::drawNoPressure(cairo_t* cr, const std::vector<Point>& pts, const double strokeWidth,
                                                  const LineStyle& lineStyle, double dashOffset) {
     cairo_set_line_width(cr, strokeWidth);
 
@@ -31,7 +31,7 @@ void xoj::view::StrokeViewHelper::drawNoPressure(cairo_t* cr, const std::vector<
 /**
  * Draw a stroke with pressure, for this multiple lines with different widths needs to be drawn
  */
-double xoj::view::StrokeViewHelper::drawWithPressure(cairo_t* cr, const std::vector<Point>& pts,
+double vn::view::StrokeViewHelper::drawWithPressure(cairo_t* cr, const std::vector<Point>& pts,
                                                      const LineStyle& lineStyle, double dashOffset) {
     const auto& dashes = lineStyle.getDashes();
     if (cairo_surface_get_type(cairo_get_target(cr)) == CAIRO_SURFACE_TYPE_PDF) {

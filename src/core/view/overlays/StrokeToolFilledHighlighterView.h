@@ -14,7 +14,7 @@
 
 #include "StrokeToolFilledView.h"
 
-namespace xoj::view {
+namespace vn::view {
 class StrokeToolFilledHighlighterView: public StrokeToolFilledView {
 public:
     StrokeToolFilledHighlighterView(const StrokeHandler* strokeHandler, const Stroke& stroke, Repaintable* parent);

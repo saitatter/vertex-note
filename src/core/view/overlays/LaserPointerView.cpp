@@ -10,7 +10,7 @@
 
 #include "StrokeToolView.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 LaserPointerView::LaserPointerView(const LaserPointerHandler* handler, Repaintable* parent):
         OverlayView(parent), handler(handler) {
@@ -34,19 +34,19 @@ void LaserPointerView::draw(cairo_t* cr) const {
 
 bool LaserPointerView::isViewOf(const OverlayBase* overlay) const { return overlay == this->handler; }
 
-void xoj::view::LaserPointerView::on(StartNewStrokeRequest, StrokeHandler* handler) {
+void vn::view::LaserPointerView::on(StartNewStrokeRequest, StrokeHandler* handler) {
     this->activeStrokeView = std::make_unique<StrokeToolView>(handler, *handler->getStroke(), parent);
     if (!this->extents.empty()) {
         on(SET_ALPHA_REQUEST, 255);
     }
 }
 
-void xoj::view::LaserPointerView::on(SetAlphaRequest, uint8_t alpha) {
+void vn::view::LaserPointerView::on(SetAlphaRequest, uint8_t alpha) {
     this->alpha = alpha;
     this->parent->flagDirtyRegion(this->extents);
 }
 
-void xoj::view::LaserPointerView::on(FinishStrokeRequest, const Range& strokeBox) {
+void vn::view::LaserPointerView::on(FinishStrokeRequest, const Range& strokeBox) {
     xoj_assert(this->activeStrokeView);
     if (this->mask.isInitialized()) {
         this->activeStrokeView->draw(this->mask.get());
@@ -55,17 +55,17 @@ void xoj::view::LaserPointerView::on(FinishStrokeRequest, const Range& strokeBox
     this->extents = this->extents.unite(strokeBox);
 }
 
-void xoj::view::LaserPointerView::on(InputCancellationRequest, const Range& rg) {
+void vn::view::LaserPointerView::on(InputCancellationRequest, const Range& rg) {
     this->activeStrokeView.reset();
     this->parent->flagDirtyRegion(rg);
 }
 
-void xoj::view::LaserPointerView::deleteOn(FinalizationRequest) {
+void vn::view::LaserPointerView::deleteOn(FinalizationRequest) {
     this->parent->deleteOverlayView(this, this->extents);
 }
 
 
-auto xoj::view::LaserPointerView::createMask(cairo_t* tgtcr) const -> Mask {
+auto vn::view::LaserPointerView::createMask(cairo_t* tgtcr) const -> Mask {
     const double zoom = this->parent->getZoom();
     Range visibleRange = this->parent->getVisiblePart();
 

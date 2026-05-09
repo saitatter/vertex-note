@@ -37,7 +37,7 @@ class ZoomControl;
  * outline of the Compass or at the marked radius (with angle 0).
  */
 
-namespace xoj::view {
+namespace vn::view {
 class Repaintable;
 
 class CompassView: public GeometryToolView {

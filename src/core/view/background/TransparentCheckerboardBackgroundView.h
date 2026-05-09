@@ -17,7 +17,7 @@
 
 #include "BackgroundView.h"  // for BackgroundView
 
-namespace xoj::view {
+namespace vn::view {
 class TransparentCheckerboardBackgroundView: public BackgroundView {
 public:
     TransparentCheckerboardBackgroundView(double pageWidth, double pageHeight);

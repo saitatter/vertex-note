@@ -19,7 +19,7 @@
 
 class BackgroundConfig;
 
-namespace xoj::view {
+namespace vn::view {
 class RuledBackgroundView: public OneColorBackgroundView {
 public:
     RuledBackgroundView(double pageWidth, double pageHeight, Color backgroundColor, const BackgroundConfig& config);

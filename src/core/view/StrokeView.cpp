@@ -19,7 +19,7 @@
 class ErasableStroke;
 
 using vn::util::Rectangle;
-using namespace xoj::view;
+using namespace vn::view;
 
 StrokeView::StrokeView(const Stroke* s): s(s) {}
 

@@ -7,7 +7,7 @@
 #include "view/Repaintable.h"
 #include "view/StrokeViewHelper.h"
 
-using namespace xoj::view;
+using namespace vn::view;
 
 ShapeToolView::ShapeToolView(const BaseShapeHandler* toolHandler, Repaintable* parent):
         BaseShapeOrSplineToolView(toolHandler, parent), toolHandler(toolHandler) {

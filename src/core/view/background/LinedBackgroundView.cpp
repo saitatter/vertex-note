@@ -7,7 +7,7 @@
 #include "view/background/RuledBackgroundView.h"  // for RuledBackgroundView
 
 using namespace background_config_strings;
-using namespace xoj::view;
+using namespace vn::view;
 
 LinedBackgroundView::LinedBackgroundView(double pageWidth, double pageHeight, Color backgroundColor,
                                          const BackgroundConfig& config):

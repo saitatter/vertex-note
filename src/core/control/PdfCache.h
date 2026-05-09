@@ -23,7 +23,7 @@
 #include "pdf/base/PdfDocument.h"  // for PdfDocument
 #include "pdf/base/PdfPage.h"      // for PdfPagePtr
 
-namespace xoj::view {
+namespace vn::view {
 class Mask;
 };
 

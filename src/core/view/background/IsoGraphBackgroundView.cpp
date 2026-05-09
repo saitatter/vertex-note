@@ -5,7 +5,7 @@
 #include "view/background/BackgroundView.h"               // for view
 #include "view/background/BaseIsometricBackgroundView.h"  // for BaseIsometr...
 
-using namespace xoj::view;
+using namespace vn::view;
 
 IsoGraphBackgroundView::IsoGraphBackgroundView(double pageWidth, double pageHeight, Color backgroundColor,
                                                const BackgroundConfig& config):

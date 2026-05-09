@@ -15,7 +15,7 @@
 #include "TextView.h"      // for TextView
 #include "View.h"          // for ElementView, view
 
-using namespace xoj::view;
+using namespace vn::view;
 
 auto ElementView::createFromElement(const Element* e) -> std::unique_ptr<ElementView> {
     switch (e->getType()) {
