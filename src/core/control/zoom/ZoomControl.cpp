@@ -11,8 +11,8 @@
 #include "control/zoom/ZoomListener.h"  // for ZoomListener
 #include "gui/Layout.h"                 // for Layout
 #include "gui/MainWindow.h"
-#include "gui/PageView.h"               // for XojPageView
-#include "gui/XournalView.h"            // for XournalView
+#include "gui/PageView.h"               // for PageView
+#include "gui/VertexNoteView.h"            // for VertexNoteView
 #include "gui/scroll/ScrollHandling.h"  // for ScrollHandling
 #include "util/Assert.h"                // for xoj_assert
 #include "util/Util.h"                  // for execInUiThread
@@ -192,7 +192,7 @@ auto ZoomControl::getScrollPositionAfterZoom() const -> xoj::util::Point<double>
     //  If we aren't in a zoomSequence, `unscaledPixels`, `scrollPosition`, and `zoomWidgetPos
     // can't be used to determine the scroll position! Return now.
     // NOTE: this case should never happen currently.
-    //       getScrollPositionAfterZoom is called from XournalView after setZoom() fired the ZoomListeners
+    //       getScrollPositionAfterZoom is called from VertexNoteView after setZoom() fired the ZoomListeners
     if (!this->isZoomSequenceActive()) {
         xoj_assert_message(false, "ZoomControl::getScrollPositionAfterZoom() was called outside of a zoom sequence.");
         return {0, 0};
@@ -211,7 +211,7 @@ void ZoomControl::removeZoomListener(ZoomListener* l) {
     }
 }
 
-void ZoomControl::initZoomHandler(GtkWidget* window, GtkWidget* widget, XournalView* v, Control* c) {
+void ZoomControl::initZoomHandler(GtkWidget* window, GtkWidget* widget, VertexNoteView* v, Control* c) {
     this->control = c;
     this->view = v;
     gtk_widget_add_events(widget, GDK_TOUCHPAD_GESTURE_MASK);
@@ -270,7 +270,7 @@ auto ZoomControl::updateZoomFitValue(size_t pageNo) -> bool {
     if (pageNo == 0) {
         pageNo = view->getCurrentPage();
     }
-    XojPageView* page = view->getViewFor(pageNo);
+    PageView* page = view->getViewFor(pageNo);
     if (!page) {  // no page
         return false;
     }
@@ -289,7 +289,7 @@ auto ZoomControl::updateZoomFitValue(size_t pageNo) -> bool {
 auto ZoomControl::getZoomFitValue() const -> double { return this->zoomFitValue; }
 
 auto ZoomControl::updateZoomPresentationValue(size_t pageNo) -> bool {
-    XojPageView* page = view->getViewFor(view->getCurrentPage());
+    PageView* page = view->getViewFor(view->getCurrentPage());
     if (!page) {
         if (!view->getViewPages().empty()) {
             g_warning("Cannot update zoomPresentationValue: no page view for the current page.");

@@ -66,7 +66,7 @@ const char* getGdkBackend() {
     }
 }
 
-std::string getXournalppVersion() {
+std::string getVertexNoteVersion() {
     auto str = std::string(PROJECT_NAME) + " " + PROJECT_VERSION;
     if (!std::string(GIT_COMMIT_ID).empty()) {
         str = str + " (" + GIT_COMMIT_ID + " from " + GIT_ORIGIN_OWNER + "/" + GIT_BRANCH + ")";
@@ -101,7 +101,7 @@ std::string getVersionInfo() {
     std::stringstream str;
     str.imbue(std::locale::classic());
 
-    str << getXournalppVersion() << std::endl;
+    str << getVertexNoteVersion() << std::endl;
 
     str << "├──libgtk: " << gtk_get_major_version() << "." << gtk_get_minor_version() << "." << gtk_get_micro_version()
         << std::endl;

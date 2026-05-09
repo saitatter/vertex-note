@@ -11,7 +11,7 @@
 #include "control/zoom/ZoomControl.h"               // for ZoomControl
 #include "gui/Layout.h"                             // for Layout
 #include "gui/MainWindow.h"                         // for MainWindow
-#include "gui/XournalView.h"                        // for XournalView
+#include "gui/VertexNoteView.h"                        // for VertexNoteView
 #include "gui/inputdevices/AbstractInputHandler.h"  // for AbstractInputHandler
 #include "gui/inputdevices/InputEvents.h"           // for InputEvent, BUTTO...
 

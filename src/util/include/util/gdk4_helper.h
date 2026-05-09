@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * header for missing gdk4 functions (part of the gtk4 port)
  * will be removed later
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

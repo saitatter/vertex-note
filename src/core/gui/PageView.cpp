@@ -24,7 +24,7 @@
 #include "control/Tool.h"                           // for Tool
 #include "control/ToolEnums.h"                      // for DRAWING_TYPE_SPLINE
 #include "control/ToolHandler.h"                    // for ToolHandler
-#include "control/jobs/XournalScheduler.h"          // for XournalScheduler
+#include "control/jobs/VertexNoteScheduler.h"          // for VertexNoteScheduler
 #include "control/layer/LayerController.h"          // for LayerControl
 #include "control/settings/Settings.h"              // for Settings
 #include "control/tools/ArrowHandler.h"             // for ArrowHandler
@@ -61,10 +61,10 @@
 #include "model/Stroke.h"                           // for Stroke
 #include "model/TexImage.h"                         // for TexImage
 #include "model/Text.h"                             // for Text
-#include "model/XojPage.h"                          // for XojPage
-#include "pdf/base/XojPdfAction.h"                  // for XojPdfAction
-#include "pdf/base/XojPdfDocument.h"                // for XojPdfDocument
-#include "pdf/base/XojPdfPage.h"                    // for XojPdfRectangle
+#include "model/NotePage.h"                          // for NotePage
+#include "pdf/base/PdfAction.h"                  // for PdfAction
+#include "pdf/base/PdfDocument.h"                // for PdfDocument
+#include "pdf/base/PdfPage.h"                    // for PdfRectangle
 #include "undo/DeleteUndoAction.h"                  // for DeleteUndoAction
 #include "undo/InsertUndoAction.h"                  // for InsertUndoAction
 #include "undo/MoveUndoAction.h"                    // for MoveUndoAction
@@ -75,7 +75,7 @@
 #include "util/Range.h"                             // for Range
 #include "util/Rectangle.h"                         // for Rectangle
 #include "util/Util.h"                              // for npos
-#include "util/XojMsgBox.h"                         // for XojMsgBox
+#include "util/AppMessageBox.h"                         // for AppMessageBox
 #include "util/gtk4_helper.h"                       // for gtk_box_append
 #include "util/i18n.h"                              // for _F, FC, FS, _
 #include "util/raii/CLibrariesSPtr.h"               // for adopt
@@ -90,8 +90,8 @@
 
 #include "PageViewFindObjectHelper.h"  // for SelectObject, Pla...
 #include "RepaintHandler.h"            // for RepaintHandler
-#include "XournalView.h"               // for XournalView
-#include "XournalppCursor.h"           // for XournalppCursor
+#include "VertexNoteView.h"               // for VertexNoteView
+#include "VertexNoteCursor.h"           // for VertexNoteCursor
 #include "filesystem.h"                // for path
 
 class OverlayBase;
@@ -99,7 +99,7 @@ class OverlayBase;
 using std::string;
 using xoj::util::Rectangle;
 
-XojPageView::XojPageView(XournalView* xournal, const PageRef& page):
+PageView::PageView(VertexNoteView* xournal, const PageRef& page):
         page(page),
         xournal(xournal),
         settings(xournal->getControl()->getSettings()),
@@ -110,7 +110,7 @@ XojPageView::XojPageView(XournalView* xournal, const PageRef& page):
     this->registerToHandler(this->page);
 }
 
-XojPageView::~XojPageView() {
+PageView::~PageView() {
     this->unregisterFromHandler();
 
     this->xournal->getControl()->getScheduler()->removePage(this);
@@ -120,18 +120,18 @@ XojPageView::~XojPageView() {
     deleteViewBuffer();  // Ensures the mutex is locked during the buffer's destruction
 }
 
-void XojPageView::addOverlayView(std::unique_ptr<xoj::view::OverlayView> overlay) {
+void PageView::addOverlayView(std::unique_ptr<xoj::view::OverlayView> overlay) {
     this->overlayViews.emplace_back(std::move(overlay));
 }
 
-void XojPageView::setIsVisible(bool visible) { this->visible = visible; }
+void PageView::setIsVisible(bool visible) { this->visible = visible; }
 
-void XojPageView::deleteViewBuffer() {
+void PageView::deleteViewBuffer() {
     std::lock_guard lock(this->drawingMutex);
     this->buffer.reset();
 }
 
-auto XojPageView::containsPoint(int x, int y, bool local) const -> bool {
+auto PageView::containsPoint(int x, int y, bool local) const -> bool {
     if (!local) {
         auto p = this->getPixelPosition();
         return p.x <= x && x <= p.x + this->getDisplayWidth() && p.y <= y && y <= p.y + this->getDisplayHeight();
@@ -141,15 +141,15 @@ auto XojPageView::containsPoint(int x, int y, bool local) const -> bool {
     return x >= 0 && y >= 0 && x <= this->getWidth() && y <= this->getHeight();
 }
 
-auto XojPageView::searchTextOnPage(const std::string& text, size_t index, size_t* occurrences,
-                                   XojPdfRectangle* matchRect) -> bool {
+auto PageView::searchTextOnPage(const std::string& text, size_t index, size_t* occurrences,
+                                   PdfRectangle* matchRect) -> bool {
     if (!this->search) {
         if (text.empty()) {
             return true;
         }
 
         auto pNr = this->page->getPdfPageNr();
-        XojPdfPageSPtr pdf = nullptr;
+        PdfPagePtr pdf = nullptr;
         if (pNr != npos) {
             Document* doc = xournal->getControl()->getDocument();
 
@@ -169,9 +169,9 @@ auto XojPageView::searchTextOnPage(const std::string& text, size_t index, size_t
     return found;
 }
 
-void XojPageView::endText() { this->textEditor.reset(); }
+void PageView::endText() { this->textEditor.reset(); }
 
-void XojPageView::startText(double x, double y) {
+void PageView::startText(double x, double y) {
     this->xournal->endTextAllPages(this);
     this->xournal->getControl()->getSearchBar()->showSearchBar(false);
 
@@ -204,7 +204,7 @@ static void eraseViewsOf(std::vector<std::unique_ptr<xoj::view::OverlayView>>& v
     xoj_assert(hasNoViewOf(views, o));
 }
 
-void XojPageView::endSpline() {
+void PageView::endSpline() {
     if (SplineHandler* h = dynamic_cast<SplineHandler*>(this->inputHandler.get()); h) {
         h->finalizeSpline();
         xoj_assert(hasNoViewOf(overlayViews, inputHandler.get()));
@@ -212,7 +212,7 @@ void XojPageView::endSpline() {
     }
 }
 
-void XojPageView::endPendingInput() {
+void PageView::endPendingInput() {
     if (!this->inputHandler) {
         return;
     }
@@ -229,12 +229,12 @@ void XojPageView::endPendingInput() {
     this->inputHandler.reset();
 }
 
-void XojPageView::deleteLaserPointerHandler() {
+void PageView::deleteLaserPointerHandler() {
     xoj_assert(hasNoViewOf(overlayViews, laserPointer.get()));
     laserPointer.reset();
 }
 
-auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
+auto PageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     if (currentSequenceDeviceId) {
         // An input sequence is already under way from another device
         return false;
@@ -260,7 +260,7 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     x /= zoom;
     y /= zoom;
 
-    XournalppCursor* cursor = xournal->getCursor();
+    VertexNoteCursor* cursor = xournal->getCursor();
     cursor->setMouseDown(true);
 
     if (this->inputHandler && this->inputHandler->acceptsAdditionalPress()) {
@@ -274,12 +274,12 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
 
         if (this->inputHandler) {
             /**
-             * Due to https://github.com/xournalpp/xournalpp/issues/4377
+             * Due to https://github.com/saitatter/vertex-note/issues/4377
              * some devices under some configurations can start an action while another one has already started
              * This is a workaround to avoid mem leaks and segfaults
              * This `if` statement can probably be replaced by an `assert` once #4377 is fixed
              */
-            g_warning("InputHandler already exists upon XojPageView::onButtonPressEvent. Deleting it (and its views)");
+            g_warning("InputHandler already exists upon PageView::onButtonPressEvent. Deleting it (and its views)");
             eraseViewsOf(this->overlayViews, this->inputHandler.get());
             this->inputHandler.reset();
         }
@@ -432,7 +432,7 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
                 auto& status = *play.playbackStatus;
                 if (!status.success) {
                     string message = FS(_F("Unable to play audio recording {1}") % status.filename.u8string());
-                    XojMsgBox::showErrorToUser(this->xournal->getControl()->getGtkWindow(), message);
+                    AppMessageBox::showErrorToUser(this->xournal->getControl()->getGtkWindow(), message);
                 }
             }
         }
@@ -450,7 +450,7 @@ auto XojPageView::onButtonPressEvent(const PositionInputData& pos) -> bool {
     return true;
 }
 
-auto XojPageView::onButtonClickEvent(const PositionInputData& pos) -> bool {
+auto PageView::onButtonClickEvent(const PositionInputData& pos) -> bool {
     Control* control = xournal->getControl();
     double x = pos.x;
     double y = pos.y;
@@ -468,7 +468,7 @@ auto XojPageView::onButtonClickEvent(const PositionInputData& pos) -> bool {
     return true;
 }
 
-auto XojPageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
+auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
     // This method assumes that it is called after onButtonPressEvent but before
     // onButtonReleaseEvent
     double zoom = this->xournal->getZoom();
@@ -528,7 +528,7 @@ auto XojPageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool
     } else if (toolType == TOOL_SELECT_PDF_TEXT_LINEAR || toolType == TOOL_SELECT_PDF_TEXT_RECT) {
         auto* pdfToolbox = this->xournal->getControl()->getWindow()->getPdfToolbox();
         if (auto* selection = pdfToolbox->getSelection()) {
-            pdfToolbox->selectionStyle = XojPdfPageSelectionStyle::Word;
+            pdfToolbox->selectionStyle = PdfPageSelectionStyle::Word;
             selection->currentPos(x, y, pdfToolbox->selectionStyle);
         }
     } else if (drawingType == DRAWING_TYPE_SPLINE) {
@@ -542,7 +542,7 @@ auto XojPageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool
     return true;
 }
 
-auto XojPageView::onButtonTriplePressEvent(const PositionInputData& pos) -> bool {
+auto PageView::onButtonTriplePressEvent(const PositionInputData& pos) -> bool {
     // This method assumes that it is called after onButtonDoubleEvent but before
     // onButtonReleaseEvent
     double zoom = this->xournal->getZoom();
@@ -561,14 +561,14 @@ auto XojPageView::onButtonTriplePressEvent(const PositionInputData& pos) -> bool
     } else if (toolType == TOOL_SELECT_PDF_TEXT_LINEAR || toolType == TOOL_SELECT_PDF_TEXT_RECT) {
         auto* pdfToolbox = this->xournal->getControl()->getWindow()->getPdfToolbox();
         if (auto* selection = pdfToolbox->getSelection()) {
-            pdfToolbox->selectionStyle = XojPdfPageSelectionStyle::Line;
+            pdfToolbox->selectionStyle = PdfPageSelectionStyle::Line;
             selection->currentPos(x, y, pdfToolbox->selectionStyle);
         }
     }
     return true;
 }
 
-auto XojPageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
+auto PageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
     if (currentSequenceDeviceId && currentSequenceDeviceId != pos.deviceId) {
         // This motion event is not from the device which started the sequence: reject it
         return false;
@@ -592,7 +592,7 @@ auto XojPageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
     } else if (this->verticalSpace) {
         this->verticalSpace->currentPos(x, y);
     } else if (this->textEditor) {
-        XournalppCursor* cursor = getXournal()->getCursor();
+        VertexNoteCursor* cursor = getXournal()->getCursor();
         cursor->setInvisible(false);
 
         const Text* text = this->textEditor->getTextElement();
@@ -606,7 +606,7 @@ auto XojPageView::onMotionNotifyEvent(const PositionInputData& pos) -> bool {
     return false;
 }
 
-void XojPageView::onSequenceCancelEvent(DeviceId deviceId) {
+void PageView::onSequenceCancelEvent(DeviceId deviceId) {
     if (currentSequenceDeviceId != deviceId) {
         // This motion event is not from the device which started the sequence: reject it
         return;
@@ -631,7 +631,7 @@ void XojPageView::onSequenceCancelEvent(DeviceId deviceId) {
     }
 }
 
-void XojPageView::onTapEvent(const PositionInputData& pos) {
+void PageView::onTapEvent(const PositionInputData& pos) {
     if (this->inputHandler) {
         /*
          * We only want tap events to trigger special actions if no tool is currently under use
@@ -671,7 +671,7 @@ void XojPageView::onTapEvent(const PositionInputData& pos) {
     }
 }
 
-auto XojPageView::showPdfToolbox(const PositionInputData& pos) -> void {
+auto PageView::showPdfToolbox(const PositionInputData& pos) -> void {
     // Convert to the widget-coordinate system
     auto p = xoj::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
     auto q = xoj::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
@@ -679,7 +679,7 @@ auto XojPageView::showPdfToolbox(const PositionInputData& pos) -> void {
     this->getXournal()->getControl()->getWindow()->getPdfToolbox()->show(q.x, q.y);
 }
 
-void XojPageView::deleteView(xoj::view::OverlayView* view) {
+void PageView::deleteView(xoj::view::OverlayView* view) {
     auto it = std::find_if(this->overlayViews.begin(), this->overlayViews.end(),
                            [view](const auto& v) { return view == v.get(); });
     if (it != this->overlayViews.end()) {
@@ -687,7 +687,7 @@ void XojPageView::deleteView(xoj::view::OverlayView* view) {
     }
 }
 
-auto XojPageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
+auto PageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
     if (currentSequenceDeviceId != pos.deviceId) {
         // This event is not from the device which started the sequence: reject it
         return false;
@@ -788,7 +788,7 @@ auto XojPageView::onButtonReleaseEvent(const PositionInputData& pos) -> bool {
     return false;
 }
 
-auto XojPageView::onKeyPressEvent(const KeyEvent& event) -> bool {
+auto PageView::onKeyPressEvent(const KeyEvent& event) -> bool {
     if (this->textEditor) {
         if (this->textEditor->onKeyPressEvent(event)) {
             return true;
@@ -816,7 +816,7 @@ auto XojPageView::onKeyPressEvent(const KeyEvent& event) -> bool {
     return false;
 }
 
-auto XojPageView::onKeyReleaseEvent(const KeyEvent& event) -> bool {
+auto PageView::onKeyReleaseEvent(const KeyEvent& event) -> bool {
     if (this->textEditor && this->textEditor->onKeyReleaseEvent(event)) {
         return true;
     }
@@ -837,23 +837,23 @@ auto XojPageView::onKeyReleaseEvent(const KeyEvent& event) -> bool {
     return false;
 }
 
-void XojPageView::rerenderPage(bool sizeChanged) {
+void PageView::rerenderPage(bool sizeChanged) {
     this->rerenderComplete = true;
     this->sizeChanged = sizeChanged;
     this->xournal->getControl()->getScheduler()->addRerenderPage(this);
 }
 
-void XojPageView::repaintPage() const { xournal->getRepaintHandler()->repaintPage(this); }
+void PageView::repaintPage() const { xournal->getRepaintHandler()->repaintPage(this); }
 
-void XojPageView::repaintArea(double x1, double y1, double x2, double y2) const {
+void PageView::repaintArea(double x1, double y1, double x2, double y2) const {
     double zoom = xournal->getZoom();
     xournal->getRepaintHandler()->repaintPageArea(this, floor_cast<int>(x1 * zoom), floor_cast<int>(y1 * zoom),
                                                   ceil_cast<int>(x2 * zoom), ceil_cast<int>(y2 * zoom));
 }
 
-void XojPageView::flagDirtyRegion(const Range& rg) const { repaintArea(rg.minX, rg.minY, rg.maxX, rg.maxY); }
+void PageView::flagDirtyRegion(const Range& rg) const { repaintArea(rg.minX, rg.minY, rg.maxX, rg.maxY); }
 
-void XojPageView::drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg) {
+void PageView::drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg) {
     if (v->isViewOf(this->inputHandler.get()) || v->isViewOf(this->verticalSpace.get()) ||
         v->isViewOf(this->textEditor.get())) {
         // Draw the inputHandler's view onto the page buffer.
@@ -867,7 +867,7 @@ void XojPageView::drawAndDeleteToolView(xoj::view::ToolView* v, const Range& rg)
     this->deleteOverlayView(v, rg);
 }
 
-void XojPageView::deleteOverlayView(xoj::view::OverlayView* v, const Range& rg) {
+void PageView::deleteOverlayView(xoj::view::OverlayView* v, const Range& rg) {
     this->deleteView(v);
     if (!rg.empty()) {
         xoj_assert(rg.isValid());
@@ -875,11 +875,11 @@ void XojPageView::deleteOverlayView(xoj::view::OverlayView* v, const Range& rg) 
     }
 }
 
-double XojPageView::getZoom() const { return xournal->getZoom(); }
+double PageView::getZoom() const { return xournal->getZoom(); }
 
-ZoomControl* XojPageView::getZoomControl() const { return this->getXournal()->getControl()->getZoomControl(); }
+ZoomControl* PageView::getZoomControl() const { return this->getXournal()->getControl()->getZoomControl(); }
 
-Range XojPageView::getVisiblePart() const {
+Range PageView::getVisiblePart() const {
     std::unique_ptr<xoj::util::Rectangle<double>> rect(xournal->getVisibleRect(this));
     if (rect) {
         return Range(*rect);
@@ -887,18 +887,18 @@ Range XojPageView::getVisiblePart() const {
     return Range();  // empty range
 }
 
-double XojPageView::getWidth() const { return page->getWidth(); }
+double PageView::getWidth() const { return page->getWidth(); }
 
-double XojPageView::getHeight() const { return page->getHeight(); }
+double PageView::getHeight() const { return page->getHeight(); }
 
-auto XojPageView::toWidgetCoordinates(const xoj::util::Rectangle<double>& r) const -> xoj::util::Rectangle<double> {
+auto PageView::toWidgetCoordinates(const xoj::util::Rectangle<double>& r) const -> xoj::util::Rectangle<double> {
     double zoom = this->getZoom();
     auto p = this->getPixelPosition();
     auto scrollDelta = this->getXournal()->getScrollHandling()->getPosition();
     return {r.x * zoom + p.x - scrollDelta.x, r.y * zoom + p.y - scrollDelta.y, r.width * zoom, r.height * zoom};
 }
 
-void XojPageView::rerenderRect(double x, double y, double width, double height) {
+void PageView::rerenderRect(double x, double y, double width, double height) {
     if (this->rerenderComplete) {
         return;
     }
@@ -924,7 +924,7 @@ void XojPageView::rerenderRect(double x, double y, double width, double height) 
     this->xournal->getControl()->getScheduler()->addRerenderPage(this);
 }
 
-void XojPageView::setSelected(bool selected) {
+void PageView::setSelected(bool selected) {
     this->selected = selected;
 
     if (selected) {
@@ -935,7 +935,7 @@ void XojPageView::setSelected(bool selected) {
     }
 }
 
-auto XojPageView::cut() -> bool {
+auto PageView::cut() -> bool {
     if (this->textEditor) {
         this->textEditor->cutToClipboard();
         return true;
@@ -943,7 +943,7 @@ auto XojPageView::cut() -> bool {
     return false;
 }
 
-auto XojPageView::copy() -> bool {
+auto PageView::copy() -> bool {
     if (this->textEditor) {
         this->textEditor->copyToClipboard();
         return true;
@@ -951,7 +951,7 @@ auto XojPageView::copy() -> bool {
     return false;
 }
 
-auto XojPageView::paste() -> bool {
+auto PageView::paste() -> bool {
     if (this->textEditor) {
         this->textEditor->pasteFromClipboard();
         return true;
@@ -959,7 +959,7 @@ auto XojPageView::paste() -> bool {
     return false;
 }
 
-auto XojPageView::actionDelete() -> bool {
+auto PageView::actionDelete() -> bool {
     if (this->textEditor) {
         this->textEditor->deleteFromCursor(GTK_DELETE_CHARS, 1);
         return true;
@@ -967,7 +967,7 @@ auto XojPageView::actionDelete() -> bool {
     return false;
 }
 
-void XojPageView::drawLoadingPage(cairo_t* cr) {
+void PageView::drawLoadingPage(cairo_t* cr) {
     static const string txtLoading = _("Loading...");
 
     cairo_set_source_rgb(cr, 1, 1, 1);
@@ -986,7 +986,7 @@ void XojPageView::drawLoadingPage(cairo_t* cr) {
     rerenderPage();
 }
 
-bool XojPageView::displayLinkPopover(std::shared_ptr<XojPdfPage> page, double pageX, double pageY) {
+bool PageView::displayLinkPopover(std::shared_ptr<PdfPage> page, double pageX, double pageY) {
     // Search for selected link
     const auto links = page->getLinks();
 
@@ -1031,9 +1031,9 @@ bool XojPageView::displayLinkPopover(std::shared_ptr<XojPdfPage> page, double pa
             }
             gtk_box_append(GTK_BOX(box), button);
 
-            using State = std::tuple<XojPageView*, std::shared_ptr<const LinkDestination>, GtkWidget*>;
+            using State = std::tuple<PageView*, std::shared_ptr<const LinkDestination>, GtkWidget*>;
             g_signal_connect_data(GTK_BUTTON(button), "clicked", G_CALLBACK(+[](GtkButton* bt, gpointer state) {
-                                      XojPageView* self;
+                                      PageView* self;
                                       std::shared_ptr<const LinkDestination> dest;
                                       GtkWidget* popover;
                                       std::tie(self, dest, popover) = *static_cast<State*>(state);
@@ -1053,7 +1053,7 @@ bool XojPageView::displayLinkPopover(std::shared_ptr<XojPdfPage> page, double pa
     return false;
 }
 
-GtkWidget* XojPageView::makePopover(const XojPdfRectangle& rect, GtkWidget* child) {
+GtkWidget* PageView::makePopover(const PdfRectangle& rect, GtkWidget* child) {
     double zoom = xournal->getZoom();
 
     GtkWidget* popover = gtk_popover_new(this->getXournal()->getWidget());
@@ -1073,7 +1073,7 @@ GtkWidget* XojPageView::makePopover(const XojPdfRectangle& rect, GtkWidget* chil
     return popover;
 }
 
-auto XojPageView::paintPage(cairo_t* cr, GdkRectangle* rect) -> bool {
+auto PageView::paintPage(cairo_t* cr, GdkRectangle* rect) -> bool {
 
     double zoom = xournal->getZoom();
     xoj::util::CairoSaveGuard saveGuard(cr);
@@ -1112,37 +1112,37 @@ auto XojPageView::paintPage(cairo_t* cr, GdkRectangle* rect) -> bool {
  * GETTER / SETTER
  */
 
-auto XojPageView::isSelected() const -> bool { return selected; }
+auto PageView::isSelected() const -> bool { return selected; }
 
-auto XojPageView::hasBuffer() const -> bool { return this->buffer.isInitialized(); }
+auto PageView::hasBuffer() const -> bool { return this->buffer.isInitialized(); }
 
-auto XojPageView::getSelectionColor() -> GdkRGBA { return Util::rgb_to_GdkRGBA(settings->getSelectionColor()); }
+auto PageView::getSelectionColor() -> GdkRGBA { return Util::rgb_to_GdkRGBA(settings->getSelectionColor()); }
 
-auto XojPageView::getTextEditor() -> TextEditor* { return textEditor.get(); }
+auto PageView::getTextEditor() -> TextEditor* { return textEditor.get(); }
 
-auto XojPageView::getPixelPosition() const -> xoj::util::Point<int> {
+auto PageView::getPixelPosition() const -> xoj::util::Point<int> {
     return this->xournal->getLayout()->getPixelCoordinatesOfEntry(this->gridCoordinates);
 }
 
-auto XojPageView::getPage() const -> const PageRef { return page; }
+auto PageView::getPage() const -> const PageRef { return page; }
 
-auto XojPageView::getXournal() const -> XournalView* { return this->xournal; }
+auto PageView::getXournal() const -> VertexNoteView* { return this->xournal; }
 
-auto XojPageView::getDisplayWidth() const -> int {
+auto PageView::getDisplayWidth() const -> int {
     return round_cast<int>(this->page->getWidth() * this->xournal->getZoom());
 }
 
-auto XojPageView::getDisplayHeight() const -> int {
+auto PageView::getDisplayHeight() const -> int {
     return round_cast<int>(this->page->getHeight() * this->xournal->getZoom());
 }
 
-auto XojPageView::getDisplayWidthDouble() const -> double { return this->page->getWidth() * this->xournal->getZoom(); }
+auto PageView::getDisplayWidthDouble() const -> double { return this->page->getWidth() * this->xournal->getZoom(); }
 
-auto XojPageView::getDisplayHeightDouble() const -> double {
+auto PageView::getDisplayHeightDouble() const -> double {
     return this->page->getHeight() * this->xournal->getZoom();
 }
 
-auto XojPageView::getSelectedTex() const -> const TexImage* {
+auto PageView::getSelectedTex() const -> const TexImage* {
     EditSelection* theSelection = this->xournal->getSelection();
     if (!theSelection) {
         return nullptr;
@@ -1156,7 +1156,7 @@ auto XojPageView::getSelectedTex() const -> const TexImage* {
     return nullptr;
 }
 
-auto XojPageView::getSelectedText() const -> const Text* {
+auto PageView::getSelectedText() const -> const Text* {
     EditSelection* theSelection = this->xournal->getSelection();
     if (!theSelection) {
         return nullptr;
@@ -1170,13 +1170,13 @@ auto XojPageView::getSelectedText() const -> const Text* {
     return nullptr;
 }
 
-void XojPageView::rectChanged(Rectangle<double>& rect) { rerenderRect(rect.x, rect.y, rect.width, rect.height); }
+void PageView::rectChanged(Rectangle<double>& rect) { rerenderRect(rect.x, rect.y, rect.width, rect.height); }
 
-void XojPageView::rangeChanged(Range& range) { rerenderRange(range); }
+void PageView::rangeChanged(Range& range) { rerenderRange(range); }
 
-void XojPageView::pageChanged() { rerenderPage(); }
+void PageView::pageChanged() { rerenderPage(); }
 
-void XojPageView::elementChanged(const Element* elem) {
+void PageView::elementChanged(const Element* elem) {
     /*
      * The input handlers issue an elementChanged event when creating an element.
      * There is however no need to redraw the element in this case: the element was already painted to the buffer via a
@@ -1194,13 +1194,13 @@ void XojPageView::elementChanged(const Element* elem) {
     }
 }
 
-void XojPageView::elementsChanged(const std::vector<const Element*>& elements, const Range& range) {
+void PageView::elementsChanged(const std::vector<const Element*>& elements, const Range& range) {
     if (!range.empty()) {
         rerenderRange(range);
     }
 }
 
-void XojPageView::showFloatingToolbox(const PositionInputData& pos) {
+void PageView::showFloatingToolbox(const PositionInputData& pos) {
     // Convert to the widget-coordinate system
     auto p = xoj::util::Point{pos.x, pos.y} - this->xournal->getScrollHandling()->getPosition();
     auto q = xoj::util::Point{round_cast<int>(p.x), round_cast<int>(p.y)} + this->getPixelPosition();
@@ -1208,5 +1208,5 @@ void XojPageView::showFloatingToolbox(const PositionInputData& pos) {
     this->getXournal()->getControl()->getWindow()->getFloatingToolbox()->show(q.x, q.y);
 }
 
-void XojPageView::setGridCoordinates(xoj::util::Point<int> coords) { this->gridCoordinates = coords; }
-auto XojPageView::getGridCoordinates() const -> xoj::util::Point<int> { return this->gridCoordinates; }
+void PageView::setGridCoordinates(xoj::util::Point<int> coords) { this->gridCoordinates = coords; }
+auto PageView::getGridCoordinates() const -> xoj::util::Point<int> { return this->gridCoordinates; }

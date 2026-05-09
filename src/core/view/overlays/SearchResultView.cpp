@@ -19,12 +19,12 @@ SearchResultView::SearchResultView(const SearchControl* searchControl, Repaintab
 SearchResultView::~SearchResultView() noexcept { this->unregisterFromPool(); }
 
 void SearchResultView::draw(cairo_t* cr) const {
-    const XojPdfRectangle* highlightRect = this->searchControl->getHighlightRect();
+    const PdfRectangle* highlightRect = this->searchControl->getHighlightRect();
     xoj::util::CairoSaveGuard saveGuard(cr);
 
     cairo_set_line_width(cr, BORDER_WIDTH_IN_PIXELS / this->parent->getZoom());
 
-    for (const XojPdfRectangle& rect: this->searchControl->getResults()) {
+    for (const PdfRectangle& rect: this->searchControl->getResults()) {
         cairo_rectangle(cr, rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1);
         Color color = frameColor;
         if (&rect == highlightRect) {

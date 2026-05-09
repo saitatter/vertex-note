@@ -7,12 +7,12 @@
 #include "control/NavigationHistory.h"    // for NavigationHistory
 #include "control/zoom/ZoomControl.h"     // for ZoomControl
 #include "gui/MainWindow.h"               // for MainWindow
-#include "gui/XournalView.h"              // for XournalView
+#include "gui/VertexNoteView.h"              // for VertexNoteView
 #include "gui/sidebar/Sidebar.h"          // for Sidebar
 #include "gui/widgets/SpinPageAdapter.h"  // for SpinPageAdapter
 #include "model/Document.h"               // for Document
 #include "model/LinkDestination.h"        // for LinkDestination
-#include "model/XojPage.h"                // for XojPage
+#include "model/NotePage.h"                // for NotePage
 #include "util/Util.h"                    // for npos
 
 #include "Control.h"  // for Control
@@ -52,7 +52,7 @@ void ScrollHandler::goToFirstPage() {
     }
 }
 
-void ScrollHandler::scrollToPage(const PageRef& page, XojPdfRectangle rect) {
+void ScrollHandler::scrollToPage(const PageRef& page, PdfRectangle rect) {
     Document* doc = this->control->getDocument();
 
     doc->lock_shared();
@@ -64,7 +64,7 @@ void ScrollHandler::scrollToPage(const PageRef& page, XojPdfRectangle rect) {
     }
 }
 
-void ScrollHandler::scrollToPage(size_t page, XojPdfRectangle rect) {
+void ScrollHandler::scrollToPage(size_t page, PdfRectangle rect) {
     MainWindow* win = this->control->getWindow();
     if (win == nullptr) {
         g_error("Window is nullptr!");
@@ -74,7 +74,7 @@ void ScrollHandler::scrollToPage(size_t page, XojPdfRectangle rect) {
     win->getXournal()->scrollTo(page, rect);
 }
 
-void ScrollHandler::jumpToPage(const PageRef& page, XojPdfRectangle rect) {
+void ScrollHandler::jumpToPage(const PageRef& page, PdfRectangle rect) {
     Document* doc = this->control->getDocument();
 
     doc->lock_shared();
@@ -86,7 +86,7 @@ void ScrollHandler::jumpToPage(const PageRef& page, XojPdfRectangle rect) {
     }
 }
 
-void ScrollHandler::jumpToPage(size_t page, XojPdfRectangle rect) {
+void ScrollHandler::jumpToPage(size_t page, PdfRectangle rect) {
     this->control->getNavigationHistory()->recordNavPoint();
     scrollToPage(page, rect);
 }

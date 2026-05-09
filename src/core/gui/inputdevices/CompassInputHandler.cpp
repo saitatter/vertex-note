@@ -6,14 +6,14 @@
 #include "control/Control.h"
 #include "control/ToolEnums.h"    // for TOOL_HAND, TOOL_HIGHLIGHTER
 #include "control/ToolHandler.h"  // for ToolHandler
-#include "gui/XournalView.h"      // for XournalView
+#include "gui/VertexNoteView.h"      // for VertexNoteView
 #include "gui/inputdevices/InputEvents.h"
 #include "model/Compass.h"
 
 constexpr double MIN_HEIGHT = 0.5;
 constexpr double MAX_HEIGHT = 10.0;
 
-CompassInputHandler::CompassInputHandler(XournalView* xournal, GeometryToolController* controller):
+CompassInputHandler::CompassInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
         GeometryToolInputHandler(xournal, controller) {}
 
 CompassInputHandler::~CompassInputHandler() noexcept = default;

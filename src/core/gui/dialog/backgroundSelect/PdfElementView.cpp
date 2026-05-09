@@ -6,12 +6,12 @@
 #include <gtk/gtk.h>  // for gtk_widget_...
 
 #include "gui/dialog/backgroundSelect/BaseElementView.h"  // for BaseElement...
-#include "pdf/base/XojPdfPage.h"                          // for XojPdfPageSPtr
+#include "pdf/base/PdfPage.h"                          // for PdfPagePtr
 #include "util/safe_casts.h"                              // for ceil_cast
 
 #include "PdfPagesDialog.h"  // for PdfPagesDialog
 
-PdfElementView::PdfElementView(size_t id, XojPdfPageSPtr page, PdfPagesDialog* dlg):
+PdfElementView::PdfElementView(size_t id, PdfPagePtr page, PdfPagesDialog* dlg):
         BaseElementView(id, dlg), page(std::move(page)) {}
 
 PdfElementView::~PdfElementView() = default;

@@ -5,7 +5,7 @@
 
 #include "pdf/popplerapi/PopplerGlibAction.h"  // for PopplerGlibAction
 
-class XojPdfAction;
+class PdfAction;
 
 PopplerGlibPageBookmarkIterator::PopplerGlibPageBookmarkIterator(PopplerIndexIter* iter, PopplerDocument* document):
         iter(iter), document(document) {
@@ -26,7 +26,7 @@ auto PopplerGlibPageBookmarkIterator::next() -> bool { return poppler_index_iter
 
 auto PopplerGlibPageBookmarkIterator::isOpen() -> bool { return poppler_index_iter_is_open(iter); }
 
-auto PopplerGlibPageBookmarkIterator::getChildIter() -> XojPdfBookmarkIterator* {
+auto PopplerGlibPageBookmarkIterator::getChildIter() -> PdfBookmarkIterator* {
     PopplerIndexIter* child = poppler_index_iter_get_child(iter);
     if (child == nullptr) {
         return nullptr;
@@ -35,15 +35,15 @@ auto PopplerGlibPageBookmarkIterator::getChildIter() -> XojPdfBookmarkIterator* 
     return new PopplerGlibPageBookmarkIterator(child, document);
 }
 
-auto PopplerGlibPageBookmarkIterator::getAction() -> XojPdfAction* {
+auto PopplerGlibPageBookmarkIterator::getAction() -> PdfAction* {
     PopplerAction* action = poppler_index_iter_get_action(iter);
 
     if (action == nullptr) {
         return nullptr;
     }
 
-    XojPdfAction* result = new PopplerGlibAction(action, document);
-    poppler_action_free(action);  // XojPdfAction does not own action.
+    PdfAction* result = new PopplerGlibAction(action, document);
+    poppler_action_free(action);  // PdfAction does not own action.
 
     return result;
 }

@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A stroke which is temporary used if you erase a part
  * This class remembers which sections of a stroke have not yet been erased, until the eraser sequence is concluded
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

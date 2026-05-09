@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Parses the uncompressed XML of .xoj / .xopp documents
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -48,7 +48,7 @@ private:
     /**
      * UTF-8 Roadmap
      *
-     * Most internals of Xournal++ still use or accept std::string in
+     * Most internals of VertexNote still use or accept std::string in
      * constructors. When that changes, you should directly retrieve
      * xoj::util::utf8_view types or their aliases below from getAttrib<T>()
      * functions instead of converting it after you already obtained a

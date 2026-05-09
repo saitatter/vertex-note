@@ -1,8 +1,8 @@
 # MacOS Build (.app)
 
-This file describes how to build and run Xournal++ and package Xournal++ into a `.app` bundle.
+This file describes how to build and run VertexNote and package VertexNote into a `.app` bundle.
 
-If you are only interested in building and running Xournal++ for local development, see
+If you are only interested in building and running VertexNote for local development, see
 the below sections on the dependency setup for Homebrew.
 
 For packaging into a `.app` bundle, see the section on gtk-osx.
@@ -17,7 +17,7 @@ tools.
 
 Run `xcode-select --install` in a terminal to install developer tools.
 
-## Xournal++ Mac Homebrew Build
+## VertexNote Mac Homebrew Build
 
 **Builds with Homebrew are for local development only. You won't be able to create an .app-bundle and distribute it.**
 
@@ -33,42 +33,42 @@ https://brew.sh/
 brew install cmake ninja pkg-config gtk+3 poppler librsvg adwaita-icon-theme libzip portaudio libsndfile gdk-pixbuf qpdf lua gtksourceview4
 ````
 
-### Build Xournal++:
+### Build VertexNote:
 ````sh
-git clone http://github.com/xournalpp/xournalpp.git
-cd xournalpp
+git clone http://github.com/vertex-note/vertex-note.git
+cd vertex-note
 mkdir build
 cd build
 cmake .. -GNinja -DCMAKE_INSTALL_PREFIX="$(brew --prefix)"
 ninja install
 ````
 
-Here `"$(brew --prefix)"` where Xournal++ gets installed defaults to `/usr/local` on MacOS Intel and to `/opt/homebrew` on MacOS ARM.
+Here `"$(brew --prefix)"` where VertexNote gets installed defaults to `/usr/local` on MacOS Intel and to `/opt/homebrew` on MacOS ARM.
 This installation prefix is essential when running the binary, since otherwise pixbuf loaders don't work properly.
 
-### Run Xournal++:
+### Run VertexNote:
 
 On MacOS Intel:
 ```sh
-/usr/local/bin/xournalpp
+/usr/local/bin/vertex-note
 ```
 or using the wrapper (in the development version):
 ```sh
-/usr/local/bin/xournalpp-wrapper
+/usr/local/bin/vertex-note-wrapper
 ```
 
 On MacOS ARM:
 
 ```sh
-/opt/homebrew/bin/xournalpp
+/opt/homebrew/bin/vertex-note
 ```
 or using the wrapper:
 ```sh
-/opt/homebrew/bin/xournalpp-wrapper
+/opt/homebrew/bin/vertex-note-wrapper
 ```
 
 
-## Bundling Xournal++ into a `.app` with gtk-osx
+## Bundling VertexNote into a `.app` with gtk-osx
 
 This uses the official [gtk-osx][gtk-osx] project, which builds GTK using the
 jhbuild tool and a curated set of dependencies that allows GTK to work on macOS.
@@ -142,8 +142,8 @@ export PATH="$HOME"/.new_local/bin:"$PATH"
 Make sure you are in the home directory for this step.
 
 jhbuild uses "modulesets" to define what dependencies to use for its builds.
-The Xournal++ macOS build defines its own moduleset (in
-`mac-setup/xournalpp.modules`) that can be used to build Xournal++ dependencies
+The VertexNote macOS build defines its own moduleset (in
+`mac-setup/vertex-note.modules`) that can be used to build VertexNote dependencies
 that are not already included in the `gtk-osx` project.
 
 First, clone the gtk-osx repository:
@@ -212,13 +212,13 @@ jhbuild bootstrap-gtk-osx
 jhbuild build meta-gtk-osx-gtk3 gtksourceview3
 ```
 
-### Step 4: Clone the Xournal++ code
+### Step 4: Clone the VertexNote code
 
-If you haven't already, you'll need to clone the Xournal++ code in order to
+If you haven't already, you'll need to clone the VertexNote code in order to
 compile it and its dependencies from source:
 
 ```sh
-git clone http://github.com/xournalpp/xournalpp.git
+git clone http://github.com/vertex-note/vertex-note.git
 ```
 
 ### Step 5: Build required dependencies not in gtk-osx
@@ -228,13 +228,13 @@ We provide a jhbuild moduleset that defines how these dependencies will be
 downloaded and built.
 
 To build them, run the following command in the `mac-setup` folder of the
-`xournalpp` repository you just cloned:
+`vertex-note` repository you just cloned:
 
 ```sh
-jhbuild -m xournalpp.modules build meta-xournalpp-deps
+jhbuild -m vertex-note.modules build meta-vertexnote-deps
 ```
 
-### Last step: build Xournal++ and package it as .app
+### Last step: build VertexNote and package it as .app
 
 From the `mac-setup` directory, this can be done completely automatically using:
 ```sh
@@ -257,7 +257,7 @@ cd mac-setup
 jhbuild run bash ./build-app.sh "$HOME"/gtk
 ```
 
-Once the `Xournal++.app` bundle is created, you can install it in your
+Once the `VertexNote.app` bundle is created, you can install it in your
 Applications directory and run it.
 
 At the time of writing, it is not possible to run the application from the

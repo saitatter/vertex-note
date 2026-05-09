@@ -7,7 +7,7 @@
 #include <glib.h>     // for gboolean
 #include <gtk/gtk.h>  // for GtkButton, GtkOverlay
 
-#include "pdf/base/XojPdfPage.h"    // for XojPdfPageSelectionStyle
+#include "pdf/base/PdfPage.h"    // for PdfPageSelectionStyle
 #include "util/raii/GObjectSPtr.h"  // for GObjectSPtr
 
 class MainWindow;
@@ -59,7 +59,7 @@ public:
     void userCancelSelection();
 
     /// Track selection style used for unfinalized selections
-    XojPdfPageSelectionStyle selectionStyle = XojPdfPageSelectionStyle::Linear;
+    PdfPageSelectionStyle selectionStyle = PdfPageSelectionStyle::Linear;
 
     /// Copy Selection to the Clipboard.
     void copyTextToClipboard();

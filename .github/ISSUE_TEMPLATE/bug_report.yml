@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a report to help us improve Xournal++.
+description: Create a report to help us improve VertexNote.
 labels: bug
 body:
   - type: dropdown
@@ -33,21 +33,21 @@ body:
   - type: input
     attributes:
       label: Installation Method
-      description: How was Xournal++ installed?
+      description: How was VertexNote installed?
       placeholder: e.g. Official Release, Flatpak, Snap, PPA, etc.
     validations:
       required: true
   - type: input
     attributes:
-      label: Xournal++ Version
-      description: What version of Xournal++ do you use? (This can be obtained by running `xournalpp --version`, or in the "About" window).
+      label: VertexNote Version
+      description: What version of VertexNote do you use? (This can be obtained by running `vertex-note --version`, or in the "About" window).
       placeholder: e.g. 1.0.16, specific commit, specific branch etc.
     validations:
       required: true
   - type: input
     attributes:
       label: libgtk Version
-      description: What version of libgtk do you use? (This can be obtained by running `xournalpp --version`, or in the "About" window).
+      description: What version of libgtk do you use? (This can be obtained by running `vertex-note --version`, or in the "About" window).
     validations:
       required: true
   - type: textarea
@@ -72,5 +72,5 @@ body:
   - type: textarea
     attributes:
       label: Additional Context
-      description: Add any other information or context about the problem here. If your bug is an input related problem, please provide [input logs](https://github.com/xournalpp/xournalpp/wiki/How-to-provide-debug-info-for-input-related-bugs).
+      description: Add any other information or context about the problem here. If your bug is an input related problem, please provide [input logs](https://github.com/saitatter/vertex-note/wiki/How-to-provide-debug-info-for-input-related-bugs).
         

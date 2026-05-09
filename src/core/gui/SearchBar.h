@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles the searchbar and search events
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -15,7 +15,7 @@
 #include <gtk/gtkcssprovider.h>  // for GtkCssProvider
 
 class Control;
-class XojPdfRectangle;
+class PdfRectangle;
 
 class SearchBar {
 public:
@@ -34,7 +34,7 @@ private:
     /**
      * @brief Searches the entire document until a match is found, starting from `page = next(currentPage)` and
      * iterating through the pages via page = next(page). The search stops after the first page with at least one match.
-     * All the match on that page are stored in XojPageView::search of the corresponding page. The current page is not
+     * All the match on that page are stored in PageView::search of the corresponding page. The current page is not
      * search!
      * @param next The parameter `next` must be convertible to size_t(size_t) and satisfy the following assertions
      *              * Iterating from page = next(currentPage) by page = next(page) must reach page == currentPage at
@@ -54,7 +54,7 @@ private:
     void searchPrevious();
 
     void search(const char* text);
-    bool searchTextOnCurrentPage(const char* text, size_t index, size_t* occurrences, XojPdfRectangle* matchRect);
+    bool searchTextOnCurrentPage(const char* text, size_t index, size_t* occurrences, PdfRectangle* matchRect);
 
 private:
     Control* control;

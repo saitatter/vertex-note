@@ -12,14 +12,14 @@
 #include "control/Control.h"            // for Control
 #include "control/settings/Settings.h"  // for Settings
 #include "gui/LayoutMapper.h"           // for LayoutMapper, GridPosition
-#include "gui/PageView.h"               // for XojPageView
+#include "gui/PageView.h"               // for PageView
 #include "gui/scroll/ScrollHandling.h"  // for ScrollHandling
 #include "model/Document.h"             // for Document
 #include "util/Range.h"                 // for Range
 #include "util/Rectangle.h"             // for Rectangle
 #include "util/safe_casts.h"            // for strict_cast, as_signed, as_si...
 
-#include "XournalView.h"  // for XournalView
+#include "VertexNoteView.h"  // for VertexNoteView
 
 /**
  * Padding outside the pages, including shadow
@@ -37,7 +37,7 @@ constexpr auto const XOURNAL_ROOM_FOR_SHADOW = 3;
 constexpr auto const XOURNAL_PADDING_BETWEEN = 15;
 
 
-Layout::Layout(XournalView* view, ScrollHandling* scrollHandling): view(view), scrollHandling(scrollHandling) {
+Layout::Layout(VertexNoteView* view, ScrollHandling* scrollHandling): view(view), scrollHandling(scrollHandling) {
     g_signal_connect(scrollHandling->getHorizontal(), "value-changed", G_CALLBACK(horizontalScrollChanged), this);
     g_signal_connect(scrollHandling->getVertical(), "value-changed", G_CALLBACK(verticalScrollChanged), this);
 
@@ -456,7 +456,7 @@ auto Layout::getGridPositionAtUnsafe(const xoj::util::Point<double>& p) const ->
     return GridPosition{foundCol, foundRow};
 }
 
-auto Layout::getPageViewAt(int x, int y) const -> XojPageView* {
+auto Layout::getPageViewAt(int x, int y) const -> PageView* {
     auto optionalPage = [&]() {
         std::lock_guard g{pc.m};
         return pc.mapper.at(getGridPositionAtUnsafe(xoj::util::Point<double>(x, y)));
@@ -525,7 +525,7 @@ auto Layout::getPixelCoordinatesOfEntry(size_t n) const -> xoj::util::Point<int>
     return getPixelCoordinatesOfEntryUnsafe(n);
 }
 
-static xoj::util::Point<int> getPixelCoords(const Layout::PreCalculated& pc, const GridPosition& pos, XojPageView& pv) {
+static xoj::util::Point<int> getPixelCoords(const Layout::PreCalculated& pc, const GridPosition& pos, PageView& pv) {
     double zoom = pv.getZoom();
     return {floor_cast<int>(((pos.col == 0 ? 0. : pc.stretchableHorizontalPixelsAfterColumn[pos.col - 1]) +
                              .5 * (pc.widthCols[pos.col] - pv.getWidth())) *

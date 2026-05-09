@@ -7,17 +7,17 @@
 
 #include "control/tools/EditSelection.h"  // for EditSelection
 #include "gui/MainWindow.h"               // for MainWindow
-#include "gui/XournalView.h"              // for XournalView
+#include "gui/VertexNoteView.h"              // for VertexNoteView
 #include "model/Document.h"               // for Document
 #include "model/ElementInsertionPosition.h"
 #include "model/Layer.h"                  // for Layer
 #include "model/PageRef.h"                // for PageRef
-#include "model/XojPage.h"                // for XojPage
+#include "model/NotePage.h"                // for NotePage
 #include "undo/UndoRedoHandler.h"         // for UndoRedoHandler
 
 #include "Control.h"  // for Control
 
-class XojPageView;
+class PageView;
 
 UndoRedoController::UndoRedoController(Control* control): control(control) {}
 
@@ -46,7 +46,7 @@ void UndoRedoController::after() {
     PageRef page = control->getCurrentPage();
     std::unique_lock lock(*doc);
     size_t pageNo = doc->indexOf(page);
-    XojPageView* view = control->getWindow()->getXournal()->getViewFor(pageNo);
+    PageView* view = control->getWindow()->getXournal()->getViewFor(pageNo);
 
     if (!view || !page) {
         // The page may have been undone

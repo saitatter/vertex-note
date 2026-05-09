@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Queue to connect an audio producer and an audio consumer
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

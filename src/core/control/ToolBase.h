@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Base class for a tool, which contains the tool configuration,
  * this is also used for other classes, e.g. to store current tool configuration
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

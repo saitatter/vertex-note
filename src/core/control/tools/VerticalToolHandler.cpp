@@ -13,7 +13,7 @@
 #include "model/Document.h"                        // for Document
 #include "model/Element.h"                         // for Element
 #include "model/Layer.h"                           // for Layer
-#include "model/XojPage.h"                         // for XojPage
+#include "model/NotePage.h"                         // for NotePage
 #include "undo/MoveUndoAction.h"                   // for MoveUndoAction
 #include "util/DispatchPool.h"
 #include "view/overlays/VerticalToolView.h"

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -36,7 +36,7 @@ class UnrenderedPaletteTabTest: public GtkTest {
         GtkListBox* optionsList = nullptr;
         createAndSetupWidgets(app, &grid, &mainLabel, &optionsList);
 
-        const fs::path palettePath{GET_TESTFILE(u8"palettes/xournalpp.gpl")};
+        const fs::path palettePath{GET_TESTFILE(u8"palettes/vertex-note-legacy.gpl")};
 
         GladeSearchpath gladeSearchPath{};
         gladeSearchPath.addSearchDirectory(Util::getInstallUiPath());
@@ -54,7 +54,7 @@ class RenderedPaletteTabTest: public GtkTest {
         GtkListBox* optionsList = nullptr;
         createAndSetupWidgets(app, &grid, &mainLabel, &optionsList);
 
-        const fs::path palettePath{GET_TESTFILE(u8"palettes/xournalpp.gpl")};
+        const fs::path palettePath{GET_TESTFILE(u8"palettes/vertex-note-legacy.gpl")};
 
         GladeSearchpath gladeSearchPath{};
         gladeSearchPath.addSearchDirectory(Util::getInstallUiPath());

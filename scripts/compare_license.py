@@ -9,7 +9,7 @@ Assumptions:
  - copyright.txt is in https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/ format
  - all relevant files are within CWD and not ignored by git (ripgrep default behaviour)
 
-For xournalpp execute using:
+For vertex-note execute using:
 
     python3 scripts/compare_license.py
 
@@ -91,7 +91,7 @@ def get_source_files_missing_license_of_header(scanned_files:Set[str], all_files
 
 # I: Add an entry if a file is detected automatically as a file with special
 # license/copyright, but which is actually licensed/copyrighted under the same
-# license/copyright as xournalpp.
+# license/copyright as vertex-note.
 # Please add a short comment explaining why it's whitelisted
 def get_whitelist_not_listed():
     """Whitelist for files containing the searched for substrings but
@@ -102,8 +102,8 @@ def get_whitelist_not_listed():
     white_list.add("scripts/compare_license.py") # this very script
     white_list.add("CMakeLists.txt") # false positive
     white_list.add("LICENSE") # main license file
-    white_list.add("rpm/fedora/xournalpp.spec") # false positive
-    white_list.add("windows-setup/xournalpp.nsi") # false positive
+    white_list.add("rpm/fedora/vertex-note.spec") # false positive
+    white_list.add("windows-setup/vertex-note.nsi") # false positive
     white_list.add("ui/about.glade") # false positive
     white_list.add("src/exe/win32/xpp.rc.in") # false positive
     white_list.add("mac-setup/Info.plist") # false positive
@@ -130,8 +130,8 @@ def get_whitelist_not_found():
     white_list.add("ui/pixmaps/application-x-xojpp.svg")
     white_list.add("ui/pixmaps/application-x-xopp.svg")
     white_list.add("ui/pixmaps/application-x-xopt.svg")
-    white_list.add("ui/pixmaps/com.github.xournalpp.xournalpp.png")
-    white_list.add("ui/pixmaps/com.github.xournalpp.xournalpp.svg")
+    white_list.add("ui/pixmaps/com.github.vertex-note.vertex-note.png")
+    white_list.add("ui/pixmaps/com.github.vertex-note.vertex-note.svg")
     white_list.add("ui/pixmaps/gnome-mime-application-x-xopp.svg")
     white_list.add("ui/pixmaps/gnome-mime-application-x-xopt.svg")
     white_list.add("ui/pixmaps/xopt.svg")

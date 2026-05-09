@@ -24,7 +24,7 @@
 #include "model/Layer.h"                                    // for Layer
 #include "model/LineStyle.h"                                // for LineStyle
 #include "model/Stroke.h"                                   // for Stroke, STROKE_...
-#include "model/XojPage.h"                                  // for XojPage
+#include "model/NotePage.h"                                  // for NotePage
 #include "undo/InsertUndoAction.h"                          // for InsertUndoAction
 #include "undo/RecognizerUndoAction.h"                      // for RecognizerUndoA...
 #include "undo/UndoRedoHandler.h"                           // for UndoRedoHandler

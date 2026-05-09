@@ -1,4 +1,4 @@
-# Template for setting up the Ubuntu build environment and building Xournal++ on
+# Template for setting up the Ubuntu build environment and building VertexNote on
 # Ubuntu
 name: Install dependencies
 inputs:

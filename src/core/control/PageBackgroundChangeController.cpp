@@ -11,7 +11,7 @@
 #include "control/settings/PageTemplateSettings.h"       // for PageTemplate...
 #include "control/settings/Settings.h"                   // for Settings
 #include "gui/MainWindow.h"                              // for MainWindow
-#include "gui/XournalView.h"                             // for XournalView
+#include "gui/VertexNoteView.h"                             // for VertexNoteView
 #include "gui/dialog/backgroundSelect/ImagesDialog.h"    // for ImagesDialog
 #include "gui/dialog/backgroundSelect/PdfPagesDialog.h"  // for PdfPagesDialog
 #include "gui/menus/menubar/Menubar.h"                   // for Menubar
@@ -19,8 +19,8 @@
 #include "model/BackgroundImage.h"                       // for BackgroundImage
 #include "model/Document.h"                              // for Document
 #include "model/PageType.h"                              // for PageType
-#include "model/XojPage.h"                               // for XojPage
-#include "pdf/base/XojPdfPage.h"                         // for XojPdfPageSPtr
+#include "model/NotePage.h"                               // for NotePage
+#include "pdf/base/PdfPage.h"                         // for PdfPagePtr
 #include "undo/GroupUndoAction.h"                        // for GroupUndoAction
 #include "undo/MissingPdfUndoAction.h"                   // for MissingPdfUn...
 #include "undo/PageBackgroundChangedUndoAction.h"        // for PageBackgrou...
@@ -30,7 +30,7 @@
 #include "util/PathUtil.h"                               // for fromGFile
 #include "util/PopupWindowWrapper.h"
 #include "util/Util.h"       // for npos
-#include "util/XojMsgBox.h"  // for XojMsgBox
+#include "util/AppMessageBox.h"  // for AppMessageBox
 #include "util/i18n.h"       // for FS, _, _F
 
 #include "Control.h"     // for Control
@@ -109,7 +109,7 @@ void PageBackgroundChangeController::changePdfPagesBackground(const fs::path& fi
 
     if (!doc->readPdf(filepath, false, attachPdf)) {
         std::string msg = FS(_F("Error reading PDF: {1}") % doc->getLastErrorMsg());
-        XojMsgBox::showErrorToUser(this->control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(this->control->getGtkWindow(), msg);
         return;
     }
     this->control->getWindow()->getXournal()->recreatePdfCache();
@@ -189,7 +189,7 @@ static void setPagePdfBackground(const PageRef& page, size_t pdfPageNr, Document
         // no need to set a type, if we set the page number the type is also set
         page->setBackgroundPdfPageNr(pdfPageNr);
 
-        XojPdfPageSPtr p = doc->getPdfPage(pdfPageNr);
+        PdfPagePtr p = doc->getPdfPage(pdfPageNr);
         page->setSize(p->getWidth(), p->getHeight());
     } else {
         g_warning("PageBackgroundChangeController::setPagePdfBackground() with past-the-end PDF page number");
@@ -271,7 +271,7 @@ void PageBackgroundChangeController::askForPdfBackground(std::function<void(size
     if (doc->getPdfPageCount() == 0) {
         std::string msg = _("You don't have any PDF pages to select from. Cancel operation.\n"
                             "Please select another background type: Menu \"Journal\" → \"Configure Page Template\".");
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
         return;
     }
 
@@ -328,7 +328,7 @@ void PageBackgroundChangeController::insertNewPage(size_t position, bool automat
         width = current->getWidth();
         height = current->getHeight();
     }
-    auto page = std::make_shared<XojPage>(width, height);
+    auto page = std::make_shared<NotePage>(width, height);
 
     auto afterConfigured = [position, shouldScrollToPage = !automatedInsertion, ctrl = this->control](PageRef page) {
         ctrl->insertPage(page, position, shouldScrollToPage);

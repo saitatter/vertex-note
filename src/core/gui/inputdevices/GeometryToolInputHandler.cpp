@@ -12,7 +12,7 @@
 #include "control/ToolEnums.h"               // for TOOL_HAND, TOOL_HIGHLIGHTER
 #include "control/ToolHandler.h"             // for ToolHandler
 #include "control/settings/Settings.h"       // for Settings
-#include "gui/XournalView.h"                 // for XournalView
+#include "gui/VertexNoteView.h"                 // for VertexNoteView
 #include "gui/inputdevices/InputContext.h"   // for InputContext::DeviceType
 #include "gui/inputdevices/InputEvents.h"    // for InputEvent, BUTTON_PRESS_...
 #include "model/Document.h"                  // for Document
@@ -21,7 +21,7 @@
 #include "model/Layer.h"                     // for Layer
 #include "model/Snapping.h"                  // for distanceLine
 #include "model/Stroke.h"                    // for Stroke
-#include "model/XojPage.h"                   // for XojPage
+#include "model/NotePage.h"                   // for NotePage
 
 constexpr double MOVE_AMOUNT = HALF_CM / 2.0;
 constexpr double MOVE_AMOUNT_SMALL = HALF_CM / 20.0;
@@ -33,7 +33,7 @@ constexpr double SNAPPING_DISTANCE_TOLERANCE = 5.0;                 // pt
 constexpr double SNAPPING_ROTATION_TOLERANCE = 3.0 * M_PI / 180.0;  // rad
 constexpr double ZOOM_DISTANCE_MIN = 0.01;
 
-GeometryToolInputHandler::GeometryToolInputHandler(XournalView* xournal, GeometryToolController* controller):
+GeometryToolInputHandler::GeometryToolInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
         xournal(xournal), controller(controller) {}
 
 GeometryToolInputHandler::~GeometryToolInputHandler() = default;

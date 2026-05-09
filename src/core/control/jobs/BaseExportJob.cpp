@@ -8,11 +8,11 @@
 #include "control/jobs/BlockingJob.h"   // for BlockingJob
 #include "control/settings/Settings.h"  // for Settings
 #include "gui/MainWindow.h"             // for MainWindow
-#include "gui/dialog/XojSaveDlg.h"
+#include "gui/dialog/DocumentSaveDialog.h"
 #include "model/Document.h"             // for Document, Document::PDF
 #include "util/PathUtil.h"              // for clearExtensions
 #include "util/PopupWindowWrapper.h"    // for PopupWindowWrapper
-#include "util/XojMsgBox.h"             // for XojMsgBox
+#include "util/AppMessageBox.h"             // for AppMessageBox
 #include "util/glib_casts.h"            // for wrap_for_g_callback_v
 #include "util/i18n.h"                  // for _, FS, _F
 
@@ -38,13 +38,13 @@ auto BaseExportJob::checkOverwriteBackgroundPDF(fs::path const& file) const -> b
         if (fs::weakly_canonical(file) == fs::weakly_canonical(backgroundPDF)) {
             // If the new file name (with the selected extension) is the previously selected pdf, warn the user
             std::string msg = _("Do not overwrite the background PDF! This will cause errors!");
-            XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+            AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
             return false;
         }
     } catch (const fs::filesystem_error& fe) {
         g_warning("%s", fe.what());
         auto msg = std::string(_("The check for overwriting the background failed with:\n")) + fe.what();
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
         return false;
     }
     return true;
@@ -92,13 +92,13 @@ auto BaseExportJob::testAndSetFilepath(const fs::path& file) -> bool {
         }
     } catch (const fs::filesystem_error& e) {
         std::string msg = FS(_F("Failed to resolve path with the following error:\n{1}") % e.what());
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
     }
     return false;
 }
 
 void BaseExportJob::afterRun() {
     if (!this->errorMsg.empty()) {
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), this->errorMsg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), this->errorMsg);
     }
 }

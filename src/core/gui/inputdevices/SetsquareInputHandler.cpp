@@ -6,14 +6,14 @@
 #include "control/SetsquareController.h"   // for SetsquareController, HYPOTENUSE
 #include "control/ToolEnums.h"             // for TOOL_HAND, TOOL_HIGHLIGHTER
 #include "control/ToolHandler.h"           // for ToolHandler
-#include "gui/XournalView.h"               // for XournalView
+#include "gui/VertexNoteView.h"               // for VertexNoteView
 #include "gui/inputdevices/InputEvents.h"  // for InputEvent
 #include "model/Setsquare.h"               // for Setsquare::INITIAL_HEIGHT,...
 
 constexpr double MIN_HEIGHT = 4.5;
 constexpr double MAX_HEIGHT = 15.0;
 
-SetsquareInputHandler::SetsquareInputHandler(XournalView* xournal, GeometryToolController* controller):
+SetsquareInputHandler::SetsquareInputHandler(VertexNoteView* xournal, GeometryToolController* controller):
         GeometryToolInputHandler(xournal, controller) {}
 
 SetsquareInputHandler::~SetsquareInputHandler() noexcept = default;

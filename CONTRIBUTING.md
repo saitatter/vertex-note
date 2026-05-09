@@ -1,56 +1,56 @@
-# Contributing to Xournal++
+# Contributing to VertexNote
 
-Thanks for your interest in contributing to Xournal++! The project is run
+Thanks for your interest in contributing to VertexNote! The project is run
 completely by volunteers in their spare time, so any contribution--no matter how
 small--is greatly appreciated. In this file, we'll outline how you can
 contribute to the project.
 
-If you have questions after reading this file, feel free to ask them on our [Gitter channel](https://gitter.im/xournalpp/xournalpp).
+If you have questions after reading this file, feel free to ask them on our [Gitter channel](https://gitter.im/vertex-note/vertex-note).
 
 ## Overview
 
 Several of the main ways that you can contribute to the project include:
 
-* Updating the [website](https://github.com/xournalpp/xournalpp.github.io)
+* Updating the [website](https://github.com/vertex-note/vertex-note.github.io)
 * [Contributing translation improvements](#contributing-translation-improvements)
 * [Contributing code improvements](#contributing-code-improvements)
 
 ## Contributing website improvements
 
-For making changes to the website, please go to [xournalpp/xournalpp.github.io](https://github.com/xournalpp/xournalpp.github.io).
-Make sure to locally test your changes with [MkDocs](https://github.com/xournalpp/xournalpp.github.io?tab=readme-ov-file#how-to-contribute)
+For making changes to the website, please go to [vertex-note/vertex-note.github.io](https://github.com/vertex-note/vertex-note.github.io).
+Make sure to locally test your changes with [MkDocs](https://github.com/vertex-note/vertex-note.github.io?tab=readme-ov-file#how-to-contribute)
 before you send a PR.
 
 ## Contributing translation improvements
 
 If you would like to contribute translations, you can submit improvements to
-[our project on Crowdin](https://crowdin.com/project/xournalpp). The Crowdin
+[our project on Crowdin](https://crowdin.com/project/vertex-note). The Crowdin
 translations are merged back into the main code periodically, after which they
 become available available in the nightly builds.
 
 ## Contributing code improvements
 
-Xournal++ development primarily occurs on GitHub at the [xournalpp/xournalpp
-repository](https://github.com/xournalpp/xournalpp). As a contributor, you
+VertexNote development primarily occurs on GitHub at the [vertex-note/vertex-note
+repository](https://github.com/vertex-note/vertex-note). As a contributor, you
 probably have a particular bug or feature that you are interested in working on.
 Before you start, you should first look in the [issue
-tracker](https://github.com/xournalpp/xournalpp/issues) to see if anyone has
+tracker](https://github.com/vertex-note/vertex-note/issues) to see if anyone has
 reported your bug or has a similar idea for a feature. If not, you should first
 submit a new issue detailing what you are about to do. This will allow you to
 get feedback and ensure that you do not end up duplicating work. You can obtain
 additional help by contacting community members through one of our [official
-communication channels](https://xournalpp.github.io/community/help).
+communication channels](https://vertex-note.github.io/community/help).
 
 The process for contributing code changes works as follows:
 
-1. Fork the main xournalpp repository and create commits on your own feature
+1. Fork the main vertex-note repository and create commits on your own feature
    branch.
 2. Submit a pull request (PR).
 3. Wait for maintainers to review the PR and address the relevant feedback.
 4. After receiving maintainer approval, the PR is merged after a short grace
    period.
 
-If your pull request does not need Xournal++ to be built to test it (e.g. for a
+If your pull request does not need VertexNote to be built to test it (e.g. for a
 README update), you can prepend [skip ci] to the title of the commit to disable
 CI running.
 
@@ -66,7 +66,7 @@ Straub, which is available online for free
 [here](https://git-scm.com/book/en/v2).
 
 You should try to first clone your fork and then compile it manually. The
-instructions for compiling Xournal++ depend on your operating system:
+instructions for compiling VertexNote depend on your operating system:
 
 * [`LinuxBuild.md`](readme/LinuxBuild.md)
 * [`MacBuild.md`](readme/MacBuild.md)
@@ -74,7 +74,7 @@ instructions for compiling Xournal++ depend on your operating system:
 
 ### Code conventions and guidelines
 
-Here are some of the _guidelines_ that we follow when working on the Xournal++
+Here are some of the _guidelines_ that we follow when working on the VertexNote
 codebase. We emphasize _guidelines_ because these are ideal points that we'd
 like to see in contributions, but we understand that perfectly following all
 points is very difficult in practice.
@@ -113,7 +113,7 @@ General contribution guidelines:
 
 Mechanical issues:
 
-* Xournal++ is a mixture of C++ and C code. This is unavoidable because we rely on
+* VertexNote is a mixture of C++ and C code. This is unavoidable because we rely on
   many C libraries (e.g. GTK). Prefer C++ when possible, however.
 * Although we do not have a strong opinion on code style, we use `clang-format`
   to enforce a _consistent_ code style. Feel free to write your code in whatever
@@ -148,17 +148,17 @@ Mechanical issues:
     reduce the time others must spend to verify your code because it is correct
     by design.
 
-See [the corresponding Wiki article](https://github.com/xournalpp/xournalpp/wiki/Coding-conventions) for more details on coding conventions.
+See [the corresponding Wiki article](https://github.com/vertex-note/vertex-note/wiki/Coding-conventions) for more details on coding conventions.
 
 ### Sending your contributions for review
 
 When you feel like you are ready to submit your code changes to be integrated
-into the main Xournal++ repository or require some feedback on your work, you
+into the main VertexNote repository or require some feedback on your work, you
 will want to submit a pull request (PR). The steps to do so are outlined below.
 
 1. Push your changes on to a branch of your fork in GitHub.
 2. Hit the "New pull request" button on the
-   [main repository's PR tracker](https://github.com/xournalpp/xournalpp/pulls).
+   [main repository's PR tracker](https://github.com/vertex-note/vertex-note/pulls).
    Select the branch you want to contribute, and then press "Create pull
    request." If you feel like your work isn't quite ready, feel free to submit
    your PR as a draft.

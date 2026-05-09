@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Xournal++ element wrapper for object-based geometry.
+ * VertexNote element wrapper for object-based geometry.
  */
 
 #pragma once

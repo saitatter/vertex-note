@@ -163,7 +163,7 @@ void XmlParser::closeOpenNodes() {
 
 void XmlParser::parseUnknownTag(const XmlParserHelper::AttributeMap& attributeMap) {
     if (this->hierarchy.empty()) {
-        // Unknown tag at document root. Assume it's another application (like Xournal++ or MrWriter) that has
+        // Unknown tag at document root. Assume it's another application (like VertexNote or MrWriter) that has
         // its own tag name, but a similar structure. Attempt parsing anyways.
         this->builder.addDocument(u8"Unknown", 1);
         g_warning("XML parser: Attempting to parse unknown document type");
@@ -344,7 +344,7 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
         it = pressureSV->data();
         end = pressureSV->data() + pressureSV->size();
     }
-    // Xournal and Xournal++ use the width field. `it` and `end` pointers are already in place.
+    // Xournal and VertexNote use the width field. `it` and `end` pointers are already in place.
 
     double pressure{};
     while (parseDouble(it, end, pressure)) {

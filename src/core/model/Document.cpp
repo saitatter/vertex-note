@@ -16,8 +16,8 @@
 #include "model/DocumentHandler.h"            // for DocumentHandler
 #include "model/PageRef.h"                    // for PageRef
 #include "model/PageType.h"                   // for PageType
-#include "pdf/base/XojPdfAction.h"            // for XojPdfAction
-#include "pdf/base/XojPdfBookmarkIterator.h"  // for XojPdfBookmarkIterator
+#include "pdf/base/PdfAction.h"            // for PdfAction
+#include "pdf/base/PdfBookmarkIterator.h"  // for PdfBookmarkIterator
 #include "util/Assert.h"                      // for xoj_assert
 #include "util/PathUtil.h"                    // for clearExtensions
 #include "util/PlaceholderString.h"           // for PlaceholderString
@@ -30,7 +30,7 @@
 #include "util/utf8_view.h"                   // for utf8
 
 #include "LinkDestination.h"  // for XojLinkDest, DOCUMENT_L...
-#include "XojPage.h"          // for XojPage
+#include "NotePage.h"          // for NotePage
 #include "filesystem.h"       // for path
 
 Document::Document(DocumentHandler* handler): handler(handler) {}
@@ -219,11 +219,11 @@ auto Document::findPdfPage(size_t pdfPage) const -> size_t {
     }
 }
 
-void Document::buildTreeContentsModel(GtkTreeIter* parent, XojPdfBookmarkIterator* iter) {
+void Document::buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter) {
     do {
         GtkTreeIter treeIter = {0};
 
-        XojPdfAction* action = iter->getAction();
+        PdfAction* action = iter->getAction();
         LinkDestination* dest = new LinkDestination(*action->getDestination());
         XojLinkDest* link = link_dest_new();
         link->dest = dest;
@@ -245,7 +245,7 @@ void Document::buildTreeContentsModel(GtkTreeIter* parent, XojPdfBookmarkIterato
         g_free(titleMarkup);
         g_object_unref(link);
 
-        XojPdfBookmarkIterator* child = iter->getChildIter();
+        PdfBookmarkIterator* child = iter->getChildIter();
         if (child) {
             buildTreeContentsModel(&treeIter, child);
             delete child;
@@ -271,7 +271,7 @@ void Document::indexPdfPages() {
 void Document::buildContentsModel() {
     freeTreeContentModel();
 
-    XojPdfBookmarkIterator* iter = pdfDocument.getContentsIter();
+    PdfBookmarkIterator* iter = pdfDocument.getContentsIter();
     if (iter == nullptr) {
         // No Bookmarks
         return;
@@ -356,8 +356,8 @@ auto Document::readPdf(const fs::path& filename, bool initPages, bool attachToDo
 
     if (initPages) {
         for (size_t i = 0; i < pdfDocument.getPageCount(); i++) {
-            XojPdfPageSPtr page = pdfDocument.getPage(i);
-            auto p = std::make_shared<XojPage>(page->getWidth(), page->getHeight());
+            PdfPagePtr page = pdfDocument.getPage(i);
+            auto p = std::make_shared<NotePage>(page->getWidth(), page->getHeight());
             p->setBackgroundPdfPageNr(i);
             this->pages.emplace_back(std::move(p));
         }
@@ -434,9 +434,9 @@ auto Document::getPage(size_t page) const -> PageRef {
     return this->pages[page];
 }
 
-auto Document::getPdfPage(size_t page) const -> XojPdfPageSPtr { return this->pdfDocument.getPage(page); }
+auto Document::getPdfPage(size_t page) const -> PdfPagePtr { return this->pdfDocument.getPage(page); }
 
-auto Document::getPdfDocument() const -> const XojPdfDocument& { return this->pdfDocument; }
+auto Document::getPdfDocument() const -> const PdfDocument& { return this->pdfDocument; }
 
 auto Document::operator=(const Document& doc) -> Document& {
     clearDocument();

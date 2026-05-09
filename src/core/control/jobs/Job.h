@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A job which is done
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -17,7 +17,7 @@ enum JobType { JOB_TYPE_BLOCKING, JOB_TYPE_PREVIEW, JOB_TYPE_RENDER, JOB_TYPE_AU
 
 /**
  * A manually ref-counted class representing an asynchronous job to be used with
- * the Xournal++ scheduler.
+ * the VertexNote scheduler.
  *
  * Instances of Job (and its subclasses) should be constructed exclusively using
  * the `new` keyword.

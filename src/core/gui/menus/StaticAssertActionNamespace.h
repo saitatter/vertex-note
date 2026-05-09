@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A helper class to statically assert the action namespace is correct
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

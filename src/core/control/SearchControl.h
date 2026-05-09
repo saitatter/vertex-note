@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles text search on a PDF page and in Xournal Texts
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -17,7 +17,7 @@
 #include "model/OverlayBase.h"
 #include "model/PageRef.h"        // for PageRef
 #include "model/Point.h"          // for Point
-#include "pdf/base/XojPdfPage.h"  // for XojPdfPageSPtr, XojPdfRectangle
+#include "pdf/base/PdfPage.h"  // for PdfPagePtr, PdfRectangle
 #include "util/DispatchPool.h"
 
 namespace xoj::view {
@@ -28,14 +28,14 @@ class SearchResultView;
 
 class SearchControl: public OverlayBase {
 public:
-    SearchControl(const PageRef& page, XojPdfPageSPtr pdf);
+    SearchControl(const PageRef& page, PdfPagePtr pdf);
     virtual ~SearchControl();
 
-    bool search(const std::string& text, size_t index, size_t* occurrences, XojPdfRectangle* UpperMostMatch);
+    bool search(const std::string& text, size_t index, size_t* occurrences, PdfRectangle* UpperMostMatch);
 
-    const std::vector<XojPdfRectangle>& getResults() const { return results; }
+    const std::vector<PdfRectangle>& getResults() const { return results; }
 
-    const XojPdfRectangle* getHighlightRect() const { return highlightRect; }
+    const PdfRectangle* getHighlightRect() const { return highlightRect; }
 
     const std::shared_ptr<xoj::util::DispatchPool<xoj::view::SearchResultView>>& getViewPool() const {
         return viewPool;
@@ -43,10 +43,10 @@ public:
 
 private:
     PageRef page;
-    XojPdfPageSPtr pdf;
+    PdfPagePtr pdf;
     std::string currentText;
-    XojPdfRectangle* highlightRect = nullptr;
+    PdfRectangle* highlightRect = nullptr;
 
-    std::vector<XojPdfRectangle> results;
+    std::vector<PdfRectangle> results;
     std::shared_ptr<xoj::util::DispatchPool<xoj::view::SearchResultView>> viewPool;
 };

@@ -7,7 +7,7 @@
 #include "gui/GladeSearchpath.h"
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 
 static void addPageTypeInfo(const std::string& name, PageTypeFormat format, const std::string& config,
@@ -26,7 +26,7 @@ PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
     if (!parseIni(file) || this->types.size() < 5) {
 
         std::string msg = FS(_F("Could not load pagetemplates.ini file"));
-        XojMsgBox::showErrorToUser(nullptr, msg);
+        AppMessageBox::showErrorToUser(nullptr, msg);
 
         // On failure load the hardcoded and predefined values
         addPageTypeInfo(_("Plain"), PageTypeFormat::Plain, "", types);

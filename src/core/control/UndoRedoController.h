@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Wrapper for undo / redo stuff, to move out the logic of the main Control class
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

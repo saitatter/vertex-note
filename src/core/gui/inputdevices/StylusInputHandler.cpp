@@ -11,14 +11,14 @@
 #include "control/ToolHandler.h"                 // for ToolHandler
 #include "control/settings/Settings.h"           // for Settings
 #include "control/settings/SettingsEnums.h"      // for Button, BUTTON_ERASER
-#include "gui/PageView.h"                        // for XojPageView
-#include "gui/XournalView.h"                     // for XournalView
-#include "gui/XournalppCursor.h"                 // for XournalppCursor
+#include "gui/PageView.h"                        // for PageView
+#include "gui/VertexNoteView.h"                     // for VertexNoteView
+#include "gui/VertexNoteCursor.h"                 // for VertexNoteCursor
 #include "gui/inputdevices/HandRecognition.h"    // for HandRecognition
 #include "gui/inputdevices/InputEvents.h"        // for InputEvent, BUTTON_P...
 #include "gui/inputdevices/PenInputHandler.h"    // for PenInputHandler
 #include "gui/inputdevices/PositionInputData.h"  // for PositionInputData
-#include "gui/widgets/XournalWidget.h"           // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"           // for GtkVertexNote
 
 #include "InputContext.h"  // for InputContext
 #include "InputUtils.h"    // for InputUtils
@@ -29,7 +29,7 @@ StylusInputHandler::~StylusInputHandler() = default;
 
 auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
     // Only handle events when there is no active gesture
-    GtkXournal* xournal = inputContext->getXournal();
+    GtkVertexNote* xournal = inputContext->getXournal();
 
     // Determine the pressed states of devices and associate them to the current event
     setPressedState(event);
@@ -56,7 +56,7 @@ auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
             // Change the tool depending on the key
             changeTool(event);
 
-            XojPageView* currentPage = getPageAtCurrentPosition(event);
+            PageView* currentPage = getPageAtCurrentPosition(event);
             if (currentPage) {
                 PositionInputData pos = this->getInputDataRelativeToCurrentPage(currentPage, event);
                 currentPage->onButtonClickEvent(pos);
@@ -81,7 +81,7 @@ auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
         } else {
             this->actionMotion(event);
         }
-        XournalppCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = xournal->view->getCursor();
         cursor->setInvisible(false);
         cursor->updateCursor();
     }
@@ -137,7 +137,7 @@ auto StylusInputHandler::handleImpl(InputEvent const& event) -> bool {
 }
 
 void StylusInputHandler::setPressedState(InputEvent const& event) {
-    XojPageView* currentPage = getPageAtCurrentPosition(event);
+    PageView* currentPage = getPageAtCurrentPosition(event);
 
     this->inputContext->getXournal()->view->getCursor()->setInsidePage(currentPage != nullptr);
 

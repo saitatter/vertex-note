@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * An array indexed by a CONTIGUOUS scoped enum from 0 to ENUMERATOR_COUNT-1
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

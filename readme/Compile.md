@@ -1,6 +1,6 @@
 # Compilation and Testing
 
-This file contains platform-independent instructions for compiling and developing locally. For instructions on how to create platform-specific packages, or instructions on preliminary steps for building Xournal++, please see these platform-specific instructions:
+This file contains platform-independent instructions for compiling and developing locally. For instructions on how to create platform-specific packages, or instructions on preliminary steps for building VertexNote, please see these platform-specific instructions:
 
 - [LinuxBuild.md](./LinuxBuild.md)
 - [MacBuild.md](./MacBuild.md)
@@ -9,8 +9,8 @@ This file contains platform-independent instructions for compiling and developin
 ## Get sources
 
 ```sh
-git clone http://github.com/xournalpp/xournalpp
-cd xournalpp
+git clone http://github.com/vertex-note/vertex-note
+cd vertex-note
 ```
 
 ## Compile
@@ -34,7 +34,7 @@ some resources need to be generated and located in the right directories.
 
 ```sh
 # Before running this command, ensure you're in the './build' directory
-./install/bin/xournalpp
+./install/bin/vertex-note
 ```
 
 ## Test

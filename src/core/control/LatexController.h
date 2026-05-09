@@ -1,13 +1,13 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Controller for Latex stuff
  *
  * @author W Brenna
  * http://wbrenna.ca
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -30,7 +30,7 @@
 class Control;
 class TexImage;
 class Document;
-class XojPageView;
+class PageView;
 class Layer;
 class Element;
 class LatexSettings;
@@ -197,7 +197,7 @@ private:
     /**
      * Page View
      */
-    XojPageView* view = nullptr;
+    PageView* view = nullptr;
 
     /**
      * Selected Page

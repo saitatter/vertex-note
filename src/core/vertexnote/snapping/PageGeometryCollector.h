@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Collect geometry objects from a Xournal++ page.
+ * Collect geometry objects from a VertexNote page.
  */
 
 #pragma once

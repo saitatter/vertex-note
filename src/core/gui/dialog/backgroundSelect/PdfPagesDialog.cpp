@@ -12,8 +12,8 @@
 #include "model/Document.h"
 #include "model/PageRef.h"
 #include "model/PageType.h"
-#include "model/XojPage.h"
-#include "pdf/base/XojPdfPage.h"
+#include "model/NotePage.h"
+#include "pdf/base/PdfPage.h"
 #include "util/Assert.h"
 #include "util/Util.h"  // for npos
 #include "util/i18n.h"  // for FC
@@ -29,7 +29,7 @@ PdfPagesDialog::PdfPagesDialog(GladeSearchpath* gladeSearchPath, Document* doc, 
         callback(std::move(callback)) {
     doc->lock_shared();
     for (size_t i = 0; i < doc->getPdfPageCount(); i++) {
-        XojPdfPageSPtr p = doc->getPdfPage(i);
+        PdfPagePtr p = doc->getPdfPage(i);
         entries.emplace_back(std::make_unique<PdfElementView>(entries.size(), p, this));
     }
 

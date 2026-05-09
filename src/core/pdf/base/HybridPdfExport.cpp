@@ -10,7 +10,7 @@
 #include "control/jobs/ProgressListener.h"  // for ProgressListener
 #include "model/Document.h"                 // for Document
 #include "model/PageRef.h"                  // for PageRef
-#include "model/XojPage.h"                  // for XojPage
+#include "model/NotePage.h"                  // for NotePage
 #include "util/Assert.h"                    // for xoj_assert
 #include "util/i18n.h"                      // for _
 #include "util/serdesstream.h"              // for serdes_stream
@@ -19,7 +19,7 @@
 
 
 HybridPdfExport::HybridPdfExport(const Document* doc, ProgressListener* progressListener):
-        XojCairoPdfExport(doc, progressListener) {}
+        CairoPdfExport(doc, progressListener) {}
 
 HybridPdfExport::~HybridPdfExport() = default;
 
@@ -40,7 +40,7 @@ auto HybridPdfExport::startPdf(std::stringstream& stream) -> bool {
 auto HybridPdfExport::createPdf(fs::path const& file, const PageRangeVector& range, bool progressiveMode) -> bool {
     if (progressiveMode || exportBackground == EXPORT_BACKGROUND_NONE) {
         // For progressive mode or without any background, cairo export seems enough.
-        return XojCairoPdfExport::createPdf(file, range, progressiveMode);
+        return CairoPdfExport::createPdf(file, range, progressiveMode);
     }
     if (range.empty()) {
         this->lastError = _("No pages to export!");

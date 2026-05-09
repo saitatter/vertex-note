@@ -1,14 +1,14 @@
 /*
  * VertexNote
  *
- * Collect geometry objects from a Xournal++ page.
+ * Collect geometry objects from a VertexNote page.
  */
 
 #include "PageGeometryCollector.h"
 
 #include "model/Element.h"
 #include "model/Layer.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "vertexnote/geometry/GeometryElement.h"
 
 namespace vn::snap {

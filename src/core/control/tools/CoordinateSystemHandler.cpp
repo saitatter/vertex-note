@@ -6,7 +6,7 @@
 #include "control/settings/Settings.h"             // for Settings
 #include "control/tools/BaseShapeHandler.h"        // for BaseShapeHandler
 #include "control/tools/SnapToGridInputHandler.h"  // for SnapToGridInputHan...
-#include "gui/XournalView.h"                       // for XournalView
+#include "gui/VertexNoteView.h"                       // for VertexNoteView
 #include "gui/inputdevices/PositionInputData.h"    // for PositionInputData
 #include "model/Point.h"                           // for Point
 

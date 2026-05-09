@@ -1,5 +1,5 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Control to callibrate the zoom to fit the display DPI
  *

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Search directory for icons and Glade files
  *
  * @author andreas
- * https://github.com/xournalpp/xournalpp
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Input handler for the compass.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -26,7 +26,7 @@ struct InputEvent;
 class CompassInputHandler: public GeometryToolInputHandler {
 
 public:
-    explicit CompassInputHandler(XournalView* xournalView, GeometryToolController* controller);
+    explicit CompassInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
     ~CompassInputHandler() noexcept override;
 
 private:

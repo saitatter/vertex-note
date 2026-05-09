@@ -11,7 +11,7 @@
 #include "PopplerGlibPageBookmarkIterator.h"  // for PopplerGlibPageBookmark...
 #include "filesystem.h"                       // for path
 
-class XojPdfBookmarkIterator;
+class PdfBookmarkIterator;
 
 using std::string;
 
@@ -30,7 +30,7 @@ PopplerGlibDocument::~PopplerGlibDocument() {
     }
 }
 
-void PopplerGlibDocument::assign(XojPdfDocumentInterface* doc) {
+void PopplerGlibDocument::assign(PdfDocumentInterface* doc) {
     if (document) {
         g_object_unref(document);
     }
@@ -41,7 +41,7 @@ void PopplerGlibDocument::assign(XojPdfDocumentInterface* doc) {
     }
 }
 
-auto PopplerGlibDocument::equals(XojPdfDocumentInterface* doc) const -> bool {
+auto PopplerGlibDocument::equals(PdfDocumentInterface* doc) const -> bool {
     return document == (dynamic_cast<PopplerGlibDocument*>(doc))->document;
 }
 
@@ -95,13 +95,13 @@ void PopplerGlibDocument::reset() {
     }
 }
 
-auto PopplerGlibDocument::getPage(size_t page) const -> XojPdfPageSPtr {
+auto PopplerGlibDocument::getPage(size_t page) const -> PdfPagePtr {
     if (document == nullptr) {
         return nullptr;
     }
 
     PopplerPage* pg = poppler_document_get_page(document, int(page));
-    XojPdfPageSPtr pageptr = std::make_shared<PopplerGlibPage>(pg, document);
+    PdfPagePtr pageptr = std::make_shared<PopplerGlibPage>(pg, document);
     g_object_unref(pg);
 
     return pageptr;
@@ -115,7 +115,7 @@ auto PopplerGlibDocument::getPageCount() const -> size_t {
     return size_t(poppler_document_get_n_pages(document));
 }
 
-auto PopplerGlibDocument::getContentsIter() const -> XojPdfBookmarkIterator* {
+auto PopplerGlibDocument::getContentsIter() const -> PdfBookmarkIterator* {
     if (document == nullptr) {
         return nullptr;
     }

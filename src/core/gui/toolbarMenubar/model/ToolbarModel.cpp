@@ -4,7 +4,7 @@
 #include <cstddef>  // for size_t
 
 #include "util/StringUtils.h"
-#include "util/XojMsgBox.h"   // for XojMsgBox
+#include "util/AppMessageBox.h"   // for AppMessageBox
 #include "util/i18n.h"        // for _
 #include "util/safe_casts.h"  // for as_signed
 
@@ -169,7 +169,7 @@ void ToolbarModel::save(fs::path const& filepath) const {
 
     GError* error = nullptr;
     if (!g_file_set_contents(char_cast(filepath.u8string().c_str()), data, as_signed(len), &error)) {
-        XojMsgBox::showErrorToUser(nullptr, error->message);
+        AppMessageBox::showErrorToUser(nullptr, error->message);
         g_error_free(error);
     }
 

@@ -52,7 +52,7 @@
 
 ## 1.3.0
 
-This is a new minor version of Xournal++, including many new features and plethora of bug fixes from the community:
+This is a new minor version of VertexNote, including many new features and plethora of bug fixes from the community:
 
 * PDF exports now preserves the background PDF's inner structure (hyperlink, comments, ...) (#6364, #6545, #6831)
 * The color palette can now be selected in the preferences (#3767)
@@ -270,7 +270,7 @@ Bugfixes from various community contributors.
   This affected the Windows build and (only for directories) the flatpak and
   snap packages on Linux (#4976).
 * Changed the link address when sending a bugreport about a recent crash log
-  such that the appropriate template from the xournalpp/xournalpp repository
+  such that the appropriate template from the vertex-note/vertex-note repository
   is used (#5032, #4910, #5084).
 * Added a missing double arrow preference to the button configuration dialog,
   therewith also fixing selections below "Draw Arrow" (#4989).
@@ -286,7 +286,7 @@ Bugfixes from various community contributors.
 
 ## 1.2.0
 
-This is a new major version of Xournal++ with many new features, improvements,
+This is a new major version of VertexNote with many new features, improvements,
 and bug fixes thanks to contributions from the community.
 
 * **Breaking Changes**:
@@ -318,7 +318,7 @@ and bug fixes thanks to contributions from the community.
   * See the website for more information.
 * Colors
   * Added new custom color palette support (#2379). A custom color palette can
-    be created in `.gpl` format in the Xournal++ config folder. See the website
+    be created in `.gpl` format in the VertexNote config folder. See the website
     guide for information on how to create a `.gpl` file.
   * Changed the color picker so that it opens with the currently selected color
     by default (#4569, #4575).
@@ -431,7 +431,7 @@ and bug fixes thanks to contributions from the community.
     (#4415, #4430).
   * Fixed a memory leak (#4088)
 * PDF support
-  * Added "Xournal++" as the "Creator" in exported PDF metadata (#3523).
+  * Added "VertexNote" as the "Creator" in exported PDF metadata (#3523).
   * Added button to propose replacement background PDF if it is missing and a
     file with a similar name is found in the same folder as the `.xopp` file
     (#4165)
@@ -466,7 +466,7 @@ and bug fixes thanks to contributions from the community.
   * AppImage: added support for AppImageUpdate (#1915, #4265, #4781, #4793).
   * Windows: the installer will now record the installed version in the
     Windows registry (#4548).
-    macOS: added a script to build a .dmg for Xournal++ (#4371).
+    macOS: added a script to build a .dmg for VertexNote (#4371).
 * Miscellaneous
   * Improved file size of documents with large amounts of stroke data by up to
     15% (#4065).
@@ -535,12 +535,12 @@ and bug fixes thanks to contributions from the community.
     properly (#4831, #4827, #4823).
   * Fixed a "File Bug Report" dialog that has never been shown but should now be
     shown when an error log is detected on startup (#4808).
-  * Improved the CrashLog by adding the Xournal++ and Gtk versions as well as
+  * Improved the CrashLog by adding the VertexNote and Gtk versions as well as
     every log message issued via g_message, g_critical, g_debug and so on (#4848).
   * Fixed a mismatch between the app id the window sets and the name of the desktop
-    file, leading to the Wayland icon being shown instead of the Xournal++ icon.
-    The program name and StarupWMClass were therefore changed from xournalpp to
-    com.github.xournalpp.xournalpp (#4870, #4887).
+    file, leading to the Wayland icon being shown instead of the VertexNote icon.
+    The program name and StarupWMClass were therefore changed from vertex-note to
+    com.github.vertex-note.vertex-note (#4870, #4887).
   * Replaced deprecated icons, which are missing on newer versions of GNOME as
     well as Windows and macOS builds (#3945, #4544).
   * macOS: fixed clipboard image paste not working (#3455, #4489).
@@ -587,7 +587,7 @@ Bugfixes from various community contributors.
 * Improved LaTeX Tool error message when running inside Flatpak by providing
   steps on how to install the TeXLive extension (#3996, #4259).
 * Windows: fixed a crash in the installer (#4041, #4062).
-* macOS: changed the way the Xournal++ is launched to avoid some potential
+* macOS: changed the way the VertexNote is launched to avoid some potential
   issues (#4087, #4090, #4287).
 * Linux: fixed linker errors associated with backtrace library (#3817, #3819).
 
@@ -659,12 +659,12 @@ Bugfixes from various community contributors.
 
 ## 1.1.0
 
-This is a new major version of Xournal++ with many new features, improvements,
+This is a new major version of VertexNote with many new features, improvements,
 and bug fixes thanks to over one year's worth of contributions from the
 community.
 
 * **Breaking changes**:
-  * Xournal++ now follows the [XDG Base Directory
+  * VertexNote now follows the [XDG Base Directory
       Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
       (#1101, #1384). The configuration files will now be stored in an
       appropriate platform-specific user data folder. Old configuration files
@@ -686,8 +686,8 @@ community.
       Please use a distro from 2018 or later, such as Ubuntu 18.04 or Debian
       Buster. The dependency versions have been updated accordingly.
   * Linux: The thumbnailer program has been renamed from `xournal-thumbnailer`
-      to `xournalpp-thumbnailer` in order to fix tab completion (#1752).
-  * Linux: Xournal++ now has a hard dependency on `librsvg`. This should not affect
+      to `vertex-note-thumbnailer` in order to fix tab completion (#1752).
+  * Linux: VertexNote now has a hard dependency on `librsvg`. This should not affect
       end-users, only maintainers and packagers.
   * The code has been updated to use C++17 (#1485) and must now be compiled
       using a supported compiler version, such as GCC 7 or Clang 5 (or newer).
@@ -868,7 +868,7 @@ community.
   * Changed default key binding of middle mouse button from nothing to hand
       tool (#3121).
   * Changed the `Help > Help` menu item to point to the new website
-      [www.xournalpp.github.io](www.xournalpp.github.io), which replaces the
+      [www.vertex-note.github.io](www.vertex-note.github.io), which replaces the
       User Manual wiki.
   * Added a setting in the Preferences window for selecting the language
       (#2188). Simplified language translation file names (#3166, #3201).
@@ -896,7 +896,7 @@ community.
   * Non-visible refactoring and code cleanup (#1279, #2150, #1944, #2199,
       #2213, #2252, etc.)
   * MacOS: Fixed the startup crash on BigSur and removed the integration
-      of Xournal++ into the Mac Menu Bar (#2836, #2976)
+      of VertexNote into the Mac Menu Bar (#2836, #2976)
   * Windows: Fixed a crash that occurs when closing the application (#2218).
 
 ## 1.0.20
@@ -919,7 +919,7 @@ contributors!
 * Added ability for taps with Select Rectangle and Select Region to act like
   Select Object (#1980)
 * Improved document loading speed (#2002)
-* Added a `--version` command to print the Xournal++ version
+* Added a `--version` command to print the VertexNote version
 * Added a `libgtk` version display to the About dialog
 * Added a 16kHz sample rate to audio settings and fixed the 91kHz sample rate
   (#2092)
@@ -964,7 +964,7 @@ contributors!
 * Fixed crash caused by custom colors in toolbar being "too close" (#1659)
 * Windows: Fixed the LaTeX tool always failing to find kpsewhich (#1738). Note
   that to make this work properly, a console window will now flash briefly
-  before Xournal++ starts.
+  before VertexNote starts.
 
 ## 1.0.17
 
@@ -978,7 +978,7 @@ contributors!
   not being disabled on the first and last page, respectively (#1637)
 * Fixed Enter keypress on the "Goto Page" (Ctrl-G) dialog not changing the page
   (#975, thanks to @MrMallIronmaker)
-* Fixed missing Xournal++ icon errors on most of the dialog windows (#1667)
+* Fixed missing VertexNote icon errors on most of the dialog windows (#1667)
 * (Windows) Fixed missing libssl/libcrypto errors in the official installation
   (#1660).
 
@@ -998,16 +998,16 @@ contributors!
 **Attention:** users who installed with `make install` will need to follow
 special instructions to update. See the "Breaking change" below.
 
-We now officially support packaging Xournal++ using CMake. This allows users to
+We now officially support packaging VertexNote using CMake. This allows users to
 generate DEB and tar packages. See `readme/linux.md` for more details.
 
-* **Breaking change**: the desktop and icon files were renamed from `xournalpp`
-  to `com.github.xournalpp.xournalpp` to be more in line with the AppStream
+* **Breaking change**: the desktop and icon files were renamed from `vertex-note`
+  to `com.github.vertex-note.vertex-note` to be more in line with the AppStream
   specification. This change should only affect users that install with `make
   install`; these users must run `make uninstall` with a cloned version of
-  _Xournal++ 1.0.12_ first. We recommend migrating to another installation
+  _VertexNote 1.0.12_ first. We recommend migrating to another installation
   format, such as Flatpak, AppImage, or tarball. Refer to [this
-  issue](https://github.com/xournalpp/xournalpp/issues/1442#issuecomment-524566511)
+  issue](https://github.com/vertex-note/vertex-note/issues/1442#issuecomment-524566511)
   for more details on how to uninstall if `make uninstall` is unavailable. Refer
   to `readme/LinuxBuild.md` for build instructions.
 * Text field
@@ -1028,7 +1028,7 @@ generate DEB and tar packages. See `readme/linux.md` for more details.
   * Improved audio recording quality and stability
   * Enable Enter/Shift+Enter to advance search bar
   * Enabled left and right arrow keys to change pages in presentation mode
-  * Xournal++ icon is now rendered in thumbnails of Xournal++ files
+  * VertexNote icon is now rendered in thumbnails of VertexNote files
   * Renamed "Thin" thickness to "Fine"; Added "Very Fine" and "Very Thick"
       thicknesses
   * Added a right-click context menu to the page preview sidebar

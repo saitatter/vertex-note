@@ -9,7 +9,7 @@
 #include "control/actions/ActionDatabase.h"
 #include "enums/Action.enum.h"
 #include "gui/MainWindow.h"
-#include "gui/XournalView.h"
+#include "gui/VertexNoteView.h"
 #include "model/Document.h"
 #include "util/Rectangle.h"
 #include "util/Util.h"

@@ -68,7 +68,7 @@ SearchBar::SearchBar(Control* control): control(control) {
 
 SearchBar::~SearchBar() { this->control = nullptr; }
 
-auto SearchBar::searchTextOnCurrentPage(const char* text, size_t index, size_t* occurrences, XojPdfRectangle* matchRect)
+auto SearchBar::searchTextOnCurrentPage(const char* text, size_t index, size_t* occurrences, PdfRectangle* matchRect)
         -> bool {
     size_t p = control->getCurrentPageNo();
     this->page = p;
@@ -128,7 +128,7 @@ void SearchBar::search(Fun next) {
     }
     const size_t originalPage = page;
 
-    XojPdfRectangle matchRect = XojPdfRectangle();
+    PdfRectangle matchRect = PdfRectangle();
     // Search backwards through the pages, wrapping around if needed.
     for (;;) {
         next(text);

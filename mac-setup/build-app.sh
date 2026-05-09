@@ -76,7 +76,7 @@ echo "create package"
 export GTKDIR="$1/inst"
 [ ! -d "$GTKDIR" ] && echo "$GTKDIR doesn't exist!" && exit 1
 
-"$GTK_MAC_BUNDLER" xournalpp.bundle
+"$GTK_MAC_BUNDLER" vertex-note.bundle
 
 echo "Replace Ctrl by Meta in mainmenubar.xml"
 sed -i -e 's/Ctrl/Meta/g' ./VertexNote.app/Contents/Resources/ui/mainmenubar.xml

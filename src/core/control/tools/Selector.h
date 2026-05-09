@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A selection while you are selection, not for editing, only for selection
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * get version info on various components and libraries
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -16,8 +16,8 @@ namespace xoj::util {
 /// Get the running GDK backend (or nullptr if none)
 const char* getGdkBackend();
 
-/// Get a string "Xournal++ a.b.c + commit info"
-std::string getXournalppVersion();
+/// Get a string "VertexNote a.b.c + commit info"
+std::string getVertexNoteVersion();
 
 /// Get a string describing the OS
 std::string getOsInfo();

@@ -8,9 +8,9 @@
 void GtkTest::SetUp() {
     argn = 1;
     argv = new char*[2];
-    argv[0] = strdup("xournalpp_test");
+    argv[0] = strdup("vertex_note_test");
     argv[1] = nullptr;
-    app = gtk_application_new("com.github.xournalpp.xournalpp.test", G_APPLICATION_FLAGS_NONE);
+    app = gtk_application_new("app.vertexnote.VertexNote.test", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(applicationCallback), this);
     g_application_run(G_APPLICATION(app), argn, argv);
 }

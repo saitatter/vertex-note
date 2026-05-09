@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Interface for GUI handling
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -21,7 +21,7 @@ class Range;
  *
  * Reasons for the deprecation:
  *
- *  * It is basically used synonymously to XojPageView.
+ *  * It is basically used synonymously to PageView.
  *  * More importantly, the coexistence of Redrawable::repaint... and Redrawable::rerender... is bothersome.
  *    it is not clear (without diving in the code) what the difference should be.
  *    (repaint = ask gtk to call us back to blitt the buffer, rerender = change the buffer's content)

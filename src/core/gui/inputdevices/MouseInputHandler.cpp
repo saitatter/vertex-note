@@ -6,17 +6,17 @@
 
 #include "control/ToolHandler.h"               // for ToolHandler
 #include "control/settings/SettingsEnums.h"    // for Button, BUTTON_MOUSE_M...
-#include "gui/XournalView.h"                   // for XournalView
-#include "gui/XournalppCursor.h"               // for XournalppCursor
+#include "gui/VertexNoteView.h"                   // for VertexNoteView
+#include "gui/VertexNoteCursor.h"               // for VertexNoteCursor
 #include "gui/inputdevices/InputEvents.h"      // for InputEvent, BUTTON_PRE...
 #include "gui/inputdevices/PenInputHandler.h"  // for PenInputHandler
-#include "gui/widgets/XournalWidget.h"         // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"         // for GtkVertexNote
 
 #include "InputContext.h"  // for InputContext
 #include "InputUtils.h"    // for InputUtils
 
 class Settings;
-class XojPageView;
+class PageView;
 
 MouseInputHandler::MouseInputHandler(InputContext* inputContext): PenInputHandler(inputContext) {}
 
@@ -24,7 +24,7 @@ MouseInputHandler::~MouseInputHandler() = default;
 
 auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
     // Only handle events when there is no active gesture
-    GtkXournal* xournal = inputContext->getXournal();
+    GtkVertexNote* xournal = inputContext->getXournal();
 
     // Determine the pressed states of devices and associate them to the current event
     setPressedState(event);
@@ -55,7 +55,7 @@ auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
     if (event.type == MOTION_EVENT)  // mouse or pen moved
     {
         this->actionMotion(event);
-        XournalppCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = xournal->view->getCursor();
         cursor->setInvisible(false);
         cursor->updateCursor();
     }
@@ -91,7 +91,7 @@ auto MouseInputHandler::handleImpl(InputEvent const& event) -> bool {
 }
 
 void MouseInputHandler::setPressedState(InputEvent const& event) {
-    XojPageView* currentPage = getPageAtCurrentPosition(event);
+    PageView* currentPage = getPageAtCurrentPosition(event);
 
     this->inputContext->getXournal()->view->getCursor()->setInsidePage(currentPage != nullptr);
 

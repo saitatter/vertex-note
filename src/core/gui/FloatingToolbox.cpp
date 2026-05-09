@@ -15,7 +15,7 @@
 
 #include "MainWindow.h"          // for MainWindow
 #include "ToolbarDefinitions.h"  // for ToolbarEntryDefintion
-#include "XournalView.h"
+#include "VertexNoteView.h"
 
 
 FloatingToolbox::FloatingToolbox(MainWindow* theMainWindow, GtkOverlay* overlay) {

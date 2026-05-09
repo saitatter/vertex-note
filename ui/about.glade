@@ -183,7 +183,7 @@ Luya Tshimbalanga</property>
                     <property name="name">lbXournal</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Based on Xournal++ and Xournal
+                    <property name="label" translatable="yes">Based on VertexNote and Xournal
 with continuing attribution to their contributors</property>
                     <property name="use-markup">True</property>
                     <property name="justify">center</property>

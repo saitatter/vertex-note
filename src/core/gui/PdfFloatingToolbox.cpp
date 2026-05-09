@@ -15,14 +15,14 @@
 #include "control/ToolEnums.h"    // for ToolType, TOOL_SELECT_PDF_TEXT_LI...
 #include "control/ToolHandler.h"  // for ToolHandler
 #include "control/tools/PdfElemSelection.h"
-#include "gui/PageView.h"           // for XojPageView
-#include "gui/XournalView.h"        // for XournalView
+#include "gui/PageView.h"           // for PageView
+#include "gui/VertexNoteView.h"        // for VertexNoteView
 #include "model/Document.h"         // for Document
 #include "model/Layer.h"            // for Layer
 #include "model/PageRef.h"          // for PageRef
 #include "model/Point.h"            // for Point
 #include "model/Stroke.h"           // for Stroke, BUTT, StrokeTool::HIGHLIG...
-#include "model/XojPage.h"          // for XojPage
+#include "model/NotePage.h"          // for NotePage
 #include "undo/GroupUndoAction.h"   // for GroupUndoAction
 #include "undo/InsertUndoAction.h"  // for InsertUndoAction
 #include "undo/UndoAction.h"        // for UndoAction
@@ -177,7 +177,7 @@ void PdfFloatingToolbox::createStrokes(PdfMarkerStyle position, PdfMarkerStyle w
 
     Range dirtyRange;
     std::vector<ElementPtr> strokes;
-    for (XojPdfRectangle rect: textRects) {
+    for (PdfRectangle rect: textRects) {
         const double topOfLine = std::min(rect.y1, rect.y2);
         const double middleOfLine = (rect.y1 + rect.y2) / 2;
         const double bottomOfLine = std::max(rect.y1, rect.y2);

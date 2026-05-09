@@ -15,7 +15,7 @@
 #include "control/settings/Settings.h"           // for Settings
 #include "gui/MainWindow.h"                      // for MainWindow
 #include "gui/toolbarMenubar/ToolMenuHandler.h"  // for ToolMenuHandler
-#include "util/XojMsgBox.h"                      // for XojMsgBox
+#include "util/AppMessageBox.h"                      // for AppMessageBox
 #include "util/i18n.h"                           // for _
 #include "util/safe_casts.h"                     // for as_signed
 
@@ -119,7 +119,7 @@ auto AudioController::getAudioFolder() const -> fs::path {
     if (!fs::is_directory(af)) {
         string msg = _("Audio folder not set or invalid! Recording won't work!\nPlease set the "
                        "recording folder under \"Preferences > Audio recording\"");
-        XojMsgBox::showErrorToUser(this->control.getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(this->control.getGtkWindow(), msg);
         return fs::path{};
     }
     return af;

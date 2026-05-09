@@ -4,7 +4,7 @@
 #include "gui/GladeSearchpath.h"
 #include "gui/MainWindow.h"
 #include "util/Assert.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 #include "util/raii/GVariantSPtr.h"
 
@@ -58,7 +58,7 @@ void Menubar::populate(const GladeSearchpath* gladeSearchPath, MainWindow* win) 
             msg += error->message;
             g_error_free(error);
         }
-        XojMsgBox::showErrorToUser(nullptr, msg);
+        AppMessageBox::showErrorToUser(nullptr, msg);
         return;
     }
 

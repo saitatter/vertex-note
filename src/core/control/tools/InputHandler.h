@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles input and optimizes the stroke
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -32,8 +32,8 @@ class Repaintable;
 /**
  * @brief A base class to handle pointer input
  *
- * The InputHandler receives various events from a XojPageView
- * and updates the XojPageView to display strokes being
+ * The InputHandler receives various events from a PageView
+ * and updates the PageView to display strokes being
  * drawn
  */
 class InputHandler: public OverlayBase {
@@ -43,37 +43,37 @@ public:
 
 public:
     /**
-     * This method is called from the XojPageView as soon
+     * This method is called from the PageView as soon
      * as the pointer is moved while this InputHandler
      * is active. It is used to update internal data
-     * structures and queue repaints of the XojPageView
+     * structures and queue repaints of the PageView
      * if necessary
      */
     virtual bool onMotionNotifyEvent(const PositionInputData& pos, double zoom) = 0;
 
     /**
-     * This method is called from the XojPageView when a keypress is detected.
+     * This method is called from the PageView when a keypress is detected.
      * It is used to update internal data structures and queue
-     * repaints of the XojPageView if necessary.
+     * repaints of the PageView if necessary.
      */
     virtual bool onKeyPressEvent(const KeyEvent& event) = 0;
     virtual bool onKeyReleaseEvent(const KeyEvent& event) = 0;
 
     /**
      * The current input device for stroken, do not react on other devices (linke mices)
-     * This method is called from the XojPageView as soon
+     * This method is called from the PageView as soon
      * as the pointer is released.
      */
     virtual void onButtonReleaseEvent(const PositionInputData& pos, double zoom) = 0;
 
     /**
-     * This method is called from the XojPageView as soon
+     * This method is called from the PageView as soon
      * as the pointer is pressed.
      */
     virtual void onButtonPressEvent(const PositionInputData& pos, double zoom) = 0;
 
     /**
-     * This method is called from the XojPageView as soon
+     * This method is called from the PageView as soon
      * as the pointer is pressed a second time.
      */
     virtual void onButtonDoublePressEvent(const PositionInputData& pos, double zoom) = 0;

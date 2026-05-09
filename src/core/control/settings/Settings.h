@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Xournal Settings
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -729,7 +729,7 @@ private:
     double cursorHighlightBorderWidth{};
 
     /**
-     * If stock icons are used instead of Xournal++ icons when available
+     * If stock icons are used instead of VertexNote icons when available
      */
     bool useStockIcons{};
 

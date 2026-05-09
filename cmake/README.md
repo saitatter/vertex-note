@@ -1,8 +1,8 @@
 # CMake configuration flags
 
-Details about installation process are on our [wiki](https://github.com/xournalpp/xournalpp/wiki/Installing).
+Details about installation process are on our [wiki](https://github.com/vertex-note/vertex-note/wiki/Installing).
 
-Here you can find complete list of Xournal++ CMake flags (sorted by categories). Advanced settings are marked with *[A]*.
+Here you can find complete list of VertexNote CMake flags (sorted by categories). Advanced settings are marked with *[A]*.
 
 
 ## `DEBUG` – debugging switches (shouldn't be enabled for normal usage), all *[A]* and disabled by default
@@ -43,7 +43,7 @@ Here you can find complete list of Xournal++ CMake flags (sorted by categories).
 
 | Variable name        | Default | Description
 | -------------------- | ------- | -----------
-| `ENABLE_GTEST`       | OFF     | Download and build GoogleTest (if not previously done) and build tests instead of xournalpp application
+| `ENABLE_GTEST`       | OFF     | Download and build GoogleTest (if not previously done) and build tests instead of VertexNote application
 
 
 ## `PATH` – here you can specify alternative location of these binaries (there are no defaults)

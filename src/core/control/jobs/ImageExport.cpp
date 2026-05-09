@@ -12,8 +12,8 @@
 #include "model/Document.h"              // for Document
 #include "model/PageRef.h"               // for PageRef
 #include "model/PageType.h"              // for PageType
-#include "model/XojPage.h"               // for XojPage
-#include "pdf/base/XojPdfPage.h"         // for XojPdfPageSPtr, XojPdfPage
+#include "model/NotePage.h"               // for NotePage
+#include "pdf/base/PdfPage.h"         // for PdfPagePtr, PdfPage
 #include "util/StringUtils.h"            // for char_cast
 #include "util/Util.h"                   // for DPI_NORMALIZATION_FACTOR
 #include "util/i18n.h"                   // for _
@@ -173,7 +173,7 @@ void ImageExport::exportImagePage(size_t pageId, size_t id, double zoomRatio, Ex
     if (page->getBackgroundType().isPdfPage() && (exportBackground != EXPORT_BACKGROUND_NONE)) {
         // Handle the pdf page separately, to call renderForPrinting for better quality.
         auto pgNo = page->getPdfPageNr();
-        XojPdfPageSPtr popplerPage = doc->getPdfPage(pgNo);
+        PdfPagePtr popplerPage = doc->getPdfPage(pgNo);
         if (!popplerPage) {
             this->lastError = _("Error while exporting the pdf background: I cannot find the pdf page number ");
             this->lastError += std::to_string(pgNo);

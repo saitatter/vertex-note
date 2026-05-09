@@ -3,10 +3,10 @@
 #include "control/Control.h"                         // for Control
 #include "control/PageBackgroundChangeController.h"  // for PageBackGroundChangeController
 #include "gui/MainWindow.h"                          // for MainWindow
-#include "gui/XournalView.h"                         // for XournalView
+#include "gui/VertexNoteView.h"                         // for VertexNoteView
 #include "model/Document.h"                          // for Document
 #include "model/PageType.h"                          // for PageTypeFormat
-#include "model/XojPage.h"                           // for XojPage
+#include "model/NotePage.h"                           // for NotePage
 #include "undo/UndoAction.h"                         // for UndoAction
 #include "util/i18n.h"                               // for _
 

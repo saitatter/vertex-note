@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Tool for selecting PDF content
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -18,7 +18,7 @@
 
 #include "control/ToolEnums.h"  // for ToolType
 #include "model/OverlayBase.h"
-#include "pdf/base/XojPdfPage.h"  // for XojPdfPageSelectionStyle, XojPdfRec...
+#include "pdf/base/PdfPage.h"  // for PdfPageSelectionStyle, XojPdfRec...
 #include "util/DispatchPool.h"
 #include "util/Util.h"                // for npos
 #include "util/raii/CairoWrappers.h"  // for CairoRegionSPtr
@@ -42,21 +42,21 @@ public:
 
 public:
     /// Calls finalizeSelection() and then repaints the page.
-    bool finalizeSelectionAndRepaint(XojPdfPageSelectionStyle style);
+    bool finalizeSelectionAndRepaint(PdfPageSelectionStyle style);
 
     /// Sets the final selection bounds using the provided selection style.
     /// Returns true iff there is text contained within the selection bounds.
-    bool finalizeSelection(XojPdfPageSelectionStyle style);
+    bool finalizeSelection(PdfPageSelectionStyle style);
 
     /// Update the (unfinalized) selection bounds with the given
     /// style.
-    void currentPos(double x, double y, XojPdfPageSelectionStyle style);
+    void currentPos(double x, double y, PdfPageSelectionStyle style);
 
     /// If the selection is a rectangle, returns true iff the given point is
     /// contained in the selection. Returns false on text selection.
     bool contains(double x, double y);
 
-    const std::vector<XojPdfRectangle>& getSelectedTextRects() const;
+    const std::vector<PdfRectangle>& getSelectedTextRects() const;
 
     /// Returns the text contained in the selection region.
     const std::string& getSelectedText() const;
@@ -70,7 +70,7 @@ public:
     const cairo_region_t* getSelectedRegion() const { return selectedTextRegion.get(); }
 
     /// Returns the selection style corresponding to the given tool type.
-    static XojPdfPageSelectionStyle selectionStyleForToolType(ToolType type);
+    static PdfPageSelectionStyle selectionStyleForToolType(ToolType type);
 
     inline const std::shared_ptr<xoj::util::DispatchPool<xoj::view::PdfElementSelectionView>>& getViewPool() const {
         return viewPool;
@@ -78,14 +78,14 @@ public:
 
 private:
     /// Assigns the selected text region to the current selection bounds.
-    void selectTextRegion(XojPdfPageSelectionStyle style);
+    void selectTextRegion(PdfPageSelectionStyle style);
 
     Range getRegionBbox() const;
 
-    XojPdfPageSPtr pdf;
+    PdfPagePtr pdf;
 
     /// The rectangles corresponding to the lines of selected text.
-    std::vector<XojPdfRectangle> selectedTextRects;
+    std::vector<PdfRectangle> selectedTextRects;
 
     /// The text content of the selection.
     std::string selectedText;
@@ -101,7 +101,7 @@ private:
     /// The selection bounds. Note that this does not necessarily correspond to
     /// a rectangle--it may also indicate start and end positions of a linear
     /// text selection.
-    XojPdfRectangle bounds;
+    PdfRectangle bounds;
 
     bool finalized;
 

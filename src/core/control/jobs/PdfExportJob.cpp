@@ -7,8 +7,8 @@
 #include "control/Control.h"               // for Control
 #include "control/jobs/BaseExportJob.h"    // for BaseExportJob
 #include "model/Document.h"                // for Document
-#include "pdf/base/XojPdfExport.h"         // for XojPdfExport
-#include "pdf/base/XojPdfExportFactory.h"  // for XojPdfExportFactory
+#include "pdf/base/PdfExport.h"         // for PdfExport
+#include "pdf/base/PdfExportFactory.h"  // for PdfExportFactory
 #include "util/PathUtil.h"                 // for clearExtensions
 #include "util/i18n.h"                     // for _
 
@@ -30,7 +30,7 @@ void PdfExportJob::run() {
     Document* doc = control->getDocument();
 
     doc->lock_shared();
-    std::unique_ptr<XojPdfExport> pdfe = XojPdfExportFactory::createExport(doc, control);
+    std::unique_ptr<PdfExport> pdfe = PdfExportFactory::createExport(doc, control);
     doc->unlock_shared();
 
     if (!pdfe->createPdf(this->filepath, false)) {

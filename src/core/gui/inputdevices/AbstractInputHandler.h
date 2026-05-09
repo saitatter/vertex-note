@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * [Header description]
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -14,7 +14,7 @@
 #include "PositionInputData.h"  // for PositionInputData
 
 class InputContext;
-class XojPageView;
+class PageView;
 struct InputEvent;
 
 /**
@@ -29,8 +29,8 @@ protected:
     bool inputRunning = false;
 
 protected:
-    XojPageView* getPageAtCurrentPosition(InputEvent const& event) const;
-    PositionInputData getInputDataRelativeToCurrentPage(XojPageView* page, InputEvent const& event) const;
+    PageView* getPageAtCurrentPosition(InputEvent const& event) const;
+    PositionInputData getInputDataRelativeToCurrentPage(PageView* page, InputEvent const& event) const;
 
 public:
     explicit AbstractInputHandler(InputContext* inputContext);

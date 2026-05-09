@@ -21,7 +21,7 @@
 #include "util/Color.h"              // for Color
 #include "util/PathUtil.h"           // for fromGFile, getTmpDir...
 #include "util/PlaceholderString.h"  // for PlaceholderString
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/gtk4_helper.h"
 #include "util/i18n.h"  // for FS, _F, _
 #include "util/raii/CStringWrapper.h"
@@ -63,7 +63,7 @@ LatexSettingsPanel::LatexSettingsPanel(GladeSearchpath* gladeSearchPath):
     this->sourceViewThemeSelector = nullptr;
 
     gtk_label_set_text(GTK_LABEL(builder.get("lbSourceviewSettingsDescription")),
-                       _("GtkSourceView was disabled when building Xournal++! "
+                       _("GtkSourceView was disabled when building VertexNote! "
                          "Some options will not be available."));
 #endif
 }
@@ -185,7 +185,7 @@ void LatexSettingsPanel::checkDeps() {
     }
 
     GtkWindow* win = GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(panel)));
-    XojMsgBox::showMessageToUser(win, msg, fail ? GTK_MESSAGE_ERROR : GTK_MESSAGE_INFO);
+    AppMessageBox::showMessageToUser(win, msg, fail ? GTK_MESSAGE_ERROR : GTK_MESSAGE_INFO);
 }
 
 void LatexSettingsPanel::updateWidgetSensitivity() {

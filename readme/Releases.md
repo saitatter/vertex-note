@@ -2,7 +2,7 @@
 
 ## Versioning
 
-Every release of Xournal++ is tagged with a unique incrementing version. In the history of the project, two changes to the versioning scheme happened. Be careful when trying to automatically parse older versions.
+Every release of VertexNote is tagged with a unique incrementing version. In the history of the project, two changes to the versioning scheme happened. Be careful when trying to automatically parse older versions.
 The current versioning scheme adheres to the rules of [Debian upstream_version](https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-version).
 
 ### Main Version
@@ -35,7 +35,7 @@ The suffix may only start with one of the two characters `+` or `~`. These chara
 
 The suffix may only contain alphanumerics, `+`, `~`, `-` and `.`.
 
-We mainly use suffixes to specify development versions. Our main development branch (`master`) has a permanent suffix `+dev` and as main version the last released version of Xournal++. This specifies that the current commit of the main development branch is based on the last release of Xournal++, but may contain any number of changes.
+We mainly use suffixes to specify development versions. Our main development branch (`master`) has a permanent suffix `+dev` and as main version the last released version of VertexNote. This specifies that the current commit of the main development branch is based on the last release of VertexNote, but may contain any number of changes.
 
 When we start our release process, we branch off a release branch. At this point of time it is clear what changes we include in the release and we can use the above rules to determine the correct version. From this point on we will change the main version string to this new version and use the suffix `~dev`. This describes our intent of working towards this release.
 
@@ -43,7 +43,7 @@ When we start our release process, we branch off a release branch. At this point
 
 Our branching model knows five types of branches:
 
-- The main development branch (`master`) used for merging feature branches and hosting the newest state of Xournal++.
+- The main development branch (`master`) used for merging feature branches and hosting the newest state of VertexNote.
 - Release branches (`release-*`) exist for preparing a release. This type of branches is branched off from the main development branch and will from that point on only receive bug fixes for the current version of this branch. Only the patch level may be bumped on such branches. When the release is ready, it is tagged on this branch and then merged back to the main development branch.
 - Hotfix branches (`hotfix-*`) originate from the tagged commit of a released version and facilitate the development of a hotfix. When the hotfix is ready for release, it will be tagged and merged back into the main development branch.
 - Feature branches (`feature-*`) are commonly used for Pull Requests with new features. Such branches are always merged into the main development branch.
@@ -98,7 +98,7 @@ followed when publishing a release:
   * Run `git log --graph <last_version_tag>..HEAD` to get a quick
     summary of the logs.
   * To correlate commits with PRs, you can go to
-    `https://github.com/xournalpp/xournalpp/commit/<commit_hash>`. The PR number
+    `https://github.com/saitatter/vertex-note/commit/<commit_hash>`. The PR number
     will be displayed next to the author information.
 * [ ] Open a new pull request to allow all maintainers to review the release and
       confirm that it has the correct contents. This should consist of two
@@ -136,5 +136,5 @@ followed when publishing a release:
 * [ ] After the release is created, merge back the release branch into `master`.
 
 
-[flathub]: https://github.com/flathub/com.github.xournalpp.xournalpp
-[website]: https://github.com/xournalpp/xournalpp.github.io
+[flathub]: https://github.com/flathub/app.vertexnote.VertexNote
+[website]: https://github.com/saitatter/vertex-note.github.io

@@ -5,7 +5,7 @@
 #include "control/Control.h"   // for Control
 #include "control/jobs/Job.h"  // for JOB_TYPE_BLOCKING, JobType
 #include "gui/MainWindow.h"    // for MainWindow
-#include "gui/XournalView.h"   // for XournalView
+#include "gui/VertexNoteView.h"   // for VertexNoteView
 #include "util/Util.h"         // for execInUiThread
 #include "util/glib_casts.h"   // for wrap_for_once_v
 

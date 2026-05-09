@@ -27,7 +27,7 @@
 #include "control/jobs/PdfExportJob.h"                           // for PdfE...
 #include "control/jobs/SaveJob.h"                                // for SaveJob
 #include "control/jobs/Scheduler.h"                              // for JOB_...
-#include "control/jobs/XournalScheduler.h"                       // for Xour...
+#include "control/jobs/VertexNoteScheduler.h"                       // for Xour...
 #include "control/layer/LayerController.h"                       // for Laye...
 #include "control/pagetype/PageTypeHandler.h"                    // for Page...
 #include "control/settings/ButtonConfig.h"                       // for Butt...
@@ -44,8 +44,8 @@
 #include "gui/PageView.h"                                        // for XojP...
 #include "gui/PdfFloatingToolbox.h"                              // for PdfF...
 #include "gui/SearchBar.h"                                       // for Sear...
-#include "gui/XournalView.h"                                     // for Xour...
-#include "gui/XournalppCursor.h"                                 // for Xour...
+#include "gui/VertexNoteView.h"                                     // for Xour...
+#include "gui/VertexNoteCursor.h"                                 // for Xour...
 #include "gui/dialog/AboutDialog.h"                              // for Abou...
 #include "gui/dialog/FormatDialog.h"                             // for Form...
 #include "gui/dialog/GotoDialog.h"                               // for Goto...
@@ -55,8 +55,8 @@
 #include "gui/dialog/SettingsDialog.h"                           // for Sett...
 #include "gui/dialog/ToolbarManageDialog.h"                      // for Tool...
 #include "gui/dialog/UpdateDialog.h"                             // for UpdateDialog
-#include "gui/dialog/XojOpenDlg.h"                               // for XojO...
-#include "gui/dialog/XojSaveDlg.h"                               // for XojS...
+#include "gui/dialog/DocumentOpenDialog.h"                               // for XojO...
+#include "gui/dialog/DocumentSaveDialog.h"                               // for XojS...
 #include "gui/dialog/toolbarCustomize/ToolbarDragDropHandler.h"  // for Tool...
 #include "gui/inputdevices/CompassInputHandler.h"                // for Comp...
 #include "gui/inputdevices/GeometryToolInputHandler.h"           // for Geom...
@@ -83,8 +83,8 @@
 #include "model/StrokeStyle.h"                                   // for Stro...
 #include "model/TexImage.h"                                      // for TexI...
 #include "model/Text.h"                                          // for Text
-#include "model/XojPage.h"                                       // for XojPage
-#include "pdf/base/XojPdfPage.h"                                 // for XojP...
+#include "model/NotePage.h"                                       // for NotePage
+#include "pdf/base/PdfPage.h"                                 // for XojP...
 #include "plugin/PluginController.h"                             // for Plug...
 #include "settings/RecolorParameters.h"                          // for RecolorParameters
 #include "undo/AddUndoAction.h"                                  // for AddU...
@@ -102,7 +102,7 @@
 #include "util/Stacktrace.h"                                     // for Stac...
 #include "util/StringUtils.h"                                    // for char_cast
 #include "util/Util.h"                                           // for exec...
-#include "util/XojMsgBox.h"                                      // for XojM...
+#include "util/AppMessageBox.h"                                      // for XojM...
 #include "util/glib_casts.h"                                     // for wrap_v
 #include "util/i18n.h"                                           // for _, FS
 #include "util/safe_casts.h"                                     // for as_unsigned
@@ -140,7 +140,7 @@ Control::Control(GApplication* gtkApp, GladeSearchpath* gladeSearchPath, bool di
     this->gladeSearchPath = gladeSearchPath;
 
     this->metadata = new MetadataManager();
-    this->cursor = new XournalppCursor(this);
+    this->cursor = new VertexNoteCursor(this);
 
     auto name = Util::getConfigFile(SETTINGS_XML_FILE);
     this->settings = new Settings(std::move(name));
@@ -157,7 +157,7 @@ Control::Control(GApplication* gtkApp, GladeSearchpath* gladeSearchPath, bool di
 
     this->scrollHandler = new ScrollHandler(this);
 
-    this->scheduler = new XournalScheduler();
+    this->scheduler = new VertexNoteScheduler();
 
     this->doc = new Document(this);
 
@@ -244,7 +244,7 @@ void Control::setLastAutosaveFile(fs::path newAutosaveFile) {
         }
     } catch (const fs::filesystem_error& e) {
         auto fmtstr = FS(_F("Filesystem error: {1}") % e.what());
-        Util::execInUiThread([fmtstr, win = getGtkWindow()]() { XojMsgBox::showErrorToUser(win, fmtstr); });
+        Util::execInUiThread([fmtstr, win = getGtkWindow()]() { AppMessageBox::showErrorToUser(win, fmtstr); });
     }
     this->lastAutosaveFilename = std::move(newAutosaveFile);
 }
@@ -257,7 +257,7 @@ void Control::deleteLastAutosaveFile() {
     } catch (const fs::filesystem_error& e) {
         auto fmtstr = FS(_F("Could not remove old autosave file \"{1}\": {2}") % this->lastAutosaveFilename.u8string() %
                          e.what());
-        Util::execInUiThread([fmtstr, win = getGtkWindow()]() { XojMsgBox::showErrorToUser(win, fmtstr); });
+        Util::execInUiThread([fmtstr, win = getGtkWindow()]() { AppMessageBox::showErrorToUser(win, fmtstr); });
     }
     this->lastAutosaveFilename.clear();
 }
@@ -306,7 +306,7 @@ void Control::initWindow(MainWindow* win) {
     selectTool(toolHandler->getToolType());
     this->sidebar = new Sidebar(win, this);
 
-    XojMsgBox::setDefaultWindow(getGtkWindow());
+    AppMessageBox::setDefaultWindow(getGtkWindow());
 
     updatePageNumbers(0, npos);
 
@@ -410,7 +410,7 @@ bool Control::toggleGeometryTool() {
         return false;
     }
     const auto view = this->win->getXournal()->getViewFor(getCurrentPageNo());
-    const auto* xournal = GTK_XOURNAL(this->win->getXournal()->getWidget());
+    const auto* xournal = GTK_VERTEX_NOTE(this->win->getXournal()->getWidget());
     auto tool = new ToolClass();
     view->addOverlayView(std::make_unique<ViewClass>(tool, view, zoom));
     this->geometryTool = std::unique_ptr<GeometryTool>(tool);
@@ -433,7 +433,7 @@ bool Control::toggleGeometryTool() {
 void Control::resetGeometryTool() {
     this->geometryToolController.reset();
     this->geometryTool.reset();
-    auto* xournal = GTK_XOURNAL(this->win->getXournal()->getWidget());
+    auto* xournal = GTK_VERTEX_NOTE(this->win->getXournal()->getWidget());
     xournal->input->resetGeometryToolInputHandler();
 }
 
@@ -524,7 +524,7 @@ void Control::selectAllOnPage() {
     win->getXournal()->clearSelection();
 
     this->doc->lock();
-    XojPageView* view = win->getXournal()->getViewFor(pageNr);
+    PageView* view = win->getXournal()->getViewFor(pageNr);
     if (view == nullptr) {
         this->doc->unlock();
         return;
@@ -594,7 +594,7 @@ void Control::manageToolbars() {
                     // The active toolbar has been deleted!
                     xoj_assert(!tbs.empty());
                     win->toolbarSelected(tbs.front().get());
-                    XojMsgBox::showErrorToUser(
+                    AppMessageBox::showErrorToUser(
                             GTK_WINDOW(win->getWindow()),
                             _("You deleted the active toolbar. Falling back to the default toolbar."));
                 }
@@ -615,7 +615,7 @@ void Control::customizeToolbars() {
 
     if (this->win->getSelectedToolbar()->isPredefined()) {
         enum { YES = 1, NO };
-        XojMsgBox::askQuestion(getGtkWindow(),
+        AppMessageBox::askQuestion(getGtkWindow(),
                                FC(_F("The Toolbarconfiguration \"{1}\" is predefined, "
                                      "would you create a copy to edit?") %
                                   this->win->getSelectedToolbar()->getName()),
@@ -694,7 +694,7 @@ void Control::disableSidebarTmp(bool disabled) { this->sidebar->setTmpDisabled(d
 void Control::addDefaultPage(const std::optional<PageTemplateSettings>& pageTemplate, Document* doc) {
     const auto& model = pageTemplate.value_or(this->settings->getPageTemplateSettings());
 
-    auto page = std::make_shared<XojPage>(model.getPageWidth(), model.getPageHeight());
+    auto page = std::make_shared<NotePage>(model.getPageWidth(), model.getPageHeight());
     page->setBackgroundColor(model.getBackgroundColor());
     page->setBackgroundType(model.getBackgroundType());
 
@@ -766,7 +766,7 @@ void Control::duplicatePage() {
     if (!page) {
         return;
     }
-    auto pageCopy = std::make_shared<XojPage>(*page);
+    auto pageCopy = std::make_shared<NotePage>(*page);
 
     insertPage(pageCopy, getCurrentPageNo() + 1);
 }
@@ -848,7 +848,7 @@ static std::string removeMnemonics(std::string orig) {
 
 void Control::askInsertPdfPage(size_t pdfPage) {
     using Responses = enum { CANCEL = 1, AFTER = 2, END = 3 };
-    std::vector<XojMsgBox::Button> buttons = {{_("Cancel"), Responses::CANCEL},
+    std::vector<AppMessageBox::Button> buttons = {{_("Cancel"), Responses::CANCEL},
                                               {_("Insert after current page"), Responses::AFTER},
                                               {_("Insert at end"), Responses::END}};
 
@@ -856,7 +856,7 @@ void Control::askInsertPdfPage(size_t pdfPage) {
     std::string pathToMenuEntry = removeMnemonics(_("_Journal") + std::string(" → ") + _("Paper B_ackground") +
                                                   std::string(" → ") + _("With PDF background"));
 
-    XojMsgBox::askQuestion(this->getGtkWindow(),
+    AppMessageBox::askQuestion(this->getGtkWindow(),
                            FC(_F("Your current document does not contain PDF Page no {1}\n"
                                  "Would you like to insert this page?\n\n"
                                  "Tip: You can select {2} to insert a PDF page.") %
@@ -868,11 +868,11 @@ void Control::askInsertPdfPage(size_t pdfPage) {
                                    doc->lock_shared();
                                    size_t position = response == Responses::AFTER ? ctrl->getCurrentPageNo() + 1 :
                                                                                     doc->getPageCount();
-                                   XojPdfPageSPtr pdf = doc->getPdfPage(pdfPage);
+                                   PdfPagePtr pdf = doc->getPdfPage(pdfPage);
                                    doc->unlock_shared();
 
                                    if (pdf) {
-                                       auto page = std::make_shared<XojPage>(pdf->getWidth(), pdf->getHeight());
+                                       auto page = std::make_shared<NotePage>(pdf->getWidth(), pdf->getHeight());
                                        page->setBackgroundPdfPageNr(pdfPage);
                                        ctrl->insertPage(page, position);
                                    }
@@ -901,21 +901,21 @@ void Control::appendNewPdfPages() {
 
     if (insertCount == 0) {
         string msg = FS(_F("No pdf pages available to append. You may need to reopen the document first."));
-        XojMsgBox::showErrorToUser(getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(getGtkWindow(), msg);
     }
     for (size_t i = 0; i != insertCount; ++i) {
 
         doc->lock_shared();
-        XojPdfPageSPtr pdf = doc->getPdfPage(currentPdfPageCount + i);
+        PdfPagePtr pdf = doc->getPdfPage(currentPdfPageCount + i);
         doc->unlock_shared();
 
         if (pdf) {
-            auto newPage = std::make_shared<XojPage>(pdf->getWidth(), pdf->getHeight());
+            auto newPage = std::make_shared<NotePage>(pdf->getWidth(), pdf->getHeight());
             newPage->setBackgroundPdfPageNr(currentPdfPageCount + i);
             insertPage(newPage, pageCount + i);
         } else {
             string msg = FS(_F("Unable to retrieve pdf page."));  // should not happen
-            XojMsgBox::showErrorToUser(getGtkWindow(), msg);
+            AppMessageBox::showErrorToUser(getGtkWindow(), msg);
         }
     }
 }
@@ -1132,7 +1132,7 @@ auto Control::getCurrentPageNo() const -> size_t {
 }
 
 auto Control::searchTextOnPage(const std::string& text, size_t pageNumber, size_t index, size_t* occurrences,
-                               XojPdfRectangle* matchRect) -> bool {
+                               PdfRectangle* matchRect) -> bool {
     return getWindow()->getXournal()->searchTextOnPage(text, pageNumber, index, occurrences, matchRect);
 }
 
@@ -1170,7 +1170,7 @@ void Control::selectTool(ToolType type) {
         clearSelectionEndText();
 
         auto pageNr = getCurrentPageNo();
-        XojPageView* view = xournal->getViewFor(pageNr);
+        PageView* view = xournal->getViewFor(pageNr);
         xoj_assert(view != nullptr);
         PageRef page = view->getPage();
         auto sel = SelectionFactory::createFromElementOnActiveLayer(this, page, view, textobj);
@@ -1400,7 +1400,7 @@ void Control::showSettings() {
             [ctrl = this, settingsBeforeDialog]() {
                 Settings* settings = ctrl->getSettings();
                 MainWindow* win = ctrl->win;
-                XournalView* xournal = win->getXournal();
+                VertexNoteView* xournal = win->getXournal();
                 // note which settings have changed and act accordingly
                 if (settingsBeforeDialog.selectionColor != settings->getBorderColor()) {
                     xournal->forceUpdatePagenumbers();
@@ -1528,7 +1528,7 @@ static auto shouldFileOpen(fs::path const& filepath, GtkWindow* win) -> bool {
                            "Copy the files to another folder.\n"
                            "Files from Folder {1} cannot be opened.") %
                         basePath.u8string());
-        XojMsgBox::showErrorToUser(win, msg);
+        AppMessageBox::showErrorToUser(win, msg);
     }
     return !isChild;
 }
@@ -1641,7 +1641,7 @@ void Control::openXoppFile(fs::path filepath, int scrollToPage, std::function<vo
         std::string msg = FS(_F("Error opening file \"{1}\".\n\n"
                                 "<tt>{2}</tt>\n<b>{3}</b>") %
                              filepath.u8string() % formatErrorMessages(errorMessages) % e.what());
-        XojMsgBox::showMarkupMessageToUser(this->getGtkWindow(), msg, "", GTK_MESSAGE_ERROR);
+        AppMessageBox::showMarkupMessageToUser(this->getGtkWindow(), msg, "", GTK_MESSAGE_ERROR);
         callback(false);
         return;
     }
@@ -1657,7 +1657,7 @@ void Control::openXoppFile(fs::path filepath, int scrollToPage, std::function<vo
                           "correctly.\n\n"
                           "Error messages:\n<tt>{1}</tt>") %
                        formatErrorMessages(errorMessages));
-            XojMsgBox::showMarkupMessageToUser(ctrl->getGtkWindow(), msg, "", GTK_MESSAGE_WARNING);
+            AppMessageBox::showMarkupMessageToUser(ctrl->getGtkWindow(), msg, "", GTK_MESSAGE_WARNING);
         }
 
         if (missingPdf && (missingPdf->wasPdfAttached || !missingPdf->missingFileName.empty())) {
@@ -1668,8 +1668,8 @@ void Control::openXoppFile(fs::path filepath, int scrollToPage, std::function<vo
 
     if (fileVersion > FILE_FORMAT_VERSION) {
         enum { YES = 1, NO };
-        std::vector<XojMsgBox::Button> buttons = {{_("Yes"), YES}, {_("No"), NO}};
-        XojMsgBox::askQuestion(
+        std::vector<AppMessageBox::Button> buttons = {{_("Yes"), YES}, {_("No"), NO}};
+        AppMessageBox::askQuestion(
                 this->getGtkWindow(), _("File version mismatch"),
                 _("The file being loaded has a file format version newer than the one currently supported by this "
                   "version of VertexNote, so it may not load properly. Open anyways?"),
@@ -1695,7 +1695,7 @@ bool Control::openPdfFile(fs::path filepath, bool attachToDocument, int scrollTo
         this->replaceDocument(std::move(doc), scrollToPage);
     } else {
         std::string msg = FS(_F("Error reading PDF file \"{1}\"\n{2}") % filepath.u8string() % doc->getLastErrorMsg());
-        XojMsgBox::showErrorToUser(this->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(this->getGtkWindow(), msg);
     }
     this->getCursor()->setCursorBusy(false);
     return success;
@@ -1716,7 +1716,7 @@ bool Control::openPngFile(fs::path filepath, bool attachToDocument, int scrollTo
 
     if (error) {
         std::string msg = FS(_F("Error reading PNG file \"{1}\"") % imagePath.u8string());
-        XojMsgBox::showErrorToUser(this->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(this->getGtkWindow(), msg);
         g_error_free(error);
         this->doc->unlock();
         this->getCursor()->setCursorBusy(false);
@@ -1751,7 +1751,7 @@ bool Control::openXoptFile(fs::path filepath) {
     PageTemplateSettings model;
     if (!model.parse(*pageTemplate)) {
         const auto msg = FS(_F("Error reading template file \"{1}\"") % filepath.u8string());
-        XojMsgBox::showErrorToUser(this->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(this->getGtkWindow(), msg);
         return false;
     }
 
@@ -1771,7 +1771,7 @@ void Control::openFileWithoutSavingTheCurrentDocument(fs::path filepath, bool at
         std::string message =
                 err ? FS(_F("Failed to determine if path exists \"{1}\": {2}") % filepath.u8string() % err.message()) :
                       FS(_F("That file does not exist:\n\"{1}\"") % filepath.u8string());
-        XojMsgBox::showErrorToUser(getGtkWindow(), message);
+        AppMessageBox::showErrorToUser(getGtkWindow(), message);
         // We create an empty document to avoid ever being in a "no document" state.
         this->replaceDocument(createNewDocument(this, fs::path(), std::nullopt), -1);
         callback(false);
@@ -1893,7 +1893,7 @@ void Control::promptMissingPdf(Control::MissingPdfData& missingPdf, const fs::pa
     }
 
     // show the dialog
-    std::vector<XojMsgBox::Button> buttons = {
+    std::vector<AppMessageBox::Button> buttons = {
             {_("Select another PDF"), static_cast<int>(MissingPdfDialogOptions::SELECT_OTHER)},
             {_("Remove PDF Background"), static_cast<int>(MissingPdfDialogOptions::REMOVE)},
             {_("Cancel"), static_cast<int>(MissingPdfDialogOptions::CANCEL)}};
@@ -1901,7 +1901,7 @@ void Control::promptMissingPdf(Control::MissingPdfData& missingPdf, const fs::pa
         buttons.insert(buttons.begin(),
                        {_("Use proposed PDF"), static_cast<int>(MissingPdfDialogOptions::USE_PROPOSED)});
     }
-    XojMsgBox::askQuestion(
+    AppMessageBox::askQuestion(
             this->getGtkWindow(), _("Missing PDF background file"), msg, buttons,
             std::bind(&Control::missingPdfDialogResponseHandler, this, proposedPdfFilepath, std::placeholders::_1));
 }
@@ -2034,7 +2034,7 @@ void Control::showFontDialog() {
     auto* dlg = gtk_font_chooser_dialog_new(_("Select font"), GTK_WINDOW(this->win->getWindow()));
     gtk_font_chooser_set_font(GTK_FONT_CHOOSER(dlg), settings->getFont().asString().c_str());
 
-    auto popup = xoj::popup::PopupWindowWrapper<XojMsgBox>(
+    auto popup = xoj::popup::PopupWindowWrapper<AppMessageBox>(
             GTK_DIALOG(dlg),
             [this, dlg](int response) {
                 if (response == GTK_RESPONSE_OK) {
@@ -2044,7 +2044,7 @@ void Control::showFontDialog() {
                 }
                 this->actionDB->enableAction(Action::SELECT_FONT, true);
             },
-            XojMsgBox::IMMEDIATE);  // We need IMMEDIATE so accessing GTK_FONT_CHOOSER(dlg) is not UB
+            AppMessageBox::IMMEDIATE);  // We need IMMEDIATE so accessing GTK_FONT_CHOOSER(dlg) is not UB
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
 
@@ -2055,7 +2055,7 @@ void Control::showColorChooserDialog() {
     gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dlg), &c);
     gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(dlg), false);
 
-    auto popup = xoj::popup::PopupWindowWrapper<XojMsgBox>(
+    auto popup = xoj::popup::PopupWindowWrapper<AppMessageBox>(
             GTK_DIALOG(dlg),
             [this, dlg](int response) {
                 if (response == GTK_RESPONSE_OK) {
@@ -2065,7 +2065,7 @@ void Control::showColorChooserDialog() {
                 }
                 this->actionDB->enableAction(Action::SELECT_COLOR, true);
             },
-            XojMsgBox::IMMEDIATE);  // We need IMMEDIATE so accessing GTK_COLOR_CHOOSER(dlg) is not UB
+            AppMessageBox::IMMEDIATE);  // We need IMMEDIATE so accessing GTK_COLOR_CHOOSER(dlg) is not UB
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
 
@@ -2222,11 +2222,11 @@ void Control::close(std::function<void(bool)> callback, const bool allowDestroy,
         const auto saveLabel = saveAs ? _("Save As...") : _("Save");
 
         enum { SAVE = 1, DISCARD, CANCEL };
-        std::vector<XojMsgBox::Button> buttons = {{saveLabel, SAVE}, {_("Discard"), DISCARD}};
+        std::vector<AppMessageBox::Button> buttons = {{saveLabel, SAVE}, {_("Discard"), DISCARD}};
         if (allowCancel) {
             buttons.emplace_back(_("Cancel"), CANCEL);
         }
-        XojMsgBox::askQuestion(getGtkWindow(), message, std::string(), std::move(buttons),
+        AppMessageBox::askQuestion(getGtkWindow(), message, std::string(), std::move(buttons),
                                [ctrl = this, saveAs, allowDestroy, callback = std::move(callback)](int response) {
                                    auto execAfter = [allowDestroy, ctrl, cb = std::move(callback)](bool saved) {
                                        if (saved && allowDestroy) {
@@ -2304,7 +2304,7 @@ void Control::showGtkDemo() {
 #endif
     gchar* prog = g_find_program_in_path(binary.c_str());
     if (!prog) {
-        XojMsgBox::showErrorToUser(getGtkWindow(), "gtk3-demo was not found in path");
+        AppMessageBox::showErrorToUser(getGtkWindow(), "gtk3-demo was not found in path");
         return;
     }
     GError* err = nullptr;
@@ -2314,7 +2314,7 @@ void Control::showGtkDemo() {
     if (err != nullptr) {
         std::string message =
                 FS(_F("Creating Gtk demo subprocess failed: {1} (exit code: {2})") % err->message % err->code);
-        XojMsgBox::showErrorToUser(getGtkWindow(), message);
+        AppMessageBox::showErrorToUser(getGtkWindow(), message);
         g_error_free(err);
     }
 
@@ -2402,7 +2402,7 @@ void Control::clipboardPaste(ElementPtr e) {
         return;
     }
 
-    XojPageView* view = win->getXournal()->getViewFor(pageNr);
+    PageView* view = win->getXournal()->getViewFor(pageNr);
     if (view == nullptr) {
         return;
     }
@@ -2443,7 +2443,7 @@ void Control::clipboardPasteXournal(ObjectInputStream& in) {
     PageRef page = this->doc->getPage(pNr);
     Layer* layer = page->getSelectedLayer();
 
-    XojPageView* view = win->getXournal()->getViewFor(pNr);
+    PageView* view = win->getXournal()->getViewFor(pNr);
 
     if (!view || !page) {
         this->doc->unlock();
@@ -2646,13 +2646,13 @@ auto Control::getUndoRedoHandler() const -> UndoRedoHandler* { return this->undo
 
 auto Control::getZoomControl() const -> ZoomControl* { return this->zoom; }
 
-auto Control::getCursor() const -> XournalppCursor* { return this->cursor; }
+auto Control::getCursor() const -> VertexNoteCursor* { return this->cursor; }
 
 auto Control::getDocument() const -> Document* { return this->doc; }
 
 auto Control::getToolHandler() const -> ToolHandler* { return this->toolHandler; }
 
-auto Control::getScheduler() const -> XournalScheduler* { return this->scheduler; }
+auto Control::getScheduler() const -> VertexNoteScheduler* { return this->scheduler; }
 
 auto Control::getWindow() const -> MainWindow* { return this->win; }
 

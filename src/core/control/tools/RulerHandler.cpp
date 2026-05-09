@@ -4,7 +4,7 @@
 #include "control/tools/SnapToGridInputHandler.h"  // for SnapToGridInputHan...
 #include "model/Point.h"                           // for Point
 
-class XournalView;
+class VertexNoteView;
 
 RulerHandler::RulerHandler(Control* control, const PageRef& page): BaseShapeHandler(control, page) {}
 

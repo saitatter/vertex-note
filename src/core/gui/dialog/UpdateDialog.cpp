@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "control/settings/Settings.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/gtk4_helper.h"
 #include "util/i18n.h"
 #include "vertexnote/update/GithubReleaseParser.h"
@@ -218,9 +218,9 @@ public:
                              if (response == GTK_RESPONSE_APPLY) {
                                  self->startCheck();
                              } else if (response == GTK_RESPONSE_HELP) {
-                                 XojMsgBox::openURL(GTK_WINDOW(dialog), self->releaseUrl().c_str());
+                                 AppMessageBox::openURL(GTK_WINDOW(dialog), self->releaseUrl().c_str());
                              } else if (response == GTK_RESPONSE_ACCEPT) {
-                                 XojMsgBox::openURL(GTK_WINDOW(dialog), self->downloadUrl().c_str());
+                                 AppMessageBox::openURL(GTK_WINDOW(dialog), self->downloadUrl().c_str());
                              } else {
                                  gtk_window_close(GTK_WINDOW(dialog));
                              }

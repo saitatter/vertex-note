@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ "master", "release-*"]
     paths:
-      - 'po/xournalpp.pot'
+      - 'po/vertex-note.pot'
       - 'po/*.po'
 
 jobs:

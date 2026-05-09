@@ -11,10 +11,10 @@
 #include "model/Document.h"               // for Document
 #include "model/PageRef.h"                // for PageRef
 #include "model/PageType.h"               // for PageType
-#include "model/XojPage.h"                // for XojPage
-#include "pdf/base/XojPdfPage.h"          // for XojPdfPageSPtr, XojPdfPage
+#include "model/NotePage.h"                // for NotePage
+#include "pdf/base/PdfPage.h"          // for PdfPagePtr, PdfPage
 #include "util/PathUtil.h"                // for clearExtensions, safeRename...
-#include "util/XojMsgBox.h"               // for XojMsgBox
+#include "util/AppMessageBox.h"               // for AppMessageBox
 #include "util/i18n.h"                    // for FS, _, _F
 #include "view/DocumentView.h"            // for DocumentView
 
@@ -36,7 +36,7 @@ void SaveJob::run() {
 
 void SaveJob::afterRun() {
     if (!this->lastError.empty()) {
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), this->lastError);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), this->lastError);
         callback(false);
     } else {
         this->control->resetSavedStatus();
@@ -79,7 +79,7 @@ void SaveJob::updatePreview(Control* control) {
         // We thus print the PDF background by hand.
         if (page->getBackgroundType().isPdfPage()) {
             auto pgNo = page->getPdfPageNr();
-            XojPdfPageSPtr popplerPage = doc->getPdfPage(pgNo);
+            PdfPagePtr popplerPage = doc->getPdfPage(pgNo);
             if (popplerPage) {
                 popplerPage->render(cr);
             }

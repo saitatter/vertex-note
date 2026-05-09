@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Snapping methods which take account of the settings
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

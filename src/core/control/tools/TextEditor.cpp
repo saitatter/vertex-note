@@ -11,11 +11,11 @@
 #include "control/AudioController.h"
 #include "control/Control.h"  // for Control
 #include "control/settings/Settings.h"
-#include "gui/XournalppCursor.h"  // for XournalppCursor
+#include "gui/VertexNoteCursor.h"  // for VertexNoteCursor
 #include "model/Document.h"       // for Document
 #include "model/Font.h"           // for XojFont
 #include "model/Text.h"           // for Text
-#include "model/XojPage.h"        // for XojPage
+#include "model/NotePage.h"        // for NotePage
 #include "undo/DeleteUndoAction.h"
 #include "undo/InsertUndoAction.h"
 #include "undo/TextBoxUndoAction.h"

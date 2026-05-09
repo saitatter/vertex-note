@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -12,13 +12,13 @@
 #include <config-test.h>
 #include <gtest/gtest.h>
 
-#include "control/XournalMain.h"
+#include "control/VertexNoteMain.h"
 
 class TestEnvironment: public ::testing::Environment {
 public:
     virtual void SetUp() {
         std::cout << "Setting up localisation for tests" << std::endl;
-        XournalMain::initLocalisation();
+        VertexNoteMain::initLocalisation();
     }
 };
 

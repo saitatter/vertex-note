@@ -15,14 +15,14 @@ void setupEnvironment() {
      * see https://gitlab.gnome.org/GNOME/gtk-mac-bundler/-/blob/master/examples/gtk3-launcher.sh
      * and https://gitlab.gnome.org/GNOME/gtk-mac-bundler/-/issues/12
      */
-    auto base = Util::getExePath().parent_path();  // Xournal++.app/Contents or $HOME/gtk/inst
+    auto base = Util::getExePath().parent_path();  // VertexNote.app/Contents or $HOME/gtk/inst
 
     if (fs::exists(base / "Resources")) {  // app-bundle
         base = base / "Resources";
         // Set poppler data directory for (relocatable) app bundles. Otherwise a compile time value is used.
         auto popplerDataDir = base / "share" / "poppler";
         poppler::set_data_dir(popplerDataDir.string().c_str());
-    }  // Now base is Xournal++.app/Contents/Resources or $HOME/gtk/inst
+    }  // Now base is VertexNote.app/Contents/Resources or $HOME/gtk/inst
 
     auto libPath = base / "lib";
     auto dataPath = base / "share";

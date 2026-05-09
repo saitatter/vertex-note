@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * The main Control
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -45,7 +45,7 @@ class FullscreenHandler;
 class Sidebar;
 class GladeSearchpath;
 class MetadataManager;
-class XournalppCursor;
+class VertexNoteCursor;
 class ToolbarDragDropHandler;
 class MetadataEntry;
 class MetadataCallbackData;
@@ -64,11 +64,11 @@ class ScrollHandler;
 class SearchBar;
 class Settings;
 class TextEditor;
-class XournalScheduler;
+class VertexNoteScheduler;
 class ZoomControl;
 class ToolMenuHandler;
 class XojFont;
-class XojPdfRectangle;
+class PdfRectangle;
 class Callback;
 class ActionDatabase;
 class NavigationHistory;
@@ -218,14 +218,14 @@ public:
     bool loadViewMode(ViewModeId mode);
 
     /**
-     * @brief Search text on the given page. The matches (if any) are stored in the XojPageView::SearchControl instance.
+     * @brief Search text on the given page. The matches (if any) are stored in the PageView::SearchControl instance.
      * @param occurrences If not nullptr, the pointed variable will contain the number of matches on the page
      * @param matchRect If not nullptr, will contain the topleft point of the first match on the page
      *                          (Used for scrolling to the first match)
      * @return true if at least one match was found
      */
     bool searchTextOnPage(const std::string& text, size_t pageNumber, size_t index, size_t* occurrences,
-                          XojPdfRectangle* matchRect);
+                          PdfRectangle* matchRect);
 
     /**
      * Fire page selected, but first check if the page Number is valid
@@ -296,7 +296,7 @@ public:
 
     void disableSidebarTmp(bool disabled);
 
-    XournalScheduler* getScheduler() const;
+    VertexNoteScheduler* getScheduler() const;
 
     void block(const std::string& name);
     void unblock();
@@ -319,7 +319,7 @@ public:
     ScrollHandler* getScrollHandler() const;
     PageRef getCurrentPage();
     size_t getCurrentPageNo() const;
-    XournalppCursor* getCursor() const;
+    VertexNoteCursor* getCursor() const;
     Sidebar* getSidebar() const;
     SearchBar* getSearchBar() const;
     AudioController* getAudioController() const;
@@ -513,7 +513,7 @@ private:
     /**
      * The cursor handler
      */
-    XournalppCursor* cursor;
+    VertexNoteCursor* cursor;
 
     /**
      * Timeout id: the timeout watches the changes and actualizes the previews from time to time
@@ -541,7 +541,7 @@ private:
     guint autosaveTimeout = 0;
     fs::path lastAutosaveFilename;
 
-    XournalScheduler* scheduler;
+    VertexNoteScheduler* scheduler;
 
     /**
      * State / Blocking attributes
@@ -568,7 +568,7 @@ private:
     std::unique_ptr<NavigationHistory> navHistory;
 
     /**
-     * Manage all Xournal++ plugins
+     * Manage all VertexNote plugins
      */
     PluginController* pluginController;
 

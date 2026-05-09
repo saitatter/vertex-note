@@ -18,7 +18,7 @@ env:
 
 jobs:
   prepare:
-    if: github.repository == 'xournalpp/xournalpp'
+    if: github.repository == 'vertex-note/vertex-note'
     runs-on: ubuntu-latest
     name: 'Prepare jobs'
     outputs:
@@ -50,7 +50,7 @@ jobs:
               // The run was triggered by a tag being pushed
               core.setOutput('tag', "${{ github.ref_name }}")
               core.setOutput('should_run', 'true')
-              const release_name = "Xournal++ " + "${{ github.ref_name }}".substring(1)  // Remove the v
+              const release_name = "VertexNote " + "${{ github.ref_name }}".substring(1)  // Remove the v
               core.setOutput('release-name', release_name)
               console.log("Building artifacts for release of " + release_name)
             } else if ( "${{ github.ref_name }}" === "${{ env.nightly-build-branch }}" ) {
@@ -143,9 +143,9 @@ jobs:
         run: |
           {
             echo 'body<<EOF'
-            echo "This is a new minor version of Xournal++ with bug fixes and improvements from the community."
-            sed -n '/^xournalpp ([0-9.-]*).*/,/^ -- .*/{ /^xournalpp .*/! { /^ -- .*/ q;p } }' changelog/debian/changelog
-            echo "See https://github.com/xournalpp/xournalpp/blob/${{ needs.prepare.outputs.tag }}/CHANGELOG.md for a more detailled list of changes."
+            echo "This is a new minor version of VertexNote with bug fixes and improvements from the community."
+            sed -n '/^vertex-note ([0-9.-]*).*/,/^ -- .*/{ /^vertex-note .*/! { /^ -- .*/ q;p } }' changelog/debian/changelog
+            echo "See https://github.com/saitatter/vertex-note/blob/${{ needs.prepare.outputs.tag }}/CHANGELOG.md for a more detailled list of changes."
             echo EOF
           } >> "$GITHUB_ENV"
       - uses: ncipollo/release-action@v1

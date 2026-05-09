@@ -4,7 +4,7 @@
 
 #include "control/Control.h"  // for Control
 #include "model/Document.h"   // for Document
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Util.h"        // for npos
 #include "util/i18n.h"        // for _

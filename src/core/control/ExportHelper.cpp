@@ -11,8 +11,8 @@
 #include "control/jobs/ImageExport.h"       // for ImageExport, EXPORT_GRAPH...
 #include "control/jobs/ProgressListener.h"  // for DummyProgressListener
 #include "model/Document.h"                 // for Document
-#include "pdf/base/XojPdfExport.h"          // for XojPdfExport
-#include "pdf/base/XojPdfExportFactory.h"   // for XojPdfExportFactory
+#include "pdf/base/PdfExport.h"          // for PdfExport
+#include "pdf/base/PdfExportFactory.h"   // for PdfExportFactory
 #include "util/ElementRange.h"              // for parse, PageRangeVector
 #include "util/i18n.h"                      // for _
 #include "util/raii/GObjectSPtr.h"          // for GObjectSPtr
@@ -65,7 +65,7 @@ void exportImg(Document* doc, fs::path outfile, const char* range, const char* l
 
 void exportPdf(Document* doc, const fs::path& output, const char* range, const char* layerRange,
                ExportBackgroundType exportBackground, bool progressiveMode, ExportBackend backend) {
-    std::unique_ptr<XojPdfExport> pdfe = XojPdfExportFactory::createExport(doc, nullptr, backend);
+    std::unique_ptr<PdfExport> pdfe = PdfExportFactory::createExport(doc, nullptr, backend);
     pdfe->setExportBackground(exportBackground);
 
     // Check if we're trying to overwrite the background PDF file

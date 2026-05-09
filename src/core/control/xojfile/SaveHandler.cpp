@@ -32,8 +32,8 @@
 #include "model/StrokeStyle.h"                 // for StrokeStyle
 #include "model/TexImage.h"                    // for TexImage
 #include "model/Text.h"                        // for Text
-#include "model/XojPage.h"                     // for XojPage
-#include "pdf/base/XojPdfDocument.h"           // for XojPdfDocument
+#include "model/NotePage.h"                     // for NotePage
+#include "pdf/base/PdfDocument.h"           // for PdfDocument
 #include "util/OutputStream.h"                 // for GzOutputStream, Output...
 #include "util/PathUtil.h"                     // for clearExtensions, normalizeAssetPath
 #include "util/PlaceholderString.h"            // for PlaceholderString

@@ -10,7 +10,7 @@
 #include "model/Element.h"
 #include "model/Layer.h"      // for Layer
 #include "model/Stroke.h"     // for Stroke
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/i18n.h"        // for _
 

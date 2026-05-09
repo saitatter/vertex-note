@@ -9,7 +9,7 @@
 #include "model/Element.h"    // for Element
 #include "model/Layer.h"      // for Layer
 #include "model/PageRef.h"    // for PageRef
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _

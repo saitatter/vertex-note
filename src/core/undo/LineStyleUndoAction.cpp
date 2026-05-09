@@ -7,7 +7,7 @@
 #include "model/Document.h"
 #include "model/PageRef.h"    // for PageRef
 #include "model/Stroke.h"     // for Stroke
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _

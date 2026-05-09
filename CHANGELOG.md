@@ -55,7 +55,7 @@
   - palettes can be changed by changing `colorPaletteSetting`
 - the changes are also reflected when customizing the toolbar
 - two palettes are provided together with the application
-  - Xournal++ Palette
+  - VertexNote Palette
   - Xournal Pallete (currently the default)
 * Add various options to create empty last page ([2f2e7c6](https://github.com/saitatter/vertex-note/commit/2f2e7c66139438a71d1bb375ebaf4484815a835e))
 * Add duplicate page option under journal menu ([5aca1a7](https://github.com/saitatter/vertex-note/commit/5aca1a7b738f275aa26227b40966b212d1d001c2))
@@ -77,7 +77,7 @@
 * Argument forceopen in control::openfile has no effect ([32d2a47](https://github.com/saitatter/vertex-note/commit/32d2a4790a26222ef4ed5f63c4476108246ffed2))
 * Fix light color as recolor.light ([146f7bd](https://github.com/saitatter/vertex-note/commit/146f7bdeb95f11ad6fc45f66feeaadbd67cc9d65))
 * **luapi:** Preserve tool alpha when changing color via lua api #6883 ([76e3668](https://github.com/saitatter/vertex-note/commit/76e366814281fac100d695cd18e1e6db96274b46))
-* **windows:** Correctly handle utf-8 command-line arguments in xournalpp-wrapper ([050b2a5](https://github.com/saitatter/vertex-note/commit/050b2a551609d6e03a90b1da4a54a2abed4d742b))
+* **windows:** Correctly handle utf-8 command-line arguments in vertexnote-wrapper ([050b2a5](https://github.com/saitatter/vertex-note/commit/050b2a551609d6e03a90b1da4a54a2abed4d742b))
 * Prevent invalid bounds in floatingtoolbox clamping ([8ccef78](https://github.com/saitatter/vertex-note/commit/8ccef78a3873c684499ca4232ed2e698749f629e))
 * Use util::getdatapath() instead of hardcoded path for gladesearchpath ([67289c8](https://github.com/saitatter/vertex-note/commit/67289c8502a554a72e67b932e8b311bfc0c2232b))
 * Removing passing stroketool as int to `g_warning` ([e340499](https://github.com/saitatter/vertex-note/commit/e3404992e3561e4aa4f8d9c711484bbd595cf104))

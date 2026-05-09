@@ -7,7 +7,7 @@
 #include "model/Document.h"
 #include "model/Font.h"       // for XojFont
 #include "model/Text.h"       // for Text
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _

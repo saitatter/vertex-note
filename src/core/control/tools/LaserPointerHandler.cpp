@@ -4,7 +4,7 @@
 #include <control/settings/Settings.h>
 #include <gui/MainWindow.h>
 #include <gui/PageView.h>
-#include <gui/XournalView.h>
+#include <gui/VertexNoteView.h>
 
 #include "gui/inputdevices/PositionInputData.h"  // for PositionInputData
 #include "model/Stroke.h"
@@ -24,7 +24,7 @@ public:
     using StrokeHandler::StrokeHandler;
 };
 
-LaserPointerHandler::LaserPointerHandler(XojPageView* pageView, Control* control, const PageRef& page):
+LaserPointerHandler::LaserPointerHandler(PageView* pageView, Control* control, const PageRef& page):
         viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::LaserPointerView>>()),
         ctrl(control),
         page(page),

@@ -14,7 +14,7 @@
 #include "gui/Builder.h"
 #include "gui/GladeSearchpath.h"
 #include "util/PathUtil.h"         // for readString
-#include "util/XojMsgBox.h"        // for XojMsgBox
+#include "util/AppMessageBox.h"        // for AppMessageBox
 #include "util/i18n.h"             // for FS, _, _F, N_
 #include "util/raii/GLibGuards.h"  // for GErrorGuard, GStrvGuard
 
@@ -99,7 +99,7 @@ void ExtEdLatexDialog::openEditor() {
     if (editorCmd.empty()) {
         auto maybeEditor = g_getenv("EDITOR");
         if (!maybeEditor) {
-            XojMsgBox::showErrorToUser(
+            AppMessageBox::showErrorToUser(
                     getWindow(),
                     "No external editor configured and no $EDITOR environment variable set. Please configure an "
                     "external editor command or disable the external editor functionality to use a built-in one.");
@@ -112,7 +112,7 @@ void ExtEdLatexDialog::openEditor() {
     editorCmd += "'";
 
     if (!g_shell_parse_argv(editorCmd.c_str(), nullptr, xoj::util::out_ptr(argv), xoj::util::out_ptr(err))) {
-        XojMsgBox::showErrorToUser(getWindow(), FS(_F("Failed to parse external editor command: {1}") % err->message));
+        AppMessageBox::showErrorToUser(getWindow(), FS(_F("Failed to parse external editor command: {1}") % err->message));
         return;
     }
 
@@ -128,7 +128,7 @@ void ExtEdLatexDialog::openEditor() {
             g_subprocess_launcher_spawnv(launcher.get(), argv.get(), xoj::util::out_ptr(err)), xoj::util::adopt);
 
     if (err) {
-        XojMsgBox::showErrorToUser(getWindow(), FS(_F("Could not spawn editor: {1}") % err->message));
+        AppMessageBox::showErrorToUser(getWindow(), FS(_F("Could not spawn editor: {1}") % err->message));
         return;
     }
 
@@ -159,7 +159,7 @@ void ExtEdLatexDialog::editorWaitCallback(GObject* processObj, GAsyncResult* res
             return;
         }
 
-        XojMsgBox::showErrorToUser(self->getWindow(), FS(_F("Could not wait for editor: {1}") % err->message));
+        AppMessageBox::showErrorToUser(self->getWindow(), FS(_F("Could not wait for editor: {1}") % err->message));
         return;
     }
 
@@ -168,7 +168,7 @@ void ExtEdLatexDialog::editorWaitCallback(GObject* processObj, GAsyncResult* res
 
     auto status = g_subprocess_get_status(process);
     if (status != 0) {
-        XojMsgBox::showErrorToUser(self->getWindow(), FS(_F("Editor exited with bad status {1}") % status));
+        AppMessageBox::showErrorToUser(self->getWindow(), FS(_F("Editor exited with bad status {1}") % status));
         return;
     }
 

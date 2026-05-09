@@ -1,6 +1,6 @@
 #include "KeyboardInputHandler.h"
 
-#include "gui/XournalView.h"                        // for XournalView
+#include "gui/VertexNoteView.h"                        // for VertexNoteView
 #include "gui/inputdevices/GeometryToolInputHandler.h"  // for GeometryToolInputHandler
 
 #include "InputContext.h"  // for InputContext

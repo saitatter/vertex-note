@@ -9,7 +9,7 @@
 #include "model/AudioElement.h"   // for AudioElement
 #include "model/Element.h"        // for ELEMENT_TEXT, Eleme...
 #include "model/Font.h"           // for XojFont
-#include "pdf/base/XojPdfPage.h"  // for XojPdfRectangle
+#include "pdf/base/PdfPage.h"  // for PdfRectangle
 #include "util/Rectangle.h"       // for Rectangle
 #include "util/Stacktrace.h"      // for Stacktrace
 #include "util/StringUtils.h"
@@ -165,7 +165,7 @@ void Text::updateSnapping() const {
     this->snappedBounds = Rectangle<double>(this->x, this->y, this->width, this->height);
 }
 
-auto Text::findText(const std::string& search) const -> std::vector<XojPdfRectangle> {
+auto Text::findText(const std::string& search) const -> std::vector<PdfRectangle> {
     size_t patternLength = search.length();
     if (patternLength == 0) {
         return {};
@@ -179,10 +179,10 @@ auto Text::findText(const std::string& search) const -> std::vector<XojPdfRectan
 
     std::string pattern = StringUtils::toLowerCase(search);
 
-    std::vector<XojPdfRectangle> list;
+    std::vector<PdfRectangle> list;
 
     for (size_t pos = text.find(pattern); pos != std::string::npos; pos = text.find(pattern, pos + 1)) {
-        XojPdfRectangle mark;
+        PdfRectangle mark;
         PangoRectangle rect = {0};
         pango_layout_index_to_pos(layout.get(), static_cast<int>(pos), &rect);
         mark.x1 = (static_cast<double>(rect.x)) / PANGO_SCALE + this->getX();

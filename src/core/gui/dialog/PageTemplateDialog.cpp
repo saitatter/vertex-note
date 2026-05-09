@@ -13,7 +13,7 @@
 #include "control/pagetype/PageTypeHandler.h"  // for PageTypeInfo, PageType...
 #include "control/settings/Settings.h"         // for Settings
 #include "gui/Builder.h"                       // for Builder
-#include "gui/dialog/XojOpenDlg.h"             // for XojOpenDlg
+#include "gui/dialog/DocumentOpenDialog.h"             // for DocumentOpenDialog
 #include "gui/menus/popoverMenus/PageTypeSelectionPopoverGridOnly.h"
 #include "gui/toolbarMenubar/ToolMenuHandler.h"
 #include "model/FormatDefinitions.h"  // for FormatUnits, XOJ_UNITS
@@ -21,7 +21,7 @@
 #include "util/Color.h"               // for GdkRGBA_to_argb, rgb_t...
 #include "util/PathUtil.h"            // for fromGFile, readString
 #include "util/PopupWindowWrapper.h"  // for PopupWindowWrapper
-#include "util/XojMsgBox.h"           // for XojMsgBox
+#include "util/AppMessageBox.h"           // for AppMessageBox
 #include "util/i18n.h"                // for _
 #include "util/serdesstream.h"        // for serdes_stream
 
@@ -154,7 +154,7 @@ void PageTemplateDialog::saveToFile() {
                                 auto out = serdes_stream<std::ofstream>(file);
                                 out << self->parent->model.toString();
                             };
-                            XojMsgBox::replaceFileQuestion(GTK_WINDOW(dialog), std::move(file),
+                            AppMessageBox::replaceFileQuestion(GTK_WINDOW(dialog), std::move(file),
                                                            std::move(saveTemplate));
                         } else {
                             // Closing the window causes another "response" signal, which we want to ignore

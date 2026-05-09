@@ -9,7 +9,7 @@
 
 #include "control/settings/Settings.h"
 #include "gui/Builder.h"
-#include "gui/dialog/XojSaveDlg.h"
+#include "gui/dialog/DocumentSaveDialog.h"
 #include "gui/inputdevices/InputContext.h"
 #include "gui/inputdevices/InputEvents.h"
 #include "gui/inputdevices/PrintEvent.h"

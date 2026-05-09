@@ -8,7 +8,7 @@
 #include "control/xojfile/SaveHandler.h"
 #include "model/Document.h"
 #include "model/Layer.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/PathUtil.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
@@ -56,7 +56,7 @@ TEST(VertexNoteGeometryXoppMetadata, rejectsUnsupportedFormat) {
 
 TEST(VertexNoteGeometryXoppMetadata, savesAndLoadsGeometryElementThroughXoppStrokeFallback) {
     Document document(nullptr);
-    auto page = std::make_shared<XojPage>(200.0, 200.0);
+    auto page = std::make_shared<NotePage>(200.0, 200.0);
     auto object = GeometryObject(42);
     auto a = object.addVertexWithId(10, Vec2{1.0, 2.0});
     auto b = object.addVertexWithId(20, Vec2{5.0, 7.0});

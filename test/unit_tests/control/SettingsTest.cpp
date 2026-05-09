@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -22,7 +22,7 @@ TEST(SettingsTest, testLoadDoesNotThrowForNonExistingFilePath) {
 TEST(SettingsTest, testReadWrite) {
     auto saveReloadTest = [&](const fs::path& dir) {
         std::cout << "Test saving in " << dir << std::endl;
-        const fs::path outPath = dir / "xournalpp-test-units_Settings_testReadWrite.xml";
+        const fs::path outPath = dir / "vertex-note-test-units_Settings_testReadWrite.xml";
         if (fs::exists(outPath)) {
             std::cout << "Removing file (already exist): " << dir << std::endl;
             fs::remove(outPath);

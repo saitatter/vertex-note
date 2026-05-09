@@ -14,12 +14,12 @@
 #include "control/settings/Settings.h"         // for Settings
 #include "control/settings/SettingsEnums.h"    // for BUTTON_TOUCH, Button
 #include "gui/MainWindow.h"                    // for MainWindow
-#include "gui/PageView.h"                      // for XojPageView
-#include "gui/XournalView.h"                   // for XournalView
-#include "gui/XournalppCursor.h"               // for XournalppCursor
+#include "gui/PageView.h"                      // for PageView
+#include "gui/VertexNoteView.h"                   // for VertexNoteView
+#include "gui/VertexNoteCursor.h"               // for VertexNoteCursor
 #include "gui/inputdevices/InputEvents.h"      // for InputEvent, BUTTON_PRE...
 #include "gui/inputdevices/PenInputHandler.h"  // for PenInputHandler
-#include "gui/widgets/XournalWidget.h"         // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"         // for GtkVertexNote
 
 #include "InputContext.h"  // for InputContext
 #include "InputUtils.h"    // for InputUtils
@@ -63,7 +63,7 @@ auto TouchDrawingInputHandler::handleImpl(InputEvent const& event) -> bool {
     if ((this->primarySequence && this->primarySequence != event.sequence) || this->secondarySequence) {
         if (!this->secondarySequence) {
             this->secondarySequence = event.sequence;
-            XojPageView* currentPage = this->getPageAtCurrentPosition(event);
+            PageView* currentPage = this->getPageAtCurrentPosition(event);
 
             if (currentPage) {
                 currentPage->onSequenceCancelEvent(event.deviceId);
@@ -99,12 +99,12 @@ auto TouchDrawingInputHandler::handleImpl(InputEvent const& event) -> bool {
     // let an alternate handler (e.g. TouchInputHandler) decide
     // what to do...
     if (this->deviceClassPressed && event.type == MOTION_EVENT && toolHandler->getToolType() != TOOL_HAND) {
-        GtkXournal* xournal = inputContext->getXournal();
+        GtkVertexNote* xournal = inputContext->getXournal();
 
         this->inputContext->getView()->getCursor()->setRotationAngle(event.relative.x);
 
         this->actionMotion(event);
-        XournalppCursor* cursor = xournal->view->getCursor();
+        VertexNoteCursor* cursor = xournal->view->getCursor();
         cursor->updateCursor();
 
         return true;

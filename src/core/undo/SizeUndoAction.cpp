@@ -7,7 +7,7 @@
 #include "model/Document.h"
 #include "model/Point.h"      // for Point
 #include "model/Stroke.h"     // for Stroke
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Assert.h"      // for xoj_assert
 #include "util/Range.h"       // for Range

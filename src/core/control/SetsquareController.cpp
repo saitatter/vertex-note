@@ -2,14 +2,14 @@
 
 #include "control/Control.h"
 #include "control/layer/LayerController.h"
-#include "gui/XournalView.h"
+#include "gui/VertexNoteView.h"
 #include "model/GeometryTool.h"
 #include "model/Setsquare.h"
 #include "model/Stroke.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 
 using xoj::util::Rectangle;
-SetsquareController::SetsquareController(XojPageView* view, Setsquare* setsquare):
+SetsquareController::SetsquareController(PageView* view, Setsquare* setsquare):
         GeometryToolController(view, setsquare) {}
 
 SetsquareController::~SetsquareController() = default;

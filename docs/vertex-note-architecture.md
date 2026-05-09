@@ -1,16 +1,16 @@
 # VertexNote Architecture Notes
 
-VertexNote is a long-term fork of Xournal++ focused on CAD-inspired technical note-taking.
-The fork must preserve existing Xournal++ behavior while adding precise, object-based geometry
+VertexNote is a long-term fork of VertexNote focused on CAD-inspired technical note-taking.
+The fork must preserve existing VertexNote behavior while adding precise, object-based geometry
 features incrementally.
 
-## Current Xournal++ Subsystems
+## Current VertexNote Subsystems
 
-- Input dispatch starts in `src/core/gui/PageView.cpp`, where `XojPageView` selects a tool handler.
+- Input dispatch starts in `src/core/gui/PageView.cpp`, where `PageView` selects a tool handler.
 - Freehand strokes are handled by `src/core/control/tools/StrokeHandler.*`.
 - Drag-created shapes are handled by `src/core/control/tools/BaseShapeHandler.*` and subclasses.
 - Click-based spline drawing already exists in `src/core/control/tools/SplineHandler.*`.
-- The document model is `Document -> XojPage -> Layer -> Element`.
+- The document model is `Document -> NotePage -> Layer -> Element`.
 - Existing persistent element types are stroke, image, teximage, and text.
 - Rendering dispatches through `src/core/view/ElementView.cpp`.
 - Stroke rendering uses Cairo through `src/core/view/StrokeView.*`.
@@ -20,7 +20,7 @@ features incrementally.
 
 ## Architectural Rule
 
-Do not turn `Stroke` into a CAD object. Keep existing Xournal++ content stroke-based.
+Do not turn `Stroke` into a CAD object. Keep existing VertexNote content stroke-based.
 Add VertexNote geometry as object-based elements that can generate stroke-compatible fallback
 representations for older `.xopp` readers.
 
@@ -209,13 +209,13 @@ Continuous drags should collapse into one undo action with old/new snapshots.
 
 ## File Compatibility
 
-For compatibility with older Xournal++:
+For compatibility with older VertexNote:
 
 1. Save a normal stroke fallback for each geometry object.
 2. Save VertexNote extension metadata that references the fallback by stable ID.
 3. On load, VertexNote should prefer the geometry metadata and regenerate fallback strokes as needed.
 
-Old Xournal++ versions can display the fallback strokes. They will not preserve VertexNote metadata
+Old VertexNote versions can display the fallback strokes. They will not preserve VertexNote metadata
 after saving, which should be documented as a compatibility limitation.
 
 ## Roadmap

@@ -1,7 +1,7 @@
 # Windows Local Development with MSYS2 MinGW64
 
 VertexNote currently builds cleanly on Windows through MSYS2 MinGW64. This is the
-recommended local development path while the fork is still close to Xournal++'s GTK3,
+recommended local development path while the fork is still close to VertexNote's GTK3,
 Cairo, Poppler, and MinGW-oriented dependency stack.
 
 ## Install MSYS2
@@ -58,7 +58,7 @@ full unit suite:
 
 ## Notes
 
-- The app executable is `build/mingw64/src/xournalpp.exe` until the Windows target
+- The app executable is `build/mingw64/src/vertex-note.exe` until the Windows target
   name is fully rebranded.
 - MinGW64 can print a locale warning on Windows during tests. The current unit suite
   still passes with that warning.

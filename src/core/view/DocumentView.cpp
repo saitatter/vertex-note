@@ -7,7 +7,7 @@
 #include <glib.h>  // for g_message
 
 #include "model/Layer.h"                     // for Layer
-#include "model/XojPage.h"                   // for XojPage
+#include "model/NotePage.h"                   // for NotePage
 #include "view/DebugShowRepaintBounds.h"     // for IF_DEBUG_REPAINT
 #include "view/View.h"                       // for EditionTreatment, NORMAL...
 #include "view/background/BackgroundView.h"  // for BackgroundFlags, Backgro...

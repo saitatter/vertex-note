@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * PDF Page GLib Implementation
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -17,10 +17,10 @@
 #include <cairo.h>    // for cairo_t, cairo_region_t
 #include <poppler.h>  // for PopplerPage
 
-#include "pdf/base/XojPdfPage.h"  // for XojPdfRectangle (ptr only), XojPdfP...
+#include "pdf/base/PdfPage.h"  // for PdfRectangle (ptr only), XojPdfP...
 
 
-class PopplerGlibPage: public XojPdfPage {
+class PopplerGlibPage: public PdfPage {
 public:
     PopplerGlibPage(PopplerPage* page, PopplerDocument* doc);
     PopplerGlibPage(const PopplerGlibPage& other);
@@ -34,13 +34,13 @@ public:
     void render(cairo_t* cr) const override;
     void renderForPrinting(cairo_t* cr) const override;
 
-    std::vector<XojPdfRectangle> findText(const std::string& text) override;
+    std::vector<PdfRectangle> findText(const std::string& text) override;
 
-    std::string selectText(const XojPdfRectangle& rect, XojPdfPageSelectionStyle style) override;
+    std::string selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
 
-    cairo_region_t* selectTextRegion(const XojPdfRectangle& rect, XojPdfPageSelectionStyle style) override;
+    cairo_region_t* selectTextRegion(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
 
-    TextSelection selectTextLines(const XojPdfRectangle& rect, XojPdfPageSelectionStyle style) override;
+    TextSelection selectTextLines(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
 
     auto getLinks() -> std::vector<Link> override;
 

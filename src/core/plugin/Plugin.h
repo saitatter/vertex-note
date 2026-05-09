@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
- * A single Xournal++ Plugin
+ * A single VertexNote Plugin
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -177,7 +177,7 @@ private:
     void loadIni();
 
     /// Load custom Lua Libraries
-    static void registerXournalppLibs(lua_State* luaPtr);
+    static void registerVertexNoteLibs(lua_State* luaPtr);
 
     /// Add the plugin folder to the lua path
     void addPluginToLuaPath();

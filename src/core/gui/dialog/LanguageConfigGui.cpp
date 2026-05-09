@@ -10,7 +10,7 @@
 #include "control/settings/Settings.h"  // for Settings
 #include "util/PathUtil.h"              // for getGettextFilepath, getLocale...
 #include "util/StringUtils.h"           // for StringUtils
-#include "util/XojMsgBox.h"             // for XojMsgBox
+#include "util/AppMessageBox.h"             // for AppMessageBox
 #include "util/i18n.h"                  // for _
 #include "util/safe_casts.h"            // for as_unsigned
 
@@ -64,7 +64,7 @@ LanguageConfigGui::LanguageConfigGui(GtkBox* parent, Settings* settings):
                 prefPos != endi) {
                 return prefPos;
             }
-            XojMsgBox::showErrorToUser(nullptr, _("Previously selected language not available anymore!"));
+            AppMessageBox::showErrorToUser(nullptr, _("Previously selected language not available anymore!"));
         }
         // Use system default
         return availableLocales.begin();

@@ -2,13 +2,13 @@
 
 #include "control/Control.h"
 #include "control/layer/LayerController.h"
-#include "gui/XournalView.h"
+#include "gui/VertexNoteView.h"
 #include "model/Compass.h"
 #include "model/GeometryTool.h"
 #include "model/Stroke.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 
-CompassController::CompassController(XojPageView* view, Compass* compass): GeometryToolController(view, compass) {}
+CompassController::CompassController(PageView* view, Compass* compass): GeometryToolController(view, compass) {}
 
 CompassController::~CompassController() = default;
 

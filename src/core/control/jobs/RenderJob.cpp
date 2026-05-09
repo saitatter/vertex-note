@@ -10,11 +10,11 @@
 #include "control/ToolEnums.h"          // for TOOL_PLAY_OBJECT
 #include "control/ToolHandler.h"        // for ToolHandler
 #include "control/jobs/Job.h"           // for JOB_TYPE_RENDER, JobType
-#include "gui/PageView.h"               // for XojPageView
-#include "gui/XournalView.h"            // for XournalView
-#include "gui/widgets/XournalWidget.h"  // for gtk_xournal_repaint_area
+#include "gui/PageView.h"               // for PageView
+#include "gui/VertexNoteView.h"            // for VertexNoteView
+#include "gui/widgets/VertexNoteWidget.h"  // for gtk_vertex_note_repaint_area
 #include "model/Document.h"             // for Document
-#include "model/XojPage.h"              // for Page
+#include "model/NotePage.h"              // for Page
 #include "util/Assert.h"                // for xoj_assert
 #include "util/Rectangle.h"             // for Rectangle
 #include "util/Util.h"                  // for execInUiThread
@@ -31,7 +31,7 @@
 
 using xoj::util::Rectangle;
 
-RenderJob::RenderJob(XojPageView* view): view(view) {}
+RenderJob::RenderJob(PageView* view): view(view) {}
 
 auto RenderJob::getSource() -> void* { return this->view; }
 
@@ -94,7 +94,7 @@ void RenderJob::run() {
 }
 
 static void repaintWidgetArea(GtkWidget* widget, int x1, int y1, int x2, int y2) {
-    Util::execInUiThread([=]() { gtk_xournal_repaint_area(widget, x1, y1, x2, y2); });
+    Util::execInUiThread([=]() { gtk_vertex_note_repaint_area(widget, x1, y1, x2, y2); });
 }
 
 void RenderJob::repaintPage() const { repaintPageArea(0, 0, view->getWidth(), view->getHeight()); }

@@ -6,17 +6,17 @@
 #include "model/Element.h"                   // for Element, ELEMENT_TEXT
 #include "model/Layer.h"                     // for Layer
 #include "model/Text.h"                      // for Text
-#include "model/XojPage.h"                   // for XojPage
+#include "model/NotePage.h"                   // for NotePage
 #include "view/overlays/SearchResultView.h"  // for SEARCH_CHANGED_NOTIFICATION
 
-SearchControl::SearchControl(const PageRef& page, XojPdfPageSPtr pdf):
+SearchControl::SearchControl(const PageRef& page, PdfPagePtr pdf):
         page(page),
         pdf(std::move(pdf)),
         viewPool(std::make_shared<xoj::util::DispatchPool<xoj::view::SearchResultView>>()) {}
 
 SearchControl::~SearchControl() = default;
 
-auto SearchControl::search(const std::string& text, size_t index, size_t* occurrences, XojPdfRectangle* matchRect)
+auto SearchControl::search(const std::string& text, size_t index, size_t* occurrences, PdfRectangle* matchRect)
         -> bool {
     this->highlightRect = nullptr;
     if (text.empty()) {
@@ -45,7 +45,7 @@ auto SearchControl::search(const std::string& text, size_t index, size_t* occurr
                 if (e->getType() == ELEMENT_TEXT) {
                     const Text* t = dynamic_cast<const Text*>(e);
 
-                    std::vector<XojPdfRectangle> textResult = t->findText(text);
+                    std::vector<PdfRectangle> textResult = t->findText(text);
                     this->results.insert(this->results.end(), textResult.begin(), textResult.end());
                 }
             }
@@ -59,7 +59,7 @@ auto SearchControl::search(const std::string& text, size_t index, size_t* occurr
     bool found;
     if (index - 1 >= this->results.size()) {
         if (matchRect) {
-            *matchRect = XojPdfRectangle(0, 0, 0, 0);
+            *matchRect = PdfRectangle(0, 0, 0, 0);
         }
         found = false;
     } else {

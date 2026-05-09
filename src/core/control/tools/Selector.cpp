@@ -10,7 +10,7 @@
 #include "gui/LegacyRedrawable.h"  // for Redrawable
 #include "model/Document.h"        // for Document
 #include "model/Layer.h"           // for Layer
-#include "model/XojPage.h"         // for XojPage
+#include "model/NotePage.h"         // for NotePage
 #include "util/safe_casts.h"       // for as_unsigned
 
 // Ensures that `-std::numeric_limits<double>::infinity()` behaves as minus infinity

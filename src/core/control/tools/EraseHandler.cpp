@@ -14,7 +14,7 @@
 #include "model/Element.h"                // for Element, ELEMENT_STROKE
 #include "model/Layer.h"                  // for Layer
 #include "model/Stroke.h"                 // for Stroke
-#include "model/XojPage.h"                // for XojPage
+#include "model/NotePage.h"                // for NotePage
 #include "model/eraser/ErasableStroke.h"  // for ErasableStroke
 #include "model/eraser/PaddedBox.h"       // for PaddedBox
 #include "undo/DeleteUndoAction.h"        // for DeleteUndoAction

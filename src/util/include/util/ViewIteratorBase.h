@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A C++20-style view for containers with values pointer
  * Such a view is not allowed to modify the pointed objects.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

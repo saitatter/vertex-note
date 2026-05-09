@@ -12,7 +12,7 @@
 #include "gui/CreatePreviewImage.h"
 #include "gui/dialog/FormatDialog.h"
 #include "gui/menus/StaticAssertActionNamespace.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/Assert.h"
 #include "util/GtkUtil.h"
 #include "util/PopupWindowWrapper.h"

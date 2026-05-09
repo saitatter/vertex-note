@@ -38,7 +38,7 @@ cairo_t* BaseShapeOrSplineToolView::prepareContext(cairo_t* cr) const {
 
     if (needMask) {
         // The mask is only for filled highlighter strokes, to avoid artefacts as in
-        // https://github.com/xournalpp/xournalpp/issues/3709
+        // https://github.com/saitatter/vertex-note/issues/3709
         if (!mask.isInitialized()) {
             mask = createMask(cr);
             const auto& dashes = this->lineStyle.getDashes();

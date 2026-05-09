@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Save-name parsing utility, does wildcard-string to save-name conversions
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

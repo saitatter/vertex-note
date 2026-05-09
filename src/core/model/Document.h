@@ -1,12 +1,12 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * The document
  *
  * All methods are unlocked, you need to lock the document before you change something and unlock after.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -24,8 +24,8 @@
 #include <glib.h>     // for gpointer, gsize
 #include <gtk/gtk.h>  // for GtkTreeModel, GtkTreeIter, GtkT...
 
-#include "pdf/base/XojPdfDocument.h"  // for XojPdfDocument
-#include "pdf/base/XojPdfPage.h"      // for XojPdfPageSPtr
+#include "pdf/base/PdfDocument.h"  // for PdfDocument
+#include "pdf/base/PdfPage.h"      // for PdfPagePtr
 #include "util/PathUtil.h"            // for PathStorageMode
 #include "util/raii/GObjectSPtr.h"    // for GObjectSptr
 
@@ -33,7 +33,7 @@
 #include "filesystem.h"  // for path
 
 class DocumentHandler;
-class XojPdfBookmarkIterator;
+class PdfBookmarkIterator;
 
 class Document {
 public:
@@ -50,8 +50,8 @@ public:
 
     size_t getPageCount() const;
     size_t getPdfPageCount() const;
-    XojPdfPageSPtr getPdfPage(size_t page) const;
-    const XojPdfDocument& getPdfDocument() const;
+    PdfPagePtr getPdfPage(size_t page) const;
+    const PdfDocument& getPdfDocument() const;
 
     void insertPage(const PageRef& p, size_t position);
     void addPage(const PageRef& p);
@@ -111,14 +111,14 @@ private:
     void freeTreeContentModel();
     static bool freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
 
-    void buildTreeContentsModel(GtkTreeIter* parent, XojPdfBookmarkIterator* iter);
+    void buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter);
     void updateIndexPageNumbers();
     static bool fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
 
 private:
     DocumentHandler* handler = nullptr;
 
-    XojPdfDocument pdfDocument;
+    PdfDocument pdfDocument;
 
     fs::path filepath;
     fs::path pdfFilepath;

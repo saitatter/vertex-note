@@ -8,7 +8,7 @@
 #include "model/Document.h"               // for Document
 #include "undo/UndoRedoHandler.h"         // for UndoRedoHandler
 #include "util/PathUtil.h"                // for clearExtensions, getAutosav...
-#include "util/XojMsgBox.h"               // for XojMsgBox
+#include "util/AppMessageBox.h"               // for AppMessageBox
 #include "util/i18n.h"                    // for FS, _F
 
 #include "filesystem.h"  // for path
@@ -19,7 +19,7 @@ AutosaveJob::~AutosaveJob() = default;
 
 void AutosaveJob::afterRun() {
     std::string msg = FS(_F("Error while autosaving: {1}") % this->error);
-    XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+    AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
 }
 
 void AutosaveJob::run() {

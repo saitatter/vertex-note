@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles the layout of the pages within a Xournal document
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -21,8 +21,8 @@
 
 #include "LayoutMapper.h"  // for LayoutMapper
 
-class XojPageView;
-class XournalView;
+class PageView;
+class VertexNoteView;
 class ScrollHandling;
 class Range;
 
@@ -34,14 +34,14 @@ class Rectangle;
 };  // namespace xoj::util
 
 /**
- * @brief The Layout manager for the XournalWidget
+ * @brief The Layout manager for the VertexNoteWidget
  *
- * This class manages the layout of the XojPageView's contained
- * in the XournalWidget
+ * This class manages the layout of the PageView's contained
+ * in the VertexNoteWidget
  */
 class Layout final {
 public:
-    Layout(XournalView* view, ScrollHandling* scrollHandling);
+    Layout(VertexNoteView* view, ScrollHandling* scrollHandling);
 
 public:
     // Todo(Fabian): move to ScrollHandling also it must not depend on Layout
@@ -56,7 +56,7 @@ public:
      */
     void scrollAbs(double x, double y);
 
-    // Todo(Fabian): move to XournalView
+    // Todo(Fabian): move to VertexNoteView
     /**
      * Changes the adjustments in such a way as to make sure that
      * the given Rectangle is visible
@@ -78,7 +78,7 @@ public:
     /// Returns the width of the entire Layout - excluding centering padding
     int getMinimalPixelWidth() const;
 
-    // Todo(Fabian): move to XournalView this must not depend on Layout directly
+    // Todo(Fabian): move to VertexNoteView this must not depend on Layout directly
     /**
      * Returns the Rectangle which is currently visible - in pixel coordinates
      */
@@ -90,14 +90,14 @@ public:
 
     /**
      * Recompute the centering paddings (to center the content if the allocation is too big)
-     * @params the size of the GtkAllocation of the GtkXournal instance - or -1 for computation from the GtkAdjustments
+     * @params the size of the GtkAllocation of the GtkVertexNote instance - or -1 for computation from the GtkAdjustments
      */
     void recomputeCenteringPadding(int allocWidth = -1, int allocHeight = -1);
 
     // Todo(Fabian): move to View:
     /**
-     * Updates the current XojPageView. The XojPageView is selected based on
-     * the percentage of the visible area of the XojPageView relative
+     * Updates the current PageView. The PageView is selected based on
+     * the percentage of the visible area of the PageView relative
      * to its total area.
      */
     void updateVisibility();
@@ -105,7 +105,7 @@ public:
     /**
      * Return the pageview containing coordinates (in pixel coordinates)
      */
-    XojPageView* getPageViewAt(int x, int y) const;
+    PageView* getPageViewAt(int x, int y) const;
 
     /**
      * Return the page index found (or std::nullopt if not found) when moving by the given offsets from the ref page
@@ -191,14 +191,14 @@ public:
 private:
     struct PixelCounter;  ///< Used to get the pixel coordinates of entries
 
-    XournalView* view = nullptr;
+    VertexNoteView* view = nullptr;
     ScrollHandling* scrollHandling = nullptr;
 
     // Todo(Fabian): move to ScrollHandling also it must not depend on Layout
     double lastScrollHorizontal = -1;
     double lastScrollVertical = -1;
 
-    std::vector<size_t> previouslyVisiblePages;  ///< indexes of pages with XojPageView::isVisible() == true
+    std::vector<size_t> previouslyVisiblePages;  ///< indexes of pages with PageView::isVisible() == true
 
     PreCalculated pc{};
 

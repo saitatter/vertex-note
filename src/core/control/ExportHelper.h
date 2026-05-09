@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Helper functions to iterate over devices
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -47,7 +47,7 @@ void exportImg(Document* doc, fs::path output, const char* range, const char* la
  *                  If a number is too high for the number of layers on a given page, it is just ignored.
  *                  If range=nullptr, exports all layers.
  * @param exportBackground If EXPORT_BACKGROUND_NONE, the exported pdf file has white background
- * @param progressiveMode If true, then for each xournalpp page, instead of rendering one PDF page, the page layers are
+ * @param progressiveMode If true, then for each vertex-note page, instead of rendering one PDF page, the page layers are
  * rendered one by one to produce as many pages as there are layers.
  */
 void exportPdf(Document* doc, const fs::path& output, const char* range, const char* layerRange,

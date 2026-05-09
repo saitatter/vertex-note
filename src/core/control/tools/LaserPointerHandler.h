@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles a laser pointer that draws temporary strokes
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -21,7 +21,7 @@
 class Control;
 class PositionInputData;
 class TemporaryStrokeHandler;
-class XojPageView;
+class PageView;
 
 namespace xoj::util {
 template <class T>
@@ -37,7 +37,7 @@ class LaserPointerView;
 
 class LaserPointerHandler: public OverlayBase {
 public:
-    LaserPointerHandler(XojPageView* pageView, Control* control, const PageRef& page);
+    LaserPointerHandler(PageView* pageView, Control* control, const PageRef& page);
     ~LaserPointerHandler() override;
 
     void onSequenceCancelEvent();
@@ -62,7 +62,7 @@ private:
     // Used only to pass on to (Temporary)StrokeHandler
     Control* ctrl;
     PageRef page;
-    XojPageView* pageView;
+    PageView* pageView;
 
     xoj::util::GSourceURef fadeoutTimer;
     uint8_t fadeoutAlpha = 255;

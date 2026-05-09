@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: xournalpp\n"
+"Project-Id-Version: vertex-note\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-03-28 16:29+0000\n"
 "PO-Revision-Date: 2026-03-28 17:05\n"
@@ -11,10 +11,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Crowdin-Project: xournalpp\n"
+"X-Crowdin-Project: vertex-note\n"
 "X-Crowdin-Project-ID: 363247\n"
 "X-Crowdin-Language: hu\n"
-"X-Crowdin-File: /master/xournalpp.pot\n"
+"X-Crowdin-File: /master/vertex-note.pot\n"
 "X-Crowdin-File-ID: 38\n"
 
 #: ../src/core/control/AudioController.cpp:120
@@ -126,8 +126,8 @@ msgid "File version mismatch"
 msgstr "Fájl verziószáma nem egyezik"
 
 #: ../src/core/control/Control.cpp:1654
-msgid "The file being loaded has a file format version newer than the one currently supported by this version of Xournal++, so it may not load properly. Open anyways?"
-msgstr "A betöltendő fájl fájlformátumának verziója újabb, mint a Xournal++ jelen verziója által jelenleg támogatott, ezért előfordulhat, hogy nem töltődik be megfelelően. Megnyitás mégis?"
+msgid "The file being loaded has a file format version newer than the one currently supported by this version of VertexNote, so it may not load properly. Open anyways?"
+msgstr "A betöltendő fájl fájlformátumának verziója újabb, mint a VertexNote jelen verziója által jelenleg támogatott, ezért előfordulhat, hogy nem töltődik be megfelelően. Megnyitás mégis?"
 
 #: ../src/core/control/Control.cpp:1677
 msgid "Error reading PDF file \"{1}\"\n"
@@ -211,7 +211,7 @@ msgid "Save As..."
 msgstr "Mentés másként..."
 
 #: ../src/core/control/Control.cpp:2202 ../src/core/control/jobs/SaveJob.cpp:25
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:85
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:85
 #: ../src/core/gui/toolbarMenubar/ToolMenuHandler.cpp:291
 msgid "Save"
 msgstr "Mentés"
@@ -302,7 +302,7 @@ msgid "Could not load LaTeX PDF file"
 msgstr "Nem sikerült a LaTeX PDF-fájl betöltése"
 
 #: ../src/core/control/PageBackgroundChangeController.cpp:111
-#: ../src/core/control/XournalMain.cpp:227
+#: ../src/core/control/VertexNoteMain.cpp:227
 #: ../src/core/control/xojfile/LoadHandler.cpp:260
 #: ../src/core/control/xojfile/LoadHandler.cpp:279
 msgid "Error reading PDF: {1}"
@@ -322,51 +322,51 @@ msgstr "PDF-háttér hiányzik"
 msgid "Running print operation failed with {1}"
 msgstr "A nyomtatási művelet futtatása nem sikerült a következővel: {1}"
 
-#: ../src/core/control/XournalMain.cpp:120
+#: ../src/core/control/VertexNoteMain.cpp:120
 msgid "Failed to delete file: {1}"
 msgstr "A következő fájl törlése nem sikerült: {1}"
 
-#: ../src/core/control/XournalMain.cpp:122
+#: ../src/core/control/VertexNoteMain.cpp:122
 msgid "Please delete the file manually"
 msgstr "Kérjük, kézzel törölje a fájlt"
 
-#: ../src/core/control/XournalMain.cpp:134
-msgid "Xournal++ crashed last time. Would you like to restore the last edited file?"
-msgstr "A Xournal++ legutóbb összeomlott. Szeretné visszaállítani az utoljára szerkesztett fájlt?"
+#: ../src/core/control/VertexNoteMain.cpp:134
+msgid "VertexNote crashed last time. Would you like to restore the last edited file?"
+msgstr "A VertexNote legutóbb összeomlott. Szeretné visszaállítani az utoljára szerkesztett fájlt?"
 
-#: ../src/core/control/XournalMain.cpp:137
+#: ../src/core/control/VertexNoteMain.cpp:137
 msgid "Recovery file detected"
 msgstr "Helyreállítási fájl észlelve"
 
-#: ../src/core/control/XournalMain.cpp:138
+#: ../src/core/control/VertexNoteMain.cpp:138
 msgid "Delete file"
 msgstr "Fájl törlése"
 
-#: ../src/core/control/XournalMain.cpp:138
+#: ../src/core/control/VertexNoteMain.cpp:138
 msgid "Restore file"
 msgstr "Fájlt helyreállítása"
 
-#: ../src/core/control/XournalMain.cpp:158
+#: ../src/core/control/VertexNoteMain.cpp:158
 msgid "The background file \"{1}\" could not be found. It might have been moved, renamed or deleted."
 msgstr "A(z) „{1}” háttérfájl nem található. Lehet, hogy áthelyezték, átnevezték vagy törölték."
 
-#: ../src/core/control/XournalMain.cpp:173
+#: ../src/core/control/VertexNoteMain.cpp:173
 msgid "Error loading document: {1}"
 msgstr "Hiba történt a dokumentum betöltésekor: {1}"
 
-#: ../src/core/control/XournalMain.cpp:206
+#: ../src/core/control/VertexNoteMain.cpp:206
 msgid "Error exporting image: {1}"
 msgstr "Hiba történt a kép exportálásakor: {1}"
 
-#: ../src/core/control/XournalMain.cpp:235
+#: ../src/core/control/VertexNoteMain.cpp:235
 msgid "Error saving document: {1}"
 msgstr "Hiba történt a dokumentum mentésekor: {1}"
 
-#: ../src/core/control/XournalMain.cpp:265
+#: ../src/core/control/VertexNoteMain.cpp:265
 msgid "Error exporting PDF: {1}"
 msgstr "Hiba történt a PDF-fájl exportálásakor: {1}"
 
-#: ../src/core/control/XournalMain.cpp:371
+#: ../src/core/control/VertexNoteMain.cpp:371
 msgid "<span foreground='red' size='x-large'>Missing the needed UI file:\n"
 "<b>{1}</b></span>\n"
 "Could not find them at any location.\n"
@@ -380,54 +380,54 @@ msgstr "<span foreground='red' size='x-large'>A szükséges UI fájl hiányzik:\
 "  A munkakönyvtárban nem található\n"
 "  A {2} könyvtárban nem található"
 
-#: ../src/core/control/XournalMain.cpp:376
+#: ../src/core/control/VertexNoteMain.cpp:376
 msgid "\n\n"
 "Will now attempt to run without this file."
 msgstr "\n\n"
 "A program megpróbál enélkül a fájl nélkül futni."
 
-#: ../src/core/control/XournalMain.cpp:398
-#: ../src/core/control/XournalMain.cpp:459
-msgid "Sorry, Xournal++ can only open one file at once.\n"
+#: ../src/core/control/VertexNoteMain.cpp:398
+#: ../src/core/control/VertexNoteMain.cpp:459
+msgid "Sorry, VertexNote can only open one file at once.\n"
 "Others are ignored."
-msgstr "Elnézést, a Xournal++ egyszerre csak egy fájlt tud megnyitni.\n"
+msgstr "Elnézést, a VertexNote egyszerre csak egy fájlt tud megnyitni.\n"
 "A további fájlok figyelmen kívül hagyva."
 
-#: ../src/core/control/XournalMain.cpp:409
+#: ../src/core/control/VertexNoteMain.cpp:409
 msgid "File {1} does not exist."
 msgstr "A(z) {1} fájl nem létezik."
 
-#: ../src/core/control/XournalMain.cpp:413
+#: ../src/core/control/VertexNoteMain.cpp:413
 msgid "Filesystem error: {1}\n"
-"Sorry, Xournal++ cannot open the file: {2}\n"
+"Sorry, VertexNote cannot open the file: {2}\n"
 "Consider copying the file to a local directory."
 msgstr "Fájlrendszer hiba: {1}\n"
-"Sajnáljuk, a Xournal++ nem tudja megnyitni a következő fájlt: {2}\n"
+"Sajnáljuk, a VertexNote nem tudja megnyitni a következő fájlt: {2}\n"
 "Fontolja meg a fájl másolását egy helyi könyvtárba."
 
-#: ../src/core/control/XournalMain.cpp:616
+#: ../src/core/control/VertexNoteMain.cpp:616
 msgid "Jump to Page (first Page: 1)"
 msgstr "Ugrás adott oldalra (első oldal: 1)"
 
-#: ../src/core/control/XournalMain.cpp:620
-msgid "Get version of xournalpp"
-msgstr "A xournalpp verzió lehívása"
+#: ../src/core/control/VertexNoteMain.cpp:620
+msgid "Get version of vertex-note"
+msgstr "A vertex-note verzió lehívása"
 
-#: ../src/core/control/XournalMain.cpp:622
+#: ../src/core/control/VertexNoteMain.cpp:622
 msgid "Disable audio for this session"
 msgstr "Hang letiltása ehhez a munkamenethez"
 
-#: ../src/core/control/XournalMain.cpp:624
+#: ../src/core/control/VertexNoteMain.cpp:624
 msgid "Open PDF in attach mode\n"
 "                                       Ignored if no PDF file is specified."
 msgstr "PDF fájl megnyitása csatolási módban\n"
 "                                 Figyelmen kívül hagyja, ha nincs megadva PDF-fájl."
 
-#: ../src/core/control/XournalMain.cpp:628
+#: ../src/core/control/VertexNoteMain.cpp:628
 msgid "Save xopp-file with the background PDF specified as FILE"
 msgstr "xopp-fájl mentése a FÁJL-ként megadott háttér PDF-fájllal"
 
-#: ../src/core/control/XournalMain.cpp:633
+#: ../src/core/control/VertexNoteMain.cpp:633
 msgid "Use the provided backend for PDF exports.\n"
 "                                       Available backends: {1}\n"
 "                                       No effect without -p/--create-pdf=foo.pdf"
@@ -435,11 +435,11 @@ msgstr "Használja a mellékelt háttérprogramot a PDF-exportáláshoz.\n"
 "                                       Rendelkezésre álló háttérrendszerek: {1}\n"
 "                                       A -p/--create-pdf=foo.pdf nélkül nincs hatása"
 
-#: ../src/core/control/XournalMain.cpp:642
+#: ../src/core/control/VertexNoteMain.cpp:642
 msgid "Export FILE as PDF"
 msgstr "FILE exportálása PDF-fájlként"
 
-#: ../src/core/control/XournalMain.cpp:645
+#: ../src/core/control/VertexNoteMain.cpp:645
 msgid "Export FILE as image files (one per page)\n"
 "                                       Guess the output format from the extension of IMGFILE\n"
 "                                       Supported formats: .png, .svg"
@@ -447,7 +447,7 @@ msgstr "FÁJL exportálása képfájlként (oldalanként egy)\n"
 "                                       A kimeneti formátum kitalálása a KÉPFÁJL kiterjesztése alapján\n"
 "                                       Támogatott formátumok: .png, .svg"
 
-#: ../src/core/control/XournalMain.cpp:651
+#: ../src/core/control/VertexNoteMain.cpp:651
 msgid "Export without background\n"
 "                                       The exported file has transparent or white background,\n"
 "                                       depending on what its format supports\n"
@@ -455,13 +455,13 @@ msgstr "Exportálás háttér nélkül\n"
 "                                       Az exportált fájl átlátszó vagy fehér háttérrel rendelkezik,\n"
 "                                       attól függően, hogy mit támogat a formátuma\n"
 
-#: ../src/core/control/XournalMain.cpp:656
+#: ../src/core/control/VertexNoteMain.cpp:656
 msgid "Export without ruling\n"
 "                                       The exported file has no paper ruling\n"
 msgstr "Exportálás vonalzó nélkül\n"
 "                                       Az exportált fájl nem tartalmaz papír vonalzót\n"
 
-#: ../src/core/control/XournalMain.cpp:661
+#: ../src/core/control/VertexNoteMain.cpp:661
 msgid "Export layers progressively\n"
 "                                       In PDF export, Render layers progressively one by one.\n"
 "                                       This results in N export pages per page with N layers,\n"
@@ -473,25 +473,25 @@ msgstr "Rétegek fokozatos exportálása\n"
 "                                       fokozatosan építve fel a rétegsort.\n"
 "                                       Az így kapott PDF-fájlt bemutatóhoz lehet használni.\n"
 
-#: ../src/core/control/XournalMain.cpp:670
+#: ../src/core/control/VertexNoteMain.cpp:670
 msgid "Only export the pages specified by RANGE (e.g. \"2-3,5,7-\")\n"
 "                                       No effect without -p/--create-pdf or -i/--create-img"
 msgstr "Csak a TARTOMÁNY által megadott oldalak exportálása (pl. \"2-3,5,7-\")\n"
 "                                       Nincs hatás a -p/--create-pdf vagy -i/--create-img kapcsolók nélkül"
 
-#: ../src/core/control/XournalMain.cpp:675
+#: ../src/core/control/VertexNoteMain.cpp:675
 msgid "Only export the layers specified by RANGE (e.g. \"2-3,5,7-\")\n"
 "                                       No effect without -p/--create-pdf or -i/--create-img"
 msgstr "Csak a TARTOMÁNY által megadott rétegek exportálása (pl. \"2-3,5,7-\")\n"
 "                                       Nincs hatás a -p/--create-pdf vagy -i/--create-img kapcsolók nélkül"
 
-#: ../src/core/control/XournalMain.cpp:679
+#: ../src/core/control/VertexNoteMain.cpp:679
 msgid "Set DPI for PNG exports. Default is 300\n"
 "                                       No effect without -i/--create-img=foo.png"
 msgstr "DPI beállítása PNG exportáláshoz. Az alapértelmezett érték szintén 300.\n"
 "                                       Nincs hatás a -i/--create-img=foo.png kapcsoló nélkül"
 
-#: ../src/core/control/XournalMain.cpp:683
+#: ../src/core/control/VertexNoteMain.cpp:683
 msgid "Set page width for PNG exports\n"
 "                                       No effect without -i/--create-img=foo.png\n"
 "                                       Ignored if --export-png-dpi is used"
@@ -499,7 +499,7 @@ msgstr "PNG exportáláshoz oldalszélesség beállítása\n"
 "                                       Nincs hatása a -i/--create-img=foo.png kapcsoló nélkül\n"
 "                                       Figyelmen kívül hagyja, ha a --export-png-dpi paramétert használja"
 
-#: ../src/core/control/XournalMain.cpp:688
+#: ../src/core/control/VertexNoteMain.cpp:688
 msgid "Set page height for PNG exports\n"
 "                                       No effect without -i/--create-img=foo.png\n"
 "                                       Ignored if --export-png-dpi or --export-png-width is used"
@@ -507,11 +507,11 @@ msgstr "PNG exportok oldalmagasságának beállítása\n"
 "                                       Nincs hatása a -i/--create-img=foo.png nélkül\n"
 "                                       Figyelmen kívül hagyja, ha a --export-png-dpi vagy a --export-png-width van használatban"
 
-#: ../src/core/control/XournalMain.cpp:696
+#: ../src/core/control/VertexNoteMain.cpp:696
 msgid "Advanced export options"
 msgstr "Haladó exportálási lehetőségek"
 
-#: ../src/core/control/XournalMain.cpp:697
+#: ../src/core/control/VertexNoteMain.cpp:697
 msgid "Display advanced export options"
 msgstr "A haladó exportálási lehetőségek megjelenítése"
 
@@ -1092,7 +1092,7 @@ msgid "All files"
 msgstr "Minden fájl"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:22
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:203
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:203
 msgid "Supported files"
 msgstr "Támogatott fájltípusok"
 
@@ -1101,13 +1101,13 @@ msgid "Xournal files"
 msgstr "Xournal fájlok"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:33
-msgid "Xournal++ files"
-msgstr "Xournal++ fájlok"
+msgid "VertexNote files"
+msgstr "VertexNote fájlok"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:34
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:120
-msgid "Xournal++ template"
-msgstr "Xournal++ sablon"
+msgid "VertexNote template"
+msgstr "VertexNote sablon"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:40
 msgid "Image files"
@@ -1131,8 +1131,8 @@ msgid "LaTeX editor theme:"
 msgstr "LaTeX-szerkesztő téma:"
 
 #: ../src/core/gui/dialog/LatexSettingsPanel.cpp:66
-msgid "GtkSourceView was disabled when building Xournal++! Some options will not be available."
-msgstr "A GtkSourceView le volt tiltva a Xournal++ készítésekor! Egyes kapcsolók nem lesznek elérhetők."
+msgid "GtkSourceView was disabled when building VertexNote! Some options will not be available."
+msgstr "A GtkSourceView le volt tiltva a VertexNote készítésekor! Egyes kapcsolók nem lesznek elérhetők."
 
 #: ../src/core/gui/dialog/LatexSettingsPanel.cpp:158
 msgid "Unable to open global template file at {1}. Does it exist?"
@@ -1151,13 +1151,13 @@ msgid "Error: {1} is not a regular file. Please check your LaTeX template file s
 msgstr "Hiba történt: A(z) {1} fájl nem szabályos. Kérjük, ellenőrizze a LaTeX-sablonfájl beállításokat! "
 
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:116
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:84
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:84
 msgid "Save File"
 msgstr "Fájl mentése"
 
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:116
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:80
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:19
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:80
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:19
 msgid "_Cancel"
 msgstr "_Mégse"
 
@@ -1262,29 +1262,29 @@ msgstr "Eszköztárak"
 msgid "New"
 msgstr "Új"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:49
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:49
 msgid "Attach file to the journal"
 msgstr "Fájl csatolása a naplóhoz"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:81
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:81
 msgid "_Open"
 msgstr "_Megnyitás…"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:123
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:123
 msgid "Open template file"
 msgstr "Sablonfájl megnyitása"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:136
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:197
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:136
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:197
 #: ../src/core/gui/toolbarMenubar/ToolMenuHandler.cpp:290
 msgid "Open file"
 msgstr "Fájl megnyitása"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:155
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:155
 msgid "Annotate Pdf file"
 msgstr "PDF-fájl jegyzetének készítése"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:173
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:173
 msgid "Choose image file"
 msgstr "Képfájl kijelölése"
 
@@ -1421,8 +1421,8 @@ msgstr "Lista törlése"
 
 #: ../src/core/gui/menus/menubar/RecentDocumentsSubmenu.cpp:182
 msgctxt "In the submenu for removing recent documents, this will display on top of the list xournal++ files to separate them from PDF files"
-msgid "Xournal++ Files"
-msgstr "Xournal++-fájlok"
+msgid "VertexNote Files"
+msgstr "VertexNote-fájlok"
 
 #: ../src/core/gui/menus/menubar/RecentDocumentsSubmenu.cpp:191
 msgctxt "In the submenu for removing recent documents, this will display on top of the list PDF files to separate them from xournal++ files"
@@ -1905,19 +1905,19 @@ msgstr "Helyrehozhatatlan hiba"
 msgid "Failed to close image stream"
 msgstr "Nem sikerült bezárni a képfolyamot"
 
-#: ../src/core/model/XojPage.cpp:173
+#: ../src/core/model/NotePage.cpp:173
 msgid "Background"
 msgstr "Háttér"
 
 #: ../src/core/pdf/base/HybridPdfExport.cpp:46
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:198
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:244
+#: ../src/core/pdf/base/CairoPdfExport.cpp:198
+#: ../src/core/pdf/base/CairoPdfExport.cpp:244
 msgid "No pages to export!"
 msgstr "Nincs exportálandó oldal!"
 
 #: ../src/core/pdf/base/HybridPdfExport.cpp:54
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:207
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:249
+#: ../src/core/pdf/base/CairoPdfExport.cpp:207
+#: ../src/core/pdf/base/CairoPdfExport.cpp:249
 msgid "Failed to initialize PDF Cairo surface"
 msgstr "Nem sikerült a PDF-Kairó felületének inicializálása"
 
@@ -1937,7 +1937,7 @@ msgstr "Alapértelmezett"
 msgid "Error with overlay or final export:"
 msgstr "Hiba az átfedésben vagy a végső exportálásban:"
 
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:128
+#: ../src/core/pdf/base/CairoPdfExport.cpp:128
 msgid "Error while finalizing the PDF Cairo surface"
 msgstr "Hiba történt a PDF Cairo felületének véglegesítése közben"
 
@@ -2153,8 +2153,8 @@ msgstr "Hiba történt a(z) „{1}” fájl olvasásakor:\n"
 "{2}"
 
 #: ../src/util/PathUtil.cpp:409
-msgid "xournalpp-{1}"
-msgstr "xournalpp-{1}"
+msgid "vertex-note-{1}"
+msgstr "vertex-note-{1}"
 
 #: ../src/util/PathUtil.cpp:418
 msgid "Could not create folder: {1}\n"
@@ -2166,19 +2166,19 @@ msgstr "A következő mappa nem hozható létre: {1}\n"
 msgid "Error {1} executing system command: {2}"
 msgstr "Hibakód {1} a(z) {2} rendszerutasítás végrehajtása közben"
 
-#: ../src/util/XojMsgBox.cpp:186
+#: ../src/util/AppMessageBox.cpp:186
 msgid "The file {1} already exists! Do you want to replace it?"
 msgstr "A(z) {1} fájl már létezik! Szeretné lecserélni?"
 
-#: ../src/util/XojMsgBox.cpp:190
+#: ../src/util/AppMessageBox.cpp:190
 msgid "Select another name"
 msgstr "Másik név kijelölése"
 
-#: ../src/util/XojMsgBox.cpp:191
+#: ../src/util/AppMessageBox.cpp:191
 msgid "Replace"
 msgstr "Csere"
 
-#: ../src/util/XojMsgBox.cpp:216
+#: ../src/util/AppMessageBox.cpp:216
 msgid "Unable to open the link: {1}\n"
 "{2}"
 msgstr "Nem sikerült megnyitni a hivatkozást: {1}\n"
@@ -2189,46 +2189,46 @@ msgid "Error opening file \"{1}\" in zip archive:\n"
 "{2}"
 msgstr ""
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:121
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:121
 msgid "xoj-preview-extractor: call with INPUT.xoj OUTPUT.png"
 msgstr "xoj-preview-extractor: hívása INPUT.xoj-jal és OUTPUT.png-vel"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:134
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:134
 msgid "xoj-preview-extractor: file \"{1}\" is not .xoj file"
 msgstr "xoj-preview-extractor: a fájl \"{1}\" nem .xoj fájl"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:138
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:138
 msgid "xoj-preview-extractor: opening input file \"{1}\" failed"
 msgstr "xoj-preview-extractor: a bemeneti fájl \"{1}\" megnyitása sikertelen"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:142
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:142
 msgid "xoj-preview-extractor: file \"{1}\" contains no preview"
 msgstr "xoj-preview-extractor: a fájl \"{1}\" nem tartalmaz előnézetet"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:147
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:147
 msgid "xoj-preview-extractor: no preview and page found, maybe an invalid file?"
 msgstr "xoj-preview-extractor: nem található előnézet és oldal, talán érvénytelen a fájl?"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:187
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:187
 msgid "xoj-preview-extractor: could not find icon \"{1}\""
 msgstr "xoj-preview-extractor: nem található az ikon \"{1}\""
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:205
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:205
 msgid "xoj-preview-extractor: opening output file \"{1}\" failed"
 msgstr "xoj-preview-extractor: a kimeneti fájl \"{1}\" megnyitása sikertelen"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:212
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:212
 msgid "xoj-preview-extractor: successfully extracted"
 msgstr "xoj-preview-extractor: sikeresen kibontva"
 
 #: ../ui/about.glade:12
-msgid "About Xournal++"
-msgstr "A Xournal++ névjegye"
+msgid "About VertexNote"
+msgstr "A VertexNote névjegye"
 
 #: ../ui/about.glade:93
-msgid "<span size=\"xx-large\" weight=\"bold\">Xournal++</span>\n"
+msgid "<span size=\"xx-large\" weight=\"bold\">VertexNote</span>\n"
 "<i>The next generation</i>"
-msgstr "<span size=\"xx-large\" weight=\"bold\">Xournal++</span>\n"
+msgstr "<span size=\"xx-large\" weight=\"bold\">VertexNote</span>\n"
 "<i>Következő létrehozás</i>"
 
 #: ../ui/about.glade:133
@@ -2280,8 +2280,8 @@ msgid "Crash report"
 msgstr "Összeomlási jelentés"
 
 #: ../ui/crashDialog.glade:23
-msgid "Oops... Xournal++ encountered a fatal error"
-msgstr "Hoppá… Az Xournal++ végzetes hibába ütközött."
+msgid "Oops... VertexNote encountered a fatal error"
+msgstr "Hoppá… Az VertexNote végzetes hibába ütközött."
 
 #: ../ui/crashDialog.glade:39
 msgid "Please consider filling a bug report (see button below). Attach the following log to your report."
@@ -2778,8 +2778,8 @@ msgid "Plugins"
 msgstr "Beépülő modulok"
 
 #: ../ui/plugin.glade:81
-msgid "Plugin changes are only applied after Xournal++ is restarted"
-msgstr "A beépülő modulok módosításai csak a Xournal++ újraindítása után kerülnek alkalmazásra"
+msgid "Plugin changes are only applied after VertexNote is restarted"
+msgstr "A beépülő modulok módosításai csak a VertexNote újraindítása után kerülnek alkalmazásra"
 
 #: ../ui/pluginEntry.glade:59
 msgid "Author: "
@@ -2826,14 +2826,14 @@ msgid "Inertia"
 msgstr "Tehetetlenség"
 
 #: ../ui/settings.glade:291
-msgid "Xournal++ Preferences"
-msgstr "Xournal++ beállításai"
+msgid "VertexNote Preferences"
+msgstr "VertexNote beállításai"
 
 #: ../ui/settings.glade:352
 msgid "<i>If the document already was saved you can find it in the same folder with the extension .autosave.xopp\n"
-"If the file was not yet saved you can find it in ~/.cache/xournalpp/autosaves</i>"
+"If the file was not yet saved you can find it in ~/.cache/vertex-note/autosaves</i>"
 msgstr "<i>Ha a dokumentumot már elmentették, akkor ugyanabban a mappában találhatja meg .autosave.xopp kiterjesztéssel\n"
-"Ha a fájl még nem lett elmentve, megtalálhatja a ~/.cache/xournalpp/autosaves könyvtárban</i>"
+"Ha a fájl még nem lett elmentve, megtalálhatja a ~/.cache/vertex-note/autosaves könyvtárban</i>"
 
 #: ../ui/settings.glade:371
 msgid "Enable Autosaving"
@@ -2992,8 +2992,8 @@ msgid "Enable autoloading of most recent file on application startup"
 msgstr "Legutóbbi fájl automatikus betöltésének bekapcsolása az alkalmazás indításakor"
 
 #: ../ui/settings.glade:834
-msgid "If enabled Xournal++ will open the most recent document automatically that you can continue editing your last saved document."
-msgstr "Ha be van kapcsolva, a(z) Xournal++ automatikusan megnyitja a legutóbbi naplót, így folytathatja az utoljára mentett napló szerkesztését."
+msgid "If enabled VertexNote will open the most recent document automatically so you can continue editing your last saved document."
+msgstr "Ha be van kapcsolva, a(z) VertexNote automatikusan megnyitja a legutóbbi naplót, így folytathatja az utoljára mentett napló szerkesztését."
 
 #: ../ui/settings.glade:849
 msgid "Autoloading"
@@ -3246,8 +3246,8 @@ msgid "<i>You can configure devices, not identified by GTK as touchscreen, to be
 msgstr "<i>A GTK által nem érintőképernyőként azonosított eszközöket beállíthatja úgy, hogy azok úgy viselkedjenek, mintha azok lennének.</i>"
 
 #: ../ui/settings.glade:2341
-msgid "<i>If your hardware does not support hand recognition, Xournal++ can disable your touchscreen when your pen is near the screen.</i>"
-msgstr "<i>Ha hardvere nem támogatja a kézfelismerést, a Xournal++ letilthatja az érintőképernyőt, ha a toll a képernyő közelében van.</i>"
+msgid "<i>If your hardware does not support hand recognition, VertexNote can disable your touchscreen when your pen is near the screen.</i>"
+msgstr "<i>Ha hardvere nem támogatja a kézfelismerést, a VertexNote letilthatja az érintőképernyőt, ha a toll a képernyő közelében van.</i>"
 
 #: ../ui/settings.glade:2355
 msgid "Enable internal Hand Recognition"
@@ -4588,8 +4588,8 @@ msgid "Minimal Top"
 msgstr "Minimális felső"
 
 #: ../resources-templates/toolbar.ini.in:69
-msgid "Xournal++"
-msgstr "Xournal++"
+msgid "VertexNote"
+msgstr "VertexNote"
 
 #: ../resources-templates/toolbar.ini.in:77
 msgid "Tablet mode"
@@ -4611,155 +4611,155 @@ msgstr "Eszköztár jobbra"
 msgid "Empty Toolbar"
 msgstr "Üres eszköztár"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:6
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:6
 msgid "Note-taking application"
 msgstr "Jegyzetkészítő alkalmazás"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:7
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:7
 msgid "Take handwritten notes"
 msgstr "Készítsen kézzel írott jegyzeteket"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:8
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:8
 msgid "tablet;Wacom;pen input;PDF Annotation;markup;journal;handwriting;diary;notes;"
 msgstr "táblagép;Wacom;toll bevitel;PDF jegyzetelés;jelölés;napló;kézírás;napló;jegyzetek;"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:8
-msgid "Xournalpp Developers"
-msgstr "Xournalpp fejlesztők"
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:8
+msgid "VertexNote Developers"
+msgstr "VertexNote fejlesztők"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:10
-msgid "Xournal++ is a hand note-taking software written in C++ with the target of flexibility, functionality and speed. Stroke recognizer and other parts are based on Xournal Code, which you can find at sourceforge. It supports GNU/Linux (e.g. Ubuntu, Debian, Arch, SUSE), macOS and Windows. Supports pen input from devices such as Wacom Tablets."
-msgstr "A Xournal++ egy kézi jegyzetkészítő szoftver C++ nyelven, a rugalmasság, a funkcionalitás és a gyors cél érdekében. A löketfelismerő és egyéb részek Xournal kódon alapulnak, amelyet a sourceforge oldalon találhat meg. Támogatja a GNU/Linuxot (például Linux Mint, Ubuntu, Debian, Arch, SUSE), macOS-t és Windowst. Támogatja a tollbevitelt olyan eszközökről, mint a Wacom Tablet."
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:10
+msgid "VertexNote is a hand note-taking software written in C++ with the target of flexibility, functionality and speed. Stroke recognizer and other parts are based on Xournal Code, which you can find at sourceforge. It supports GNU/Linux (e.g. Ubuntu, Debian, Arch, SUSE), macOS and Windows. Supports pen input from devices such as Wacom Tablets."
+msgstr "A VertexNote egy kézi jegyzetkészítő szoftver C++ nyelven, a rugalmasság, a funkcionalitás és a gyors cél érdekében. A löketfelismerő és egyéb részek Xournal kódon alapulnak, amelyet a sourceforge oldalon találhat meg. Támogatja a GNU/Linuxot (például Linux Mint, Ubuntu, Debian, Arch, SUSE), macOS-t és Windowst. Támogatja a tollbevitelt olyan eszközökről, mint a Wacom Tablet."
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:17
-msgid "Xournal++ features:"
-msgstr "A Xournal++ jellemzői:"
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:17
+msgid "VertexNote features:"
+msgstr "A VertexNote jellemzői:"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:21
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:21
 msgid "Supports pressure-sensitive styluses and digital pen tables (e.g. Wacom, Huion, XP Pen, etc. tablets)"
 msgstr "Támogatja a nyomásérzékeny ceruzákat és digitális tollasztalokat (pl. Wacom, Huion, XP toll stb. táblagépek)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:22
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:22
 msgid "Paper backgrounds for note-taking, scratch paper, or whiteboarding"
 msgstr "Papírháttér jegyzeteléshez, papírkarcoláshoz vagy táblához"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:23
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:23
 msgid "Annotate on top of PDFs"
 msgstr "Jegyzetek a PDF-fájlok tetejére"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:24
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:24
 msgid "Select text from the background PDF, copy, highlight or underline it or strike it through"
 msgstr "Válasszon szöveget a háttér PDF-fájlokból, másolja, jelölje ki vagy húzza alá, vagy húzza át"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:25
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:25
 msgid "Follow links from the background PDF"
 msgstr "Kövesse a háttérben található PDF-fájlok hivatkozásait"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:26
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:26
 msgid "Export to a variety of formats including SVG, PNG and PDF, both from the GUI and command line"
 msgstr "Exportálás különféle formátumokba, beleértve az SVG-fájlokat, PNG-fájlokat és PDF-fájlokat, mind a grafikus felhasználói felületről, mind a parancssorból"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:27
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:27
 msgid "Different drawing tools (e.g. pen, highlighter) and stroke styles (e.g. solid, dotted)"
 msgstr "Különböző rajzeszközök (pl. toll, kiemelő) és körvonalstílusok (pl. tömör, pontozott)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:28
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:28
 msgid "Shape drawing (line, arrow, circle, rectangle, spline)"
 msgstr "Alakzat rajzolása (vonal, nyíl, kör, téglalap, spline)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:29
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:29
 msgid "Use the set-square and compass tools for measurements or as a guide for drawing straight lines, circular arcs and radii"
 msgstr "Négyzetbeállító és iránytű eszközök mérésekhez vagy útmutatóként egyenes vonalak, körívek és sugarak rajzolásához"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:30
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:30
 msgid "Fill shape functionality"
 msgstr "Kitöltési alakzat funkció"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:31
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:31
 msgid "Shape resizing and rotation"
 msgstr "Alakzat átméretezése és forgatása"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:32
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:32
 msgid "Rotation and grid snapping for precise alignment of objects"
 msgstr "Forgatás és rácspattintással az objektumok pontos igazítása érdekében"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:33
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:33
 msgid "Input stabilization for smoother writing/drawing"
 msgstr "Bemeneti stabilizálás a gördülékenyebb írás/rajzolás érdekében"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:34
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:34
 msgid "Text tool for adding text in different fonts, colors, and sizes"
 msgstr "Szöveg eszköz szövegek hozzáadásához különböző betűtípusokkal, színekkel és méretekkel"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:35
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:35
 msgid "Enhanced support for image insertion"
 msgstr "Továbbfejlesztett támogatás a képbeillesztéshez"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:36
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:36
 msgid "Eraser with multiple configurations"
 msgstr "Radír többféle beállítással"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:37
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:37
 msgid "LaTeX support (requires a working LaTeX installation) with customizable template and a resizable editor with syntax highlighting"
 msgstr "LaTeX támogatás (működő LaTeX telepítés szükséges) testreszabható sablonnal és átméretezhető szerkesztővel szintaktikai kiemeléssel"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:38
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:38
 msgid "Sidebar containing page previews with advanced page sorting, PDF bookmarks and layers (can be individually hidden/edited)"
 msgstr "Oldalsáv, amely oldal előnézeteket tartalmaz fejlett oldalrendezéssel, PDF könyvjelzőkkel és rétegekkel (egyenként elrejthető/szerkeszthető)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:39
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:39
 msgid "Allows mapping different tools/colors etc. to stylus/mouse buttons"
 msgstr "Lehetővé teszi a különböző eszközök/színek stb. hozzárendelését a ceruzához/egér gombokhoz"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:40
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:40
 msgid "Customizable toolbar with multiple configurations, e.g. to optimize toolbar for portrait/landscape"
 msgstr "Testreszabható eszköztár több beállítással, pl. az eszköztárat álló/fekvő nézetekhez optimalizálni"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:41
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:41
 msgid "Custom color palette support using the .gpl format"
 msgstr "Egyéni színpaletta támogatása a .gpl formátum használatával"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:42
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:42
 msgid "Page template definitions"
 msgstr "Oldalsablon definíciók"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:43
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:43
 msgid "Bug reporting, autosave, and auto backup tools"
 msgstr "Hibajelentési, automatikus mentési és automatikus biztonsági mentési eszközök"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:44
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:44
 msgid "Audio recording and playback alongside with handwritten notes"
 msgstr "Hangfelvétel és lejátszás kézzel írt jegyzetekkel"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:45
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:45
 msgid "Multi language support (over 20 languages supported)"
 msgstr "Több nyelv támogatása (több mint 20 nyelv támogatott)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:46
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:46
 msgid "Plugins using Lua scripting"
 msgstr "Beépülő modulok Lua parancsfájlok használatával"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:57
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:57
 msgid "Note taking"
 msgstr "Jegyzetelés"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:61
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:61
 msgid "PDF annotation"
 msgstr "PDF-megjegyzés"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:65
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:65
 msgid "LaTeX with customized preamble"
 msgstr "LaTeX testreszabott bevezetővel"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:4
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:4
 msgid "Xournal note file"
 msgstr "Xournal-jegyzetfájl"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:8
-msgid "Xournal++ note file"
-msgstr "Xournal++-jegyzetfájl"
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:8
+msgid "VertexNote note file"
+msgstr "VertexNote-jegyzetfájl"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:12
-msgid "Xournal++ page template file"
-msgstr "Xournal++-oldalsablonfájl"
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:12
+msgid "VertexNote page template file"
+msgstr "VertexNote-oldalsablonfájl"
 

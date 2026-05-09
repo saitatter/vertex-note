@@ -10,12 +10,12 @@
 
 #include "control/Control.h"      // for Control
 #include "control/ToolHandler.h"  // for ToolHandler
-#include "gui/PageView.h"         // for XojPageView
-#include "gui/XournalView.h"      // for XournalView
+#include "gui/PageView.h"         // for PageView
+#include "gui/VertexNoteView.h"      // for VertexNoteView
 #include "model/Document.h"       // for Document
 #include "model/PageRef.h"        // for PageRef
-#include "model/XojPage.h"        // for XojPage
-#include "pdf/base/XojPdfPage.h"  // for XojPdfRectangle, XojPdfPageSelectio...
+#include "model/NotePage.h"        // for NotePage
+#include "pdf/base/PdfPage.h"  // for PdfRectangle, PdfPageSelectio...
 #include "util/Assert.h"          // for xoj_assert
 #include "util/safe_casts.h"      // for strict_cast, as_signed, as_si...
 #include "view/overlays/PdfElementSelectionView.h"
@@ -43,7 +43,7 @@ PdfElemSelection::~PdfElemSelection() {
     this->viewPool->dispatchAndClear(xoj::view::PdfElementSelectionView::CANCEL_SELECTION_REQUEST, rg);
 }
 
-auto PdfElemSelection::finalizeSelectionAndRepaint(XojPdfPageSelectionStyle style) -> bool {
+auto PdfElemSelection::finalizeSelectionAndRepaint(PdfPageSelectionStyle style) -> bool {
     Range rg = getRegionBbox();
     bool result = this->finalizeSelection(style);
     rg = rg.unite(getRegionBbox());
@@ -53,10 +53,10 @@ auto PdfElemSelection::finalizeSelectionAndRepaint(XojPdfPageSelectionStyle styl
     return result;
 }
 
-bool PdfElemSelection::finalizeSelection(XojPdfPageSelectionStyle style) {
+bool PdfElemSelection::finalizeSelection(PdfPageSelectionStyle style) {
     this->finalized = true;
 
-    XojPdfPage::TextSelection selection = this->pdf->selectTextLines(this->bounds, style);
+    PdfPage::TextSelection selection = this->pdf->selectTextLines(this->bounds, style);
     this->selectedTextRegion = std::move(selection.region);
     this->selectedTextRects = std::move(selection.rects);
     this->selectedText = this->pdf->selectText(this->bounds, style);
@@ -66,12 +66,12 @@ bool PdfElemSelection::finalizeSelection(XojPdfPageSelectionStyle style) {
     return !this->selectedTextRects.empty();
 }
 
-XojPdfPageSelectionStyle PdfElemSelection::selectionStyleForToolType(ToolType type) {
+PdfPageSelectionStyle PdfElemSelection::selectionStyleForToolType(ToolType type) {
     switch (type) {
         case ToolType::TOOL_SELECT_PDF_TEXT_RECT:
-            return XojPdfPageSelectionStyle::Area;
+            return PdfPageSelectionStyle::Area;
         default:
-            return XojPdfPageSelectionStyle::Linear;
+            return PdfPageSelectionStyle::Linear;
     }
 }
 
@@ -84,7 +84,7 @@ Range PdfElemSelection::getRegionBbox() const {
     return Range();  // empty range
 }
 
-void PdfElemSelection::currentPos(double x, double y, XojPdfPageSelectionStyle style) {
+void PdfElemSelection::currentPos(double x, double y, PdfPageSelectionStyle style) {
     if (!this->pdf) {
         return;
     }
@@ -96,12 +96,12 @@ void PdfElemSelection::currentPos(double x, double y, XojPdfPageSelectionStyle s
 
     // Repaint the selected text area
     switch (style) {
-        case XojPdfPageSelectionStyle::Linear:
-        case XojPdfPageSelectionStyle::Word:
-        case XojPdfPageSelectionStyle::Line:
+        case PdfPageSelectionStyle::Linear:
+        case PdfPageSelectionStyle::Word:
+        case PdfPageSelectionStyle::Line:
             this->selectedTextRegion.reset(this->pdf->selectTextRegion(this->bounds, style), xoj::util::adopt);
             break;
-        case XojPdfPageSelectionStyle::Area: {
+        case PdfPageSelectionStyle::Area: {
             cairo_rectangle_int_t rect;
             rect.x = floor_cast<int>(std::min(bounds.x1, bounds.x2));
             rect.width = ceil_cast<int>(std::max(bounds.x1, bounds.x2)) - rect.x;
@@ -128,7 +128,7 @@ auto PdfElemSelection::contains(double x, double y) -> bool {
     return cairo_region_contains_point(this->selectedTextRegion.get(), static_cast<int>(x), static_cast<int>(y));
 }
 
-auto PdfElemSelection::getSelectedTextRects() const -> const std::vector<XojPdfRectangle>& { return selectedTextRects; }
+auto PdfElemSelection::getSelectedTextRects() const -> const std::vector<PdfRectangle>& { return selectedTextRects; }
 
 auto PdfElemSelection::getSelectedText() const -> const std::string& { return this->selectedText; }
 

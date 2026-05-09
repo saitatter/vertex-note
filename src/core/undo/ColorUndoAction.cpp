@@ -6,7 +6,7 @@
 #include "control/Control.h"
 #include "model/Document.h"
 #include "model/Element.h"    // for Element
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Rectangle.h"   // for Rectangle
 #include "util/i18n.h"        // for _

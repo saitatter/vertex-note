@@ -10,12 +10,12 @@
 #include "control/settings/Settings.h"             // for Settings
 #include "control/tools/InputHandler.h"            // for InputHandler
 #include "control/tools/SnapToGridInputHandler.h"  // for SnapToGridInputHandler
-#include "gui/XournalppCursor.h"                   // for XournalppCursor
+#include "gui/VertexNoteCursor.h"                   // for VertexNoteCursor
 #include "gui/inputdevices/PositionInputData.h"    // for PositionInputData
 #include "model/Document.h"                        // for Document
 #include "model/Layer.h"                           // for Layer
 #include "model/Stroke.h"                          // for Stroke
-#include "model/XojPage.h"                         // for XojPage
+#include "model/NotePage.h"                         // for NotePage
 #include "undo/InsertUndoAction.h"                 // for InsertUndoAction
 #include "undo/UndoRedoHandler.h"                  // for UndoRedoHandler
 #include "util/Assert.h"                           // for xoj_assert

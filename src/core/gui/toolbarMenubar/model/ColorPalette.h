@@ -65,7 +65,7 @@ struct Palette {
 
     /**
      * @brief Create default gpl file string
-     * Default xournalpp color scheme
+     * Default vertex-note color scheme
      *   0 0 0 Black
      *   0 128 0 Green
      *   0 192 255 Light Blue
@@ -83,7 +83,7 @@ struct Palette {
     static const std::string default_palette();
 
     /**
-     * @brief Create a default gpl file for the xournalpp color scheme
+     * @brief Create a default gpl file for the vertex-note color scheme
      * See default_palette() for further information.
      *
      * @param path to write gpl file to

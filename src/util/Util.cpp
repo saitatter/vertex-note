@@ -11,7 +11,7 @@
 #include "util/Color.h"              // for argb_to_GdkRGBA, rgb_to_GdkRGBA
 #include "util/OutputStream.h"       // for OutputStream
 #include "util/PlaceholderString.h"  // for PlaceholderString
-#include "util/XojMsgBox.h"          // for XojMsgBox
+#include "util/AppMessageBox.h"          // for AppMessageBox
 #include "util/i18n.h"               // for FS, _F
 
 #if defined(_MSC_VER)
@@ -64,7 +64,7 @@ void Util::writeCoordinateString(OutputStream* out, double xVal, double yVal) {
 void Util::systemWithMessage(const char* command) {
     if (auto errc = std::system(command); errc != 0) {
         std::string msg = FS(_F("Error {1} executing system command: {2}") % errc % command);
-        XojMsgBox::showErrorToUser(nullptr, msg);
+        AppMessageBox::showErrorToUser(nullptr, msg);
     }
 }
 

@@ -12,7 +12,7 @@
 #include "control/Control.h"                            // for Control
 #include "control/DeviceListHelper.h"                   // for InputDevice
 #include "control/settings/Settings.h"                  // for Settings
-#include "gui/XournalView.h"                            // for XournalView
+#include "gui/VertexNoteView.h"                            // for VertexNoteView
 #include "gui/dialog/DeviceTestingArea.h"               // for DeviceTestingArea
 #include "gui/inputdevices/GeometryToolInputHandler.h"  // for GeometryToolInputHandler
 #include "gui/inputdevices/HandRecognition.h"           // for HandRecognition
@@ -36,7 +36,7 @@
 class ScrollHandling;
 class ToolHandler;
 
-InputContext::InputContext(XournalView* view, ScrollHandling* scrollHandling):
+InputContext::InputContext(VertexNoteView* view, ScrollHandling* scrollHandling):
         view(view),
         scrollHandling(scrollHandling),
         settings(view->getControl()->getSettings()),
@@ -153,8 +153,8 @@ auto InputContext::handle(GdkEvent* sourceEvent) -> bool {
             sourceEvent, this->getSettings(),
             this->view ?
                     xoj::util::Point<double>{
-                            gtk_adjustment_get_value(GTK_XOURNAL(this->view->getWidget())->hadjustment),
-                            gtk_adjustment_get_value(GTK_XOURNAL(this->view->getWidget())->vadjustment)} :
+                            gtk_adjustment_get_value(GTK_VERTEX_NOTE(this->view->getWidget())->hadjustment),
+                            gtk_adjustment_get_value(GTK_VERTEX_NOTE(this->view->getWidget())->vadjustment)} :
                     xoj::util::Point<double>{0., 0.});
 
     // Add the device to the list of known devices if it is currently unknown
@@ -212,9 +212,9 @@ auto InputContext::handle(GdkEvent* sourceEvent) -> bool {
     return false;
 }
 
-auto InputContext::getXournal() const -> GtkXournal* { return GTK_XOURNAL(widget); }
+auto InputContext::getXournal() const -> GtkVertexNote* { return GTK_VERTEX_NOTE(widget); }
 
-auto InputContext::getView() const -> XournalView* { return view; }
+auto InputContext::getView() const -> VertexNoteView* { return view; }
 
 auto InputContext::getSettings() const -> Settings* { return settings; }
 

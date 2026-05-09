@@ -10,7 +10,7 @@
 
 #include "util/StringUtils.h"  // for StringUtils
 #include "util/Util.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"          // for FORMAT_STR, FS, _
 #include "util/serdesstream.h"  // for serdes_stream
 
@@ -178,5 +178,5 @@ auto Palette::parseErrorDialog(const std::exception& e) const -> void {
     msg_stream << "Until this is fixed, the application will use the default color palette." << std::endl;
 
     // Call later, to make sure the main window has been set up, so the popup is displayed in front of it (and modal)
-    Util::execInUiThread([msg = msg_stream.str()]() { XojMsgBox::showErrorToUser(nullptr, msg); });
+    Util::execInUiThread([msg = msg_stream.str()]() { AppMessageBox::showErrorToUser(nullptr, msg); });
 }

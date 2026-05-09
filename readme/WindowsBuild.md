@@ -1,10 +1,10 @@
 # Windows Build
 
-![Screenshot](./main-win.png?raw=true "Xournal++ Screenshot on Win10")
+![Screenshot](./main-win.png?raw=true "VertexNote Screenshot on Win10")
 
 ## Install Dependencies
 
-Xournal++ requires the following software to build:
+VertexNote requires the following software to build:
 
 1. Install [MSYS2](https://www.msys2.org/) to a short path without spaces.
 2. Install [NSIS](https://nsis.sourceforge.io/Download) to the standard directory.
@@ -64,6 +64,6 @@ Create the installer with
 ./windows-setup/package.sh build/
 ```
 
-The installer will be located at `build/xournalpp-setup.exe`. This
-command will also create a portable version of Xournal++ located in
+The installer will be located at `build/vertex-note-setup.exe`. This
+command will also create a portable version of VertexNote located in
 `build/dist`.

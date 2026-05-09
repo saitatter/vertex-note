@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Input handler for the setsquare.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -26,7 +26,7 @@ struct InputEvent;
 class SetsquareInputHandler: public GeometryToolInputHandler {
 
 public:
-    explicit SetsquareInputHandler(XournalView* xournalView, GeometryToolController* controller);
+    explicit SetsquareInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
     ~SetsquareInputHandler() noexcept override;
 
 private:

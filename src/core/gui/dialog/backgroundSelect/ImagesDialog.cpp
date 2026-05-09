@@ -7,17 +7,17 @@
 
 #include <glib-object.h>
 
-#include "gui/dialog/XojOpenDlg.h"  // for showOpenImageDialog
+#include "gui/dialog/DocumentOpenDialog.h"  // for showOpenImageDialog
 #include "gui/dialog/backgroundSelect/BackgroundSelectDialogBase.h"
 #include "gui/dialog/backgroundSelect/BaseElementView.h"
 #include "model/BackgroundImage.h"
 #include "model/Document.h"
 #include "model/PageRef.h"
 #include "model/PageType.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/PathUtil.h"
 #include "util/Util.h"  // for npos
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 
 #include "ImageElementView.h"
@@ -103,14 +103,14 @@ void ImagesDialog::filechooserButtonCallback(GtkButton*, ImagesDialog* dlg) {
         img.loadFile(p, &err);
         img.setAttach(attach);
         if (err) {
-            XojMsgBox::showErrorToUser(dlg->window.get(),
+            AppMessageBox::showErrorToUser(dlg->window.get(),
                                        FS(_F("This image could not be loaded. Error message: {1}") % err->message));
             g_error_free(err);
             return;
         }
 
         if (img.isEmpty()) {
-            XojMsgBox::showErrorToUser(dlg->window.get(), _("This image could not be loaded."));
+            AppMessageBox::showErrorToUser(dlg->window.get(), _("This image could not be loaded."));
             return;
         }
 

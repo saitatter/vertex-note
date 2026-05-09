@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * PDF Document Export Abstraction Interface - uses cairo for the annotations and overlay them on the original PDF using
  * another PDF library
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -16,13 +16,13 @@
 
 #include "util/ElementRange.h"  // for PageRangeVector
 
-#include "XojCairoPdfExport.h"  // for XojPdfExport
+#include "CairoPdfExport.h"  // for PdfExport
 #include "filesystem.h"         // for path
 
 class Document;
 class ProgressListener;
 
-class HybridPdfExport: public XojCairoPdfExport {
+class HybridPdfExport: public CairoPdfExport {
 public:
     HybridPdfExport(const Document* doc, ProgressListener* progressListener);
     ~HybridPdfExport() override;

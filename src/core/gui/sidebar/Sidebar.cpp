@@ -15,8 +15,8 @@
 #include "gui/sidebar/AbstractSidebarPage.h"         // for AbstractSidebar...
 #include "gui/sidebar/indextree/SidebarIndexPage.h"  // for SidebarIndexPage
 #include "model/Document.h"                          // for Document
-#include "model/XojPage.h"                           // for XojPage
-#include "pdf/base/XojPdfPage.h"                     // for XojPdfPageSPtr
+#include "model/NotePage.h"                           // for NotePage
+#include "pdf/base/PdfPage.h"                     // for PdfPagePtr
 #include "previews/layer/SidebarPreviewLayers.h"     // for SidebarPreviewL...
 #include "previews/page/SidebarPreviewPages.h"       // for SidebarPreviewP...
 #include "util/Util.h"                               // for npos

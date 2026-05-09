@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * The Main window
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -35,7 +35,7 @@ class ScrollHandling;
 class ToolMenuHandler;
 class ToolbarData;
 class ToolbarModel;
-class XournalView;
+class VertexNoteView;
 class PdfFloatingToolbox;
 class FloatingToolbox;
 class GladeSearchpath;
@@ -81,7 +81,7 @@ public:
 
     bool isDarkTheme() const;
 
-    XournalView* getXournal() const;
+    VertexNoteView* getXournal() const;
 
     void setMenubarVisible(bool visible);
     void setSidebarVisible(bool visible);
@@ -123,7 +123,7 @@ public:
     void setDPI() const;
 
 private:
-    void initXournalWidget();
+    void initVertexNoteWidget();
 
     void createToolbar();
 
@@ -158,7 +158,7 @@ private:
 private:
     Control* control;
 
-    std::unique_ptr<XournalView> xournal;
+    std::unique_ptr<VertexNoteView> xournal;
     GtkWidget* winXournal = nullptr;
     std::unique_ptr<ScrollHandling> scrollHandling;
 

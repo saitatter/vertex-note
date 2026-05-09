@@ -17,16 +17,16 @@
 #include "control/tools/SnapToGridInputHandler.h"  // for SnapToGridInputHan...
 #include "control/zoom/ZoomControl.h"              // for ZoomControl
 #include "gui/Layout.h"                            // for Layout
-#include "gui/PageView.h"                          // for XojPageView
-#include "gui/XournalView.h"                       // for XournalView
-#include "gui/XournalppCursor.h"                   // for XournalppCursor
+#include "gui/PageView.h"                          // for PageView
+#include "gui/VertexNoteView.h"                       // for VertexNoteView
+#include "gui/VertexNoteCursor.h"                   // for VertexNoteCursor
 #include "model/Document.h"                        // for Document
 #include "model/Element.h"                         // for Element::Index
 #include "model/ElementInsertionPosition.h"
 #include "model/Layer.h"                          // for Layer
 #include "model/LineStyle.h"                      // for LineStyle
 #include "model/Point.h"                          // for Point
-#include "model/XojPage.h"                        // for XojPage
+#include "model/NotePage.h"                        // for NotePage
 #include "undo/ArrangeUndoAction.h"               // for ArrangeUndoAction
 #include "undo/GeometryVertexMoveUndoAction.h"
 #include "undo/InsertUndoAction.h"                // for InsertsUndoAction
@@ -66,7 +66,7 @@ static auto computeBoxes(const InsertionOrder& elts) -> std::pair<Range, Range> 
             [](auto&& e) { return std::make_pair(Range(e.e->boundingRect()), Range(e.e->getSnappedBounds())); });
 }
 
-auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view, ElementPtr eOwn)
+auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr eOwn)
         -> std::unique_ptr<EditSelection> {
     auto* e = eOwn.get();  // Order of parameter evaluation is unspecified, eOwn.get() must be evaluated before moving
     InsertionOrder i{1};
@@ -75,7 +75,7 @@ auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer,
                                            Range(e->getSnappedBounds()));
 }
 
-auto createFromFloatingElements(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view,
+auto createFromFloatingElements(Control* ctrl, const PageRef& page, Layer* layer, PageView* view,
                                 InsertionOrder elts) -> std::pair<std::unique_ptr<EditSelection>, Range> {
     xoj_assert(std::is_sorted(elts.begin(), elts.end()));
     auto [bounds, snappingBounds] = computeBoxes(elts);
@@ -83,7 +83,7 @@ auto createFromFloatingElements(Control* ctrl, const PageRef& page, Layer* layer
             std::make_unique<EditSelection>(ctrl, std::move(elts), page, layer, view, bounds, snappingBounds), bounds);
 }
 
-auto createFromElementOnActiveLayer(Control* ctrl, const PageRef& page, XojPageView* view, const Element* e,
+auto createFromElementOnActiveLayer(Control* ctrl, const PageRef& page, PageView* view, const Element* e,
                                     Element::Index pos) -> std::unique_ptr<EditSelection> {
     Document* doc = ctrl->getDocument();
     Layer* layer = nullptr;
@@ -99,7 +99,7 @@ auto createFromElementOnActiveLayer(Control* ctrl, const PageRef& page, XojPageV
                                            Range(e->getSnappedBounds()));
 }
 
-auto createFromElementsOnActiveLayer(Control* ctrl, const PageRef& page, XojPageView* view, InsertionOrderRef elts)
+auto createFromElementsOnActiveLayer(Control* ctrl, const PageRef& page, PageView* view, InsertionOrderRef elts)
         -> std::unique_ptr<EditSelection> {
     xoj_assert(std::is_sorted(elts.begin(), elts.end()));
     Document* doc = ctrl->getDocument();
@@ -212,7 +212,7 @@ static int getBtnWidth(Control* c) {
     return std::max(10, round_cast<int>(c->getZoomControl()->getZoom100Value() * Util::DPI_NORMALIZATION_FACTOR / 8));
 }
 
-EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& page, Layer* layer, XojPageView* view,
+EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& page, Layer* layer, PageView* view,
                              const Range& bounds, const Range& snappingBounds):
         snappedBounds(snappingBounds),
         btnWidth(getBtnWidth(ctrl)),
@@ -245,7 +245,7 @@ EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& 
 }
 
 
-EditSelection::EditSelection(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view):
+EditSelection::EditSelection(Control* ctrl, const PageRef& page, Layer* layer, PageView* view):
         snappedBounds(Rectangle<double>{}),
         btnWidth(getBtnWidth(ctrl)),
         sourcePage(page),
@@ -266,7 +266,7 @@ EditSelection::~EditSelection() {
  * them to new layer if any or to the old if no new layer
  */
 void EditSelection::finalizeSelection() {
-    XojPageView* v = getPageViewUnderCursor();
+    PageView* v = getPageViewUnderCursor();
     if (v == nullptr) {  // Not on any page - move back to original page and position
         double ox = this->snappedBounds.x - this->x;
         double oy = this->snappedBounds.y - this->y;
@@ -727,10 +727,10 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
     this->view->getXournal()->repaintSelection();
 
     if (this->mouseDownType == CURSOR_SELECTION_MOVE) {
-        XojPageView* v = getPageViewUnderCursor();
+        PageView* v = getPageViewUnderCursor();
 
         if (v && v != this->view) {
-            XournalView* xournal = this->view->getXournal();
+            VertexNoteView* xournal = this->view->getXournal();
             const auto pageNr = xournal->getControl()->getDocument()->indexOf(v->getPage());
 
             xournal->pageSelected(pageNr);
@@ -771,7 +771,7 @@ void EditSelection::scaleShift(double fx, double fy, bool changeLeft, bool chang
     moveSelection(cxRot - cx, cyRot - cy);
 }
 
-auto EditSelection::getPageViewUnderCursor() -> XojPageView* {
+auto EditSelection::getPageViewUnderCursor() -> PageView* {
     double zoom = view->getXournal()->getZoom();
 
     // get grabbing hand position
@@ -781,7 +781,7 @@ auto EditSelection::getPageViewUnderCursor() -> XojPageView* {
 
 
     Layout* layout = this->view->getXournal()->getLayout();
-    XojPageView* v = layout->getPageViewAt(static_cast<int>(hx), static_cast<int>(hy));
+    PageView* v = layout->getPageViewAt(static_cast<int>(hx), static_cast<int>(hy));
 
     return v;
 }
@@ -790,7 +790,7 @@ auto EditSelection::getPageViewUnderCursor() -> XojPageView* {
  * Translate all coordinates which are relative to the current view to the new view,
  * and set the attribute view to the new view
  */
-void EditSelection::translateToView(XojPageView* v) {
+void EditSelection::translateToView(PageView* v) {
     double zoom = view->getXournal()->getZoom();
 
     double ox = this->snappedBounds.x - this->x;
@@ -860,10 +860,10 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
     updateMatrix();
 
     if (addMoveUndo) {
-        XojPageView* v = getPageViewUnderCursor();
+        PageView* v = getPageViewUnderCursor();
 
         if (v && v != this->view) {
-            XournalView* xournal = this->view->getXournal();
+            VertexNoteView* xournal = this->view->getXournal();
             const auto pageNr = xournal->getControl()->getDocument()->indexOf(v->getPage());
 
             xournal->pageSelected(pageNr);
@@ -972,8 +972,8 @@ bool EditSelection::handleEdgePan(EditSelection* self) {
         layout->scrollRelative(layoutScrollX, layoutScrollY);  // May create a page
         self->moveSelection(translateX, translateY);
 
-        if (XojPageView* v = self->getPageViewUnderCursor(); v && v != self->view) {
-            XournalView* xournal = self->view->getXournal();
+        if (PageView* v = self->getPageViewUnderCursor(); v && v != self->view) {
+            VertexNoteView* xournal = self->view->getXournal();
             xournal->pageSelected(xournal->getControl()->getDocument()->indexOf(v->getPage()));
 
             self->translateToView(v);
@@ -1012,7 +1012,7 @@ auto EditSelection::getBoundingBoxInView() const -> Rectangle<double> {
 void EditSelection::ensureWithinVisibleArea() {
     const Rectangle<double> viewRect = this->getBoundingBoxInView();
     // need to modify this to take into account the position
-    // of the object, plus typecast because XojPageView takes ints
+    // of the object, plus typecast because PageView takes ints
     this->view->getXournal()->ensureRectIsVisible(static_cast<int>(viewRect.x), static_cast<int>(viewRect.y),
                                                   static_cast<int>(viewRect.width), static_cast<int>(viewRect.height));
 }
@@ -1341,7 +1341,7 @@ void EditSelection::drawDeleteRect(cairo_t* cr, double x, double y, double zoom)
 }
 
 
-auto EditSelection::getView() -> XojPageView* { return this->view; }
+auto EditSelection::getView() -> PageView* { return this->view; }
 
 void EditSelection::serialize(ObjectOutputStream& out) const {
     out.writeObject("EditSelection");

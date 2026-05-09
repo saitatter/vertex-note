@@ -20,11 +20,11 @@
 #include "control/tools/EditSelection.h"        // for EditSelection
 #include "control/zoom/ZoomControl.h"           // for ZoomControl
 #include "gui/Layout.h"                         // for Layout
-#include "gui/PageView.h"                       // for XojPageView
-#include "gui/XournalView.h"                    // for XournalView
-#include "gui/XournalppCursor.h"                // for XournalppCursor
+#include "gui/PageView.h"                       // for PageView
+#include "gui/VertexNoteView.h"                    // for VertexNoteView
+#include "gui/VertexNoteCursor.h"                // for VertexNoteCursor
 #include "gui/scroll/ScrollHandling.h"          // for ScrollHandling
-#include "gui/widgets/XournalWidget.h"          // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"          // for GtkVertexNote
 #include "model/Point.h"                        // for Point, Point::NO_PRES...
 #include "util/Assert.h"                        // for xoj_assert
 #include "util/Point.h"                         // for Point
@@ -86,7 +86,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
     this->lastActionStartTimeStamp = event.timestamp;
     this->sequenceStartPosition = event.absolute;
 
-    XojPageView* currentPage = this->getPageAtCurrentPosition(event);
+    PageView* currentPage = this->getPageAtCurrentPosition(event);
     // set reference data for handling of entering/leaving page
     this->updateLastEvent(event);
 
@@ -110,9 +110,9 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
 
     this->penInWidget = true;
 
-    GtkXournal* xournal = this->inputContext->getXournal();
+    GtkVertexNote* xournal = this->inputContext->getXournal();
 
-    XournalppCursor* cursor = xournal->view->getCursor();
+    VertexNoteCursor* cursor = xournal->view->getCursor();
     cursor->setMouseDown(true);
 
 
@@ -138,7 +138,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
     if (changeSelection) {
         EditSelection* selection = xournal->selection;
 
-        XojPageView* view = selection->getView();
+        PageView* view = selection->getView();
         PositionInputData selectionPos = this->getInputDataRelativeToCurrentPage(view, event);
 
         // Check if event modifies selection instead of page
@@ -180,7 +180,7 @@ auto PenInputHandler::actionStart(InputEvent const& event) -> bool {
     return true;
 }
 
-double PenInputHandler::inferPressureValue(PositionInputData const& pos, XojPageView* page) {
+double PenInputHandler::inferPressureValue(PositionInputData const& pos, PageView* page) {
     PositionInputData lastPos = getInputDataRelativeToCurrentPage(page, this->lastEvent);
 
     double dt = (pos.timestamp - lastPos.timestamp) / 10.0;
@@ -206,7 +206,7 @@ double PenInputHandler::inferPressureValue(PositionInputData const& pos, XojPage
     return (newPressure * 1.1 + 0.8) / 2.0;
 }
 
-double PenInputHandler::filterPressure(PositionInputData const& pos, XojPageView* page) {
+double PenInputHandler::filterPressure(PositionInputData const& pos, PageView* page) {
     if (pressureMode == PressureMode::NO_PRESSURE) {
         return Point::NO_PRESSURE;
     }
@@ -287,7 +287,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
 
-    GtkXournal* xournal = this->inputContext->getXournal();
+    GtkVertexNote* xournal = this->inputContext->getXournal();
     ToolHandler* toolHandler = this->inputContext->getToolHandler();
 
     this->changeTool(event);
@@ -314,7 +314,7 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
 
     if (handleSelectionMove) {
         EditSelection* selection = xournal->selection;
-        XojPageView* view = selection->getView();
+        PageView* view = selection->getView();
 
         PositionInputData pos = this->getInputDataRelativeToCurrentPage(view, event);
 
@@ -328,9 +328,9 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
     }
 
     // Check if page was left / entered
-    XojPageView* lastEventPage = getPageAtCurrentPosition(this->lastEvent);
-    XojPageView* lastHitEventPage = getPageAtCurrentPosition(this->lastHitEvent);
-    XojPageView* currentPage = getPageAtCurrentPosition(event);
+    PageView* lastEventPage = getPageAtCurrentPosition(this->lastEvent);
+    PageView* lastHitEventPage = getPageAtCurrentPosition(this->lastHitEvent);
+    PageView* currentPage = getPageAtCurrentPosition(event);
 
     if (!toolHandler->isSinglePageTool()) {
         /*
@@ -401,8 +401,8 @@ auto PenInputHandler::actionMotion(InputEvent const& event) -> bool {
 }
 
 auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
-    GtkXournal* xournal = inputContext->getXournal();
-    XournalppCursor* cursor = xournal->view->getCursor();
+    GtkVertexNote* xournal = inputContext->getXournal();
+    VertexNoteCursor* cursor = xournal->view->getCursor();
     ToolHandler* toolHandler = inputContext->getToolHandler();
     EditSelection* selection = xournal->view->getSelection();
 
@@ -420,7 +420,7 @@ auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
 
     if (cancelAction) {
         // Cancel the sequence and trigger the necessary action
-        XojPageView* pageUnderTap = this->sequenceStartPage ? this->sequenceStartPage : getPageAtCurrentPosition(event);
+        PageView* pageUnderTap = this->sequenceStartPage ? this->sequenceStartPage : getPageAtCurrentPosition(event);
         if (pageUnderTap) {
             PositionInputData pos = getInputDataRelativeToCurrentPage(pageUnderTap, event);
             pageUnderTap->onSequenceCancelEvent(pos.deviceId);
@@ -445,7 +445,7 @@ auto PenInputHandler::actionEnd(InputEvent const& event) -> bool {
         this->sequenceStartPage->onButtonReleaseEvent(pos);
     } else {
         // Relay the event to the page
-        XojPageView* currentPage = getPageAtCurrentPosition(event);
+        PageView* currentPage = getPageAtCurrentPosition(event);
 
         /*
          * Use the last active page if you can't find a page under the cursor position.
@@ -491,7 +491,7 @@ void PenInputHandler::actionPerform(InputEvent const& event) {
               this->modifier3 ? "true" : "false");
 #endif
 
-    XojPageView* currentPage = this->getPageAtCurrentPosition(event);
+    PageView* currentPage = this->getPageAtCurrentPosition(event);
     if (currentPage == nullptr) {
         return;
     }
@@ -561,7 +561,7 @@ void PenInputHandler::actionLeaveWindow(InputEvent const& event) {
 
             while (!this->penInWidget) {
                 Util::execInUiThread([&]() {
-                    GtkXournal* xournal = this->inputContext->getXournal();
+                    GtkVertexNote* xournal = this->inputContext->getXournal();
                     xournal->layout->scrollRelative(offsetX, offsetY);
                 });
 

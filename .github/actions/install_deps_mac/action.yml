@@ -13,7 +13,7 @@ runs:
     uses: actions/cache/restore@v5
     with:
       path: "${{github.workspace}}/blob"
-      key: ${{ runner.os }}-${{ runner.arch }}-blob-${{ hashFiles('mac-setup/CI_jhbuild.sh', 'mac-setup/jhbuild-version.lock', 'mac-setup/xournalpp.modules', 'mac-setup/gtk-osx.patch') }}
+      key: ${{ runner.os }}-${{ runner.arch }}-blob-${{ hashFiles('mac-setup/CI_jhbuild.sh', 'mac-setup/jhbuild-version.lock', 'mac-setup/vertex-note.modules', 'mac-setup/gtk-osx.patch') }}
   - name: 'Install Perl XML::Parser' # Needed for compilation of Intltool in the blob
     if: steps.restore-blob.outputs.cache-hit != 'true'
     uses: perl-actions/install-with-cpm@v1
@@ -26,7 +26,7 @@ runs:
       brew install cargo-c
       mkdir "${{github.workspace}}/blob"
       bash "${{github.workspace}}/mac-setup/CI_jhbuild.sh"
-      mv xournalpp-binary-blob.tar.gz "${{github.workspace}}/blob/"
+      mv vertex-note-binary-blob.tar.gz "${{github.workspace}}/blob/"
   - name: 'Push blob to cache'
     if: steps.restore-blob.outputs.cache-hit != 'true'
     uses: actions/cache/save@v5
@@ -36,12 +36,12 @@ runs:
   # - uses: actions/upload-artifact@v6
   #   with:
   #     name: my-artifact
-  #     path: "${{github.workspace}}/blob/xournalpp-binary-blob.tar.gz"
+  #     path: "${{github.workspace}}/blob/vertex-note-binary-blob.tar.gz"
   - name: 'Extract blob'
     shell: bash
     run: |
       mkdir -p "${{inputs.install_path}}"
-      (cd "${{inputs.install_path}}" && tar xf "${{github.workspace}}/blob/xournalpp-binary-blob.tar.gz")
+      (cd "${{inputs.install_path}}" && tar xf "${{github.workspace}}/blob/vertex-note-binary-blob.tar.gz")
   - name: 'Install ninja'
     shell: bash
     run: |

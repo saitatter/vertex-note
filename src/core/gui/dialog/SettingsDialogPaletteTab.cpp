@@ -2,11 +2,11 @@
 
 #include "gui/toolbarMenubar/icon/ColorIcon.h"
 #include "util/PathUtil.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/gtk4_helper.h"
 #include "util/i18n.h"
 
-static const char* const G_OBJECT_PALETTE_PATH = "xournalpp.palettePath";
+static const char* const G_OBJECT_PALETTE_PATH = "vertexnote.palettePath";
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ void SettingsDialogPaletteTab::renderColorPaletteExplainLabel() const {
     gtk_label_set_wrap(colorPaletteExplainLabel, true);
     gtk_label_set_use_markup(colorPaletteExplainLabel, true);
     g_signal_connect(colorPaletteExplainLabel, "activate-link", G_CALLBACK(+[](GtkLabel*, gchar* uri, gpointer) {
-                         XojMsgBox::openURL(nullptr, uri);
+                         AppMessageBox::openURL(nullptr, uri);
                          return true;  // default handler does not work on Windows
                      }),
                      nullptr);

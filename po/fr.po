@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: xournalpp\n"
+"Project-Id-Version: vertex-note\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-03-28 16:29+0000\n"
 "PO-Revision-Date: 2026-03-28 17:05\n"
@@ -11,10 +11,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"X-Crowdin-Project: xournalpp\n"
+"X-Crowdin-Project: vertex-note\n"
 "X-Crowdin-Project-ID: 363247\n"
 "X-Crowdin-Language: fr\n"
-"X-Crowdin-File: /master/xournalpp.pot\n"
+"X-Crowdin-File: /master/vertex-note.pot\n"
 "X-Crowdin-File-ID: 38\n"
 
 #: ../src/core/control/AudioController.cpp:120
@@ -126,8 +126,8 @@ msgid "File version mismatch"
 msgstr "La version du fichier ne correspond pas"
 
 #: ../src/core/control/Control.cpp:1654
-msgid "The file being loaded has a file format version newer than the one currently supported by this version of Xournal++, so it may not load properly. Open anyways?"
-msgstr "Le fichier en cours de chargement utilise une version du format de fichier plus récente que celle actuellement supportée par cette version de Xournal++, il pourrait par conséquent ne pas se charger correctement. L'ouvrir quand même ?"
+msgid "The file being loaded has a file format version newer than the one currently supported by this version of VertexNote, so it may not load properly. Open anyways?"
+msgstr "Le fichier en cours de chargement utilise une version du format de fichier plus récente que celle actuellement supportée par cette version de VertexNote, il pourrait par conséquent ne pas se charger correctement. L'ouvrir quand même ?"
 
 #: ../src/core/control/Control.cpp:1677
 msgid "Error reading PDF file \"{1}\"\n"
@@ -210,7 +210,7 @@ msgid "Save As..."
 msgstr "Enregistrer sous..."
 
 #: ../src/core/control/Control.cpp:2202 ../src/core/control/jobs/SaveJob.cpp:25
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:85
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:85
 #: ../src/core/gui/toolbarMenubar/ToolMenuHandler.cpp:291
 msgid "Save"
 msgstr "Sauvegarder"
@@ -301,7 +301,7 @@ msgid "Could not load LaTeX PDF file"
 msgstr "Impossible de charger le fichier PDF LaTeX"
 
 #: ../src/core/control/PageBackgroundChangeController.cpp:111
-#: ../src/core/control/XournalMain.cpp:227
+#: ../src/core/control/VertexNoteMain.cpp:227
 #: ../src/core/control/xojfile/LoadHandler.cpp:260
 #: ../src/core/control/xojfile/LoadHandler.cpp:279
 msgid "Error reading PDF: {1}"
@@ -321,51 +321,51 @@ msgstr "Fond PDF manquant"
 msgid "Running print operation failed with {1}"
 msgstr "L'opération d'impression en cours a échoué avec {1}"
 
-#: ../src/core/control/XournalMain.cpp:120
+#: ../src/core/control/VertexNoteMain.cpp:120
 msgid "Failed to delete file: {1}"
 msgstr "Impossible de supprimer le fichier : {1}"
 
-#: ../src/core/control/XournalMain.cpp:122
+#: ../src/core/control/VertexNoteMain.cpp:122
 msgid "Please delete the file manually"
 msgstr "Veuillez supprimer le fichier manuellement"
 
-#: ../src/core/control/XournalMain.cpp:134
-msgid "Xournal++ crashed last time. Would you like to restore the last edited file?"
-msgstr "Xournal++ a échoué la dernière fois. Voulez-vous restaurer le dernier fichier modifié ?"
+#: ../src/core/control/VertexNoteMain.cpp:134
+msgid "VertexNote crashed last time. Would you like to restore the last edited file?"
+msgstr "VertexNote a échoué la dernière fois. Voulez-vous restaurer le dernier fichier modifié ?"
 
-#: ../src/core/control/XournalMain.cpp:137
+#: ../src/core/control/VertexNoteMain.cpp:137
 msgid "Recovery file detected"
 msgstr "Fichier de récupération détecté"
 
-#: ../src/core/control/XournalMain.cpp:138
+#: ../src/core/control/VertexNoteMain.cpp:138
 msgid "Delete file"
 msgstr "Supprimer le fichier"
 
-#: ../src/core/control/XournalMain.cpp:138
+#: ../src/core/control/VertexNoteMain.cpp:138
 msgid "Restore file"
 msgstr "Restaurer le fichier"
 
-#: ../src/core/control/XournalMain.cpp:158
+#: ../src/core/control/VertexNoteMain.cpp:158
 msgid "The background file \"{1}\" could not be found. It might have been moved, renamed or deleted."
 msgstr "Le fichier d'arrière-plan \"{1}\" n'a pas pu être trouvé. Il a peut-être été déplacé, renommé ou supprimé."
 
-#: ../src/core/control/XournalMain.cpp:173
+#: ../src/core/control/VertexNoteMain.cpp:173
 msgid "Error loading document: {1}"
 msgstr "Erreur lors du chargement du document : {1}"
 
-#: ../src/core/control/XournalMain.cpp:206
+#: ../src/core/control/VertexNoteMain.cpp:206
 msgid "Error exporting image: {1}"
 msgstr "Erreur lors de l'exportation de l'image : {1}"
 
-#: ../src/core/control/XournalMain.cpp:235
+#: ../src/core/control/VertexNoteMain.cpp:235
 msgid "Error saving document: {1}"
 msgstr "Erreur lors de l'enregistrement du document : {1}"
 
-#: ../src/core/control/XournalMain.cpp:265
+#: ../src/core/control/VertexNoteMain.cpp:265
 msgid "Error exporting PDF: {1}"
 msgstr "Erreur lors de l'exportation du PDF : {1}"
 
-#: ../src/core/control/XournalMain.cpp:371
+#: ../src/core/control/VertexNoteMain.cpp:371
 msgid "<span foreground='red' size='x-large'>Missing the needed UI file:\n"
 "<b>{1}</b></span>\n"
 "Could not find them at any location.\n"
@@ -379,54 +379,54 @@ msgstr "<span foreground='red' size='x-large'>Le fichier UI requis est manquant 
 "  Pas dans le chemin de travail\n"
 "  Pas dans {2}"
 
-#: ../src/core/control/XournalMain.cpp:376
+#: ../src/core/control/VertexNoteMain.cpp:376
 msgid "\n\n"
 "Will now attempt to run without this file."
 msgstr "\n\n"
 "Essai de démarrage sans fichier."
 
-#: ../src/core/control/XournalMain.cpp:398
-#: ../src/core/control/XournalMain.cpp:459
-msgid "Sorry, Xournal++ can only open one file at once.\n"
+#: ../src/core/control/VertexNoteMain.cpp:398
+#: ../src/core/control/VertexNoteMain.cpp:459
+msgid "Sorry, VertexNote can only open one file at once.\n"
 "Others are ignored."
-msgstr "Désolé, Xournal++ ne peut ouvrir qu'un seul fichier à la fois.\n"
+msgstr "Désolé, VertexNote ne peut ouvrir qu'un seul fichier à la fois.\n"
 "Les autres sont ignorés."
 
-#: ../src/core/control/XournalMain.cpp:409
+#: ../src/core/control/VertexNoteMain.cpp:409
 msgid "File {1} does not exist."
 msgstr "Le fichier {1} n’existe pas."
 
-#: ../src/core/control/XournalMain.cpp:413
+#: ../src/core/control/VertexNoteMain.cpp:413
 msgid "Filesystem error: {1}\n"
-"Sorry, Xournal++ cannot open the file: {2}\n"
+"Sorry, VertexNote cannot open the file: {2}\n"
 "Consider copying the file to a local directory."
 msgstr "Erreur de système de fichiers : {1}\n"
-"Désolé, Xournal++ ne peut pas ouvrir le fichier : {2}\n"
+"Désolé, VertexNote ne peut pas ouvrir le fichier : {2}\n"
 "Il peut être nécessaire de copier le fichier dans un répertoire local."
 
-#: ../src/core/control/XournalMain.cpp:616
+#: ../src/core/control/VertexNoteMain.cpp:616
 msgid "Jump to Page (first Page: 1)"
 msgstr "Aller à la page (première page : 1)"
 
-#: ../src/core/control/XournalMain.cpp:620
-msgid "Get version of xournalpp"
-msgstr "Récupérer la version de Xournal++"
+#: ../src/core/control/VertexNoteMain.cpp:620
+msgid "Get version of vertex-note"
+msgstr "Récupérer la version de VertexNote"
 
-#: ../src/core/control/XournalMain.cpp:622
+#: ../src/core/control/VertexNoteMain.cpp:622
 msgid "Disable audio for this session"
 msgstr "Désactiver l'audio pour cette session"
 
-#: ../src/core/control/XournalMain.cpp:624
+#: ../src/core/control/VertexNoteMain.cpp:624
 msgid "Open PDF in attach mode\n"
 "                                       Ignored if no PDF file is specified."
 msgstr "Ouvrir le PDF en mode pièce jointe\n"
 "                                       Sans effets si aucun fichier PDF n'est spécifié."
 
-#: ../src/core/control/XournalMain.cpp:628
+#: ../src/core/control/VertexNoteMain.cpp:628
 msgid "Save xopp-file with the background PDF specified as FILE"
 msgstr "Enregistrer le fichier xopp avec le PDF d'arrière-plan spécifié comme FICHIER"
 
-#: ../src/core/control/XournalMain.cpp:633
+#: ../src/core/control/VertexNoteMain.cpp:633
 msgid "Use the provided backend for PDF exports.\n"
 "                                       Available backends: {1}\n"
 "                                       No effect without -p/--create-pdf=foo.pdf"
@@ -434,11 +434,11 @@ msgstr "Choisir le backend utilisé pour les exportations PDF.\n"
 "                                       Backends disponibles : {1}\n"
 "                                       Aucun effet sans -p/--create-pdf=foo.pdf"
 
-#: ../src/core/control/XournalMain.cpp:642
+#: ../src/core/control/VertexNoteMain.cpp:642
 msgid "Export FILE as PDF"
 msgstr "Exporter le fichier FILE en PDF"
 
-#: ../src/core/control/XournalMain.cpp:645
+#: ../src/core/control/VertexNoteMain.cpp:645
 msgid "Export FILE as image files (one per page)\n"
 "                                       Guess the output format from the extension of IMGFILE\n"
 "                                       Supported formats: .png, .svg"
@@ -446,7 +446,7 @@ msgstr "Exporter le FICHIER en tant que fichiers image (une par page)\n"
 "                                       Devine le format de sortie à partir de l'extension de IMGFILE\n"
 "                                       Formats pris en charge : .png, .svg"
 
-#: ../src/core/control/XournalMain.cpp:651
+#: ../src/core/control/VertexNoteMain.cpp:651
 msgid "Export without background\n"
 "                                       The exported file has transparent or white background,\n"
 "                                       depending on what its format supports\n"
@@ -454,13 +454,13 @@ msgstr "Exporter sans arrière-plan\n"
 "                                       Le fichier exporté a un arrière-plan transparent ou blanc,\n"
 "                                       selon ce qui est supporté par son format\n"
 
-#: ../src/core/control/XournalMain.cpp:656
+#: ../src/core/control/VertexNoteMain.cpp:656
 msgid "Export without ruling\n"
 "                                       The exported file has no paper ruling\n"
 msgstr "Exporter sans les lignes\n"
 "                                       Le fichier exporté n'a ni lignes ni carreaux sur le papier\n"
 
-#: ../src/core/control/XournalMain.cpp:661
+#: ../src/core/control/VertexNoteMain.cpp:661
 msgid "Export layers progressively\n"
 "                                       In PDF export, Render layers progressively one by one.\n"
 "                                       This results in N export pages per page with N layers,\n"
@@ -472,25 +472,25 @@ msgstr "Exporter progressivement les calques\n"
 "                                       construisant progressivement la pile de calques.\n"
 "                                       Le fichier PDF généré peut être utilisé pour une présentation.\n"
 
-#: ../src/core/control/XournalMain.cpp:670
+#: ../src/core/control/VertexNoteMain.cpp:670
 msgid "Only export the pages specified by RANGE (e.g. \"2-3,5,7-\")\n"
 "                                       No effect without -p/--create-pdf or -i/--create-img"
 msgstr "Exporter uniquement les pages spécifiées par INTERVALLE (par exemple \"2-3,5,7-\")\n"
 "                                       Aucun effet sans -p/--create-pdf ou -i/--create-img"
 
-#: ../src/core/control/XournalMain.cpp:675
+#: ../src/core/control/VertexNoteMain.cpp:675
 msgid "Only export the layers specified by RANGE (e.g. \"2-3,5,7-\")\n"
 "                                       No effect without -p/--create-pdf or -i/--create-img"
 msgstr "Exporter uniquement les claques spécifiés par INTERVALLE (par exemple \"2-3,5,7-\")\n"
 "                                       Aucun effet sans -p/--create-pdf ou -i/--create-img"
 
-#: ../src/core/control/XournalMain.cpp:679
+#: ../src/core/control/VertexNoteMain.cpp:679
 msgid "Set DPI for PNG exports. Default is 300\n"
 "                                       No effect without -i/--create-img=foo.png"
 msgstr "Définir le DPI pour les exportations PNG. La valeur par défaut est 300\n"
 "                                       Pas d'effet sans -i/--create-img=foo.png"
 
-#: ../src/core/control/XournalMain.cpp:683
+#: ../src/core/control/VertexNoteMain.cpp:683
 msgid "Set page width for PNG exports\n"
 "                                       No effect without -i/--create-img=foo.png\n"
 "                                       Ignored if --export-png-dpi is used"
@@ -498,7 +498,7 @@ msgstr "Définir la largeur de page pour les exports PNG\n"
 "                                       Aucun effet sans -i/--create-img=foo.png\n"
 "                                       Ignoré si --export-png-dpi est utilisé"
 
-#: ../src/core/control/XournalMain.cpp:688
+#: ../src/core/control/VertexNoteMain.cpp:688
 msgid "Set page height for PNG exports\n"
 "                                       No effect without -i/--create-img=foo.png\n"
 "                                       Ignored if --export-png-dpi or --export-png-width is used"
@@ -506,11 +506,11 @@ msgstr "Définir la hauteur de page pour les exports PNG\n"
 "                                       Aucun effet sans -i/--create-img=foo.png\n"
 "                                       Ignoré si --export-png-dpi ou --export-png-width est utilisé"
 
-#: ../src/core/control/XournalMain.cpp:696
+#: ../src/core/control/VertexNoteMain.cpp:696
 msgid "Advanced export options"
 msgstr "Options d'exportation avancées"
 
-#: ../src/core/control/XournalMain.cpp:697
+#: ../src/core/control/VertexNoteMain.cpp:697
 msgid "Display advanced export options"
 msgstr "Afficher les options d'exportation avancées"
 
@@ -1092,7 +1092,7 @@ msgid "All files"
 msgstr "Tous les fichiers"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:22
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:203
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:203
 msgid "Supported files"
 msgstr "Fichiers pris en charge"
 
@@ -1101,13 +1101,13 @@ msgid "Xournal files"
 msgstr "Fichiers Xournal"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:33
-msgid "Xournal++ files"
-msgstr "Fichiers Xournal++"
+msgid "VertexNote files"
+msgstr "Fichiers VertexNote"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:34
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:120
-msgid "Xournal++ template"
-msgstr "Modèle Xournal++"
+msgid "VertexNote template"
+msgstr "Modèle VertexNote"
 
 #: ../src/core/gui/dialog/FileChooserFiltersHelper.cpp:40
 msgid "Image files"
@@ -1131,8 +1131,8 @@ msgid "LaTeX editor theme:"
 msgstr "Thème de l'éditeur LaTeX :"
 
 #: ../src/core/gui/dialog/LatexSettingsPanel.cpp:66
-msgid "GtkSourceView was disabled when building Xournal++! Some options will not be available."
-msgstr "GtkSourceView a été désactivé lors de la compilation de Xournal++ ! Certaines options ne seront pas disponibles."
+msgid "GtkSourceView was disabled when building VertexNote! Some options will not be available."
+msgstr "GtkSourceView a été désactivé lors de la compilation de VertexNote ! Certaines options ne seront pas disponibles."
 
 #: ../src/core/gui/dialog/LatexSettingsPanel.cpp:158
 msgid "Unable to open global template file at {1}. Does it exist?"
@@ -1151,13 +1151,13 @@ msgid "Error: {1} is not a regular file. Please check your LaTeX template file s
 msgstr "Erreur : {1} n'est pas un fichier normal. Veuillez vérifier les paramètres de votre fichier de modèle LaTeX. "
 
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:116
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:84
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:84
 msgid "Save File"
 msgstr "Enregistrer le fichier"
 
 #: ../src/core/gui/dialog/PageTemplateDialog.cpp:116
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:80
-#: ../src/core/gui/dialog/XojSaveDlg.cpp:19
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:80
+#: ../src/core/gui/dialog/DocumentSaveDialog.cpp:19
 msgid "_Cancel"
 msgstr "_Annuler"
 
@@ -1262,29 +1262,29 @@ msgstr "Barres d'outils"
 msgid "New"
 msgstr "Nouveau"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:49
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:49
 msgid "Attach file to the journal"
 msgstr "Attacher le fichier au journal"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:81
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:81
 msgid "_Open"
 msgstr "_Ouvrir"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:123
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:123
 msgid "Open template file"
 msgstr "Ouvrir un fichier modèle"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:136
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:197
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:136
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:197
 #: ../src/core/gui/toolbarMenubar/ToolMenuHandler.cpp:290
 msgid "Open file"
 msgstr "Ouvrir un fichier"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:155
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:155
 msgid "Annotate Pdf file"
 msgstr "Annoter un fichier Pdf"
 
-#: ../src/core/gui/dialog/XojOpenDlg.cpp:173
+#: ../src/core/gui/dialog/DocumentOpenDialog.cpp:173
 msgid "Choose image file"
 msgstr "Choisir un fichier image"
 
@@ -1421,8 +1421,8 @@ msgstr "Vider la liste"
 
 #: ../src/core/gui/menus/menubar/RecentDocumentsSubmenu.cpp:182
 msgctxt "In the submenu for removing recent documents, this will display on top of the list xournal++ files to separate them from PDF files"
-msgid "Xournal++ Files"
-msgstr "Fichiers Xournal++"
+msgid "VertexNote Files"
+msgstr "Fichiers VertexNote"
 
 #: ../src/core/gui/menus/menubar/RecentDocumentsSubmenu.cpp:191
 msgctxt "In the submenu for removing recent documents, this will display on top of the list PDF files to separate them from xournal++ files"
@@ -1905,19 +1905,19 @@ msgstr "Erreur irrécupérable"
 msgid "Failed to close image stream"
 msgstr "Impossible de fermer le flux de l'image"
 
-#: ../src/core/model/XojPage.cpp:173
+#: ../src/core/model/NotePage.cpp:173
 msgid "Background"
 msgstr "Arrière-plan"
 
 #: ../src/core/pdf/base/HybridPdfExport.cpp:46
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:198
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:244
+#: ../src/core/pdf/base/CairoPdfExport.cpp:198
+#: ../src/core/pdf/base/CairoPdfExport.cpp:244
 msgid "No pages to export!"
 msgstr "Aucune page à exporter !"
 
 #: ../src/core/pdf/base/HybridPdfExport.cpp:54
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:207
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:249
+#: ../src/core/pdf/base/CairoPdfExport.cpp:207
+#: ../src/core/pdf/base/CairoPdfExport.cpp:249
 msgid "Failed to initialize PDF Cairo surface"
 msgstr "Échec de l'initialisation de la surface PDF Cairo"
 
@@ -1937,7 +1937,7 @@ msgstr "Défaut"
 msgid "Error with overlay or final export:"
 msgstr "Erreur lors de la superposition ou de l'exportation finale :"
 
-#: ../src/core/pdf/base/XojCairoPdfExport.cpp:128
+#: ../src/core/pdf/base/CairoPdfExport.cpp:128
 msgid "Error while finalizing the PDF Cairo surface"
 msgstr "Erreur lors de la finalisation avec PDF Cairo surface"
 
@@ -2152,8 +2152,8 @@ msgid "Error reading \"{1}\":\n"
 msgstr "Erreur de lecture \"{1}\" : {2}"
 
 #: ../src/util/PathUtil.cpp:409
-msgid "xournalpp-{1}"
-msgstr "xournalpp-{1}"
+msgid "vertex-note-{1}"
+msgstr "vertex-note-{1}"
 
 #: ../src/util/PathUtil.cpp:418
 msgid "Could not create folder: {1}\n"
@@ -2165,19 +2165,19 @@ msgstr "Impossible de créer le dossier : {1}\n"
 msgid "Error {1} executing system command: {2}"
 msgstr "Erreur {1} lors de l'exécution d'une commande système : {2}"
 
-#: ../src/util/XojMsgBox.cpp:186
+#: ../src/util/AppMessageBox.cpp:186
 msgid "The file {1} already exists! Do you want to replace it?"
 msgstr "Le fichier {1} existe déjà ! Voulez-vous le remplacer ?"
 
-#: ../src/util/XojMsgBox.cpp:190
+#: ../src/util/AppMessageBox.cpp:190
 msgid "Select another name"
 msgstr "Sélectionnez un autre nom"
 
-#: ../src/util/XojMsgBox.cpp:191
+#: ../src/util/AppMessageBox.cpp:191
 msgid "Replace"
 msgstr "Remplacer"
 
-#: ../src/util/XojMsgBox.cpp:216
+#: ../src/util/AppMessageBox.cpp:216
 msgid "Unable to open the link: {1}\n"
 "{2}"
 msgstr "Impossible d'ouvrir le lien : {1}\n"
@@ -2188,46 +2188,46 @@ msgid "Error opening file \"{1}\" in zip archive:\n"
 "{2}"
 msgstr ""
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:121
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:121
 msgid "xoj-preview-extractor: call with INPUT.xoj OUTPUT.png"
 msgstr "xoj-preview-extractor: appeller avec INPUT.xoj OUTPUT.png"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:134
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:134
 msgid "xoj-preview-extractor: file \"{1}\" is not .xoj file"
 msgstr "xoj-preview-extractor: le fichier \"{1}\" n'est pas un fichier .xoj"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:138
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:138
 msgid "xoj-preview-extractor: opening input file \"{1}\" failed"
 msgstr "xoj-preview-extractor : l'ouverture du fichier d'entrée \"{1}\" a échoué"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:142
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:142
 msgid "xoj-preview-extractor: file \"{1}\" contains no preview"
 msgstr "xoj-preview-extractor: le fichier \"{1}\" ne contient aucun aperçu"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:147
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:147
 msgid "xoj-preview-extractor: no preview and page found, maybe an invalid file?"
 msgstr "xoj-preview-extractor: pas de prévisualisation et ni de page trouvée, peut-être un fichier invalide?"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:187
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:187
 msgid "xoj-preview-extractor: could not find icon \"{1}\""
 msgstr "icône introuvable \"{1}\""
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:205
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:205
 msgid "xoj-preview-extractor: opening output file \"{1}\" failed"
 msgstr "xoj-preview-extractor : l'ouverture du fichier de sortie \"{1}\" a échoué"
 
-#: ../src/xoj-preview-extractor/xournalpp-thumbnailer.cpp:212
+#: ../src/xoj-preview-extractor/vertex-note-thumbnailer.cpp:212
 msgid "xoj-preview-extractor: successfully extracted"
 msgstr "extracteur-xoj-preview : extrait avec succès"
 
 #: ../ui/about.glade:12
-msgid "About Xournal++"
-msgstr "À propos de Xournal++"
+msgid "About VertexNote"
+msgstr "À propos de VertexNote"
 
 #: ../ui/about.glade:93
-msgid "<span size=\"xx-large\" weight=\"bold\">Xournal++</span>\n"
+msgid "<span size=\"xx-large\" weight=\"bold\">VertexNote</span>\n"
 "<i>The next generation</i>"
-msgstr "<span size=\"xx-large\" weight=\"bold\">Xournal++</span>\n"
+msgstr "<span size=\"xx-large\" weight=\"bold\">VertexNote</span>\n"
 "<i>La prochaine génération</i>"
 
 #: ../ui/about.glade:133
@@ -2279,8 +2279,8 @@ msgid "Crash report"
 msgstr "Rapport d'erreur"
 
 #: ../ui/crashDialog.glade:23
-msgid "Oops... Xournal++ encountered a fatal error"
-msgstr "Oups... Xournal++ a rencontré une erreur fatale"
+msgid "Oops... VertexNote encountered a fatal error"
+msgstr "Oups... VertexNote a rencontré une erreur fatale"
 
 #: ../ui/crashDialog.glade:39
 msgid "Please consider filling a bug report (see button below). Attach the following log to your report."
@@ -2777,8 +2777,8 @@ msgid "Plugins"
 msgstr "Greffons"
 
 #: ../ui/plugin.glade:81
-msgid "Plugin changes are only applied after Xournal++ is restarted"
-msgstr "Les modifications de greffons ne sont appliquées qu'après le redémarrage de Xournal++"
+msgid "Plugin changes are only applied after VertexNote is restarted"
+msgstr "Les modifications de greffons ne sont appliquées qu'après le redémarrage de VertexNote"
 
 #: ../ui/pluginEntry.glade:59
 msgid "Author: "
@@ -2825,14 +2825,14 @@ msgid "Inertia"
 msgstr "Inertie"
 
 #: ../ui/settings.glade:291
-msgid "Xournal++ Preferences"
-msgstr "Préférences Xournal++"
+msgid "VertexNote Preferences"
+msgstr "Préférences VertexNote"
 
 #: ../ui/settings.glade:352
 msgid "<i>If the document already was saved you can find it in the same folder with the extension .autosave.xopp\n"
-"If the file was not yet saved you can find it in ~/.cache/xournalpp/autosaves</i>"
+"If the file was not yet saved you can find it in ~/.cache/vertex-note/autosaves</i>"
 msgstr "<i>Si le document a déjà été enregistré, vous pouvez le trouver dans le même dossier avec l'extension .autosave.xopp.\n"
-"Si le fichier n'a pas encore été enregistré, vous pouvez le trouver dans ~/.cache/xournalpp/autosaves</i>"
+"Si le fichier n'a pas encore été enregistré, vous pouvez le trouver dans ~/.cache/vertex-note/autosaves</i>"
 
 #: ../ui/settings.glade:371
 msgid "Enable Autosaving"
@@ -2990,8 +2990,8 @@ msgid "Enable autoloading of most recent file on application startup"
 msgstr "Activer le chargement automatique du fichier le plus récent lorsque l'application démarre"
 
 #: ../ui/settings.glade:834
-msgid "If enabled Xournal++ will open the most recent document automatically that you can continue editing your last saved document."
-msgstr "Si activée, Xournal++ rouvrira automatiquement le document le plus récent pour que vous puissiez continuer à l'éditer."
+msgid "If enabled VertexNote will open the most recent document automatically so you can continue editing your last saved document."
+msgstr "Si activée, VertexNote rouvrira automatiquement le document le plus récent pour que vous puissiez continuer à l'éditer."
 
 #: ../ui/settings.glade:849
 msgid "Autoloading"
@@ -3165,7 +3165,7 @@ msgstr "Activer la sensibilité à la pression"
 
 #: ../ui/settings.glade:1785
 msgid "<i>Some devices report unexpectedly small or large pressures. This can be fixed by setting a minimum pressure or scaling the pressure reported by the device.</i>"
-msgstr "<i>Certains appareils indiquent des pressions anormalement petites ou grandes. Pour contourner ce problème, Xournal++ peut définir une pression minimale ou ajuster l'échelle de pression indiquée par l'appareil.</i>"
+msgstr "<i>Certains appareils indiquent des pressions anormalement petites ou grandes. Pour contourner ce problème, VertexNote peut définir une pression minimale ou ajuster l'échelle de pression indiquée par l'appareil.</i>"
 
 #: ../ui/settings.glade:1807
 msgid "Minimum Pressure:"
@@ -3244,8 +3244,8 @@ msgid "<i>You can configure devices, not identified by GTK as touchscreen, to be
 msgstr "<i>Vous pouvez configurer des périphériques, non identifiés par GTK comme écran tactile, pour vous comporter comme s'ils étaient un.</i>"
 
 #: ../ui/settings.glade:2341
-msgid "<i>If your hardware does not support hand recognition, Xournal++ can disable your touchscreen when your pen is near the screen.</i>"
-msgstr "<i>Si votre matériel ne supporte pas la reconnaissance manuelle, Xournal++ peut désactiver votre écran tactile lorsque votre stylet est proche de l'écran.</i>"
+msgid "<i>If your hardware does not support hand recognition, VertexNote can disable your touchscreen when your pen is near the screen.</i>"
+msgstr "<i>Si votre matériel ne supporte pas la reconnaissance manuelle, VertexNote peut désactiver votre écran tactile lorsque votre stylet est proche de l'écran.</i>"
 
 #: ../ui/settings.glade:2355
 msgid "Enable internal Hand Recognition"
@@ -4586,8 +4586,8 @@ msgid "Minimal Top"
 msgstr "Minimaliste, en haut"
 
 #: ../resources-templates/toolbar.ini.in:69
-msgid "Xournal++"
-msgstr "Xournal++"
+msgid "VertexNote"
+msgstr "VertexNote"
 
 #: ../resources-templates/toolbar.ini.in:77
 msgid "Tablet mode"
@@ -4609,155 +4609,155 @@ msgstr "Barre d'outils, à droite"
 msgid "Empty Toolbar"
 msgstr "Vide"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:6
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:6
 msgid "Note-taking application"
 msgstr "Application de prise de notes"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:7
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:7
 msgid "Take handwritten notes"
 msgstr "Prendre des notes manuscrites"
 
-#: ../desktop/com.github.xournalpp.xournalpp.desktop.in:8
+#: ../desktop/com.github.vertex-note.vertex-note.desktop.in:8
 msgid "tablet;Wacom;pen input;PDF Annotation;markup;journal;handwriting;diary;notes;"
 msgstr "tablette;Wacom;pen input;PDF Annotation;markup;journal;manuscrit;agenda;notes;"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:8
-msgid "Xournalpp Developers"
-msgstr "Développeurs de Xournal++"
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:8
+msgid "VertexNote Developers"
+msgstr "Développeurs de VertexNote"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:10
-msgid "Xournal++ is a hand note-taking software written in C++ with the target of flexibility, functionality and speed. Stroke recognizer and other parts are based on Xournal Code, which you can find at sourceforge. It supports GNU/Linux (e.g. Ubuntu, Debian, Arch, SUSE), macOS and Windows. Supports pen input from devices such as Wacom Tablets."
-msgstr "Xournal++ est un logiciel de prise de notes écrit en C++ qui combine flexibilité, fonctionnalité et rapidité. Certaines parties du code, dont la reconnaissance de traits, sont basées sur le code du projet Xournal, que vous pouvez trouver sur Sourceforge. Xournal++ prend en charge GNU/Linux (Ubuntu, Debian, Arch, ou SUSE par exemple), macOS et Windows, et supporte l'entrée à partir de stylets à l'aide de périphériques tels que les tablettes Wacom."
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:10
+msgid "VertexNote is a hand note-taking software written in C++ with the target of flexibility, functionality and speed. Stroke recognizer and other parts are based on Xournal Code, which you can find at sourceforge. It supports GNU/Linux (e.g. Ubuntu, Debian, Arch, SUSE), macOS and Windows. Supports pen input from devices such as Wacom Tablets."
+msgstr "VertexNote est un logiciel de prise de notes écrit en C++ qui combine flexibilité, fonctionnalité et rapidité. Certaines parties du code, dont la reconnaissance de traits, sont basées sur le code du projet Xournal, que vous pouvez trouver sur Sourceforge. VertexNote prend en charge GNU/Linux (Ubuntu, Debian, Arch, ou SUSE par exemple), macOS et Windows, et supporte l'entrée à partir de stylets à l'aide de périphériques tels que les tablettes Wacom."
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:17
-msgid "Xournal++ features:"
-msgstr "Fonctionnalités de Xournal++ :"
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:17
+msgid "VertexNote features:"
+msgstr "Fonctionnalités de VertexNote :"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:21
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:21
 msgid "Supports pressure-sensitive styluses and digital pen tables (e.g. Wacom, Huion, XP Pen, etc. tablets)"
 msgstr "Prise en charge des stylets sensibles à la pression et des tablettes de dessin numériques (ex : Wacom, Huion, XP Pen, etc.)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:22
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:22
 msgid "Paper backgrounds for note-taking, scratch paper, or whiteboarding"
 msgstr "Arrière-plans de style papier pour la prise de notes, papier à gratter ou tableau blanc"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:23
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:23
 msgid "Annotate on top of PDFs"
 msgstr "Annoter par-dessus des PDF"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:24
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:24
 msgid "Select text from the background PDF, copy, highlight or underline it or strike it through"
 msgstr "Sélectionner du texte à partir du PDF en arrière-plan, le copier, le surligner, le souligner ou le barrer"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:25
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:25
 msgid "Follow links from the background PDF"
 msgstr "Suivre des liens depuis le PDF en arrière-plan"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:26
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:26
 msgid "Export to a variety of formats including SVG, PNG and PDF, both from the GUI and command line"
 msgstr "Export vers une variété de formats, y compris SVG, PNG et PDF, à partir de l'interface graphique et de la ligne de commande"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:27
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:27
 msgid "Different drawing tools (e.g. pen, highlighter) and stroke styles (e.g. solid, dotted)"
 msgstr "Différents outils de dessin (ex. stylo, surligneur) et styles de traits (ex. : solide, en pointillés)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:28
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:28
 msgid "Shape drawing (line, arrow, circle, rectangle, spline)"
 msgstr "Dessin de formes (lignes, flèches, cercles, rectangles, gaussiennes)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:29
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:29
 msgid "Use the set-square and compass tools for measurements or as a guide for drawing straight lines, circular arcs and radii"
 msgstr "Utilisez les outils rapporteur et compas pour mesurer, ou bien comme guide pour tracer des lignes droites, des arcs circulaires et des rayons"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:30
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:30
 msgid "Fill shape functionality"
 msgstr "Possibilité de remplir la forme tracée"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:31
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:31
 msgid "Shape resizing and rotation"
 msgstr "Redimensionnement et rotation de la forme sélectionnée"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:32
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:32
 msgid "Rotation and grid snapping for precise alignment of objects"
 msgstr "Rotation et aimantage à la grille pour un alignement précis des objets"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:33
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:33
 msgid "Input stabilization for smoother writing/drawing"
 msgstr "Stabilisation de l'entrée pour une écriture et un dessin plus lisses"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:34
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:34
 msgid "Text tool for adding text in different fonts, colors, and sizes"
 msgstr "Outil texte pour ajouter du texte dans différentes polices, couleurs et tailles"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:35
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:35
 msgid "Enhanced support for image insertion"
 msgstr "Support avancé pour l'insertion d'images"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:36
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:36
 msgid "Eraser with multiple configurations"
 msgstr "Effaceur avec plusieurs configurations"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:37
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:37
 msgid "LaTeX support (requires a working LaTeX installation) with customizable template and a resizable editor with syntax highlighting"
 msgstr "Support LaTeX (nécessite une installation LaTeX fonctionnelle) avec un modèle personnalisable et un éditeur redimensionnable avec coloration syntaxique"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:38
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:38
 msgid "Sidebar containing page previews with advanced page sorting, PDF bookmarks and layers (can be individually hidden/edited)"
 msgstr "Barre latérale contenant des aperçus de page avec un tri avancé des pages, des signets PDF et des couches (peuvent être masqués individuellement/édités)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:39
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:39
 msgid "Allows mapping different tools/colors etc. to stylus/mouse buttons"
 msgstr "Permet d'associer différents outils/couleurs, etc. à des boutons du stylet/de la souris"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:40
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:40
 msgid "Customizable toolbar with multiple configurations, e.g. to optimize toolbar for portrait/landscape"
 msgstr "Barre d'outils personnalisable avec plusieurs configurations (ex. : optimisée pour le mode portrait/paysage)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:41
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:41
 msgid "Custom color palette support using the .gpl format"
 msgstr "Prise en charge de palettes de couleurs personnalisées au format .gpl"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:42
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:42
 msgid "Page template definitions"
 msgstr "Définitions de modèles de page"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:43
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:43
 msgid "Bug reporting, autosave, and auto backup tools"
 msgstr "Outils facilitant les rapports de bugs, la sauvegarde et les backups automatiques"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:44
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:44
 msgid "Audio recording and playback alongside with handwritten notes"
 msgstr "Enregistrement et lecture d'audios intégrés aux notes manuscrites"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:45
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:45
 msgid "Multi language support (over 20 languages supported)"
 msgstr "Prise en charge multilingue (plus de 20 langues supportées)"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:46
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:46
 msgid "Plugins using Lua scripting"
 msgstr "Greffons utilisant le script Lua"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:57
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:57
 msgid "Note taking"
 msgstr "Prise de notes"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:61
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:61
 msgid "PDF annotation"
 msgstr "Annotation PDF"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in:65
+#: ../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in:65
 msgid "LaTeX with customized preamble"
 msgstr "LaTeX avec préambule personnalisé"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:4
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:4
 msgid "Xournal note file"
 msgstr "Fichier de note Xournal"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:8
-msgid "Xournal++ note file"
-msgstr "Fichier de note Xournal++"
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:8
+msgid "VertexNote note file"
+msgstr "Fichier de note VertexNote"
 
-#: ../resources-templates/com.github.xournalpp.xournalpp.xml.in:12
-msgid "Xournal++ page template file"
-msgstr "Fichier-modèle de page Xournal++"
+#: ../resources-templates/com.github.vertex-note.vertex-note.xml.in:12
+msgid "VertexNote page template file"
+msgstr "Fichier-modèle de page VertexNote"
 

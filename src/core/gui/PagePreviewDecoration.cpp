@@ -100,7 +100,7 @@ void PagePreviewDecoration::drawPageNumberWithSquareBackground(cairo_t* cr, Side
         Util::cairo_set_source_rgbi(cr, Colors::xopp_darkslategray);
 
         // In case the page is not selected draw a border around the preview to match the selected
-        // See discussion: <https://github.com/xournalpp/xournalpp/issues/4624#issue-1557719574>
+        // See discussion: <https://github.com/saitatter/vertex-note/issues/4624#issue-1557719574>
         cairo_set_line_width(cr, PREVIEW_BORDER_LINE_WIDTH);
         cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
         cairo_set_line_join(cr, CAIRO_LINE_JOIN_BEVEL);

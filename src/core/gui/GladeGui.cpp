@@ -7,7 +7,7 @@
 
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/StringUtils.h"        // for char_cast
-#include "util/XojMsgBox.h"          // for XojMsgBox
+#include "util/AppMessageBox.h"          // for AppMessageBox
 #include "util/i18n.h"               // for FS, _F
 
 #include "GladeSearchpath.h"  // for GladeSearchpath
@@ -30,7 +30,7 @@ GladeGui::GladeGui(GladeSearchpath* gladeSearchPath, const std::string& glade, c
             msg += error->message;
             g_error_free(error);
         }
-        XojMsgBox::showErrorAndQuit(msg, -1);
+        AppMessageBox::showErrorAndQuit(msg, -1);
     }
 
     this->window = get(mainWnd);

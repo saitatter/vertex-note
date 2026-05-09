@@ -53,7 +53,7 @@ switch ($Task) {
     }
     "run" {
         Build-VertexNote
-        Invoke-Mingw64 "./build/mingw64/src/xournalpp.exe"
+        Invoke-Mingw64 "./build/mingw64/src/vertex-note.exe"
     }
     "all" {
         Configure-VertexNote

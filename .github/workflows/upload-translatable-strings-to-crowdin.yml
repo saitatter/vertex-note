@@ -4,13 +4,13 @@ on:
   push:
     branches: [ "master", "release-*" ]
     paths-ignore:
-      - 'po/xournalpp.pot'
+      - 'po/vertex-note.pot'
       - 'po/*.po'
   workflow_dispatch:  # This can be triggered from the Github Action tab on the website
 
 jobs:
   Translations:
-    if: github.repository == 'xournalpp/xournalpp'
+    if: github.repository == 'vertex-note/vertex-note'
     name: Upload translatable strings to Crowdin
     runs-on: ubuntu-latest
     permissions:

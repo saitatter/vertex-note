@@ -1,38 +1,38 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Class for render and repaint pages
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
 
 #pragma once
 
-class XojPageView;
-class XournalView;
+class PageView;
+class VertexNoteView;
 
 class RepaintHandler {
 public:
-    RepaintHandler(XournalView* xournal);
+    RepaintHandler(VertexNoteView* xournal);
     virtual ~RepaintHandler();
 
 public:
     /**
      * Repaint a page
      */
-    void repaintPage(const XojPageView* view);
+    void repaintPage(const PageView* view);
 
     /// Repaint a page area, coordinates are in pixel-coordinates, relative to the page's upper-left corner
-    void repaintPageArea(const XojPageView* view, int x1, int y1, int x2, int y2);
+    void repaintPageArea(const PageView* view, int x1, int y1, int x2, int y2);
 
     /**
      * Repaints the page border (at least)
      */
-    void repaintPageBorder(const XojPageView* view);
+    void repaintPageBorder(const PageView* view);
 
 private:
-    XournalView* xournal;
+    VertexNoteView* xournal;
 };

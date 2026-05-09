@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Element used to mark the document as changed, so it is changed after restore.
  * Without this, it's unchanged and does not ask for save
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

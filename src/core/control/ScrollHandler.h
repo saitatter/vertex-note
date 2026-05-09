@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Scroll handler
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -15,7 +15,7 @@
 
 #include "gui/widgets/SpinPageAdapter.h"  // for SpinPageListener
 #include "model/PageRef.h"                // for PageRef
-#include "pdf/base/XojPdfPage.h"          // for XojPdfRectangle
+#include "pdf/base/PdfPage.h"          // for PdfRectangle
 
 class Control;
 class LinkDestination;
@@ -32,15 +32,15 @@ public:
     void goToLastPage();
     void goToFirstPage();
 
-    void scrollToPage(const PageRef& page, XojPdfRectangle rect = {0, 0, -1, -1});
-    void scrollToPage(size_t page, XojPdfRectangle rect = {0, 0, -1, -1});
+    void scrollToPage(const PageRef& page, PdfRectangle rect = {0, 0, -1, -1});
+    void scrollToPage(size_t page, PdfRectangle rect = {0, 0, -1, -1});
 
     /**
      * Jump to a page, recording a navigation point first.
      * Use this for user-initiated jumps (search, goto dialog, etc.)
      */
-    void jumpToPage(const PageRef& page, XojPdfRectangle rect = {0, 0, -1, -1});
-    void jumpToPage(size_t page, XojPdfRectangle rect = {0, 0, -1, -1});
+    void jumpToPage(const PageRef& page, PdfRectangle rect = {0, 0, -1, -1});
+    void jumpToPage(size_t page, PdfRectangle rect = {0, 0, -1, -1});
 
     void scrollToAnnotatedPage(bool next);
 

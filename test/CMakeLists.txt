@@ -8,7 +8,7 @@ endif()
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
-# Prevent GoogleTest from being installed with xournalpp
+# Prevent GoogleTest from being installed with vertex-note
 # This is not strictly necessary as add_subdirectory is called on ./test with
 # EXCLUDE_FROM_ALL, but better safe than sorry
 option(INSTALL_GTEST "Enable installation of googletest." OFF)

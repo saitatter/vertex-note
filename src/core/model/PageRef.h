@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A page reference, should only allocated on the stack
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -12,7 +12,7 @@
 
 #include <memory>
 
-class XojPage;
+class NotePage;
 
-using PageRef = std::shared_ptr<XojPage>;
-using ConstPageRef = std::shared_ptr<const XojPage>;
+using PageRef = std::shared_ptr<NotePage>;
+using ConstPageRef = std::shared_ptr<const NotePage>;

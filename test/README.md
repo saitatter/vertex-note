@@ -21,7 +21,7 @@ TEST(HelloTest, BasicAssertions) {
 ```
 as taken from the official [docs](http://google.github.io/googletest/quickstart-cmake.html).
 
-As all `test/unit_tests` are built with a dependency on `xournalpp-core` you can include any file from `src` as you would in the main code.
+As all `test/unit_tests` are built with a dependency on `vertexnote-core` you can include any file from `src` as you would in the main code.
 
 ## How to migrate existing CPPUnit Test code
 

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Base view for shapes or spline tools
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -36,7 +36,7 @@ protected:
     const double fillingAlpha;
 
     // The mask is only for filled highlighter strokes, to avoid artefacts as in
-    // https://github.com/xournalpp/xournalpp/issues/3709
+    // https://github.com/saitatter/vertex-note/issues/3709
     mutable Mask mask;
     const bool needMask;
     /// @brief The part of the mask that needs to be wiped to ensure the filling is correctly drawn.

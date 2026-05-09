@@ -12,12 +12,12 @@
 #include "model/Document.h"       // for Document
 #include "model/PageRef.h"        // for PageRef
 #include "model/PageType.h"       // for PageType
-#include "model/XojPage.h"        // for XojPage
-#include "pdf/base/XojPdfPage.h"  // for XojPdfPageSPtr, XojPdfPage
+#include "model/NotePage.h"        // for NotePage
+#include "pdf/base/PdfPage.h"  // for PdfPagePtr, PdfPage
 #include "util/Assert.h"          // for xoj_assert
 #include "util/PathUtil.h"        // for getConfigFile
 #include "util/StringUtils.h"     // for char_cast
-#include "util/XojMsgBox.h"       // for XojMsgBox
+#include "util/AppMessageBox.h"       // for AppMessageBox
 #include "util/i18n.h"            // for _
 #include "util/safe_casts.h"      // for strict_cast
 #include "view/DocumentView.h"    // for DocumentView
@@ -43,7 +43,7 @@ void drawPage(GtkPrintOperation* /*operation*/, GtkPrintContext* context, int pa
 
     // For better quality printing, we use a dedicated pdf-renderer in this case
     if (page->getBackgroundType().isPdfPage()) {
-        XojPdfPageSPtr popplerPage = doc->getPdfPage(page->getPdfPageNr());
+        PdfPagePtr popplerPage = doc->getPdfPage(page->getPdfPageNr());
         if (popplerPage) {
             popplerPage->renderForPrinting(cr);
         }
@@ -120,7 +120,7 @@ void PrintHandler::print(Document* doc, size_t currentPage, GtkWindow* parent) {
     } else if (GTK_PRINT_OPERATION_RESULT_ERROR == res) {
         xoj_assert(error);
         std::string msg = FS(_F("Running print operation failed with {1}") % error->message);
-        XojMsgBox::showErrorToUser(nullptr, msg);
+        AppMessageBox::showErrorToUser(nullptr, msg);
         g_error_free(error);
     }
 

@@ -116,7 +116,7 @@ function app.registerUi(opts) end
 --- *
 --- Change the action's state, triggering callbacks. Actions with state from an enum
 --- (like ToolType, ToolSize, EraserSize, OrderChange) should be accessed via the app.C
---- table of constants for consistency between different versions of Xournal++
+--- table of constants for consistency between different versions of VertexNote
 --- @param action Action
 --- @param state any
 --- 
@@ -132,7 +132,7 @@ function app.changeActionState(action, state) end
 --- Get the action's state. For actions with state from an enum
 --- (like ToolType, ToolSize, EraserSize, OrderChange) the return value should
 --- be compared to the app.C table of constants for consistency between different
---- versions of Xournal++
+--- versions of VertexNote
 --- @param action Action
 --- 
 --- Example 1: if app.getActionState("select-tool") == app.C.Tool_text then
@@ -148,7 +148,7 @@ function app.getActionState(action) end
 --- *
 --- Activate the action, triggering callbacks. Actions with state from an enum
 --- (like ToolType, ToolSize, EraserSize, OrderChange) should be accessed via the app.C
---- table of constants for consistency between different versions of Xournal++
+--- table of constants for consistency between different versions of VertexNote
 --- @param action Action
 --- @param state nil | any
 --- 
@@ -620,7 +620,7 @@ function app.changeBackgroundPdfPageNr(pageNr, relative) end
 ---      "y"      = number
 ---   }
 ---   -- bounds used for snapping (doesn't include padding and doesn't account to line width)
----   -- for more information see https://github.com/xournalpp/xournalpp/pull/4359#issuecomment-1304395011
+---   -- for more information see https://github.com/saitatter/vertex-note/pull/4359#issuecomment-1304395011
 ---   "snappedBounds" = {
 ---      "width"  = number
 ---      "height" = number
@@ -938,8 +938,8 @@ function app.addImages(opts) end
 ---     {
 ---         ["x"] = number,
 ---         ["y"] = number,
----         ["width"] = number,    (width when inserted into Xournal++)
----         ["height"] = number,   (height when inserted into Xournal++)
+---         ["width"] = number,    (width when inserted into VertexNote)
+---         ["height"] = number,   (height when inserted into VertexNote)
 ---         ["data"] = string,
 ---         ["format"] = string,
 ---         ["imageWidth"] = integer,

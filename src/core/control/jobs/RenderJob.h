@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A job which redraws a page or a page region
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -16,7 +16,7 @@
 
 #include "Job.h"  // for Job, JobType
 
-class XojPageView;
+class PageView;
 namespace xoj::util {
 template <class T>
 class Rectangle;
@@ -24,7 +24,7 @@ class Rectangle;
 
 class RenderJob: public Job {
 public:
-    RenderJob(XojPageView* view);
+    RenderJob(PageView* view);
 
 protected:
     ~RenderJob() override = default;
@@ -46,5 +46,5 @@ private:
     void renderToBuffer(cairo_t* cr) const;
 
 private:
-    XojPageView* view;
+    PageView* view;
 };

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * [Header description]
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -21,7 +21,7 @@
 #include <glib.h>     // for gulong
 #include <gtk/gtk.h>  // for GtkWidget
 
-#include "gui/widgets/XournalWidget.h"  // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"  // for GtkVertexNote
 
 class GeometryToolInputHandler;
 class KeyboardInputHandler;
@@ -32,14 +32,14 @@ class StylusInputHandler;
 class ToolHandler;
 class TouchDrawingInputHandler;
 class TouchInputHandler;
-class XournalView;
+class VertexNoteView;
 class DeviceTestingArea;
 class HandRecognition;
 
 class InputContext final {
 
 private:
-    XournalView* view;
+    VertexNoteView* view;
     ScrollHandling* scrollHandling;
     Settings* settings;
 
@@ -68,7 +68,7 @@ public:
     };
 
 public:
-    InputContext(XournalView* view, ScrollHandling* scrollHandling);
+    InputContext(VertexNoteView* view, ScrollHandling* scrollHandling);
     ~InputContext();
 
     /// Make an input context for testing purposes
@@ -96,8 +96,8 @@ public:
     void connect(GtkWidget* widget, bool connectKeyboardHandler = true,
                  std::optional<std::function<void(GdkEvent*)>> logfunction = std::nullopt);
 
-    GtkXournal* getXournal() const;
-    XournalView* getView() const;
+    GtkVertexNote* getXournal() const;
+    VertexNoteView* getView() const;
     ToolHandler* getToolHandler() const;
     Settings* getSettings() const;
     HandRecognition* getHandRecognition() const;

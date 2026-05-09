@@ -5,7 +5,7 @@
 #include "control/Control.h"
 #include "model/Document.h"
 #include "model/Stroke.h"     // for Stroke
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 #include "util/Range.h"       // for Range
 #include "util/i18n.h"        // for _

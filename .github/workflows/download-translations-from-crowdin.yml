@@ -8,7 +8,7 @@ on:
 
 jobs:
   Translations:
-    if: github.repository == 'xournalpp/xournalpp'
+    if: github.repository == 'vertex-note/vertex-note'
     name: Download translated strings from Crowdin
     strategy:
       matrix:
@@ -104,11 +104,11 @@ jobs:
             if [ $RET -ne 0 ]; then
               git commit -am tmp
               git switch ${{ env.localization-branch }}
-              git restore --source ${{ matrix.branch }} -- po/*.po po/xournalpp.pot
+              git restore --source ${{ matrix.branch }} -- po/*.po po/vertex-note.pot
             fi
           fi
 
-          git add -- po/*.po po/xournalpp.pot
+          git add -- po/*.po po/vertex-note.pot
           git status
           git commit -m "${{ env.commit-message }}"
           git push origin ${{ env.localization-branch }}:${{ env.localization-branch }}

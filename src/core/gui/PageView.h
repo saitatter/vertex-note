@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Displays a single page
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -43,23 +43,23 @@ class Settings;
 class Text;
 class TextEditor;
 class VerticalToolHandler;
-class XournalView;
+class VertexNoteView;
 class Element;
 class PositionInputData;
 class Range;
 class TexImage;
-class XojPdfRectangle;
-class XojPdfPage;
+class PdfRectangle;
+class PdfPage;
 
 namespace xoj::view {
 class OverlayView;
 class ToolView;
 }  // namespace xoj::view
 
-class XojPageView: public LegacyRedrawable, public PageListener, public xoj::view::Repaintable {
+class PageView: public LegacyRedrawable, public PageListener, public xoj::view::Repaintable {
 public:
-    XojPageView(XournalView* xournal, const PageRef& page);
-    ~XojPageView() override;
+    PageView(VertexNoteView* xournal, const PageRef& page);
+    ~PageView() override;
 
 public:
     void addOverlayView(std::unique_ptr<xoj::view::OverlayView>);
@@ -105,7 +105,7 @@ public:
     void endSpline();
     void endPendingInput();
 
-    bool searchTextOnPage(const std::string& text, size_t index, size_t* occurrences, XojPdfRectangle* matchRect);
+    bool searchTextOnPage(const std::string& text, size_t index, size_t* occurrences, PdfRectangle* matchRect);
 
     bool onKeyPressEvent(const KeyEvent& event);
     bool onKeyReleaseEvent(const KeyEvent& event);
@@ -130,21 +130,21 @@ public:
     TextEditor* getTextEditor();
 
     /**
-     * Returns a reference to the XojPage belonging to
+     * Returns a reference to the NotePage belonging to
      * this PageView
      */
     const PageRef getPage() const;
 
-    XournalView* getXournal() const;
+    VertexNoteView* getXournal() const;
 
     /**
-     * Returns the width of this XojPageView as displayed
+     * Returns the width of this PageView as displayed
      * on the display taking into account the current zoom
      */
     int getDisplayWidth() const;
     double getDisplayWidthDouble() const;
     /**
-     * Returns the height of this XojPageView as displayed
+     * Returns the height of this PageView as displayed
      * on the display taking into account the current zoom
      */
     int getDisplayHeight() const;
@@ -172,7 +172,7 @@ public:  // event handler
     bool onButtonClickEvent(const PositionInputData& pos);
 
     /**
-     * This method actually repaints the XojPageView, triggering
+     * This method actually repaints the PageView, triggering
      * a rerender call if necessary
      */
     bool paintPage(cairo_t* cr, GdkRectangle* rect);
@@ -201,7 +201,7 @@ private:
      * @param child is added to the dialog before displaying.
      * @returns a pointer to the popover dialog.
      */
-    GtkWidget* makePopover(const XojPdfRectangle& rect, GtkWidget* child);
+    GtkWidget* makePopover(const PdfRectangle& rect, GtkWidget* child);
 
     /**
      * @brief Display a popover with link-related actions, if one
@@ -212,7 +212,7 @@ private:
      * @param targetY the link must contain (targetX, targetY)
      * @returns true iff a URI link exists near/at (targetX, targetY) => a popover was shown
      */
-    bool displayLinkPopover(std::shared_ptr<XojPdfPage> page, double targetX, double targetY);
+    bool displayLinkPopover(std::shared_ptr<PdfPage> page, double targetX, double targetY);
 
     /**
      * Shows the floating toolbox at the location of an input event
@@ -228,7 +228,7 @@ private:
 
 private:
     PageRef page;
-    XournalView* xournal = nullptr;
+    VertexNoteView* xournal = nullptr;
     Settings* settings = nullptr;
     std::unique_ptr<EraseHandler> eraser;
     std::unique_ptr<InputHandler> inputHandler;

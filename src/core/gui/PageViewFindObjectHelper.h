@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Helper classes to find / select objects
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -24,14 +24,14 @@
 #include "control/tools/EditSelection.h"
 #include "gui/PageView.h"
 #include "model/Layer.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/safe_casts.h"
 
-#include "XournalView.h"
+#include "VertexNoteView.h"
 
 class BaseSelectObject {
 public:
-    BaseSelectObject(XojPageView* view): view(view) {}
+    BaseSelectObject(PageView* view): view(view) {}
 
     virtual ~BaseSelectObject() = default;
 
@@ -67,14 +67,14 @@ protected:
     virtual bool checkLayer(const Layer* l) = 0;
 
 protected:
-    XojPageView* view{};
+    PageView* view{};
     double x{0};
     double y{0};
 };
 
 class SelectObject: public BaseSelectObject {
 public:
-    SelectObject(XojPageView* view): BaseSelectObject(view), match(nullptr) {}
+    SelectObject(PageView* view): BaseSelectObject(view), match(nullptr) {}
 
     ~SelectObject() override = default;
 
@@ -142,7 +142,7 @@ private:
 
 class PlayObject: public BaseSelectObject {
 public:
-    PlayObject(XojPageView* view): BaseSelectObject(view), playbackStatus() {}
+    PlayObject(PageView* view): BaseSelectObject(view), playbackStatus() {}
 
     ~PlayObject() override = default;
 

@@ -5,10 +5,10 @@
 #include <gtk/gtk.h>      //
 
 #include "control/Control.h"                // for Control
-#include "control/jobs/XournalScheduler.h"  // for XournalScheduler
+#include "control/jobs/VertexNoteScheduler.h"  // for VertexNoteScheduler
 #include "control/settings/Settings.h"      // for Settings
 #include "gui/Shadow.h"                     // for Shadow
-#include "model/XojPage.h"                  // for XojPage
+#include "model/NotePage.h"                  // for NotePage
 #include "util/Color.h"                     // for cairo_set_source_rgbi
 #include "util/gtk4_helper.h"               //
 #include "util/i18n.h"                      // for _

@@ -23,7 +23,7 @@ void attachConsole() {
         HANDLE job = CreateJobObject(NULL, NULL);
 
         if (job != NULL) {
-            // Terminate the console process automatically when Xournal++ exits.
+            // Terminate the console process automatically when VertexNote exits.
             JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInformation = {0};
             jobInformation.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 

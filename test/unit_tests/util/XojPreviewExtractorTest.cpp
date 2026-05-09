@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include "util/XojPreviewExtractor.h"
+#include "util/LegacyXojPreviewExtractor.h"
 
 #include "config-test.h"
 
@@ -22,22 +22,22 @@
 using namespace std;
 
 
-TEST(UtilXojPreviewExtractor, testNonExistingFile) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testNonExistingFile) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"THIS FILE DOES NOT EXIST.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_COULD_NOT_OPEN_FILE, result);
 }
 
-TEST(UtilXojPreviewExtractor, testExtensionCheck) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testExtensionCheck) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"test.xoi"));
 
     EXPECT_EQ(PREVIEW_RESULT_BAD_FILE_EXTENSION, result);
 }
 
-TEST(UtilXojPreviewExtractor, testLoadGzipped) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testLoadGzipped) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"preview-test.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
@@ -47,8 +47,8 @@ TEST(UtilXojPreviewExtractor, testLoadGzipped) {
     EXPECT_EQ(string("CppUnitTestString"), string((char*)imageData, (size_t)dataLen));
 }
 
-TEST(UtilXojPreviewExtractor, testLoadGzipped2) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testLoadGzipped2) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"preview-test2.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
@@ -58,8 +58,8 @@ TEST(UtilXojPreviewExtractor, testLoadGzipped2) {
     EXPECT_EQ((std::string::size_type)2856, dataLen);
 }
 
-TEST(UtilXojPreviewExtractor, testLoad1Unzipped) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testLoad1Unzipped) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"preview-test.unzipped.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
@@ -69,8 +69,8 @@ TEST(UtilXojPreviewExtractor, testLoad1Unzipped) {
     EXPECT_EQ(string("CppUnitTestString"), string((char*)imageData, (size_t)dataLen));
 }
 
-TEST(UtilXojPreviewExtractor, testLoad1Zipped) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testLoad1Zipped) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"packaged_xopp/testPreview.xopp"));
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
@@ -80,8 +80,8 @@ TEST(UtilXojPreviewExtractor, testLoad1Zipped) {
     EXPECT_EQ(string("CppUnitTestString \n"), string((char*)imageData, (size_t)dataLen));
 }
 
-TEST(UtilXojPreviewExtractor, testLoad2Zipped) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testLoad2Zipped) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"packaged_xopp/testPreview2.xopp"));
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
@@ -91,15 +91,15 @@ TEST(UtilXojPreviewExtractor, testLoad2Zipped) {
     EXPECT_EQ((std::string::size_type)804, dataLen);
 }
 
-TEST(UtilXojPreviewExtractor, testNoPreview) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testNoPreview) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"preview-test-no-preview.unzipped.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_NO_PREVIEW, result);
 }
 
-TEST(UtilXojPreviewExtractor, testInvalidFile) {
-    XojPreviewExtractor extractor;
+TEST(UtilLegacyXojPreviewExtractor, testInvalidFile) {
+    LegacyXojPreviewExtractor extractor;
     PreviewExtractResult result = extractor.readFile(GET_TESTFILE(u8"preview-test-invalid.xoj"));
 
     EXPECT_EQ(PREVIEW_RESULT_ERROR_READING_PREVIEW, result);

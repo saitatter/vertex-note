@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Xournal++ is programmed with C++20.
+VertexNote is programmed with C++20.
 Therefore it is required to install a compiler implementing those features.
 We recommend using at least GCC 11 or Clang 15.
 
@@ -108,33 +108,33 @@ the Adwaita icon theme into the AppImage.
 
 ### Flatpak
 
-The Flatpak manifest for Xournal++ is located at
-https://github.com/flathub/com.github.xournalpp.xournalpp, which should be
+The Flatpak manifest for VertexNote is located at
+https://github.com/flathub/app.vertexnote.VertexNote, which should be
 cloned into a separate directory before building.
 
 ```sh
-git clone https://github.com/flathub/com.github.xournalpp.xournalpp xournalpp-flatpak
-cd xournalpp-flatpak
+git clone https://github.com/flathub/app.vertexnote.VertexNote vertex-note-flatpak
+cd vertex-note-flatpak
 ```
 
 By default, the Flatpak manifest will build the latest stable version of
-Xournal++. You can change the built version to a specific commit by editing the
+VertexNote. You can change the built version to a specific commit by editing the
 commit information of the manifest to the desired commit (also specify tags if
 building a stable version):
 
 ```diff
-   - name: xournalpp
+   - name: vertex-note
      buildsystem: cmake-ninja
      sources:
        - type: git
-         url: https://github.com/xournalpp/xournalpp
+         url: https://github.com/saitatter/vertex-note
 -        commit: 14e9012b94e005112387dbb7d2ed59274d542885
 -        tag: 1.0.10
 +        commit: a911a3911df7c588c23997a29ad6a2e8d48b4aea
 +        tag: 1.0.15
 ```
 
-You can also build your local clone of Xournal++ by changing the source type to
+You can also build your local clone of VertexNote by changing the source type to
 `dir` and specifying the path to the clone.
 
 ### Installation from source
@@ -143,7 +143,7 @@ __We highly discourage installation from source__, as it may lead to issues when
 upgrading to newer versions later on. Please think about creating a native
 package, an AppImage or Flatpak instead. Instructions are above.
 
-If you don't want to make a package, you can install Xournal++ into your user
+If you don't want to make a package, you can install VertexNote into your user
 folder (or any other folder) by specifying `CMAKE_INSTALL_PREFIX`:
 
 ```sh
@@ -152,7 +152,7 @@ cmake --build . --target install
 ./cmake/postinst configure
 ```
 
-If you want to install Xournal++ system-wide directly from the build directory, run
+If you want to install VertexNote system-wide directly from the build directory, run
 
 ```sh
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -G Ninja

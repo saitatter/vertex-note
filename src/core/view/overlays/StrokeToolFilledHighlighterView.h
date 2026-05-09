@@ -1,12 +1,12 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * View active stroke tool -- for filled highlighter only
  *      In this case, the mask needs to be wiped at every iteration, and repainted to avoid artefacts like in
- *          https://github.com/xournalpp/xournalpp/issues/3709
+ *          https://github.com/saitatter/vertex-note/issues/3709
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

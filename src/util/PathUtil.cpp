@@ -17,7 +17,7 @@
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/StringUtils.h"        // for replace_pair, StringUtils
 #include "util/Util.h"               // for getPid, execInUiThread
-#include "util/XojMsgBox.h"          // for XojMsgBox
+#include "util/AppMessageBox.h"          // for AppMessageBox
 #include "util/i18n.h"               // for FS, _F, FORMAT_STR
 #include "util/raii/CStringWrapper.h"
 #include "util/safe_casts.h"  // for as_signed
@@ -38,7 +38,7 @@
 #endif
 
 constexpr auto const* CONFIG_FOLDER_NAME = "vertex-note";
-constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "xournalpp";
+constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "vertex-note";
 
 static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const fs::path& legacyFolder) {
     try {
@@ -49,7 +49,7 @@ static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const
         fs::create_directories(currentFolder.parent_path());
         fs::copy(legacyFolder, currentFolder, fs::copy_options::recursive | fs::copy_options::skip_existing);
     } catch (const fs::filesystem_error& fe) {
-        g_warning("Could not migrate legacy Xournal++ folder %s to VertexNote folder %s: %s",
+        g_warning("Could not migrate legacy VertexNote folder %s to VertexNote folder %s: %s",
                   char_cast(legacyFolder.u8string().c_str()), char_cast(currentFolder.u8string().c_str()), fe.what());
     }
 }
@@ -145,7 +145,7 @@ auto Util::readString(fs::path const& path, bool showErrorToUser, std::ios_base:
     } catch (const std::exception& e) {
         if (showErrorToUser) {
             const auto msg = FS(_F("Error reading \"{1}\":\n{2}") % path.u8string() % e.what());
-            XojMsgBox::showErrorToUser(nullptr, msg);
+            AppMessageBox::showErrorToUser(nullptr, msg);
         }
     }
     return std::nullopt;
@@ -431,7 +431,7 @@ auto Util::ensureFolderExists(const fs::path& p) -> fs::path {
         fs::create_directories(p);
     } catch (const fs::filesystem_error& fe) {
         std::string msg = FS(_F("Could not create folder: {1}\nFailed with error: {2}") % p.u8string() % fe.what());
-        Util::execInUiThread([msg = std::move(msg)]() { XojMsgBox::showErrorToUser(nullptr, msg); });
+        Util::execInUiThread([msg = std::move(msg)]() { AppMessageBox::showErrorToUser(nullptr, msg); });
     }
     return p;
 }
@@ -472,7 +472,7 @@ bool Util::safeRenameFile(fs::path const& from, fs::path const& to) {
         return false;
     }
 
-    // Due to https://github.com/xournalpp/xournalpp/issues/1122,
+    // Due to https://github.com/saitatter/vertex-note/issues/1122,
     // we first attempt to move the file with fs::rename.
     // If this fails, we then copy and delete the source, as
     // discussed in the issue

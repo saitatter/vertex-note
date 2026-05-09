@@ -14,7 +14,7 @@
 #include "control/tools/StrokeStabilizerEnum.h"  // for AveragingMethod, Pre...
 #include "gui/CreatePreviewImage.h"              // for createPreviewImage
 #include "gui/MainWindow.h"                      // for MainWindow
-#include "gui/XournalView.h"                     // for XournalView
+#include "gui/VertexNoteView.h"                     // for VertexNoteView
 #include "gui/toolbarMenubar/ToolMenuHandler.h"  // for ToolMenuHandler
 #include "gui/toolbarMenubar/icon/ColorIcon.h"
 #include "gui/toolbarMenubar/model/ColorPalette.h"  // for Palette

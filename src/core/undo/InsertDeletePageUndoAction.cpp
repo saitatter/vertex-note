@@ -2,7 +2,7 @@
 
 #include "control/Control.h"        // for Control
 #include "control/ScrollHandler.h"  // for ScrollHandler
-#include "gui/XournalppCursor.h"    // for XournalppCursor
+#include "gui/VertexNoteCursor.h"    // for VertexNoteCursor
 #include "model/Document.h"         // for Document
 #include "model/PageRef.h"          // for PageRef
 #include "undo/UndoAction.h"        // for UndoAction

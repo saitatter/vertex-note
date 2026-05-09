@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Caches PDF backgrounds for faster repaint
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -18,8 +18,8 @@
 
 #include <cairo.h>  // for cairo_t, cairo_surface_t
 
-#include "pdf/base/XojPdfDocument.h"  // for XojPdfDocument
-#include "pdf/base/XojPdfPage.h"      // for XojPdfPageSPtr
+#include "pdf/base/PdfDocument.h"  // for PdfDocument
+#include "pdf/base/PdfPage.h"      // for PdfPagePtr
 
 namespace xoj::view {
 class Mask;
@@ -30,7 +30,7 @@ class Settings;
 
 class PdfCache {
 public:
-    PdfCache(const XojPdfDocument& doc, Settings* settings);
+    PdfCache(const PdfDocument& doc, Settings* settings);
     virtual ~PdfCache();
 
 private:
@@ -43,7 +43,7 @@ public:
      * @param cr the cairo context
      * @param pdfPageNo The page number (in the pdf document)
      * @param zoom The current zoom level
-     * @param pageWidth/pageHeight Xournal++ page dimensions
+     * @param pageWidth/pageHeight VertexNote page dimensions
      */
     void render(cairo_t* cr, size_t pdfPageNo, double zoom, double pageWidth, double pageHeight);
 
@@ -79,10 +79,10 @@ private:
     /**
      * @brief Push a cache entry
      */
-    const PdfCacheEntry* cache(XojPdfPageSPtr popplerPage, xoj::view::Mask&& buffer);
+    const PdfCacheEntry* cache(PdfPagePtr popplerPage, xoj::view::Mask&& buffer);
 
 private:
-    XojPdfDocument pdfDocument;
+    PdfDocument pdfDocument;
 
     std::mutex renderMutex;
 

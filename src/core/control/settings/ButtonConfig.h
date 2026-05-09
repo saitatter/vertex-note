@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Configuration for Mouse Buttons, Eraser and default configuration
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

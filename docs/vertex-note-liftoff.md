@@ -1,6 +1,6 @@
 # VertexNote Lift-Off Plan
 
-This document tracks the rebrand from the inherited Xournal++ application surface to
+This document tracks the rebrand from the inherited VertexNote application surface to
 VertexNote. The goal is a clean product identity without breaking existing `.xopp`
 documents or upstream-derived internals that still need incremental refactors.
 
@@ -10,19 +10,19 @@ documents or upstream-derived internals that still need incremental refactors.
 - Repository, release tags, release notes, and CI naming should use `vertex-note`.
 - Keep `.xopp`, `.xoj`, `.xojpp`, and `.xopt` compatibility names where they describe
   existing file formats or MIME compatibility.
-- Keep legal attribution to Xournal++ and Xournal in copyright/license files.
+- Keep legal attribution to VertexNote and Xournal in copyright/license files.
 - Avoid large symbol renames while geometry work is active unless the rename is isolated
   and fully build-verified.
 
 ## Current High-Impact Surfaces
 
 - Build/package identity:
-  - `CMakeLists.txt` still declares `project(xournalpp)`.
-  - `src/CMakeLists.txt` still builds `xournalpp` and `xournalpp-wrapper`.
-  - Windows packaging still outputs `xournalpp-setup.exe` from `windows-setup/package.sh`.
+  - `CMakeLists.txt` still declares `project(vertex-note)`.
+  - `src/CMakeLists.txt` still builds `vertex-note` and `vertexnote-wrapper`.
+  - Windows packaging still outputs `vertex-note-setup.exe` from `windows-setup/package.sh`.
 - Desktop/app metadata:
-  - `desktop/com.github.xournalpp.xournalpp.desktop.in`.
-  - `resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in`.
+  - `desktop/com.github.vertex-note.vertex-note.desktop.in`.
+  - `resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in`.
   - `ui/about.glade` and `ui/crashDialog.glade`.
 - Runtime/user text:
   - About dialog title and product label.
@@ -30,13 +30,13 @@ documents or upstream-derived internals that still need incremental refactors.
   - Toolbar default group name in `resources-templates/toolbar.ini.in`.
   - New-document toolbar label in `ToolMenuHandler.cpp`.
 - Internal names:
-  - `XournalView`, `XojPage`, `XournalScheduler`, `xoj::` namespaces, and many comments
+  - `VertexNoteView`, `NotePage`, `VertexNoteScheduler`, `xoj::` namespaces, and many comments
     remain inherited architecture names. Rename these only in focused batches.
 
 ## Incremental Lift-Off Phases
 
 1. Public UI text
-   - Rename visible dialogs, menu strings, toolbar group labels, and docs from Xournal++
+   - Rename visible dialogs, menu strings, toolbar group labels, and docs from VertexNote
      to VertexNote where the text is not legal attribution or compatibility language.
 
 2. App/package identity

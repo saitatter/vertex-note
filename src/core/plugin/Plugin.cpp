@@ -9,7 +9,7 @@
 
 #include "util/Assert.h"     // for xoj_assert
 #include "util/PathUtil.h"   // for toGFilename
-#include "util/XojMsgBox.h"  // for XojMsgBox
+#include "util/AppMessageBox.h"  // for AppMessageBox
 
 #include "config-features.h"  // for ENABLE_PLUGINS
 
@@ -44,7 +44,7 @@ Plugin::Plugin(Control* control, std::string name, fs::path path):
 }
 
 auto Plugin::getPluginFromLua(lua_State* lua) -> Plugin* {
-    lua_getfield(lua, LUA_REGISTRYINDEX, "Xournalpp_Plugin");
+    lua_getfield(lua, LUA_REGISTRYINDEX, "VertexNote_Plugin");
 
     if (lua_islightuserdata(lua, -1)) {
         auto* data = static_cast<Plugin*>(lua_touserdata(lua, -1));
@@ -169,7 +169,7 @@ void Plugin::loadIni() {
     LOAD_FROM_INI(version, "about", "version");
     LOAD_FROM_INI(description, "about", "description");
 
-    if (version == "<xournalpp>") {
+    if (version == "<vertexnote>" || version == "<vertex-note>") {
         version = PROJECT_VERSION;
     }
 
@@ -186,7 +186,7 @@ void Plugin::loadIni() {
     this->valid = true;
 }
 
-void Plugin::registerXournalppLibs(lua_State* luaPtr) {
+void Plugin::registerVertexNoteLibs(lua_State* luaPtr) {
     for (auto const& lib: loadedlibs) {
         luaL_requiref(luaPtr, lib.name, lib.func, 1);
         // remove lib
@@ -248,7 +248,7 @@ void Plugin::loadScript() {
     int status = luaL_loadfile(lua.get(), luafile.string().c_str());
     if (status != LUA_OK) {
         const char* errMsg = lua_tostring(lua.get(), -1);
-        XojMsgBox::showPluginMessage(name, errMsg, true);
+        AppMessageBox::showPluginMessage(name, errMsg, true);
 
         // Error out if file can't be read
         g_warning("Could not load plugin Lua file. Error: \"%s\", error code: %d (syntax error: %s)", errMsg, status, status == LUA_ERRSYNTAX ? "true" : "false");
@@ -258,16 +258,16 @@ void Plugin::loadScript() {
 
     // Register Plugin object to Lua instance
     lua_pushlightuserdata(lua.get(), this);
-    lua_setfield(lua.get(), LUA_REGISTRYINDEX, "Xournalpp_Plugin");
+    lua_setfield(lua.get(), LUA_REGISTRYINDEX, "VertexNote_Plugin");
 
-    registerXournalppLibs(lua.get());
+    registerVertexNoteLibs(lua.get());
 
     addPluginToLuaPath();
 
     // Run the loaded Lua script
     if (lua_pcall(lua.get(), 0, 0, 0) != LUA_OK) {
         const char* errMsg = lua_tostring(lua.get(), -1);
-        XojMsgBox::showPluginMessage(name, errMsg, true);
+        AppMessageBox::showPluginMessage(name, errMsg, true);
 
         g_warning("Could not run plugin Lua file: \"%s\", error: \"%s\"", char_cast(luafile.u8string().c_str()),
                   errMsg);
@@ -289,7 +289,7 @@ auto Plugin::callFunction(const std::string& fnc, ptrdiff_t mode) -> bool {
     // Run the function
     if (lua_pcall(lua.get(), numArgs, 0, 0)) {
         const char* errMsg = lua_tostring(lua.get(), -1);
-        XojMsgBox::showPluginMessage(name, errMsg, true);
+        AppMessageBox::showPluginMessage(name, errMsg, true);
 
         g_warning("Error in Plugin: \"%s\", error: \"%s\"", name.c_str(), errMsg);
         return false;
@@ -306,7 +306,7 @@ auto Plugin::callFunction(const std::string& fnc, const char* s) -> bool {
     // Run the function
     if (lua_pcall(lua.get(), 1, 0, 0)) {
         const char* errMsg = lua_tostring(lua.get(), -1);
-        XojMsgBox::showPluginMessage(name, errMsg, true);
+        AppMessageBox::showPluginMessage(name, errMsg, true);
 
         g_warning("Error in Plugin: \"%s\", error: \"%s\"", name.c_str(), errMsg);
         return false;

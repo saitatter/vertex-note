@@ -5,7 +5,7 @@
 #include "control/settings/Settings.h"
 #include "model/BackgroundConfig.h"  // for BackgroundConfig
 #include "model/Snapping.h"
-#include "model/XojPage.h"  // for XojPage
+#include "model/NotePage.h"  // for NotePage
 
 using namespace background_config_strings;
 

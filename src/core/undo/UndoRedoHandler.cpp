@@ -13,7 +13,7 @@
 #include "model/Document.h"   // for Document
 #include "undo/UndoAction.h"  // for UndoActionPtr, UndoAction
 #include "util/Assert.h"      // for xoj_assert
-#include "util/XojMsgBox.h"   // for XojMsgBox
+#include "util/AppMessageBox.h"   // for AppMessageBox
 #include "util/i18n.h"        // for _, FS, _F
 
 using std::string;
@@ -114,7 +114,7 @@ void UndoRedoHandler::undo() {
         string msg = FS(_F("Could not undo \"{1}\"\n"
                            "Something went wrong… Please write a bug report…") %
                         undoAction.getText());
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
     }
 
     fireUpdateUndoRedoButtons(undoAction.getPages());
@@ -140,7 +140,7 @@ void UndoRedoHandler::redo() {
         string msg = FS(_F("Could not redo \"{1}\"\n"
                            "Something went wrong… Please write a bug report…") %
                         redoAction.getText());
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
     }
 
     fireUpdateUndoRedoButtons(redoAction.getPages());

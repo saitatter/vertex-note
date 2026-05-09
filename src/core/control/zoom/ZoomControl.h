@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Controls the zoom level
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -28,7 +28,7 @@ constexpr auto DEFAULT_ZOOM_STEP_SCROLL{0.01};
 
 enum ZoomDirection : bool { ZOOM_OUT = false, ZOOM_IN = true };
 
-class XournalView;
+class VertexNoteView;
 class Control;
 class ZoomListener;
 
@@ -120,7 +120,7 @@ public:
     void addZoomListener(ZoomListener* listener);
     void removeZoomListener(ZoomListener* listener);
 
-    void initZoomHandler(GtkWidget* window, GtkWidget* widget, XournalView* v, Control* c);
+    void initZoomHandler(GtkWidget* window, GtkWidget* widget, VertexNoteView* v, Control* c);
 
     /**
      * Call this before any zoom is done, it saves the current page and position
@@ -202,7 +202,7 @@ private:
     friend bool onTouchpadPinchEvent(GtkWidget* widget, GdkEventTouchpadPinch* event, ZoomControl* zoom);
 
 private:
-    XournalView* view = nullptr;
+    VertexNoteView* view = nullptr;
     Control* control = nullptr;
     std::vector<ZoomListener*> listener;
 

@@ -15,14 +15,14 @@
       "displayed_name": "Debian",
       "runner": "ubuntu-latest",
       "extra_packages": "build-essential lsb-release git",
-      "container_image": "ghcr.io/xournalpp/debian-latest-sudo:master",
+      "container_image": "ghcr.io/vertex-note/debian-latest-sudo:master",
       "run_ci": "false"
     },
     "debian-arm64": {
       "displayed_name": "Debian ARM64",
       "runner": "ubuntu-24.04-arm",
       "extra_packages": "build-essential lsb-release git",
-      "container_image": "ghcr.io/xournalpp/debian-latest-sudo:master",
+      "container_image": "ghcr.io/vertex-note/debian-latest-sudo:master",
       "run_ci": "false"
     },
     "ubuntu-22-arm": {

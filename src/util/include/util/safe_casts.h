@@ -1,6 +1,6 @@
 /*
  * This file is provided by Fabian Keßler <fabian_kessler@gmx.de> under the
- * Boost Software License - Version 1.0 - August 17th, 2003 to the Xournal++
+ * Boost Software License - Version 1.0 - August 17th, 2003 to the VertexNote
  * project.
  *
  * Boost Software License - Version 1.0 - August 17th, 2003

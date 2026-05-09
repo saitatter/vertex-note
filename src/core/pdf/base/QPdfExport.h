@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * PDF Document Export Abstraction Interface - use cairo for the annotations and overlay them on the original PDF using
  * QPDF to avoid information loss
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

@@ -7,11 +7,11 @@
 #include "control/Control.h"                // for Control
 #include "control/layer/LayerController.h"  // for LayerController
 #include "gui/MainWindow.h"                 // for MainWindow
-#include "gui/XournalView.h"                // for XournalView
+#include "gui/VertexNoteView.h"                // for VertexNoteView
 #include "model/Document.h"
 #include "model/Layer.h"                    // for Layer, Layer::Index
 #include "model/PageRef.h"                  // for PageRef
-#include "model/XojPage.h"                  // for XojPage
+#include "model/NotePage.h"                  // for NotePage
 #include "undo/UndoAction.h"                // for UndoAction
 #include "util/i18n.h"                      // for _
 

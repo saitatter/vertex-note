@@ -19,7 +19,7 @@
 #include "gui/inputdevices/PositionInputData.h"
 #include "model/Document.h"
 #include "model/Layer.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "undo/InsertUndoAction.h"
 #include "undo/UndoRedoHandler.h"
 #include "util/DispatchPool.h"

@@ -1,12 +1,12 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Latex implementation
  *
  * @author W Brenna
  * http://wbrenna.ca
  *
- * https://github.com/xournalpp/xournalpp
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

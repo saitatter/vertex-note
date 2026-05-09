@@ -6,7 +6,7 @@ set -o pipefail
 ### Step 1: install jhbuild
 
 LOCKFILE="$(dirname "$0")"/jhbuild-version.lock
-MODULEFILE="$(dirname "$0")"/xournalpp.modules
+MODULEFILE="$(dirname "$0")"/vertex-note.modules
 GTK_OSX_PATCHFILE="$(dirname "$0")"/gtk-osx.patch
 GTK_MODULES="meta-gtk-osx-gtk3 gtksourceview3"
 
@@ -42,7 +42,7 @@ download_jhbuild_sources() {
     echo "Cloning jhbuild version $JHBUILD_BRANCH"
     git clone --depth 1 -b $JHBUILD_BRANCH https://gitlab.gnome.org/GNOME/jhbuild.git "$HOME/Source/jhbuild"
 
-    shallow_clone_into_commit "https://github.com/xournalpp/xournalpp-pipeline-dependencies" "xournalpp-pipeline-dependencies" ~/xournalpp-pipeline-dependencies
+    shallow_clone_into_commit "https://github.com/vertex-note/vertex-note-pipeline-dependencies" "vertex-note-pipeline-dependencies" ~/vertex-note-pipeline-dependencies
 }
 
 echo "::group::Download jhbuild sources"
@@ -78,7 +78,7 @@ setup_custom_modulesets() {
     # Enable custom jhbuild configuration
     cat <<EOF >> ~/.config/jhbuildrc-custom
 
-### BEGIN xournalpp macOS CI
+### BEGIN vertex-note macOS CI
 use_local_modulesets = True
 moduleset = "gtk-osx.modules"
 modulesets_dir = os.path.expanduser("~/gtk-osx-custom/modulesets-stable")
@@ -119,7 +119,7 @@ echo "::endgroup::"
 ### Step 2: Download modules' sources
 download() {
     jhbuild update $GTK_MODULES
-    jhbuild -m "$MODULEFILE" update meta-xournalpp-deps
+    jhbuild -m "$MODULEFILE" update meta-vertexnote-deps
     jhbuild -m bootstrap.modules update meta-bootstrap
     echo "Downloaded all jhbuild modules' sources"
 }
@@ -146,20 +146,20 @@ build_gtk
 echo "::endgroup::"
 
 
-### Step 5: build xournalpp deps
+### Step 5: build VertexNote deps
 
-build_xournalpp_deps() {
-    jhbuild -m "$MODULEFILE" build --no-network meta-xournalpp-deps
+build_vertexnote_deps() {
+    jhbuild -m "$MODULEFILE" build --no-network meta-vertexnote-deps
 }
 echo "::group::Build deps"
-build_xournalpp_deps
+build_vertexnote_deps
 echo "::endgroup::"
 
 
 ### Step 6: build binary blob
 
 build_binary_blob() {
-    jhbuild run python3 ~/xournalpp-pipeline-dependencies/gtk/package-gtk-bin.py -o xournalpp-binary-blob.tar.gz
+    jhbuild run python3 ~/vertex-note-pipeline-dependencies/gtk/package-gtk-bin.py -o vertex-note-binary-blob.tar.gz
 }
 echo "::group::Build blob"
 build_binary_blob

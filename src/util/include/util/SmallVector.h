@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A small-vector-optimized data structure, with data in the stack when it's small enough, in the heap otherwise
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

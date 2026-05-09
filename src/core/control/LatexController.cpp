@@ -20,8 +20,8 @@
 #include "control/tools/EditSelection.h"     // for EditSelection
 #include "gui/Layout.h"                      // for Layout
 #include "gui/MainWindow.h"                  // for MainWindow
-#include "gui/PageView.h"                    // for XojPageView
-#include "gui/XournalView.h"                 // for XournalView
+#include "gui/PageView.h"                    // for PageView
+#include "gui/VertexNoteView.h"                 // for VertexNoteView
 #include "gui/dialog/ExtEdLatexDialog.h"     // for ExtEdLatexDialog
 #include "gui/dialog/IntEdLatexDialog.h"     // for IntEdLatexDialog
 #include "model/Document.h"                  // for Document
@@ -29,7 +29,7 @@
 #include "model/Layer.h"                     // for Layer
 #include "model/TexImage.h"                  // for TexImage
 #include "model/Text.h"                      // for Text
-#include "model/XojPage.h"                   // for XojPage
+#include "model/NotePage.h"                   // for NotePage
 #include "undo/InsertUndoAction.h"           // for InsertUndoAction
 #include "undo/UndoRedoHandler.h"            // for UndoRedoHandler
 #include "util/Assert.h"                     // for xoj_assert
@@ -39,7 +39,7 @@
 #include "util/PopupWindowWrapper.h"         // for PopupWindowWrapper
 #include "util/Rectangle.h"                  // for Rectangle
 #include "util/Util.h"                       // for npos
-#include "util/XojMsgBox.h"                  // for XojMsgBox
+#include "util/AppMessageBox.h"                  // for AppMessageBox
 #include "util/i18n.h"                       // for FS, _, _F, N_
 #include "util/safe_casts.h"                 // for round_cast
 
@@ -185,7 +185,7 @@ void LatexController::triggerImageUpdate(const string& texString) {
     const std::string texContents = LatexGenerator::templateSub(texString, latexTemplate, textColor);
     auto result = generator.asyncRun(texTmpDir, texContents);
     if (auto* err = std::get_if<LatexGenerator::GenError>(&result)) {
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), err->message);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), err->message);
     } else if (auto** proc = std::get_if<GSubprocess*>(&result)) {
         // Render the TeX and capture the process' output.
         updating_cancellable = g_cancellable_new();
@@ -240,7 +240,7 @@ void LatexController::onPdfRenderComplete(GObject* procObj, GAsyncResult* res, L
             // The error was not caused by invalid LaTeX.
             string message =
                     FS(_F("Latex generation encountered an error: {1} (exit code: {2})") % err->message % err->code);
-            XojMsgBox::showErrorToUser(self->control->getGtkWindow(), message);
+            AppMessageBox::showErrorToUser(self->control->getGtkWindow(), message);
         }
 
         self->isValidTex = false;
@@ -309,11 +309,11 @@ auto LatexController::loadRendered(string renderedTex) -> std::unique_ptr<TexIma
 
     if (err != nullptr) {
         string message = FS(_F("Could not load LaTeX PDF file: {1}") % err->message);
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), message);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), message);
         g_error_free(err);
         return nullptr;
     } else if (!loaded || !img->getPdf()) {
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), FS(_F("Could not load LaTeX PDF file")));
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), FS(_F("Could not load LaTeX PDF file")));
         return nullptr;
     }
 
@@ -358,7 +358,7 @@ void LatexController::run(Control* ctrl) {
     auto self = std::make_unique<LatexController>(ctrl);
     auto depStatus = self->findTexDependencies();
     if (!depStatus.success) {
-        XojMsgBox::showErrorToUser(ctrl->getGtkWindow(), depStatus.errorMsg);
+        AppMessageBox::showErrorToUser(ctrl->getGtkWindow(), depStatus.errorMsg);
         return;
     }
 

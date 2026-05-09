@@ -3,7 +3,7 @@
 #include "control/Control.h"                // for Control
 #include "control/layer/LayerController.h"  // for LayerController
 #include "gui/MainWindow.h"                 // for MainWindow
-#include "gui/XournalView.h"                // for XournalView
+#include "gui/VertexNoteView.h"                // for VertexNoteView
 #include "model/Document.h"                 // for Document
 #include "model/Layer.h"                    // for Layer, Layer::Index
 #include "model/PageRef.h"                  // for PageRef

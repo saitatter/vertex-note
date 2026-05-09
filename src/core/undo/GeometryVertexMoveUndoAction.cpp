@@ -10,7 +10,7 @@
 
 #include "control/Control.h"
 #include "model/Document.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/i18n.h"
 #include "vertexnote/geometry/GeometryElement.h"
 

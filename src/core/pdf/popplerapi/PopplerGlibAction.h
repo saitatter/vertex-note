@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * PDF Action Abstraction Interface
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -16,13 +16,13 @@
 
 #include <poppler.h>  // for PopplerAction, PopplerDocument
 
-#include "pdf/base/XojPdfAction.h"  // for XojPdfAction
+#include "pdf/base/PdfAction.h"  // for PdfAction
 #include "util/raii/GObjectSPtr.h"  // for GObjectSPtr
 
 class LinkDestination;
 
 
-class PopplerGlibAction: public XojPdfAction {
+class PopplerGlibAction: public PdfAction {
 public:
     PopplerGlibAction(PopplerAction* action, PopplerDocument* document);
     ~PopplerGlibAction() override;

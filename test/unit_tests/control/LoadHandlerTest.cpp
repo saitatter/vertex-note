@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -33,7 +33,7 @@
 #include "model/StrokeStyle.h"
 #include "model/TexImage.h"
 #include "model/Text.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/Color.h"
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"
@@ -539,7 +539,7 @@ TEST(ControlLoadHandler, imageSaveJpegBackwardCompat) {
     // For backward compatibility, check that loaded JPEG images are saved in PNG format.
 
     // FIXME: use a path in CMAKE_BINARY_DIR or CMAKE_CURRENT_BINARY_DIR
-    const fs::path outPath = fs::temp_directory_path() / "xournalpp-test-units_ControlLoaderHandler_imageLoadJpeg.xopp";
+    const fs::path outPath = fs::temp_directory_path() / "vertex-note-test-units_ControlLoaderHandler_imageLoadJpeg.xopp";
     ASSERT_TRUE(!fs::exists(outPath));
 
     // save journal containing JPEG image
@@ -597,7 +597,7 @@ TEST(ControlLoadHandler, testLatex) {
 TEST(ControlLoadHandler, linebreaksLatex) {
     // FIXME: use a path in CMAKE_BINARY_DIR or CMAKE_CURRENT_BINARY_DIR
     const fs::path outPath =
-            fs::temp_directory_path() / "xournalpp-test-units_ControlLoaderHandler_linebreaksLatex.xopp";
+            fs::temp_directory_path() / "vertex-note-test-units_ControlLoaderHandler_linebreaksLatex.xopp";
     ASSERT_TRUE(!fs::exists(outPath));
 
     // save journal containing latex object with linebreaks.
@@ -635,12 +635,12 @@ TEST(ControlLoadHandler, testLoadStoreLoadDefault) {
 }
 
 // Backwards compatibility test that checks that full-precision float strings can be loaded.
-// See https://github.com/xournalpp/xournalpp/pull/4065
+// See https://github.com/vertex-note/vertex-note/pull/4065
 TEST(ControlLoadHandler, testLoadStoreLoadFloatBwCompat) {
     testLoadStoreLoadHelper(GET_TESTFILE(u8"packaged_xopp/suite_float_bw_compat.xopp"), /*tol=*/1e-5);
 }
 
-// Old Xournal files may include line returns in stroke data. See https://github.com/xournalpp/xournalpp/issues/7407
+// Old Xournal files may include line returns in stroke data. See https://github.com/vertex-note/vertex-note/issues/7407
 TEST(ControlLoadHandler, testLoadStoreLoadStrokeLineReturn) {
     auto doc = loadTestDocument(GET_TESTFILE(u8"load/compatibility/stroke_line_return.xoj"));
     ASSERT_TRUE(doc);
@@ -761,7 +761,7 @@ TEST(ControlLoadHandler, testRelativePath) {
 
     auto saveReloadTest = [&](const fs::path& dir) {
         std::cout << "Test saving in " << dir.string() << std::endl;
-        const fs::path outPath = dir / "xournalpp-test-units_ControlLoaderHandler_testRelativePath.xopp";
+        const fs::path outPath = dir / "vertex-note-test-units_ControlLoaderHandler_testRelativePath.xopp";
         ASSERT_TRUE(!fs::exists(outPath));
 
         SaveHandler saver;

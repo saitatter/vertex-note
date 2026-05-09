@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Fixed input benchmark test of the file loading process
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -20,7 +20,7 @@
 #include "control/xojfile/SaveHandler.h"
 #include "model/Document.h"
 #include "model/PageRef.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "util/PathUtil.h"
 
 #include "filesystem.h"
@@ -62,7 +62,7 @@ TEST(FileLoadBenchmark, benchmarkEmpty) {
     // Create empty file (containing only one obligatory page)
     const auto tmp_path = createTemporaryFile(
             [](Document& doc) -> void {
-                const PageRef page = std::make_shared<XojPage>(50, 50);
+                const PageRef page = std::make_shared<NotePage>(50, 50);
                 doc.addPage(page);
             },
             u8"empty.xopp");
@@ -79,7 +79,7 @@ TEST(FileLoadBenchmark, benchmarkManyPages) {
     const auto tmp_path = createTemporaryFile(
             [](Document& doc) -> void {
                 for (int i = 0; i < 500; ++i) {
-                    const PageRef page = std::make_shared<XojPage>(50, 50);
+                    const PageRef page = std::make_shared<NotePage>(50, 50);
                     doc.addPage(page);
                 }
             },

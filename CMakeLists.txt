@@ -32,7 +32,6 @@ project(VertexNote
 set(VERSION_SUFFIX "+dev")
 set(PROJECT_VERSION "${PROJECT_VERSION}${VERSION_SUFFIX}")
 set(vertexnote_VERSION ${PROJECT_VERSION})
-set(xournalpp_VERSION ${PROJECT_VERSION}) # Compatibility for upstream CMake snippets and packaging scripts.
 set(CMAKE_PROJECT_VERSION ${PROJECT_VERSION})
 set(PROJECT_CONTACT "https://github.com/saitatter/vertex-note/issues")
 set(VERTEX_NOTE_APP_ID "app.vertexnote.VertexNote")
@@ -303,7 +302,7 @@ configure_file(
 
 # Development options
 option(DEV_CALL_LOG "Call log" OFF)
-add_compile_definitions(G_LOG_DOMAIN="xopp")
+add_compile_definitions(G_LOG_DOMAIN="vertexnote")
 
 # Debug options
 option(DEBUG_INPUT "Input debugging, e.g. eraser events etc" OFF)
@@ -365,8 +364,7 @@ configure_file(
 )
 
 option(VERTEX_NOTE_LINT "enable lint (clang-tidy) target" OFF)
-option(xournalpp_LINT "legacy alias for VERTEX_NOTE_LINT" OFF)
-if (VERTEX_NOTE_LINT OR xournalpp_LINT)
+if (VERTEX_NOTE_LINT)
     include(clang-tidy)
 endif ()
 

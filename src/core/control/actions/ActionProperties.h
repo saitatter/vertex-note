@@ -18,18 +18,18 @@
 #include "enums/Action.enum.h"
 #include "gui/MainWindow.h"
 #include "gui/SearchBar.h"
-#include "gui/XournalView.h"
+#include "gui/VertexNoteView.h"
 #include "gui/dialog/RenameLayerDialog.h"
 #include "gui/toolbarMenubar/ToolMenuHandler.h"
 #include "model/Document.h"
 #include "model/Font.h"
 #include "model/StrokeStyle.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "plugin/PluginController.h"
 #include "util/Assert.h"
 #include "util/PopupWindowWrapper.h"
 #include "util/Util.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 
 #include "ActionDatabase.h"
@@ -848,7 +848,7 @@ struct ActionProperties<Action::AUDIO_RECORD> {
         } else {
             g_simple_action_set_state(ga, g_variant_new_boolean(!enabled));
             Util::execInUiThread([win = ctrl->getGtkWindow()]() {
-                XojMsgBox::showErrorToUser(win, _("Recorder could not be started."));
+                AppMessageBox::showErrorToUser(win, _("Recorder could not be started."));
             });
         }
 #else
@@ -944,7 +944,7 @@ struct ActionProperties<Action::PLUGIN_MANAGER> {
 /** Help menu **/
 template <>
 struct ActionProperties<Action::HELP> {
-    static void callback(GSimpleAction*, GVariant*, Control* ctrl) { XojMsgBox::showHelp(ctrl->getGtkWindow()); }
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) { AppMessageBox::showHelp(ctrl->getGtkWindow()); }
 };
 
 template <>

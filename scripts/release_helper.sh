@@ -162,14 +162,14 @@ function bump_version() {
     local date=$(date --rfc-2822)
 
     if [ "$replace" -eq 0 ]; then
-        sed -i "1i xournalpp ($(current_version)-1) UNRELEASED; urgency=medium\n\n  * \n\n -- ${git_user} <${git_mail}>  ${date}\n" "${SCRIPT_PATH}/../debian/changelog"
+        sed -i "1i vertex-note ($(current_version)-1) UNRELEASED; urgency=medium\n\n  * \n\n -- ${git_user} <${git_mail}>  ${date}\n" "${SCRIPT_PATH}/../debian/changelog"
     else
         if [ $publish -eq 0 ]; then
-            sed -i "s/xournalpp (${prior_version}-1) UNRELEASED; urgency=medium/xournalpp ($(current_version)-1) UNRELEASED; urgency=medium/g" "${SCRIPT_PATH}/../debian/changelog"
-            sed -i "/xournalpp ($(current_version)-1)/,/xournalpp/s/ --.*/ -- ${git_user} <${git_mail}>  ${date}/g" "${SCRIPT_PATH}/../debian/changelog"
+            sed -i "s/vertex-note (${prior_version}-1) UNRELEASED; urgency=medium/vertex-note ($(current_version)-1) UNRELEASED; urgency=medium/g" "${SCRIPT_PATH}/../debian/changelog"
+            sed -i "/vertex-note ($(current_version)-1)/,/vertex-note/s/ --.*/ -- ${git_user} <${git_mail}>  ${date}/g" "${SCRIPT_PATH}/../debian/changelog"
         else
-            sed -i "s/xournalpp (${prior_version}-1) UNRELEASED; urgency=medium/xournalpp ($(current_version)-1) unstable; urgency=medium/g" "${SCRIPT_PATH}/../debian/changelog"
-            sed -i "/xournalpp ($(current_version)-1)/,/xournalpp/s/ --.*/ -- ${git_user} <${git_mail}>  ${date}/g" "${SCRIPT_PATH}/../debian/changelog"
+            sed -i "s/vertex-note (${prior_version}-1) UNRELEASED; urgency=medium/vertex-note ($(current_version)-1) unstable; urgency=medium/g" "${SCRIPT_PATH}/../debian/changelog"
+            sed -i "/vertex-note ($(current_version)-1)/,/vertex-note/s/ --.*/ -- ${git_user} <${git_mail}>  ${date}/g" "${SCRIPT_PATH}/../debian/changelog"
         fi
     fi
 
@@ -179,17 +179,17 @@ function bump_version() {
     if [ "$replace" -eq 0 ]; then
         sed -i "1,/^    <release .*$/ {/^    <release .*$/i\
         \ \ \ \ <release date=\"$date\" version=\"$(current_version)\" />
-        }" "${SCRIPT_PATH}/../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in"
+        }" "${SCRIPT_PATH}/../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in"
     else
-        sed -i "s/\ \ \ \ <release date=\".*\" version=\"${prior_version}\" \/>/\ \ \ \ <release date=\"$date\" version=\"$(current_version)\" \/>/g" "${SCRIPT_PATH}/../resources-templates/com.github.xournalpp.xournalpp.appdata.xml.in"
+        sed -i "s/\ \ \ \ <release date=\".*\" version=\"${prior_version}\" \/>/\ \ \ \ <release date=\"$date\" version=\"$(current_version)\" \/>/g" "${SCRIPT_PATH}/../resources-templates/com.github.vertex-note.vertex-note.appdata.xml.in"
     fi
 
     # Update MacOS Info.plist
     sed -i "s/<string>${prior_version}<\/string>/<string>$(current_version)<\/string>/g" "${SCRIPT_PATH}/../mac-setup/Info.plist"
     sed -i "s/<string>${prior_version}.0<\/string>/<string>$(current_version).0<\/string>/g" "${SCRIPT_PATH}/../mac-setup/Info.plist"
 
-    # Update Fedora xournalpp.spec
-    sed -i "s/%global	version_string ${prior_version}/%global	version_string $(current_version)/g" "${SCRIPT_PATH}/../rpm/fedora/xournalpp.spec"
+    # Update Fedora vertex-note.spec
+    sed -i "s/%global	version_string ${prior_version}/%global	version_string $(current_version)/g" "${SCRIPT_PATH}/../rpm/fedora/vertex-note.spec"
 }
 
 # Prepares a new version
@@ -413,8 +413,8 @@ if ! [ -z "\$(cat debian/changelog | grep -E "\+dev|~dev")" ]; then
     exit 1
 fi
 
-if ! [ -z "\$(cat desktop/com.github.xournalpp.xournalpp.appdata.xml | grep -E "\+dev|~dev")" ]; then
-    echo "desktop/com.github.xournalpp.xournalpp.appdata.xml should not contain a development version string '[+~]dev'"
+if ! [ -z "\$(cat desktop/com.github.vertex-note.vertex-note.appdata.xml | grep -E "\+dev|~dev")" ]; then
+    echo "desktop/com.github.vertex-note.vertex-note.appdata.xml should not contain a development version string '[+~]dev'"
     exit 1
 fi
 
@@ -422,7 +422,7 @@ fi
 bump_version "${release_version}+dev" 0
 
 # Amend the previous commit to include the version change
-git add CMakeLists.txt CHANGELOG.md debian/changelog desktop/com.github.xournalpp.xournalpp.appdata.xml rpm/fedora/xournalpp.spec mac-setup/Info.plist
+git add CMakeLists.txt CHANGELOG.md debian/changelog desktop/com.github.vertex-note.vertex-note.appdata.xml rpm/fedora/vertex-note.spec mac-setup/Info.plist
 
 # Wait for merge to finish and then amend the commit (This hack is needed since git does not allow amendments in hooks)
 bash -c "git merge HEAD &> /dev/null; while [ $? -ne 0 ]; do sleep 1; git merge HEAD &> /dev/null; done; git commit --amend -C HEAD --no-verify" &
@@ -484,13 +484,13 @@ if ! [[ "\$(sed -n "N;N;s/# Changelog\n\n## \([^\ ]*\) (Unreleased)/\1/p" CHANGE
     exit 1
 fi
 
-if ! [[ "\$(sed -n "1,/xournalpp/{s/xournalpp (\([^-]*-1\)) UNRELEASED; urgency=medium/\1/p}" debian/changelog)" == "$old_version-1" ]]; then
+if ! [[ "\$(sed -n "1,/vertex-note/{s/vertex-note (\([^-]*-1\)) UNRELEASED; urgency=medium/\1/p}" debian/changelog)" == "$old_version-1" ]]; then
     echo "The first version in debian/changelog should be $old_version"
     exit 1
 fi
 
-if ! [[ "\$(sed -n "1,/\ \ \ \ <release /{s/\ \ \ \ <release date=\"[^\"]*\" version=\"\([^\"]*\)\" \/>/\1/p}" desktop/com.github.xournalpp.xournalpp.appdata.xml)" == "$old_version" ]]; then
-    echo "The first version in desktop/com.github.xournalpp.xournalpp.appdata.xml should be $old_version"
+if ! [[ "\$(sed -n "1,/\ \ \ \ <release /{s/\ \ \ \ <release date=\"[^\"]*\" version=\"\([^\"]*\)\" \/>/\1/p}" desktop/com.github.vertex-note.vertex-note.appdata.xml)" == "$old_version" ]]; then
+    echo "The first version in desktop/com.github.vertex-note.vertex-note.appdata.xml should be $old_version"
     exit 1
 fi
 

@@ -12,14 +12,14 @@
 #include "control/Control.h"                      // for Control
 #include "control/settings/Settings.h"            // for Settings
 #include "control/tools/CursorSelectionType.h"    // for CURSOR_SELECTION_TO...
-#include "gui/PageView.h"                         // for XojPageView
-#include "gui/XournalView.h"                      // for XournalView
+#include "gui/PageView.h"                         // for PageView
+#include "gui/VertexNoteView.h"                      // for VertexNoteView
 #include "model/Element.h"                        // for Element, Element::I...
 #include "model/Layer.h"                          // for Layer
 #include "model/LineStyle.h"                      // for LineStyle
 #include "model/Stroke.h"                         // for Stroke, StrokeTool...
 #include "model/Text.h"                           // for Text
-#include "model/XojPage.h"                        // for XojPage
+#include "model/NotePage.h"                        // for NotePage
 #include "undo/ColorUndoAction.h"                 // for ColorUndoAction
 #include "undo/DeleteUndoAction.h"                // for DeleteUndoAction
 #include "undo/FillUndoAction.h"                  // for FillUndoAction
@@ -45,7 +45,7 @@ using std::vector;
 using xoj::util::Rectangle;
 
 EditSelectionContents::EditSelectionContents(Rectangle<double> bounds, Rectangle<double> snappedBounds,
-                                             const PageRef& sourcePage, Layer* sourceLayer, XojPageView* sourceView):
+                                             const PageRef& sourcePage, Layer* sourceLayer, PageView* sourceView):
         originalBounds(bounds),
         lastBounds(bounds),
         lastSnappedBounds(snappedBounds),
@@ -398,7 +398,7 @@ auto EditSelectionContents::getOriginalBounds() const -> Rectangle<double> {
     return Rectangle<double>{this->originalBounds};
 }
 
-auto EditSelectionContents::getSourceView() -> XojPageView* { return this->sourceView; }
+auto EditSelectionContents::getSourceView() -> PageView* { return this->sourceView; }
 
 
 void EditSelectionContents::updateContent(Rectangle<double> bounds, Rectangle<double> snappedBounds, double rotation,

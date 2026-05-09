@@ -12,7 +12,7 @@
 #include "control/DeviceListHelper.h"                   // for getSourceMapping
 #include "control/ScrollHandler.h"                      // for ScrollHandler
 #include "control/actions/ActionDatabase.h"             // for ActionDatabase
-#include "control/jobs/XournalScheduler.h"              // for XournalScheduler
+#include "control/jobs/VertexNoteScheduler.h"              // for VertexNoteScheduler
 #include "control/layer/LayerController.h"              // for LayerController
 #include "control/settings/Settings.h"                  // for Settings
 #include "control/settings/SettingsEnums.h"             // for SCROLLBAR_HIDE_HO...
@@ -30,13 +30,13 @@
 #include "gui/toolbarMenubar/model/ToolbarData.h"       // for ToolbarData
 #include "gui/toolbarMenubar/model/ToolbarModel.h"      // for ToolbarModel
 #include "gui/widgets/SpinPageAdapter.h"                // for SpinPageAdapter
-#include "gui/widgets/XournalWidget.h"                  // for gtk_xournal_get_l...
+#include "gui/widgets/VertexNoteWidget.h"                  // for gtk_vertex_note_get_l...
 #include "util/GListView.h"                             // for GListView, GListV...
 #include "util/GtkUtil.h"                               // for getWidgetDPI
 #include "util/PathUtil.h"                              // for getConfigFile
 #include "util/StringUtils.h"                           // for char_cast
 #include "util/Util.h"                                  // for execInUiThread, npos
-#include "util/XojMsgBox.h"                             // for XojMsgBox
+#include "util/AppMessageBox.h"                             // for AppMessageBox
 #include "util/glib_casts.h"                            // for wrap_for_once_v
 #include "util/gtk4_helper.h"                           // for gtk_widget_get_width
 #include "util/i18n.h"                                  // for FS, _F
@@ -44,7 +44,7 @@
 
 #include "GladeSearchpath.h"     // for GladeSearchpath
 #include "ToolbarDefinitions.h"  // for TOOLBAR_DEFINITIO...
-#include "XournalView.h"         // for XournalView
+#include "VertexNoteView.h"         // for VertexNoteView
 #include "config-dev.h"          // for TOOLBAR_CONFIG
 #include "filesystem.h"          // for path, exists
 
@@ -82,7 +82,7 @@ MainWindow::MainWindow(GladeSearchpath* gladeSearchPath, Control* control, GtkAp
         this->toolbarWidgets[i].reset(get(TOOLBAR_DEFINITIONS[i].guiName), xoj::util::ref);
     }
 
-    initXournalWidget();
+    initVertexNoteWidget();
 
     setSidebarVisible(control->getSettings()->isSidebarVisible());
 
@@ -306,7 +306,7 @@ void MainWindow::updateColorscheme() {
                                       this);
 }
 
-void MainWindow::initXournalWidget() {
+void MainWindow::initVertexNoteWidget() {
     winXournal = gtk_scrolled_window_new();
 
     setGtkTouchscreenScrollingForDeviceMapping();
@@ -315,7 +315,7 @@ void MainWindow::initXournalWidget() {
 
     scrollHandling = std::make_unique<ScrollHandling>(GTK_SCROLLED_WINDOW(winXournal));
 
-    this->xournal = std::make_unique<XournalView>(winXournal, control, scrollHandling.get());
+    this->xournal = std::make_unique<VertexNoteView>(winXournal, control, scrollHandling.get());
 
     control->getZoomControl()->initZoomHandler(this->window, winXournal, xournal.get(), control);
     gtk_widget_show_all(winXournal);
@@ -631,7 +631,7 @@ auto MainWindow::setFullscreen(bool enabled) const -> void {
 
 auto MainWindow::isDarkTheme() const -> bool { return this->darkMode; }
 
-auto MainWindow::getXournal() const -> XournalView* { return xournal.get(); }
+auto MainWindow::getXournal() const -> VertexNoteView* { return xournal.get(); }
 
 auto MainWindow::windowMaximizedCallback(GObject* window, GParamSpec*, MainWindow* win) -> void {
     win->setMaximized(gtk_window_is_maximized(GTK_WINDOW(window)));

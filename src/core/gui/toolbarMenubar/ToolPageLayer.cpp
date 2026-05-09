@@ -11,7 +11,7 @@
 #include "gui/IconNameHelper.h"                   // for IconNameHelper
 #include "gui/toolbarMenubar/AbstractToolItem.h"  // for AbstractToolItem
 #include "model/PageRef.h"                        // for PageRef
-#include "model/XojPage.h"                        // for XojPage
+#include "model/NotePage.h"                        // for NotePage
 #include "util/GtkUtil.h"                         // for setRadioButtonActionName
 #include "util/glib_casts.h"                      // for closure_notify_cb
 #include "util/gtk4_helper.h"                     // for gtk_box_append

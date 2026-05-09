@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Input handler for the geometry tool.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -39,9 +39,9 @@ class GeometryToolInputHandler {
 
 protected:
     /**
-     * @brief the XournalView attached to this handler
+     * @brief the VertexNoteView attached to this handler
      */
-    XournalView* xournal;
+    VertexNoteView* xournal;
 
     /**
      * @brief the geometry tool controller
@@ -152,7 +152,7 @@ protected:
     virtual double getMaxHeight() const = 0;
 
 public:
-    explicit GeometryToolInputHandler(XournalView* xournalView, GeometryToolController* controller);
+    explicit GeometryToolInputHandler(VertexNoteView* xournalView, GeometryToolController* controller);
     virtual ~GeometryToolInputHandler();
 
     bool handle(InputEvent const& event);

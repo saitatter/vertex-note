@@ -7,9 +7,9 @@
 #include "control/Control.h"                 // for Control
 #include "control/actions/ActionDatabase.h"  // for ActionDatabase
 #include "gui/MainWindow.h"                  // for MainWindow
-#include "gui/XournalView.h"                 // for XournalView
+#include "gui/VertexNoteView.h"                 // for VertexNoteView
 #include "model/Document.h"                 // for Document
-#include "model/XojPage.h"                  // for XojPage
+#include "model/NotePage.h"                  // for NotePage
 #include "undo/InsertLayerUndoAction.h"     // for InsertLayerUndoAction
 #include "undo/MergeLayerDownUndoAction.h"  // for MergeLayerDownUndoAction
 #include "undo/MoveLayerUndoAction.h"       // for MoveLayerUndoAction

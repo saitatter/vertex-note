@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Class to record audio and store it as MP3-file
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

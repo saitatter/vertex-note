@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Toolbar icon for separator (only used for drag and drop and so)
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

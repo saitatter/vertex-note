@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A geometry tool controller
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -29,7 +29,7 @@ class Stroke;
 
 class GeometryToolController {
 public:
-    GeometryToolController(XojPageView* view, GeometryTool* geometryTool);
+    GeometryToolController(PageView* view, GeometryTool* geometryTool);
     virtual ~GeometryToolController();
 
 public:
@@ -75,7 +75,7 @@ public:
     /**
      * @brief the page view of the page with respect to which the geometry tool is initialized
      */
-    XojPageView* getView() const;
+    PageView* getView() const;
 
     /**
      * @brief the page with respect to which the setsquare is initialized
@@ -89,7 +89,7 @@ public:
     virtual GeometryToolType getType() const = 0;
 
 protected:
-    XojPageView* view;
+    PageView* view;
 
     /**
      * @brief the underlying geometry tool

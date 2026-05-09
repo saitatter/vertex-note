@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Helper functions for libsndfile
  * platform dependent code to open std::filesystem::paths
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

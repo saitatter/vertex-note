@@ -23,7 +23,7 @@
 #include "util/NamedColor.h"  // for NamedColor
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"  // for StringUtils
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/gtk4_helper.h"
 #include "util/i18n.h"  // for _
 
@@ -69,7 +69,7 @@ void ToolMenuHandler::populate(const GladeSearchpath* gladeSearchPath) {
         std::string msg = FS(_F("Could not parse general toolbar.ini file: {1}\n"
                                 "No Toolbars will be available") %
                              file.u8string());
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
     }
 
     file = Util::getConfigFile(TOOLBAR_CONFIG);
@@ -78,7 +78,7 @@ void ToolMenuHandler::populate(const GladeSearchpath* gladeSearchPath) {
             string msg = FS(_F("Could not parse custom toolbar.ini file: {1}\n"
                                "Toolbars will not be available") %
                             file.u8string());
-            XojMsgBox::showErrorToUser(control->getGtkWindow(), msg);
+            AppMessageBox::showErrorToUser(control->getGtkWindow(), msg);
         }
     }
 }

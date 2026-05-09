@@ -1,10 +1,10 @@
 /**
- * Xournal++
+ * VertexNote
  *
  * Part of the customizable toolbars
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  * @brief Helper functions in use in the different InputHandlers as for example StylusInputHandler.h
@@ -38,7 +38,7 @@ public:
      *  1. Disable Drawing for this device is set for Touchscreen
      *  2. Tool - don't change is set for Touchscreen
      *  3. current Tool in the toolbar is a Drawing tool (i.e. Pen/Highlighter/Eraser)
-     * As this results in xournalpp just using the currently selected tool to draw
+     * As this results in vertex-note just using the currently selected tool to draw
      * which might be surprising to users. Hence it's logged as warning.
      *
      * @param toolHandler the toolHandler containing the tools

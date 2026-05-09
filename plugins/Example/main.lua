@@ -1,4 +1,4 @@
--- This is an example Xournal++ Plugin - copy this to get started
+-- This is an example VertexNote Plugin - copy this to get started
 
 local var_dump = require "var_dump"
 

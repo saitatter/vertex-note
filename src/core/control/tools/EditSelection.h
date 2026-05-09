@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A selection for editing, every selection (Rect, Lasso...) is
  * converted to this one if the selection is finished
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -38,7 +38,7 @@
 
 class UndoRedoHandler;
 class Layer;
-class XojPageView;
+class PageView;
 class Selection;
 class EditSelectionContents;
 class DeleteUndoAction;
@@ -50,15 +50,15 @@ class Document;
 class EditSelection;
 
 namespace SelectionFactory {
-auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view, ElementPtr e)
+auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr e)
         -> std::unique_ptr<EditSelection>;
-auto createFromFloatingElements(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view,
+auto createFromFloatingElements(Control* ctrl, const PageRef& page, Layer* layer, PageView* view,
                                 InsertionOrder elts)  //
         -> std::pair<std::unique_ptr<EditSelection>, Range>;
-auto createFromElementOnActiveLayer(Control* ctrl, const PageRef& page, XojPageView* view, const Element* e,
+auto createFromElementOnActiveLayer(Control* ctrl, const PageRef& page, PageView* view, const Element* e,
                                     Element::Index pos = Element::InvalidIndex)  //
         -> std::unique_ptr<EditSelection>;
-auto createFromElementsOnActiveLayer(Control* ctrl, const PageRef& page, XojPageView* view, InsertionOrderRef elts)
+auto createFromElementsOnActiveLayer(Control* ctrl, const PageRef& page, PageView* view, InsertionOrderRef elts)
         -> std::unique_ptr<EditSelection>;
 /**
  * @brief Creates a new instance containing base->getElements() and *e. The content of *base is cleared but *base is not
@@ -76,11 +76,11 @@ auto addElementsFromActiveLayer(Control* ctrl, EditSelection* base, const Insert
 
 class EditSelection: public ElementContainer, public Serializable {
 public:
-    EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& page, Layer* layer, XojPageView* view,
+    EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& page, Layer* layer, PageView* view,
                   const Range& bounds, const Range& snappingBounds);
 
     /// Construct an empty selection
-    EditSelection(Control* ctrl, const PageRef& page, Layer* layer, XojPageView* view);
+    EditSelection(Control* ctrl, const PageRef& page, Layer* layer, PageView* view);
 
     ~EditSelection() override;
 
@@ -154,7 +154,7 @@ public:
      */
     Layer* getSourceLayer() const;
 
-    inline XojPageView* getView() const { return view; }
+    inline PageView* getView() const { return view; }
 
 public:
     /**
@@ -292,7 +292,7 @@ public:
     void copySelection();
 
 public:
-    XojPageView* getView();
+    PageView* getView();
 
 public:
     // Serialize interface
@@ -338,13 +338,13 @@ private:
     /**
      * Gets the PageView under the cursor
      */
-    XojPageView* getPageViewUnderCursor();
+    PageView* getPageViewUnderCursor();
 
     /**
      * Translate all coordinates which are relative to the current view to the new view,
      * and set the attribute view to the new view
      */
-    void translateToView(XojPageView* v);
+    void translateToView(PageView* v);
 
     /**
      * Updates rotation matrix
@@ -448,7 +448,7 @@ private:  // HANDLER
     /**
      * The page view for the anchor
      */
-    XojPageView* view{};
+    PageView* view{};
 
     /**
      * Undo redo handler

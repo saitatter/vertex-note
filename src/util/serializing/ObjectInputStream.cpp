@@ -40,7 +40,7 @@ size_t ObjectInputStream::pos() { return static_cast<size_t>(istream.tellg()); }
 
 auto ObjectInputStream::read(const char* data, size_t data_len) -> bool {
     if (data && data_len > 0) {
-        // std::string() constructor can throw is data == nullptr. cf https://github.com/xournalpp/xournalpp/issues/6964
+        // std::string() constructor can throw is data == nullptr. cf https://github.com/saitatter/vertex-note/issues/6964
         return read(std::stringstream(std::string(data, data_len)), data_len);
     }
     return false;

@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Helper for reading / writing files
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -121,7 +121,7 @@ private:
 
 enum class PathStorageMode { AS_ABSOLUTE_PATH, AS_RELATIVE_PATH };
 /**
- * A Xournalpp file may include references to other PDF, PNG, etc. files on disk. This function converts an asset path
+ * A VertexNote file may include references to other PDF, PNG, etc. files on disk. This function converts an asset path
  * to a string destined for storage (e.g. in a .xopp file).
  *
  * If mode == ABSOLUTE, the path is made absolute before being converted to string

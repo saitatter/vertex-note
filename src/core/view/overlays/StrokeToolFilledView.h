@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * View active stroke tool -- filled strokes, but not filled highlighter.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

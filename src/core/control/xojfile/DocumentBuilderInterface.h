@@ -1,11 +1,11 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Abstract interface for usage by the file parsers to be implemented by classes
  * constructing a Document.
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

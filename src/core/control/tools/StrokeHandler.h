@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles input of strokes
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -43,13 +43,13 @@ class Active;
 }  // namespace StrokeStabilizer
 
 /**
- * @brief The stroke handler draws a stroke on a XojPageView
+ * @brief The stroke handler draws a stroke on a PageView
  *
  * The stroke is drawn using a cairo_surface_t* as a mask:
  * As the pointer moves on the canvas single segments are
  * drawn opaquely on the initially transparent masking
  * surface. The surface is used to mask the stroke
- * when drawing it to the XojPageView
+ * when drawing it to the PageView
  */
 class StrokeHandler: public InputHandler {
 public:

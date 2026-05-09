@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * The "Model" of a EditSelection
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -32,7 +32,7 @@
 
 class UndoRedoHandler;
 class Layer;
-class XojPageView;
+class PageView;
 class DeleteUndoAction;
 class LineStyle;
 class ObjectInputStream;
@@ -42,7 +42,7 @@ class XojFont;
 class EditSelectionContents: public ElementContainer, public Serializable {
 public:
     EditSelectionContents(xoj::util::Rectangle<double> bounds, xoj::util::Rectangle<double> snappedBounds,
-                          const PageRef& sourcePage, Layer* sourceLayer, XojPageView* sourceView);
+                          const PageRef& sourcePage, Layer* sourceLayer, PageView* sourceView);
     ~EditSelectionContents() override;
 
 public:
@@ -146,7 +146,7 @@ public:
     /**
      * Gets the original view of the contents
      */
-    XojPageView* getSourceView();
+    PageView* getSourceView();
 
 
     /**
@@ -231,5 +231,5 @@ private:
     /**
      * Source View for Undo operations
      */
-    XojPageView* sourceView;
+    PageView* sourceView;
 };

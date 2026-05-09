@@ -10,7 +10,7 @@
 #include <glib.h>  // for g_warning
 
 #include "control/settings/Settings.h"  // for Settings
-#include "pdf/base/XojPdfDocument.h"    // for XojPdfDocument
+#include "pdf/base/PdfDocument.h"    // for PdfDocument
 #include "util/Assert.h"                // for xoj_assert
 #include "util/Range.h"                 // for Range
 #include "util/i18n.h"                  // for _
@@ -29,12 +29,12 @@ public:
      * @param popplerPage
      * @param buffer is the result of rendering popplerPage
      */
-    PdfCacheEntry(XojPdfPageSPtr popplerPage, xoj::view::Mask&& buffer):
+    PdfCacheEntry(PdfPagePtr popplerPage, xoj::view::Mask&& buffer):
             popplerPage(std::move(popplerPage)), buffer(std::forward<xoj::view::Mask>(buffer)) {}
 
     ~PdfCacheEntry() = default;
 
-    XojPdfPageSPtr popplerPage;
+    PdfPagePtr popplerPage;
     xoj::view::Mask buffer;
 };
 
@@ -43,7 +43,7 @@ static double getPercentZoomChange(double oldZoom, double newZoom) {
     return std::abs(oldZoom - newZoom) * 100.0 / averagedZoom;
 }
 
-PdfCache::PdfCache(const XojPdfDocument& doc, Settings* settings): pdfDocument(doc) { updateSettings(settings); }
+PdfCache::PdfCache(const PdfDocument& doc, Settings* settings): pdfDocument(doc) { updateSettings(settings); }
 
 PdfCache::~PdfCache() = default;
 
@@ -89,7 +89,7 @@ auto PdfCache::lookup(size_t pdfPageNo) const -> const PdfCacheEntry* {
     return nullptr;
 }
 
-auto PdfCache::cache(XojPdfPageSPtr popplerPage, xoj::view::Mask&& buffer) -> const PdfCacheEntry* {
+auto PdfCache::cache(PdfPagePtr popplerPage, xoj::view::Mask&& buffer) -> const PdfCacheEntry* {
     xoj_assert(this->maxSize > 0);
     xoj_assert(popplerPage);
     const auto pageId = popplerPage->getPageId();

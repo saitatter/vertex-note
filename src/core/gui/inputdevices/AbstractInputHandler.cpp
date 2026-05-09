@@ -10,12 +10,12 @@
 
 #include "control/settings/Settings.h"           // for Settings
 #include "gui/Layout.h"                          // for Layout
-#include "gui/PageView.h"                        // for XojPageView
-#include "gui/XournalView.h"                     // for XournalView
-#include "gui/XournalppCursor.h"                 // for XournalppCursor
+#include "gui/PageView.h"                        // for PageView
+#include "gui/VertexNoteView.h"                     // for VertexNoteView
+#include "gui/VertexNoteCursor.h"                 // for VertexNoteCursor
 #include "gui/inputdevices/InputEvents.h"        // for InputEvent
 #include "gui/inputdevices/PositionInputData.h"  // for PositionInputData
-#include "gui/widgets/XournalWidget.h"           // for GtkXournal
+#include "gui/widgets/VertexNoteWidget.h"           // for GtkVertexNote
 #include "model/Point.h"                         // for Point, Point::NO_PRE...
 #include "util/Assert.h"                         // for xoj_assert
 #include "util/safe_casts.h"                     // for round_cast
@@ -55,12 +55,12 @@ auto AbstractInputHandler::handle(InputEvent const& event) -> bool {
  *
  * @return page or nullptr if none
  */
-auto AbstractInputHandler::getPageAtCurrentPosition(InputEvent const& event) const -> XojPageView* {
+auto AbstractInputHandler::getPageAtCurrentPosition(InputEvent const& event) const -> PageView* {
     if (!event) {
         return nullptr;
     }
 
-    GtkXournal* xournal = this->inputContext->getXournal();
+    GtkVertexNote* xournal = this->inputContext->getXournal();
 
     int x = round_cast<int>(event.relative.x);
     int y = round_cast<int>(event.relative.y);
@@ -71,7 +71,7 @@ auto AbstractInputHandler::getPageAtCurrentPosition(InputEvent const& event) con
 /**
  * Get input data relative to current input page
  */
-auto AbstractInputHandler::getInputDataRelativeToCurrentPage(XojPageView* page, InputEvent const& event) const
+auto AbstractInputHandler::getInputDataRelativeToCurrentPage(PageView* page, InputEvent const& event) const
         -> PositionInputData {
     xoj_assert(page != nullptr);
 

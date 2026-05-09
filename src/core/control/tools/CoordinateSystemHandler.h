@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Handles input to draw an coordinate system
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -17,7 +17,7 @@
 
 #include "BaseShapeHandler.h"  // for BaseShapeHandler
 
-class XournalView;
+class VertexNoteView;
 
 class CoordinateSystemHandler: public BaseShapeHandler {
 public:

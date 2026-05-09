@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * [Header description]
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -18,7 +18,7 @@
 
 class InputContext;
 class PositionInputData;
-class XojPageView;
+class PageView;
 
 enum class PressureMode { NO_PRESSURE, DEVICE_PRESSURE, INFERRED_PRESSURE };
 
@@ -71,7 +71,7 @@ protected:
     /**
      * Page a selection started at as we require this for motion updates
      */
-    XojPageView* sequenceStartPage = nullptr;
+    PageView* sequenceStartPage = nullptr;
 
     /**
      * For tap event filtering. See Preferences->Drawing Area->Action on Tool Tap
@@ -140,7 +140,7 @@ protected:
      * @param page The page the event is relative to.
      * @return The filtered pressure.
      */
-    double inferPressureValue(PositionInputData const& pos, XojPageView* page);
+    double inferPressureValue(PositionInputData const& pos, PageView* page);
 
     /**
      * @brief Apply filters (e.g. minimum pressure, pressure inference, etc.) to
@@ -150,7 +150,7 @@ protected:
      * @param page The page the event is relative to
      * @return The filtered pressure.
      */
-    double filterPressure(PositionInputData const& pos, XojPageView* page);
+    double filterPressure(PositionInputData const& pos, PageView* page);
 
     /**
      * @brief Detects whether the current input event is to be used as a selection

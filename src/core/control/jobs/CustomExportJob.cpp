@@ -7,21 +7,21 @@
 
 #include "control/Control.h"                   // for Control
 #include "control/jobs/BaseExportJob.h"        // for BaseExportJob::ExportType
-#include "control/xojfile/XojExportHandler.h"  // for XojExportHandler
+#include "control/xojfile/LegacyXojExportHandler.h"  // for LegacyXojExportHandler
 #include "gui/MainWindow.h"                    // for MainWindow
 #include "gui/dialog/ExportDialog.h"           // for ExportDialog
 #include "model/Document.h"                    // for Document
-#include "pdf/base/XojPdfExport.h"             // for XojPdfExport
-#include "pdf/base/XojPdfExportFactory.h"      // for XojPdfExportFactory
+#include "pdf/base/PdfExport.h"             // for PdfExport
+#include "pdf/base/PdfExportFactory.h"      // for PdfExportFactory
 #include "util/PathUtil.h"                     // for clearExtensions
 #include "util/PopupWindowWrapper.h"           // for PopupWindowWrapper
 #include "util/Util.h"                         // for execInUiThread
-#include "util/XojMsgBox.h"                    // for XojMsgBox
+#include "util/AppMessageBox.h"                    // for AppMessageBox
 #include "util/i18n.h"                         // for _, FS, _F
 
 #include "ImageExport.h"  // for ImageExport, EXPORT_GR...
 #include "SaveJob.h"      // for SaveJob
-#include "XournalScheduler.h"
+#include "VertexNoteScheduler.h"
 
 
 CustomExportJob::CustomExportJob(Control* control): BaseExportJob(control, _("Custom Export")) {
@@ -122,7 +122,7 @@ void CustomExportJob::run() {
         SaveJob::updatePreview(control);
         Document* doc = this->control->getDocument();
 
-        XojExportHandler h;
+        LegacyXojExportHandler h;
         doc->lock_shared();
         h.prepareSave(doc, filepath);
         h.saveTo(filepath, this->control);
@@ -138,7 +138,7 @@ void CustomExportJob::run() {
         // the ui is blocked, so there should be no changes...
         Document* doc = control->getDocument();
 
-        std::unique_ptr<XojPdfExport> pdfe = XojPdfExportFactory::createExport(doc, control, pdfExportBackend);
+        std::unique_ptr<PdfExport> pdfe = PdfExportFactory::createExport(doc, control, pdfExportBackend);
 
         pdfe->setExportBackground(exportBackground);
 
@@ -153,6 +153,6 @@ void CustomExportJob::run() {
 
 void CustomExportJob::afterRun() {
     if (!this->lastError.empty()) {
-        XojMsgBox::showErrorToUser(control->getGtkWindow(), this->lastError);
+        AppMessageBox::showErrorToUser(control->getGtkWindow(), this->lastError);
     }
 }

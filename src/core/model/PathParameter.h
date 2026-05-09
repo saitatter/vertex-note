@@ -1,11 +1,11 @@
 /**
- * Xournal++
+ * VertexNote
  *
  * @brief Type for parameters of points on a path.
  * Similar to std::pair<size_t, double>, but with named variables
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

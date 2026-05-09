@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * PDF view
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -13,7 +13,7 @@
 
 #include <cairo.h>  // for cairo_t
 
-#include "pdf/base/XojPdfPage.h"  // for XojPdfPageSPtr
+#include "pdf/base/PdfPage.h"  // for PdfPagePtr
 
 #include "BaseElementView.h"  // for BaseElementView
 
@@ -21,7 +21,7 @@ class PdfPagesDialog;
 
 class PdfElementView: public BaseElementView {
 public:
-    PdfElementView(size_t id, XojPdfPageSPtr page, PdfPagesDialog* dlg);
+    PdfElementView(size_t id, PdfPagePtr page, PdfPagesDialog* dlg);
     ~PdfElementView() override;
 
 protected:
@@ -46,7 +46,7 @@ public:
     void setHideIfUsed(bool hideIfUsed);
 
 private:
-    XojPdfPageSPtr page;
+    PdfPagePtr page;
 
     /**
      * This page is already used as background

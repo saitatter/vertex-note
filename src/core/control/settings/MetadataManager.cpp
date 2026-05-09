@@ -11,7 +11,7 @@
 
 #include "util/PathUtil.h"   // for getConfigSubfolder, getStateSubfolder
 #include "util/StringUtils.h"
-#include "util/XojMsgBox.h"  // for XojMsgBox
+#include "util/AppMessageBox.h"  // for AppMessageBox
 #include "util/serdesstream.h"
 #include "util/utf8_view.h"
 
@@ -117,7 +117,7 @@ auto MetadataManager::loadList() -> std::vector<MetadataEntry> {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        XojMsgBox::showErrorToUser(nullptr, e.what());
+        AppMessageBox::showErrorToUser(nullptr, e.what());
         return data;
     }
 

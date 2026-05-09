@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A page range for PDF export etc. (e.g. 1-2,5,7)
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */

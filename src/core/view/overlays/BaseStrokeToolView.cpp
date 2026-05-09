@@ -38,7 +38,7 @@ auto BaseStrokeToolView::createMask(cairo_t* tgtcr) const -> Mask {
     if (!visibleRange.isValid()) {
         /*
          * The user might be drawing on a page that is not visible at all:
-         * e.g. https://github.com/xournalpp/xournalpp/pull/4158#issuecomment-1385954494
+         * e.g. https://github.com/saitatter/vertex-note/pull/4158#issuecomment-1385954494
          */
         return Mask();
     }

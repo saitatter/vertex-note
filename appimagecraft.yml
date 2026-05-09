@@ -1,7 +1,7 @@
 version: 1
 
 project:
-  name: com.github.xournalpp.xournalpp
+  name: app.vertexnote.VertexNote
   version_command: git describe --tags
 
 scripts:

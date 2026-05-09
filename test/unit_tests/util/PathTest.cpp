@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * This file is part of the Xournal UnitTests
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/vertex-note/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -190,14 +190,14 @@ TEST(UtilPath, normalizeAssetPath) {
     EXPECT_TRUE(!p.empty());
 
     // symlinks are not resolved
-    if (!fs::exists("xournalpp-test-symlink")) {
-        fs::create_directory_symlink("../dir", "xournalpp-test-symlink");
-        p = Util::normalizeAssetPath("xournalpp-test-symlink/file.txt", "base",
+    if (!fs::exists("vertex-note-test-symlink")) {
+        fs::create_directory_symlink("../dir", "vertex-note-test-symlink");
+        p = Util::normalizeAssetPath("vertex-note-test-symlink/file.txt", "base",
                                      Util::PathStorageMode::AS_RELATIVE_PATH);
-        EXPECT_EQ(std::u8string_view(u8"../xournalpp-test-symlink/file.txt"), p.u8string());
-        fs::remove("xournalpp-test-symlink");
+        EXPECT_EQ(std::u8string_view(u8"../vertex-note-test-symlink/file.txt"), p.u8string());
+        fs::remove("vertex-note-test-symlink");
     } else {
-        FAIL() << "File named \"xournalpp-test-symlink\" already exists";
+        FAIL() << "File named \"vertex-note-test-symlink\" already exists";
     }
 
 #endif

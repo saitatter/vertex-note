@@ -4,19 +4,19 @@
 
 #include "control/Control.h"
 #include "control/layer/LayerController.h"
-#include "gui/XournalView.h"
-#include "gui/XournalppCursor.h"
+#include "gui/VertexNoteView.h"
+#include "gui/VertexNoteCursor.h"
 #include "model/Document.h"
 #include "model/GeometryTool.h"
 #include "model/Stroke.h"
-#include "model/XojPage.h"
+#include "model/NotePage.h"
 #include "undo/InsertUndoAction.h"
 
 using xoj::util::Rectangle;
 
 constexpr double MARK_SIZE = 2.;
 
-GeometryToolController::GeometryToolController(XojPageView* view, GeometryTool* geometryTool):
+GeometryToolController::GeometryToolController(PageView* view, GeometryTool* geometryTool):
         view(view), geometryTool(geometryTool) {}
 
 GeometryToolController::~GeometryToolController() = default;
@@ -124,4 +124,4 @@ void GeometryToolController::initializeStroke() {
 
 auto GeometryToolController::getPage() const -> const PageRef { return view->getPage(); }
 
-auto GeometryToolController::getView() const -> XojPageView* { return view; }
+auto GeometryToolController::getView() const -> PageView* { return view; }

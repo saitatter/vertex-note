@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * Lua API, application library
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -39,13 +39,13 @@
 #include "enums/Action.enum.h"
 #include "gui/Layout.h"
 #include "gui/MainWindow.h"
-#include "gui/XournalView.h"
+#include "gui/VertexNoteView.h"
 #include "gui/dialog/FileChooserFiltersHelper.h"
-#include "gui/dialog/XojOpenDlg.h"  // for XojO...
-#include "gui/dialog/XojSaveDlg.h"  // for XojS...
+#include "gui/dialog/DocumentOpenDialog.h"  // for XojO...
+#include "gui/dialog/DocumentSaveDialog.h"  // for XojS...
 #include "gui/sidebar/Sidebar.h"
 #include "gui/toolbarMenubar/model/ColorPalette.h"  // for Palette
-#include "gui/widgets/XournalWidget.h"
+#include "gui/widgets/VertexNoteWidget.h"
 #include "model/Document.h"
 #include "model/Element.h"
 #include "model/Font.h"
@@ -54,14 +54,14 @@
 #include "model/Stroke.h"
 #include "model/StrokeStyle.h"
 #include "model/Text.h"
-#include "model/XojPage.h"  // IWYU pragma: keep for XojPage
+#include "model/NotePage.h"  // IWYU pragma: keep for NotePage
 #include "plugin/Plugin.h"
 #include "undo/InsertUndoAction.h"
 #include "util/GVariantTemplate.h"    // for makeGVariant
 #include "util/PathUtil.h"            // for clea...
 #include "util/PopupWindowWrapper.h"  // for PopupWindowWrapper
 #include "util/StringUtils.h"
-#include "util/XojMsgBox.h"
+#include "util/AppMessageBox.h"
 #include "util/i18n.h"              // for _
 #include "util/raii/GObjectSPtr.h"  // for GObjectSPtr (font validation)
 #include "util/safe_casts.h"        // for round_cast, as_signed, as_unsigned
@@ -423,7 +423,7 @@ static int applib_msgbox(lua_State* L) {
 
     lua_pushnil(L);  // initial key for table traversal with `next`
 
-    std::vector<XojMsgBox::Button> buttons;
+    std::vector<AppMessageBox::Button> buttons;
 
     while (lua_next(L, 2) != 0) {
         int index = static_cast<int>(lua_tointeger(L, -2));
@@ -435,7 +435,7 @@ static int applib_msgbox(lua_State* L) {
 
     Plugin* plugin = Plugin::getPluginFromLua(L);
 
-    int result = XojMsgBox::askPluginQuestion(plugin->getName(), msg, buttons);
+    int result = AppMessageBox::askPluginQuestion(plugin->getName(), msg, buttons);
     lua_pushinteger(L, result);
     return 1;
 }
@@ -467,7 +467,7 @@ static int applib_openDialog(lua_State* L) {
 
     lua_pushnil(L);  // initial key for table traversal with `next`
 
-    std::vector<XojMsgBox::Button> buttons;
+    std::vector<AppMessageBox::Button> buttons;
 
     while (lua_next(L, 2) != 0) {
         int index = static_cast<int>(lua_tointeger(L, -2));
@@ -485,7 +485,7 @@ static int applib_openDialog(lua_State* L) {
     const std::string& pluginName = plugin->getName();
     auto header = (error ? std::string("<b>Error in </b>") : "") + std::string("VertexNote Plugin «") + pluginName + "»";
 
-    XojMsgBox::askQuestionWithMarkup(nullptr, header, msg, buttons, [cb, plugin](int response) {
+    AppMessageBox::askQuestionWithMarkup(nullptr, header, msg, buttons, [cb, plugin](int response) {
         if (cb != "" && response >= 1) {
             plugin->callFunction(cb, static_cast<ptrdiff_t>(response));
         }
@@ -656,7 +656,7 @@ void lua_push_gvariant(lua_State* L, GVariant* state, const GVariantType* typeHi
 /***
  * Change the action's state, triggering callbacks. Actions with state from an enum
  * (like ToolType, ToolSize, EraserSize, OrderChange) should be accessed via the app.C
- * table of constants for consistency between different versions of Xournal++
+ * table of constants for consistency between different versions of VertexNote
  * @param action Action
  * @param state any
  *
@@ -690,7 +690,7 @@ static int applib_changeActionState(lua_State* L) {
  * Get the action's state. For actions with state from an enum
  * (like ToolType, ToolSize, EraserSize, OrderChange) the return value should
  * be compared to the app.C table of constants for consistency between different
- * versions of Xournal++
+ * versions of VertexNote
  * @param action Action
  *
  * Example 1: if app.getActionState("select-tool") == app.C.Tool_text then
@@ -721,7 +721,7 @@ static int applib_getActionState(lua_State* L) {
 /***
  * Activate the action, triggering callbacks. Actions with state from an enum
  * (like ToolType, ToolSize, EraserSize, OrderChange) should be accessed via the app.C
- * table of constants for consistency between different versions of Xournal++
+ * table of constants for consistency between different versions of VertexNote
  * @param action Action
  * @param state nil | any
  *
@@ -2102,7 +2102,7 @@ static int applib_changeBackgroundPdfPageNr(lua_State* L) {
         // no need to set a type, if we set the page number the type is also set
         page->setBackgroundPdfPageNr(selected);
 
-        XojPdfPageSPtr p = doc->getPdfPage(selected);
+        PdfPagePtr p = doc->getPdfPage(selected);
         page->setSize(p->getWidth(), p->getHeight());
     } else {
         return luaL_error(L, "Pdf page number %d does not exist!", selected + 1);
@@ -2211,7 +2211,7 @@ static void pushRectangleHelper(lua_State* L, xoj::util::Rectangle<double> rect)
  *      "y"      = number
  *   }
  *   -- bounds used for snapping (doesn't include padding and doesn't account to line width)
- *   -- for more information see https://github.com/xournalpp/xournalpp/pull/4359#issuecomment-1304395011
+ *   -- for more information see https://github.com/saitatter/vertex-note/pull/4359#issuecomment-1304395011
  *   "snappedBounds" = {
  *      "width"  = number
  *      "height" = number
@@ -2698,7 +2698,7 @@ static int applib_getScrollPos(lua_State* L) {
 static int applib_getPageLabel(lua_State* L) {
     const Plugin* plugin = Plugin::getPluginFromLua(L);
     const Control* control = plugin->getControl();
-    const XojPdfDocument& doc = control->getDocument()->getPdfDocument();
+    const PdfDocument& doc = control->getDocument()->getPdfDocument();
 
     const size_t pagenr = static_cast<size_t>(luaL_checkinteger(L, 1)) - 1;
 
@@ -3331,8 +3331,8 @@ static int applib_addImages(lua_State* L) {
  *     {
  *         ["x"] = number,
  *         ["y"] = number,
- *         ["width"] = number,    (width when inserted into Xournal++)
- *         ["height"] = number,   (height when inserted into Xournal++)
+ *         ["width"] = number,    (width when inserted into VertexNote)
+ *         ["height"] = number,   (height when inserted into VertexNote)
  *         ["data"] = string,
  *         ["format"] = string,
  *         ["imageWidth"] = integer,
@@ -3465,7 +3465,7 @@ static int applib_getFolder(lua_State* L) {
 static int applib_clearSelection(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
     Control* control = plugin->getControl();
-    XournalView* xournal = control->getWindow()->getXournal();
+    VertexNoteView* xournal = control->getWindow()->getXournal();
     xournal->clearSelection();
     return 0;
 }
@@ -3486,9 +3486,9 @@ static int applib_addToSelection(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
     Control* control = plugin->getControl();
     PageRef page = control->getCurrentPage();
-    XournalView* xournal = control->getWindow()->getXournal();
+    VertexNoteView* xournal = control->getWindow()->getXournal();
     EditSelection* sel = xournal->getSelection();
-    XojPageView* view = xournal->getViewFor(control->getCurrentPageNo());
+    PageView* view = xournal->getViewFor(control->getCurrentPageNo());
 
     std::unordered_set<void*> refs;
     // stack now contains: -1 => table

@@ -35,7 +35,7 @@
 #include "model/Stroke.h"               // for Stroke, StrokeCapStyle
 #include "model/TexImage.h"             // for TexImage
 #include "model/Text.h"                 // for Text
-#include "model/XojPage.h"              // for XojPage
+#include "model/NotePage.h"              // for NotePage
 #include "util/Assert.h"                // for xoj_assert
 #include "util/Color.h"                 // for Color
 #include "util/GzInputStream.h"         // for GzInputStream
@@ -102,7 +102,7 @@ void LoadHandler::finalizeDocument() {
 void LoadHandler::addPage(double width, double height) {
     xoj_assert(!this->page);
 
-    this->page = std::make_shared<XojPage>(width, height, /*suppressLayerCreation*/ true);
+    this->page = std::make_shared<NotePage>(width, height, /*suppressLayerCreation*/ true);
     this->pages.emplace_back(this->page);
 }
 
@@ -615,7 +615,7 @@ auto LoadHandler::loadDocument(fs::path const& filepath) -> std::unique_ptr<Docu
     this->doc->setCreateBackupOnSave(true);
 
     if (this->fileVersion == 1 || (this->errorMessages && !this->errorMessages->empty())) {
-        // Either, this file was created by Xournal, not Xournal++, or loading
+        // Either, this file was created by Xournal, not VertexNote, or loading
         // the file failed to some extent (i.e. file is corrupt or uses unknown
         // features). In all cases, do not set the doc's filename, in order to
         // prompt a "Save as" dialog when the user saves the document. In this
@@ -633,7 +633,7 @@ auto LoadHandler::loadDocument(fs::path const& filepath) -> std::unique_ptr<Docu
 
 void LoadHandler::fixNullPressureValues(std::vector<Point> pts) {
     /*
-     * Due to various bugs (see e.g. https://github.com/xournalpp/xournalpp/issues/3643), old files may contain strokes
+     * Due to various bugs (see e.g. https://github.com/saitatter/vertex-note/issues/3643), old files may contain strokes
      * with non-positive pressure values.
      *
      * Those strokes thus fail the somewhat reasonable assumption that pressure values should be positive.

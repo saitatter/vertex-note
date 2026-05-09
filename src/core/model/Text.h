@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A text element
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -25,7 +25,7 @@
 class Element;
 class ObjectInputStream;
 class ObjectOutputStream;
-class XojPdfRectangle;
+class PdfRectangle;
 
 class Text: public AudioElement {
 public:
@@ -69,7 +69,7 @@ protected:
     void updateSnapping() const;
 
 public:
-    std::vector<XojPdfRectangle> findText(const std::string& search) const;
+    std::vector<PdfRectangle> findText(const std::string& search) const;
 
 private:
     XojFont font;

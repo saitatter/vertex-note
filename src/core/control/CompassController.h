@@ -1,10 +1,10 @@
 /*
- * Xournal++
+ * VertexNote
  *
  * A compass controller
  *
- * @author Xournal++ Team
- * https://github.com/xournalpp/xournalpp
+ * @author VertexNote Team
+ * https://github.com/saitatter/vertex-note
  *
  * @license GNU GPLv2 or later
  */
@@ -34,7 +34,7 @@ class Stroke;
 
 class CompassController: public GeometryToolController {
 public:
-    CompassController(XojPageView* view, Compass* compass);
+    CompassController(PageView* view, Compass* compass);
     ~CompassController() override;
 
 public:

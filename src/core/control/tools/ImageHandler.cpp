@@ -13,16 +13,16 @@
 #include "control/Control.h"              // for Control
 #include "control/tools/EditSelection.h"  // for EditSelection
 #include "gui/MainWindow.h"               // for MainWindow
-#include "gui/PageView.h"                 // for XojPageView
-#include "gui/XournalView.h"              // for XournalView
-#include "gui/dialog/XojOpenDlg.h"        // for showOpenImageDialog
+#include "gui/PageView.h"                 // for PageView
+#include "gui/VertexNoteView.h"              // for VertexNoteView
+#include "gui/dialog/DocumentOpenDialog.h"        // for showOpenImageDialog
 #include "model/Image.h"
 #include "model/Layer.h"            // for Layer
 #include "model/PageRef.h"          // for PageRef
-#include "model/XojPage.h"          // for XojPage
+#include "model/NotePage.h"          // for NotePage
 #include "undo/InsertUndoAction.h"  // for InsertUndoAction
 #include "undo/UndoRedoHandler.h"   // for UndoRedoHandler
-#include "util/XojMsgBox.h"         // for XojMsgBox
+#include "util/AppMessageBox.h"         // for AppMessageBox
 #include "util/i18n.h"              // for _
 #include "util/raii/GObjectSPtr.h"  // for GObjectSPtr.h
 
@@ -37,7 +37,7 @@ void ImageHandler::chooseAndCreateImage(std::function<void(std::unique_ptr<Image
                                           auto img = ImageHandler::createImageFromFile(p);
 
                                           if (!img || img->getImageSize() == Image::NOSIZE) {
-                                              XojMsgBox::showErrorToUser(ctrl->getGtkWindow(),
+                                              AppMessageBox::showErrorToUser(ctrl->getGtkWindow(),
                                                                          _("Failed to load image"));
                                               return;
                                           }
@@ -69,13 +69,13 @@ auto ImageHandler::createImageFromFile(const fs::path& p) -> std::unique_ptr<Ima
         msg << _("Error while opening image file: ") << p.string() << '\n'
             << "Error code: " << e.code() << '\n'
             << "Explanatory string: " << e.what();
-        XojMsgBox::showErrorToUser(nullptr, msg.str());
+        AppMessageBox::showErrorToUser(nullptr, msg.str());
         return nullptr;
     }
     // Render the image.
     if (auto opt = img->renderBuffer(); opt.has_value()) {
         // An error occurred
-        XojMsgBox::showErrorToUser(nullptr, opt.value());
+        AppMessageBox::showErrorToUser(nullptr, opt.value());
         return nullptr;
     }
 
@@ -89,7 +89,7 @@ bool ImageHandler::addImageToDocument(std::unique_ptr<Image> img, PageRef page, 
         control->getUndoRedoHandler()->addUndoAction(std::make_unique<InsertUndoAction>(page, layer, img.get()));
     }
 
-    XournalView* xournal = control->getWindow()->getXournal();
+    VertexNoteView* xournal = control->getWindow()->getXournal();
     auto pageNr = xournal->getCurrentPage();
     auto* view = xournal->getViewFor(pageNr);
 

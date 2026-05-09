@@ -7,7 +7,7 @@
 #include "model/Document.h"
 #include "model/Element.h"
 #include "model/Layer.h"      // for Layer
-#include "model/XojPage.h"    // for XojPage
+#include "model/NotePage.h"    // for NotePage
 #include "undo/UndoAction.h"  // for UndoAction
 
 ArrangeUndoAction::ArrangeUndoAction(const PageRef& page, Layer* layer, std::string desc, InsertionOrderRef oldOrder,
