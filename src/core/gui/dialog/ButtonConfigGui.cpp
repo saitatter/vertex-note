@@ -143,6 +143,8 @@ ButtonConfigGui::ButtonConfigGui(GladeSearchpath* gladeSearchPath, GtkBox* box, 
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Rectangle by Clicks"));
     // DRAWING_TYPE_VERTEX_CIRCLE
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Circle by Clicks"));
+    // DRAWING_TYPE_VERTEX_ARC
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(this->cbDrawingType), _("Draw Vertex Arc by Clicks"));
 
 
     // Values in glade GUI!

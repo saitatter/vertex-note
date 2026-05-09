@@ -86,6 +86,26 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForFullCircleArc) {
     EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
 }
 
+TEST(VertexNoteGeometryObject, createsStrokeFallbackForPartialArc) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto start = object.addVertex(Vec2{14.0, 10.0});
+    const auto end = object.addVertex(Vec2{10.0, 14.0});
+    object.addEdge(EdgeKind::Arc, start, end, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 4U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 10.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 10.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 14.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
+}
+
 TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     GeometryObject object(42);
     auto a = object.addVertex(Vec2{1.0, 2.0});

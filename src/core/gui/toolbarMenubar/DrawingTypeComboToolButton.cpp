@@ -51,6 +51,8 @@ static auto makeEntries(IconNameHelper& icons, const ActionDatabase& db)
     entries[Type::VERTEX_CIRCLE] =
             Entry(_("Draw Vertex Circle by Clicks"), icons.iconName("draw-ellipse"), db,
                   Action::TOOL_DRAW_VERTEX_CIRCLE);
+    entries[Type::VERTEX_ARC] =
+            Entry(_("Draw Vertex Arc by Clicks"), icons.iconName("draw-ellipse"), db, Action::TOOL_DRAW_VERTEX_ARC);
     entries[Type::SHAPE_RECOGNIZER] =
             Entry(_("Stroke recognizer"), icons.iconName("shape-recognizer"), db, Action::TOOL_DRAW_SHAPE_RECOGNIZER);
     return res;
@@ -163,6 +165,8 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> vn::util::Widget
     g_signal_connect((*entries)[Type::VERTEX_CIRCLE].gAction.get(), "notify::state",
                      vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_CIRCLE>>,
                      data.get());
+    g_signal_connect((*entries)[Type::VERTEX_ARC].gAction.get(), "notify::state",
+                     vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::VERTEX_ARC>>, data.get());
     g_signal_connect((*entries)[Type::SHAPE_RECOGNIZER].gAction.get(), "notify::state",
                      vn::util::wrap_for_g_callback_v<Data::setProminentIconCallback<Type::SHAPE_RECOGNIZER>>,
                      data.get());
@@ -183,6 +187,7 @@ auto DrawingTypeComboToolButton::createItem(bool horizontal) -> vn::util::Widget
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::VERTEX_POLYLINE].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::VERTEX_RECTANGLE].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::VERTEX_CIRCLE].gAction.get(), d);
+                g_signal_handlers_disconnect_by_data((*data->entries)[Type::VERTEX_ARC].gAction.get(), d);
                 g_signal_handlers_disconnect_by_data((*data->entries)[Type::SHAPE_RECOGNIZER].gAction.get(), d);
                 delete data;
             },

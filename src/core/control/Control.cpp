@@ -128,7 +128,8 @@ namespace {
 
 [[nodiscard]] auto hasPendingInputDrawingType(DrawingType type) -> bool {
     return type == DRAWING_TYPE_SPLINE || type == DRAWING_TYPE_VERTEX_LINE || type == DRAWING_TYPE_VERTEX_POLYLINE ||
-           type == DRAWING_TYPE_VERTEX_RECTANGLE || type == DRAWING_TYPE_VERTEX_CIRCLE;
+           type == DRAWING_TYPE_VERTEX_RECTANGLE || type == DRAWING_TYPE_VERTEX_CIRCLE ||
+           type == DRAWING_TYPE_VERTEX_ARC;
 }
 
 }  // namespace
@@ -1249,6 +1250,7 @@ void Control::toolChanged() {
                                  toolHandler->hasCapability(TOOL_CAP_VERTEX_RECTANGLE));
     this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_CIRCLE,
                                  toolHandler->hasCapability(TOOL_CAP_VERTEX_CIRCLE));
+    this->actionDB->enableAction(Action::TOOL_DRAW_VERTEX_ARC, toolHandler->hasCapability(TOOL_CAP_VERTEX_ARC));
     this->actionDB->enableAction(Action::TOOL_DRAW_SHAPE_RECOGNIZER, toolHandler->hasCapability(TOOL_CAP_RECOGNIZER));
 
     DrawingType dt = toolHandler->getDrawingType();
@@ -1263,6 +1265,7 @@ void Control::toolChanged() {
     this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_POLYLINE, dt == DRAWING_TYPE_VERTEX_POLYLINE);
     this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_RECTANGLE, dt == DRAWING_TYPE_VERTEX_RECTANGLE);
     this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_CIRCLE, dt == DRAWING_TYPE_VERTEX_CIRCLE);
+    this->actionDB->setActionState(Action::TOOL_DRAW_VERTEX_ARC, dt == DRAWING_TYPE_VERTEX_ARC);
     this->actionDB->setActionState(Action::TOOL_DRAW_SHAPE_RECOGNIZER, dt == DRAWING_TYPE_SHAPE_RECOGNIZER);
 
     bool enableSize = toolHandler->hasCapability(TOOL_CAP_SIZE);

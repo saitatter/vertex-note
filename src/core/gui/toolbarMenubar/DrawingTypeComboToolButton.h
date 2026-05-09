@@ -56,6 +56,7 @@ public:
         VERTEX_POLYLINE,
         VERTEX_RECTANGLE,
         VERTEX_CIRCLE,
+        VERTEX_ARC,
         SHAPE_RECOGNIZER,
         ENUMERATOR_COUNT
     };
