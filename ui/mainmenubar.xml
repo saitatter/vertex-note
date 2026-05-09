@@ -159,10 +159,47 @@
      <attribute name="label" translatable="yes">VertexNote Geometry Snapping</attribute>
      <attribute name="action">win.vertexnote-geometry-snapping</attribute>
     </item>
-    <item>
+   <item>
      <attribute name="label" translatable="yes">VertexNote Grid Snapping</attribute>
      <attribute name="action">win.vertexnote-grid-snapping</attribute>
     </item>
+   </section>
+   <section>
+    <submenu>
+     <attribute name="label" translatable="yes">Geometry Constraints</attribute>
+     <section>
+      <item>
+       <attribute name="label" translatable="yes">Coincident</attribute>
+       <attribute name="action">win.vertexnote-constraint-coincident</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Horizontal</attribute>
+       <attribute name="action">win.vertexnote-constraint-horizontal</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Vertical</attribute>
+       <attribute name="action">win.vertexnote-constraint-vertical</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Fixed Length</attribute>
+       <attribute name="action">win.vertexnote-constraint-fixed-length</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Parallel</attribute>
+       <attribute name="action">win.vertexnote-constraint-parallel</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Perpendicular</attribute>
+       <attribute name="action">win.vertexnote-constraint-perpendicular</attribute>
+      </item>
+     </section>
+     <section>
+      <item>
+       <attribute name="label" translatable="yes">Delete Matching Constraints</attribute>
+       <attribute name="action">win.vertexnote-constraint-delete</attribute>
+      </item>
+     </section>
+    </submenu>
    </section>
    <section>
     <item>

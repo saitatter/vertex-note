@@ -72,6 +72,9 @@ class PdfRectangle;
 class Callback;
 class ActionDatabase;
 class NavigationHistory;
+namespace vn::geom {
+enum class ConstraintKind;
+}
 
 class Control:
         public ToolListener,
@@ -274,6 +277,8 @@ public:
     void selectAllOnPage();
 
     void reorderSelection(EditSelection::OrderChange change);
+    bool applyGeometryConstraint(vn::geom::ConstraintKind kind);
+    bool deleteSelectedGeometryConstraints();
 
     void setToolSize(ToolSize size);
 

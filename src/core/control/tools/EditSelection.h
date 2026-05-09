@@ -297,6 +297,8 @@ public:
     [[nodiscard]] auto deleteActiveGeometryVertex() -> bool;
     [[nodiscard]] auto insertActiveGeometryVertexOnEdge() -> bool;
     [[nodiscard]] auto insertGeometryVertexAt(double x, double y, double zoom) -> bool;
+    [[nodiscard]] auto applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bool;
+    [[nodiscard]] auto removeSelectedGeometryConstraints() -> bool;
 
 public:
     PageView* getView();
@@ -350,6 +352,12 @@ private:
     [[nodiscard]] auto isGeometryVertexSelected(const vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
             -> bool;
     [[nodiscard]] auto findSelectedGeometryVertex(vn::geom::GeometryElement* element, vn::geom::VertexId vertex) const
+            -> std::optional<std::size_t>;
+    void setSingleGeometryEdgeSelection(vn::geom::GeometryElement* element, vn::geom::EdgeId edge);
+    void toggleGeometryEdgeSelection(vn::geom::GeometryElement* element, vn::geom::EdgeId edge);
+    [[nodiscard]] auto isGeometryEdgeSelected(const vn::geom::GeometryElement* element, vn::geom::EdgeId edge) const
+            -> bool;
+    [[nodiscard]] auto findSelectedGeometryEdge(vn::geom::GeometryElement* element, vn::geom::EdgeId edge) const
             -> std::optional<std::size_t>;
 
 
@@ -434,6 +442,7 @@ private:  // DATA
     std::vector<vn::geom::VertexId> activeGeometryVertices;
     std::vector<vn::geom::Vec2> activeGeometryVertexStartPositions;
     std::vector<vn::geom::Vec2> activeGeometryVertexCurrentPositions;
+    std::vector<vn::geom::EdgeId> activeGeometryEdges;
     std::optional<vn::geom::GeometryObject> activeGeometryBeforeDrag;
     bool activeGeometryVertexMoved = false;
     vn::geom::GeometryElement* hoveredGeometryVertexElement = nullptr;

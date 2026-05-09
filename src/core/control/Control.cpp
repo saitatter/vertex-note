@@ -562,6 +562,20 @@ void Control::reorderSelection(EditSelection::OrderChange change) {
     this->undoRedo->addUndoAction(std::move(undoAction));
 }
 
+bool Control::applyGeometryConstraint(vn::geom::ConstraintKind kind) {
+    if (EditSelection* selection = this->win->getNoteView()->getSelection()) {
+        return selection->applyGeometryConstraint(kind);
+    }
+    return false;
+}
+
+bool Control::deleteSelectedGeometryConstraints() {
+    if (EditSelection* selection = this->win->getNoteView()->getSelection()) {
+        return selection->removeSelectedGeometryConstraints();
+    }
+    return false;
+}
+
 /**
  * Fire page selected, but first check if the page Number is valid
  *

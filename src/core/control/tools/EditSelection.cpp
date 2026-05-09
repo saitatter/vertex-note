@@ -7,6 +7,8 @@
 #include <memory>     // for make_unique, __sha...
 #include <numeric>    // for reduce
 #include <optional>
+#include <span>
+#include <stdexcept>
 #include <string>     // for string
 #include <utility>
 
@@ -88,6 +90,34 @@ static auto distanceToSegment(double px, double py, double ax, double ay, double
     const double projX = ax + t * dx;
     const double projY = ay + t * dy;
     return {std::hypot(px - projX, py - projY), t};
+}
+
+static auto edgeLength(const vn::geom::GeometryObject& object, const vn::geom::Constraint& constraint) -> double {
+    if (constraint.vertices.size() < 2U) {
+        return 0.0;
+    }
+
+    const auto* start = object.vertex(constraint.vertices.front());
+    const auto* end = object.vertex(constraint.vertices[1]);
+    if (!start || !end) {
+        return 0.0;
+    }
+
+    return std::hypot(end->position.x - start->position.x, end->position.y - start->position.y);
+}
+
+static auto intersectsSelection(std::span<const vn::geom::VertexId> selectedVertices,
+                                std::span<const vn::geom::EdgeId> selectedEdges, const vn::geom::Constraint& constraint)
+        -> bool {
+    const bool vertexMatch =
+            std::ranges::any_of(selectedVertices, [&constraint](vn::geom::VertexId id) {
+                return std::ranges::find(constraint.vertices, id) != constraint.vertices.end();
+            });
+    const bool edgeMatch =
+            std::ranges::any_of(selectedEdges, [&constraint](vn::geom::EdgeId id) {
+                return std::ranges::find(constraint.edges, id) != constraint.edges.end();
+            });
+    return vertexMatch || edgeMatch;
 }
 
 auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr eOwn)
@@ -571,6 +601,12 @@ void EditSelection::mouseUp() {
         return;
     }
 
+    if (this->mouseDownType == CURSOR_SELECTION_GEOMETRY_EDGE) {
+        this->mouseDownType = CURSOR_SELECTION_NONE;
+        this->view->getNoteView()->repaintSelection();
+        return;
+    }
+
 
     PageRef page = this->view->getPage();
     Layer* layer = page->getSelectedLayer();
@@ -621,6 +657,13 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
             this->activeGeometryBeforeDrag = this->activeGeometryElement->geometry();
         }
     } else if (type == CURSOR_SELECTION_GEOMETRY_EDGE) {
+        if (this->hoveredGeometryElement && this->hoveredGeometryEdge != vn::geom::InvalidEdgeId) {
+            if (shiftDown) {
+                toggleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
+            } else if (!isGeometryEdgeSelected(this->hoveredGeometryElement, this->hoveredGeometryEdge)) {
+                setSingleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
+            }
+        }
         clearGeometrySnapState();
     }
 
@@ -1126,6 +1169,109 @@ auto EditSelection::insertGeometryVertexAt(double x, double y, double zoom) -> b
     return insertActiveGeometryVertexOnEdge();
 }
 
+auto EditSelection::applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bool {
+    if (!this->activeGeometryElement) {
+        return false;
+    }
+
+    auto before = this->activeGeometryElement->geometry();
+    auto after = before;
+
+    try {
+        switch (kind) {
+            case vn::geom::ConstraintKind::Coincident:
+                if (this->activeGeometryVertices.size() < 2U) {
+                    return false;
+                }
+                after.addConstraint(kind, this->activeGeometryVertices);
+                break;
+            case vn::geom::ConstraintKind::Horizontal:
+            case vn::geom::ConstraintKind::Vertical:
+                if (this->activeGeometryVertices.size() != 2U) {
+                    return false;
+                }
+                after.addConstraint(kind, {this->activeGeometryVertices[0], this->activeGeometryVertices[1]});
+                break;
+            case vn::geom::ConstraintKind::FixedLength: {
+                if (this->activeGeometryVertices.size() != 2U) {
+                    return false;
+                }
+                const vn::geom::Constraint preview{vn::geom::InvalidConstraintId, kind,
+                                                   {this->activeGeometryVertices[0], this->activeGeometryVertices[1]},
+                                                   {}, 0.0};
+                const double length = SelectionFactory::edgeLength(before, preview);
+                if (length <= 0.0) {
+                    return false;
+                }
+                after.addConstraint(kind, {this->activeGeometryVertices[0], this->activeGeometryVertices[1]}, {},
+                                    length);
+                break;
+            }
+            case vn::geom::ConstraintKind::Parallel:
+            case vn::geom::ConstraintKind::Perpendicular:
+                if (this->activeGeometryEdges.size() != 2U) {
+                    return false;
+                }
+                after.addConstraint(kind, {}, {this->activeGeometryEdges[0], this->activeGeometryEdges[1]});
+                break;
+            case vn::geom::ConstraintKind::EqualLength:
+            case vn::geom::ConstraintKind::FixedAngle:
+            case vn::geom::ConstraintKind::Radius:
+            case vn::geom::ConstraintKind::OnEdge:
+                return false;
+        }
+    } catch (const std::invalid_argument&) {
+        return false;
+    }
+
+    const bool _solverChanged = applyGeometryConstraints(after);
+    (void) _solverChanged;
+    this->activeGeometryElement->replaceGeometry(after);
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->activeGeometryElement, before, after, _("Create geometry constraint")));
+    this->contents->invalidateViewBuffer();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
+}
+
+auto EditSelection::removeSelectedGeometryConstraints() -> bool {
+    if (!this->activeGeometryElement) {
+        return false;
+    }
+    if (this->activeGeometryVertices.empty() && this->activeGeometryEdges.empty()) {
+        return false;
+    }
+
+    const auto before = this->activeGeometryElement->geometry();
+    auto after = before;
+    std::vector<vn::geom::ConstraintId> removedIds;
+    for (const auto& constraint: before.constraints()) {
+        if (SelectionFactory::intersectsSelection(this->activeGeometryVertices, this->activeGeometryEdges, constraint)) {
+            removedIds.push_back(constraint.id);
+        }
+    }
+
+    if (removedIds.empty()) {
+        return false;
+    }
+
+    for (const auto id: removedIds) {
+        const bool removed = after.removeConstraint(id);
+        xoj_assert(removed);
+        (void) removed;
+    }
+
+    this->activeGeometryElement->replaceGeometry(after);
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->activeGeometryElement, before, after,
+            removedIds.size() == 1U ? _("Delete geometry constraint") : _("Delete geometry constraints")));
+    this->contents->invalidateViewBuffer();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
+}
+
 void EditSelection::setEdgePan(bool pan) {
     if (pan && !this->edgePanHandler) {
         this->edgePanHandler =
@@ -1550,8 +1696,11 @@ void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, d
             continue;
         }
 
-        const bool edgeHovered = highlightedElement == this->hoveredGeometryElement && edge.id == this->hoveredGeometryEdge;
-        drawEdge(edge, edgeHovered ? 1.0 : 0.45, edgeHovered ? 0.5 : 0.28);
+        const bool edgeHovered =
+                highlightedElement == this->hoveredGeometryElement && edge.id == this->hoveredGeometryEdge;
+        const bool edgeSelected = isGeometryEdgeSelected(highlightedElement, edge.id);
+        drawEdge(edge, edgeHovered ? 1.0 : edgeSelected ? 0.85 : 0.45,
+                 edgeHovered ? 0.5 : edgeSelected ? 0.4 : 0.28);
     }
     cairo_restore(cr);
 }
@@ -1738,6 +1887,7 @@ void EditSelection::clearGeometryVertexSelection() {
     this->activeGeometryVertices.clear();
     this->activeGeometryVertexStartPositions.clear();
     this->activeGeometryVertexCurrentPositions.clear();
+    this->activeGeometryEdges.clear();
     this->activeGeometryVertexMoved = false;
 }
 
@@ -1750,12 +1900,13 @@ void EditSelection::setSingleGeometryVertexSelection(vn::geom::GeometryElement* 
     this->activeGeometryVertices = {vertex};
     this->activeGeometryVertexStartPositions = {position};
     this->activeGeometryVertexCurrentPositions = {position};
+    this->activeGeometryEdges.clear();
     this->activeGeometryVertexMoved = false;
 }
 
 void EditSelection::toggleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
                                                   vn::geom::Vec2 position) {
-    if (element != this->activeGeometryElement) {
+    if (element != this->activeGeometryElement || !this->activeGeometryEdges.empty()) {
         setSingleGeometryVertexSelection(element, vertex, position);
         return;
     }
@@ -1802,6 +1953,57 @@ auto EditSelection::findSelectedGeometryVertex(vn::geom::GeometryElement* elemen
 
     for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
         if (this->activeGeometryVertices[i] == vertex) {
+            return i;
+        }
+    }
+    return std::nullopt;
+}
+
+void EditSelection::setSingleGeometryEdgeSelection(vn::geom::GeometryElement* element, vn::geom::EdgeId edge) {
+    this->activeGeometryElement = element;
+    this->activeGeometryVertex = vn::geom::InvalidVertexId;
+    this->activeGeometryVertexStart = {};
+    this->activeGeometryVertexCurrent = {};
+    this->activeGeometryVertices.clear();
+    this->activeGeometryVertexStartPositions.clear();
+    this->activeGeometryVertexCurrentPositions.clear();
+    this->activeGeometryEdges = {edge};
+    this->activeGeometryBeforeDrag.reset();
+    this->activeGeometryVertexMoved = false;
+}
+
+void EditSelection::toggleGeometryEdgeSelection(vn::geom::GeometryElement* element, vn::geom::EdgeId edge) {
+    if (element != this->activeGeometryElement || !this->activeGeometryVertices.empty()) {
+        setSingleGeometryEdgeSelection(element, edge);
+        return;
+    }
+
+    const auto index = findSelectedGeometryEdge(element, edge);
+    if (!index) {
+        this->activeGeometryElement = element;
+        this->activeGeometryEdges.push_back(edge);
+        return;
+    }
+
+    this->activeGeometryEdges.erase(this->activeGeometryEdges.begin() + static_cast<std::ptrdiff_t>(*index));
+    if (this->activeGeometryEdges.empty()) {
+        clearGeometryVertexSelection();
+    }
+}
+
+auto EditSelection::isGeometryEdgeSelected(const vn::geom::GeometryElement* element, vn::geom::EdgeId edge) const
+        -> bool {
+    return element == this->activeGeometryElement && findSelectedGeometryEdge(this->activeGeometryElement, edge).has_value();
+}
+
+auto EditSelection::findSelectedGeometryEdge(vn::geom::GeometryElement* element, vn::geom::EdgeId edge) const
+        -> std::optional<std::size_t> {
+    if (element != this->activeGeometryElement) {
+        return std::nullopt;
+    }
+
+    for (std::size_t i = 0; i < this->activeGeometryEdges.size(); ++i) {
+        if (this->activeGeometryEdges[i] == edge) {
             return i;
         }
     }

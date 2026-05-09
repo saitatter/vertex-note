@@ -31,6 +31,7 @@
 #include "util/Util.h"
 #include "util/AppMessageBox.h"
 #include "util/i18n.h"
+#include "vertexnote/geometry/GeometryTypes.h"
 
 #include "ActionDatabase.h"
 
@@ -272,6 +273,53 @@ struct ActionProperties<Action::VERTEXNOTE_GRID_SNAPPING> {
         g_simple_action_set_state(ga, p);
         ctrl->setVertexNoteGridSnapping(g_variant_get_boolean(p));
     }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_COINCIDENT> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Coincident);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_HORIZONTAL> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Horizontal);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_VERTICAL> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Vertical);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_FIXED_LENGTH> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::FixedLength);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PARALLEL> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Parallel);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_PERPENDICULAR> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
+        ctrl->applyGeometryConstraint(vn::geom::ConstraintKind::Perpendicular);
+    }
+};
+
+template <>
+struct ActionProperties<Action::VERTEXNOTE_CONSTRAINT_DELETE> {
+    static void callback(GSimpleAction*, GVariant*, Control* ctrl) { ctrl->deleteSelectedGeometryConstraints(); }
 };
 
 template <>
