@@ -101,7 +101,7 @@ auto XmlParserHelper::getAttrib<LineStyle>(std::u8string_view name, const Attrib
 
 auto XmlParserHelper::getAttribColorMandatory(const AttributeMap& attributeMap, const Color& defaultValue, bool bg)
         -> Color {
-    const auto optColorSV = getAttrib<std::string_view>(vn::xopp::xml_attrs::COLOR_STR, attributeMap);
+    const auto optColorSV = getAttrib<std::string_view>(vn::xml_attrs::COLOR_STR, attributeMap);
 
     if (optColorSV) {
         std::optional<Color> optColor;

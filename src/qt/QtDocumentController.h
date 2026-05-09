@@ -11,10 +11,15 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "model/Document.h"
 #include "model/DocumentHandler.h"
+#include "model/Element.h"
+#include "model/Point.h"
+#include "model/Stroke.h"
+#include "util/Color.h"
 #include "vertexnote/geometry/GeometryObject.h"
 #include "vertexnote/geometry/GeometryTypes.h"
 #include "vertexnote/snapping/ISnapProvider.h"
@@ -59,6 +64,25 @@ struct QtGeometryHistoryEntry {
     std::string text;
 };
 
+struct QtStrokeHistoryEntry {
+    std::size_t pageIndex = 0U;
+    const Element* element = nullptr;
+    ElementPtr ownedElement;        // populated after undo (for redo)
+    Element::Index insertionPos{};  // original position in layer
+    std::string text;
+};
+
+struct QtHistoryEntry {
+    std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry> data;
+    [[nodiscard]] auto text() const -> std::string;
+};
+
+struct QtActiveStroke {
+    std::size_t pageIndex = 0U;
+    std::unique_ptr<Stroke> stroke;
+    bool hasPressure = false;
+};
+
 class QtDocumentController {
 public:
     QtDocumentController();
@@ -94,6 +118,22 @@ public:
     [[nodiscard]] auto undoGeometryEditText() const -> std::string;
     [[nodiscard]] auto redoGeometryEditText() const -> std::string;
 
+    // Stroke input
+    auto beginStroke(std::size_t pageIndex, double x, double y, double pressure, Color color, double width,
+                     StrokeTool::Value toolType, bool pressureSensitive) -> bool;
+    auto updateStroke(double x, double y, double pressure) -> bool;
+    auto finalizeStroke() -> bool;
+    auto cancelStroke() -> void;
+    [[nodiscard]] auto activeStroke() const -> const QtActiveStroke*;
+
+    // Unified undo/redo
+    [[nodiscard]] auto canUndo() const -> bool;
+    [[nodiscard]] auto canRedo() const -> bool;
+    [[nodiscard]] auto undo() -> bool;
+    [[nodiscard]] auto redo() -> bool;
+    [[nodiscard]] auto undoText() const -> std::string;
+    [[nodiscard]] auto redoText() const -> std::string;
+
 private:
     static auto isPdfPath(const std::filesystem::path& path) -> bool;
     static auto normalizeExtension(const std::filesystem::path& path) -> std::string;
@@ -104,6 +144,10 @@ private:
     [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> vn::geom::GeometryElement*;
     [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format) -> std::shared_ptr<const vn::snap::ISnapProvider>;
+    void clearHistory();
+    void pushHistory(QtHistoryEntry entry);
+    [[nodiscard]] auto applyHistoryUndo(QtHistoryEntry& entry) -> bool;
+    [[nodiscard]] auto applyHistoryRedo(QtHistoryEntry& entry) -> bool;
 
 private:
     DocumentHandler documentHandler;
@@ -116,4 +160,7 @@ private:
     std::optional<QtGeometryDragState> geometryDragState;
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
+    std::optional<QtActiveStroke> currentStroke;
+    std::deque<QtHistoryEntry> undoHistory;
+    std::deque<QtHistoryEntry> redoHistory;
 };

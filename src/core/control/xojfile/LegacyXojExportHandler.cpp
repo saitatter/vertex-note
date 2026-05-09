@@ -31,18 +31,18 @@ void LegacyXojExportHandler::visitStrokeExtended(XmlPointNode* stroke, const Str
 }
 
 void LegacyXojExportHandler::writeHeader() {
-    this->root->setAttrib(vn::xopp::xml_attrs::CREATOR_STR, PROJECT_STRING);
+    this->root->setAttrib(vn::xml_attrs::CREATOR_STR, PROJECT_STRING);
     // Keep this version on 2, as this is anyway not read by Xournal
-    this->root->setAttrib(vn::xopp::xml_attrs::FILEVERSION_STR, "2");
+    this->root->setAttrib(vn::xml_attrs::FILEVERSION_STR, "2");
     this->root->addChild(
-            new XmlTextNode(vn::xopp::xml_tags::NAMES[vn::xopp::xml_tags::Type::TITLE],
+            new XmlTextNode(vn::xml_tags::NAMES[vn::xml_tags::Type::TITLE],
                             std::string{"Xournal document (Compatibility) - see "} + PROJECT_HOMEPAGE_URL));
 }
 
 void LegacyXojExportHandler::writeSolidBackground(XmlNode* background, ConstPageRef p) {
-    using vn::xopp::xml_attrs::BackgroundType;
-    background->setAttrib(vn::xopp::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::SOLID]);
-    background->setAttrib(vn::xopp::xml_attrs::COLOR_STR, getColorStr(p->getBackgroundColor()));
+    using vn::xml_attrs::BackgroundType;
+    background->setAttrib(vn::xml_attrs::TYPE_STR, BackgroundType::NAMES[BackgroundType::SOLID]);
+    background->setAttrib(vn::xml_attrs::COLOR_STR, getColorStr(p->getBackgroundColor()));
 
     PageTypeFormat bgFormat = p->getBackgroundType().format;
     std::string format;
@@ -53,7 +53,7 @@ void LegacyXojExportHandler::writeSolidBackground(XmlNode* background, ConstPage
         format = "plain";
     }
 
-    background->setAttrib(vn::xopp::xml_attrs::STYLE_STR, format);
+    background->setAttrib(vn::xml_attrs::STYLE_STR, format);
 }
 
 void LegacyXojExportHandler::writeTimestamp(XmlAudioNode* xmlAudioNode, const AudioElement* audioElement) {

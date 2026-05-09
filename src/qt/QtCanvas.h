@@ -15,6 +15,7 @@
 #include "QtDocumentController.h"
 #include "QtDocumentSession.h"
 #include "QtInputAdapter.h"
+#include "QtToolState.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
 #include "view/render/Renderers.h"
@@ -53,6 +54,18 @@ public:
     [[nodiscard]] auto undoGeometryEdit() -> bool;
     [[nodiscard]] auto redoGeometryEdit() -> bool;
 
+    // Tool state
+    void setActiveTool(QtToolType tool);
+    [[nodiscard]] auto activeTool() const -> QtToolType;
+    [[nodiscard]] auto toolState() -> QtToolState&;
+    [[nodiscard]] auto toolState() const -> const QtToolState&;
+
+    // Unified undo/redo
+    [[nodiscard]] auto canUndo() const -> bool;
+    [[nodiscard]] auto canRedo() const -> bool;
+    [[nodiscard]] auto performUndo() -> bool;
+    [[nodiscard]] auto performRedo() -> bool;
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -89,6 +102,11 @@ private:
     void selectHoveredGeometry(bool additive = false);
     void beginPan(const QPointF& position);
     void endPan();
+    void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
+    void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
+    void finalizeActiveStroke();
+    void cancelActiveStroke();
+    void drawActiveStroke(QPainter& painter) const;
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
@@ -106,5 +124,7 @@ private:
     bool gridSnapEnabled = false;
     bool spaceHeld = false;
     bool panning = false;
+    bool drawing = false;
     QPointF lastPanScreenPosition;
+    QtToolState currentToolState;
 };

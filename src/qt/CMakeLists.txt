@@ -30,6 +30,7 @@ set(vertexnote_qt_sources
         QtPreviewTextRenderer.cpp
         QtRecentFilesService.h
         QtRecentFilesService.cpp
+        QtToolState.h
         QtUpdatePresentationService.h
         QtUpdatePresentationService.cpp
         QtInputAdapter.h

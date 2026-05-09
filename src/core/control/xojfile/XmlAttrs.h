@@ -15,7 +15,7 @@
 
 
 // Names of attributes
-namespace vn::xopp::xml_attrs {
+namespace vn::xml_attrs {
 
 // xournal
 constexpr auto CREATOR_STR = u8"creator";
@@ -95,8 +95,8 @@ private:
     Value value;
 };
 
-}  // namespace vn::xopp::xml_attrs
+}  // namespace vn::xml_attrs
 
 namespace xoj {
-namespace xml_attrs = vn::xopp::xml_attrs;
+namespace xml_attrs = vn::xml_attrs;
 }

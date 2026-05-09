@@ -570,3 +570,263 @@ auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format)
             return nullptr;
     }
 }
+
+// ---------------------------------------------------------------------------
+// Stroke input
+// ---------------------------------------------------------------------------
+
+auto QtDocumentController::beginStroke(std::size_t pageIndex, double x, double y, double pressure, Color color,
+                                       double width, StrokeTool::Value toolType, bool pressureSensitive) -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    auto stroke = std::make_unique<Stroke>();
+    stroke->setToolType(StrokeTool(toolType));
+    stroke->setColor(color);
+    stroke->setWidth(width);
+
+    if (toolType == StrokeTool::HIGHLIGHTER) {
+        stroke->setFill(128);
+    }
+
+    const bool hasPressure = pressureSensitive && pressure > 0.0 && toolType == StrokeTool::PEN;
+    if (hasPressure) {
+        stroke->addPoint(Point(x, y, pressure * width));
+    } else {
+        stroke->addPoint(Point(x, y));
+    }
+
+    this->currentStroke = QtActiveStroke{.pageIndex = pageIndex, .stroke = std::move(stroke), .hasPressure = hasPressure};
+    return true;
+}
+
+auto QtDocumentController::updateStroke(double x, double y, double pressure) -> bool {
+    if (!this->currentStroke) {
+        return false;
+    }
+
+    auto& stroke = this->currentStroke->stroke;
+    const auto pointCount = stroke->getPointCount();
+    if (pointCount == 0) {
+        return false;
+    }
+
+    if (pressure == 0.0) {
+        // Some devices emit zero-pressure moves when lifting — ignore them
+        return true;
+    }
+
+    const auto lastPoint = stroke->getPoint(pointCount - 1);
+    Point newPoint;
+    if (this->currentStroke->hasPressure) {
+        newPoint = Point(x, y, pressure * stroke->getWidth());
+    } else {
+        newPoint = Point(x, y);
+    }
+
+    constexpr double MIN_DISTANCE = 0.3;
+    if (newPoint.lineLengthTo(lastPoint) < MIN_DISTANCE) {
+        return true;
+    }
+
+    stroke->addPoint(newPoint);
+    return true;
+}
+
+auto QtDocumentController::finalizeStroke() -> bool {
+    if (!this->currentStroke) {
+        return false;
+    }
+
+    auto& stroke = this->currentStroke->stroke;
+
+    // A stroke with only one point needs a duplicate to be visible
+    if (stroke->getPointCount() == 1) {
+        const Point pt = stroke->getPoint(0);
+        stroke->addPoint(pt);
+    }
+
+    if (stroke->getPointCount() < 2) {
+        this->currentStroke.reset();
+        return false;
+    }
+
+    stroke->freeUnusedPointItems();
+    const std::size_t pageIndex = this->currentStroke->pageIndex;
+
+    this->document->lock();
+    if (pageIndex >= this->document->getPageCount()) {
+        this->document->unlock();
+        this->currentStroke.reset();
+        return false;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        this->currentStroke.reset();
+        return false;
+    }
+
+    const Element* elementPtr = stroke.get();
+    layer->addElement(std::move(stroke));
+    this->document->unlock();
+
+    pushHistory(QtHistoryEntry{QtStrokeHistoryEntry{.pageIndex = pageIndex, .element = elementPtr, .text = "Draw stroke"}});
+    rebuildPageSnapshots();
+    this->currentStroke.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelStroke() -> void { this->currentStroke.reset(); }
+
+auto QtDocumentController::activeStroke() const -> const QtActiveStroke* {
+    return this->currentStroke ? &*this->currentStroke : nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// Unified undo/redo
+// ---------------------------------------------------------------------------
+
+auto QtHistoryEntry::text() const -> std::string {
+    return std::visit([](auto& entry) { return entry.text; }, this->data);
+}
+
+void QtDocumentController::clearHistory() {
+    this->undoHistory.clear();
+    this->redoHistory.clear();
+}
+
+void QtDocumentController::pushHistory(QtHistoryEntry entry) {
+    this->redoHistory.clear();
+    this->undoHistory.push_back(std::move(entry));
+}
+
+auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
+    return std::visit(
+            [this](auto& e) -> bool {
+                using T = std::decay_t<decltype(e)>;
+                if constexpr (std::is_same_v<T, QtGeometryHistoryEntry>) {
+                    return applyGeometryHistoryEntry(e, false);
+                } else {
+                    // Stroke undo: remove the element from the layer and take ownership
+                    if (!this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    for (auto* layer: page->getLayers()) {
+                        if (!layer) {
+                            continue;
+                        }
+                        auto removed = layer->removeElement(e.element);
+                        if (removed.e) {
+                            e.ownedElement = std::move(removed.e);
+                            e.insertionPos = removed.pos;
+                            this->document->unlock();
+                            rebuildPageSnapshots();
+                            return true;
+                        }
+                    }
+                    this->document->unlock();
+                    return false;
+                }
+            },
+            entry.data);
+}
+
+auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
+    return std::visit(
+            [this](auto& e) -> bool {
+                using T = std::decay_t<decltype(e)>;
+                if constexpr (std::is_same_v<T, QtGeometryHistoryEntry>) {
+                    return applyGeometryHistoryEntry(e, true);
+                } else {
+                    // Stroke redo: re-insert the owned element at its original position
+                    if (!e.ownedElement || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    e.element = e.ownedElement.get();
+                    layer->insertElement(std::move(e.ownedElement), e.insertionPos);
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
+                }
+            },
+            entry.data);
+}
+
+auto QtDocumentController::canUndo() const -> bool {
+    return !this->undoHistory.empty() || !this->geometryUndoHistory.empty();
+}
+
+auto QtDocumentController::canRedo() const -> bool {
+    return !this->redoHistory.empty() || !this->geometryRedoHistory.empty();
+}
+
+auto QtDocumentController::undoText() const -> std::string {
+    // Prefer the newest entry from either stack
+    if (!this->undoHistory.empty() && !this->geometryUndoHistory.empty()) {
+        return this->undoHistory.back().text();
+    }
+    if (!this->undoHistory.empty()) {
+        return this->undoHistory.back().text();
+    }
+    if (!this->geometryUndoHistory.empty()) {
+        return this->geometryUndoHistory.back().text;
+    }
+    return {};
+}
+
+auto QtDocumentController::redoText() const -> std::string {
+    if (!this->redoHistory.empty()) {
+        return this->redoHistory.back().text();
+    }
+    if (!this->geometryRedoHistory.empty()) {
+        return this->geometryRedoHistory.back().text;
+    }
+    return {};
+}
+
+auto QtDocumentController::undo() -> bool {
+    // Try unified history first, fall back to geometry-only
+    if (!this->undoHistory.empty()) {
+        auto entry = std::move(this->undoHistory.back());
+        this->undoHistory.pop_back();
+        if (applyHistoryUndo(entry)) {
+            this->redoHistory.push_back(std::move(entry));
+            return true;
+        }
+        this->undoHistory.push_back(std::move(entry));
+        return false;
+    }
+    return undoGeometryEdit();
+}
+
+auto QtDocumentController::redo() -> bool {
+    if (!this->redoHistory.empty()) {
+        auto entry = std::move(this->redoHistory.back());
+        this->redoHistory.pop_back();
+        if (applyHistoryRedo(entry)) {
+            this->undoHistory.push_back(std::move(entry));
+            return true;
+        }
+        this->redoHistory.push_back(std::move(entry));
+        return false;
+    }
+    return redoGeometryEdit();
+}

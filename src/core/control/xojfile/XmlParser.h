@@ -85,7 +85,7 @@ private:
      * the last valid tag type. Otherwise it returns TagType::UNKNOWN, even if
      * the tag is globally known (e.g. if a page is found under a layer).
      */
-    vn::xopp::xml_tags::Type getTagType(c_string_utf8_view name) const;
+    vn::xml_tags::Type getTagType(c_string_utf8_view name) const;
 
     /**
      * Close the top tag in the hierarchy
@@ -102,8 +102,8 @@ private:
     };
 
     // Table to dispatch parsing callbacks
-    static constexpr EnumIndexedArray<ParsingEntry, vn::xopp::xml_tags::Type> parsingTable{
-            EnumIndexedArray<ParsingEntry, vn::xopp::xml_tags::Type>::underlying_array_type{{
+    static constexpr EnumIndexedArray<ParsingEntry, vn::xml_tags::Type> parsingTable{
+            EnumIndexedArray<ParsingEntry, vn::xml_tags::Type>::underlying_array_type{{
                     {&XmlParser::parseUnknownTag, {}, {}},                                           // TagType::UNKNOWN
                     {&XmlParser::parseXournalTag, {}, &DocumentBuilderInterface::finalizeDocument},  // TagType::XOURNAL
                     {&XmlParser::parseMrWriterTag,
@@ -131,9 +131,9 @@ private:
     DocumentBuilderInterface& builder;
 
     // Stack containing the tag types found at every level in the document
-    std::vector<vn::xopp::xml_tags::Type> hierarchy;
+    std::vector<vn::xml_tags::Type> hierarchy;
     // Variable to track the topmost valid tag type in the hierarchy stack
-    std::optional<vn::xopp::xml_tags::Type> lastValidTag;
+    std::optional<vn::xml_tags::Type> lastValidTag;
 
     bool pdfFilenameParsed = false;
 

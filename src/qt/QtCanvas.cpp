@@ -17,6 +17,7 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPalette>
 #include <QPen>
 #include <QRect>
@@ -342,6 +343,8 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
                          index < pages.size() ? pages[index] : vn::view::render::PageRenderSnapshot{}, index);
     }
 
+    drawActiveStroke(painter);
+
     painter.resetTransform();
     painter.setPen(QColor(52, 64, 84));
     painter.drawText(QRect(20, 18, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
@@ -349,12 +352,13 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     painter.setPen(QColor(102, 112, 133));
     const auto pageCount = this->documentController ? this->documentController->pageCount() : rects.size();
     painter.drawText(QRect(20, 52, width() - 40, 72), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("render backend=QtPainter scale=%1  zoom=%2%  scroll=(%3, %4)  pages=%5")
+                     QStringLiteral("render backend=QtPainter scale=%1  zoom=%2%  scroll=(%3, %4)  pages=%5  tool=%6")
                              .arg(renderContext.scaleFactor(), 0, 'f', 2)
                              .arg(this->zoomFactor * 100.0, 0, 'f', 0)
                              .arg(this->scrollX, 0, 'f', 1)
                              .arg(this->scrollY, 0, 'f', 1)
-                             .arg(static_cast<int>(pageCount)));
+                             .arg(static_cast<int>(pageCount))
+                             .arg(QString::fromStdString(this->currentToolState.activeToolName())));
     painter.drawText(QRect(20, 78, width() - 40, 40), Qt::AlignLeft | Qt::AlignTop, this->lastEventSummary);
     drawOverlayHud(painter);
 
@@ -371,6 +375,12 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         return;
     }
     if (event->button() == Qt::LeftButton) {
+        const auto tool = this->currentToolState.activeTool;
+        if (tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::Eraser) {
+            beginStrokeAtScreen(event->position(), 0.5);
+            event->accept();
+            return;
+        }
         updateGeometryHover(event->position());
         selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
         if (this->documentController && this->documentController->selectedGeometry() &&
@@ -405,6 +415,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->drawing) {
+        finalizeActiveStroke();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->documentController && this->documentController->activeGeometryDrag()) {
         const bool changed = this->documentController->endGeometryVertexDrag();
         if (!this->spaceHeld) {
@@ -429,6 +444,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         this->scrollY -= delta.y() / this->zoomFactor;
         updateDebugOverlay(QStringLiteral("pan dx=%1 dy=%2").arg(delta.x(), 0, 'f', 1).arg(delta.y(), 0, 'f', 1));
         emitViewportUpdate();
+        event->accept();
+        return;
+    }
+    if (this->drawing) {
+        updateStrokeAtScreen(event->position(), 0.5);
         event->accept();
         return;
     }
@@ -469,6 +489,25 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 
 void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
+    const auto tool = this->currentToolState.activeTool;
+    const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::Eraser;
+    if (isDrawTool) {
+        if (event->type() == QEvent::TabletPress && event->buttons().testFlag(Qt::LeftButton) && !this->spaceHeld) {
+            beginStrokeAtScreen(event->position(), event->pressure());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletMove && this->drawing) {
+            updateStrokeAtScreen(event->position(), event->pressure());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletRelease && this->drawing) {
+            finalizeActiveStroke();
+            event->accept();
+            return;
+        }
+    }
     QWidget::tabletEvent(event);
 }
 
@@ -904,4 +943,201 @@ void QtCanvas::endPan() {
     } else {
         unsetCursor();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Tool state
+// ---------------------------------------------------------------------------
+
+void QtCanvas::setActiveTool(QtToolType tool) {
+    if (this->drawing) {
+        cancelActiveStroke();
+    }
+    this->currentToolState.activeTool = tool;
+    switch (tool) {
+        case QtToolType::Pen:
+        case QtToolType::Highlighter:
+        case QtToolType::Eraser:
+            setCursor(Qt::CrossCursor);
+            break;
+        case QtToolType::Hand:
+            setCursor(Qt::OpenHandCursor);
+            break;
+        case QtToolType::Text:
+            setCursor(Qt::IBeamCursor);
+            break;
+        case QtToolType::SelectRect:
+            setCursor(Qt::ArrowCursor);
+            break;
+    }
+    update();
+}
+
+auto QtCanvas::activeTool() const -> QtToolType { return this->currentToolState.activeTool; }
+
+auto QtCanvas::toolState() -> QtToolState& { return this->currentToolState; }
+
+auto QtCanvas::toolState() const -> const QtToolState& { return this->currentToolState; }
+
+auto QtCanvas::canUndo() const -> bool { return this->documentController && this->documentController->canUndo(); }
+
+auto QtCanvas::canRedo() const -> bool { return this->documentController && this->documentController->canRedo(); }
+
+auto QtCanvas::performUndo() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+    const bool changed = this->documentController->undo();
+    if (changed) {
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
+auto QtCanvas::performRedo() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+    const bool changed = this->documentController->redo();
+    if (changed) {
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
+// ---------------------------------------------------------------------------
+// Stroke input
+// ---------------------------------------------------------------------------
+
+void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[*pageIdx];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+
+    Color color;
+    double width;
+    StrokeTool::Value toolType;
+    const auto tool = this->currentToolState.activeTool;
+    if (tool == QtToolType::Pen) {
+        color = this->currentToolState.penColor;
+        width = this->currentToolState.penWidth;
+        toolType = StrokeTool::PEN;
+    } else if (tool == QtToolType::Highlighter) {
+        color = this->currentToolState.highlighterColor;
+        width = this->currentToolState.highlighterWidth;
+        toolType = StrokeTool::HIGHLIGHTER;
+    } else if (tool == QtToolType::Eraser) {
+        color = Colors::white;
+        width = this->currentToolState.eraserWidth;
+        toolType = StrokeTool::ERASER;
+    } else {
+        return;
+    }
+
+    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, pressure, color, width, toolType,
+                                               this->currentToolState.pressureSensitive)) {
+        this->drawing = true;
+        update();
+    }
+}
+
+void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure) {
+    if (!this->documentController || !this->drawing) {
+        return;
+    }
+
+    const auto* active = this->documentController->activeStroke();
+    if (!active) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (active->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const QRectF& pageRect = rects[active->pageIndex];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+
+    if (this->documentController->updateStroke(pageX, pageY, pressure)) {
+        update();
+    }
+}
+
+void QtCanvas::finalizeActiveStroke() {
+    if (!this->documentController || !this->drawing) {
+        return;
+    }
+
+    const bool added = this->documentController->finalizeStroke();
+    this->drawing = false;
+    update();
+    if (added) {
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::cancelActiveStroke() {
+    if (this->documentController) {
+        this->documentController->cancelStroke();
+    }
+    this->drawing = false;
+    update();
+}
+
+void QtCanvas::drawActiveStroke(QPainter& painter) const {
+    const auto* active = this->documentController ? this->documentController->activeStroke() : nullptr;
+    if (!active || !active->stroke) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (active->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[active->pageIndex];
+    painter.save();
+    painter.setClipRect(pageRect);
+
+    const auto& points = active->stroke->getPointVector();
+    if (points.size() < 2) {
+        painter.restore();
+        return;
+    }
+
+    const auto color = active->stroke->getColor();
+    QColor qColor(static_cast<int>(color.red), static_cast<int>(color.green), static_cast<int>(color.blue),
+                  static_cast<int>(color.alpha));
+    QPen pen(qColor, active->stroke->getWidth(), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    pen.setCosmetic(false);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    QPainterPath path;
+    path.moveTo(pageRect.x() + points[0].x, pageRect.y() + points[0].y);
+    for (std::size_t i = 1; i < points.size(); ++i) {
+        path.lineTo(pageRect.x() + points[i].x, pageRect.y() + points[i].y);
+    }
+    painter.drawPath(path);
+    painter.restore();
 }

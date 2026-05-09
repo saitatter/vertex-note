@@ -13,6 +13,7 @@
 #include "QtMainWindow.h"
 #include "QtPluginUiBridge.h"
 #include "QtRecentFilesService.h"
+#include "QtToolState.h"
 #include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
 
@@ -46,6 +47,8 @@ private:
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
+    void selectTool(QtToolType tool);
+    void updateToolCommandStates();
 
 private:
     QtMainWindow window;

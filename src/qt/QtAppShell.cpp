@@ -158,28 +158,28 @@ void QtAppShell::registerBootstrapCommands() {
 
     this->window.commandHost()->registerCommand(
             {.id = "edit.undo-geometry",
-             .text = "Undo Geometry Edit",
-             .tooltip = "Undo the last Qt geometry edit",
+             .text = "Undo",
+             .tooltip = "Undo the last edit",
              .shortcut = "Ctrl+Z",
              .menu = "Edit",
-             .enabled = this->window.canvas()->canUndoGeometryEdit()},
+             .enabled = this->window.canvas()->canUndo()},
             [this]() {
-                if (this->window.canvas()->undoGeometryEdit()) {
-                    this->window.statusBar()->showMessage(QStringLiteral("Undid geometry edit"), 3000);
+                if (this->window.canvas()->performUndo()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Undid edit"), 3000);
                     updateEditCommandStates();
                 }
             });
 
     this->window.commandHost()->registerCommand(
             {.id = "edit.redo-geometry",
-             .text = "Redo Geometry Edit",
-             .tooltip = "Redo the last Qt geometry edit",
+             .text = "Redo",
+             .tooltip = "Redo the last edit",
              .shortcut = "Ctrl+Y",
              .menu = "Edit",
-             .enabled = this->window.canvas()->canRedoGeometryEdit()},
+             .enabled = this->window.canvas()->canRedo()},
             [this]() {
-                if (this->window.canvas()->redoGeometryEdit()) {
-                    this->window.statusBar()->showMessage(QStringLiteral("Redid geometry edit"), 3000);
+                if (this->window.canvas()->performRedo()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Redid edit"), 3000);
                     updateEditCommandStates();
                 }
             });
@@ -227,6 +227,47 @@ void QtAppShell::registerBootstrapCommands() {
              .checkable = true,
              .checked = this->window.canvas()->isGridSnapEnabled()},
             [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
+
+    // Tool selection commands
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.hand",
+             .text = "Hand Tool",
+             .tooltip = "Pan the canvas with click and drag",
+             .shortcut = "H",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::Hand},
+            [this]() { selectTool(QtToolType::Hand); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.pen",
+             .text = "Pen",
+             .tooltip = "Draw freehand strokes",
+             .shortcut = "P",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::Pen},
+            [this]() { selectTool(QtToolType::Pen); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.eraser",
+             .text = "Eraser",
+             .tooltip = "Draw white-out strokes",
+             .shortcut = "E",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::Eraser},
+            [this]() { selectTool(QtToolType::Eraser); });
+
+    this->window.commandHost()->registerCommand(
+            {.id = "tool.highlighter",
+             .text = "Highlighter",
+             .tooltip = "Draw semi-transparent highlight strokes",
+             .shortcut = "G",
+             .menu = "Tools",
+             .checkable = true,
+             .checked = this->window.canvas()->activeTool() == QtToolType::Highlighter},
+            [this]() { selectTool(QtToolType::Highlighter); });
 }
 
 void QtAppShell::wireWindowState() {
@@ -251,11 +292,15 @@ void QtAppShell::rebuildToolbar() {
     auto* toolBar = this->window.mainToolBar();
     toolBar->clear();
 
-    const std::array<std::string_view, 13> commandIds = {"app.new",
+    const std::array<std::string_view, 17> commandIds = {"app.new",
                                                           "app.open",
                                                           "app.save-as",
                                                           "edit.undo-geometry",
                                                           "edit.redo-geometry",
+                                                          "tool.hand",
+                                                          "tool.pen",
+                                                          "tool.eraser",
+                                                          "tool.highlighter",
                                                           "edit.insert-vertex",
                                                           "edit.delete-geometry",
                                                           "view.zoom-in",
@@ -268,7 +313,7 @@ void QtAppShell::rebuildToolbar() {
     for (const auto id: commandIds) {
         if (auto* action = this->window.commandHost()->actionForCommand(id)) {
             toolBar->addAction(action);
-            if (id == "edit.delete-geometry" || id == "view.fit-page") {
+            if (id == "edit.delete-geometry" || id == "view.fit-page" || id == "tool.highlighter") {
                 toolBar->addSeparator();
             }
         }
@@ -370,8 +415,9 @@ void QtAppShell::markSessionDirty() {
 }
 
 void QtAppShell::updateEditCommandStates() {
-    this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndoGeometryEdit());
-    this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedoGeometryEdit());
+    this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndo());
+    this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedo());
+    updateToolCommandStates();
 }
 
 void QtAppShell::setGeometrySnapEnabled(bool enabled) {
@@ -386,4 +432,19 @@ void QtAppShell::setGridSnapEnabled(bool enabled) {
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", enabled);
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Grid snap enabled") : QStringLiteral("Grid snap disabled"), 2500);
+}
+
+void QtAppShell::selectTool(QtToolType tool) {
+    this->window.canvas()->setActiveTool(tool);
+    updateToolCommandStates();
+    this->window.statusBar()->showMessage(
+            QString::fromStdString("Tool: " + this->window.canvas()->toolState().activeToolName()), 2500);
+}
+
+void QtAppShell::updateToolCommandStates() {
+    const auto active = this->window.canvas()->activeTool();
+    this->window.commandHost()->setCommandChecked("tool.hand", active == QtToolType::Hand);
+    this->window.commandHost()->setCommandChecked("tool.pen", active == QtToolType::Pen);
+    this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
+    this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
 }
