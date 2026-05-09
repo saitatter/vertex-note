@@ -118,31 +118,31 @@ FileDlg::FileDlg(const char* title, std::function<void(fs::path)> callback):
         FileDlg(title, [cb = std::move(callback)](fs::path path, bool) { cb(std::move(path)); }) {}
 
 
-void xoj::OpenDlg::showOpenTemplateDialog(GtkWindow* parent, Settings* settings,
+void vn::OpenDlg::showOpenTemplateDialog(GtkWindow* parent, Settings* settings,
                                           std::function<void(fs::path)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(_("Open template file"),
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(_("Open template file"),
                                                          addSetLastSavePathToCallback(std::move(callback), settings));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
-    xoj::addFilterAllFiles(fc);
-    xoj::addFilterXopt(fc);
+    vn::addFilterAllFiles(fc);
+    vn::addFilterXopt(fc);
     setCurrentFolderToLastOpenPath(fc, settings);
 
     popup.show(parent);
 }
 
 
-void xoj::OpenDlg::showOpenFileDialog(GtkWindow* parent, Settings* settings, std::function<void(fs::path)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(_("Open file"),
+void vn::OpenDlg::showOpenFileDialog(GtkWindow* parent, Settings* settings, std::function<void(fs::path)> callback) {
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(_("Open file"),
                                                          addSetLastSavePathToCallback(std::move(callback), settings));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
-    xoj::addFilterSupported(fc);
-    xoj::addFilterXoj(fc);
-    xoj::addFilterXopt(fc);
-    xoj::addFilterXopp(fc);
-    xoj::addFilterPdf(fc);
-    xoj::addFilterAllFiles(fc);
+    vn::addFilterSupported(fc);
+    vn::addFilterXoj(fc);
+    vn::addFilterXopt(fc);
+    vn::addFilterXopp(fc);
+    vn::addFilterPdf(fc);
+    vn::addFilterAllFiles(fc);
 
     addlastSavePathShortcut(fc, settings);
     setCurrentFolderToLastOpenPath(fc, settings);
@@ -150,15 +150,15 @@ void xoj::OpenDlg::showOpenFileDialog(GtkWindow* parent, Settings* settings, std
     popup.show(parent);
 }
 
-void xoj::OpenDlg::showAnnotatePdfDialog(GtkWindow* parent, Settings* settings,
+void vn::OpenDlg::showAnnotatePdfDialog(GtkWindow* parent, Settings* settings,
                                          std::function<void(fs::path, bool)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(_("Annotate Pdf file"),
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(_("Annotate Pdf file"),
                                                          addSetLastSavePathToCallback(std::move(callback), settings));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
 
-    xoj::addFilterPdf(fc);
-    xoj::addFilterAllFiles(fc);
+    vn::addFilterPdf(fc);
+    vn::addFilterAllFiles(fc);
 
     addlastSavePathShortcut(fc, settings);
     setCurrentFolderToLastOpenPath(fc, settings);
@@ -168,9 +168,9 @@ void xoj::OpenDlg::showAnnotatePdfDialog(GtkWindow* parent, Settings* settings,
     popup.show(parent);
 }
 
-void xoj::OpenDlg::showOpenImageDialog(GtkWindow* parent, Settings* settings,
+void vn::OpenDlg::showOpenImageDialog(GtkWindow* parent, Settings* settings,
                                        std::function<void(fs::path, bool)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(_("Choose image file"),
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(_("Choose image file"),
                                                          [cb = std::move(callback), settings](fs::path p, bool attach) {
                                                              if (auto folder = p.parent_path(); !folder.empty()) {
                                                                  settings->setLastImagePath(folder);
@@ -180,8 +180,8 @@ void xoj::OpenDlg::showOpenImageDialog(GtkWindow* parent, Settings* settings,
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
 
-    xoj::addFilterImages(fc);
-    xoj::addFilterAllFiles(fc);
+    vn::addFilterImages(fc);
+    vn::addFilterAllFiles(fc);
 
     if (!settings->getLastImagePath().empty()) {
         gtk_file_chooser_set_current_folder(fc, Util::toGFile(settings->getLastImagePath()).get(), nullptr);
@@ -192,9 +192,9 @@ void xoj::OpenDlg::showOpenImageDialog(GtkWindow* parent, Settings* settings,
     popup.show(parent);
 }
 
-void xoj::OpenDlg::showMultiFormatDialog(GtkWindow* parent, std::vector<std::string> formats,
+void vn::OpenDlg::showMultiFormatDialog(GtkWindow* parent, std::vector<std::string> formats,
                                          std::function<void(fs::path)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(_("Open file"), std::move(callback));
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(_("Open file"), std::move(callback));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
 

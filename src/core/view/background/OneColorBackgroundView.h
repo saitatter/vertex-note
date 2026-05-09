@@ -39,4 +39,4 @@ protected:
     Color foregroundColor;
     double lineWidth;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

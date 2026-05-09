@@ -105,7 +105,7 @@ public:
 private:
     T* p = nullptr;
 };
-};  // namespace xoj::util
+};  // namespace vn::util
 
 namespace std {
 template <typename T, class H>

@@ -23,7 +23,7 @@ class Settings;
 class ToolMenuHandler;
 class PageTypeSelectionPopoverGridOnly;
 
-namespace xoj::popup {
+namespace vn::popup {
 class PageTemplateDialog final {
 public:
     PageTemplateDialog(GladeSearchpath* gladeSearchPath, Settings* settings, ToolMenuHandler* toolmenu,
@@ -77,4 +77,4 @@ private:
     GtkToggleButton* copyLastPageButton;
     GtkToggleButton* copyLastPageSizeButton;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

@@ -24,7 +24,7 @@
 class GladeSearchpath;
 class Settings;
 
-namespace xoj::popup {
+namespace vn::popup {
 class FormatDialog {
 public:
     FormatDialog(GladeSearchpath* gladeSearchPath, Settings* settings, double width, double height,
@@ -69,4 +69,4 @@ private:
     xoj::util::GtkWindowUPtr window;
     std::function<void(double w, double h)> callbackFun;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

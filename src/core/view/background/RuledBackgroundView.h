@@ -37,4 +37,4 @@ protected:
     constexpr static double HEADER_SIZE = 80.0;
     constexpr static double FOOTER_SIZE = 60.0;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

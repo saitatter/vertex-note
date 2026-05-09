@@ -36,12 +36,12 @@ namespace xoj::view {
 class OverlayView;
 class Repaintable;
 class VerticalToolView;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 namespace xoj::util {
 template <class T>
 class DispatchPool;
-};  // namespace xoj::util
+};  // namespace vn::util
 
 /**
  * Handler class for the Vertical Spacing tool.

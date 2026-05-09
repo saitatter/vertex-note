@@ -51,4 +51,4 @@ void setRadioButtonActionName(GtkRadioButton* btn, const char* actionNamespace, 
  */
 void fixActionableInitialSensitivity(GtkActionable* w);
 #endif
-};  // namespace xoj::util::gtk
+};  // namespace vn::util::gtk

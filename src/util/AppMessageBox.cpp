@@ -63,7 +63,7 @@ void AppMessageBox::showMarkupMessageToUser(GtkWindow* win, const std::string_vi
         gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", msg.c_str());
     }
 
-    xoj::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog));
+    vn::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog));
     popup.show(win);
 }
 
@@ -107,7 +107,7 @@ void AppMessageBox::askQuestionWithMarkup(GtkWindow* win, std::string_view maint
 
     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", secondarytext.c_str());
 
-    xoj::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog), std::move(callback));
+    vn::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog), std::move(callback));
     popup.show(win);
 }
 
@@ -120,7 +120,7 @@ void AppMessageBox::showErrorAndQuit(std::string& msg, int exitCode) {
     // We use a hack to ensure the app does not exit until the user has read the error message and closed the popup
     bool done = false;
 
-    xoj::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog), [&done](int) { done = true; });
+    vn::popup::PopupWindowWrapper<AppMessageBox> popup(GTK_DIALOG(dialog), [&done](int) { done = true; });
 
     popup.show(defaultWindow);
 
@@ -190,7 +190,7 @@ void AppMessageBox::replaceFileQuestion(GtkWindow* win, fs::path file,
     gtk_dialog_add_button(GTK_DIALOG(dialog), _("Select another name"), GTK_RESPONSE_CANCEL);
     gtk_dialog_add_button(GTK_DIALOG(dialog), _("Replace"), GTK_RESPONSE_OK);
 
-    xoj::popup::PopupWindowWrapper<AppMessageBox> popup(
+    vn::popup::PopupWindowWrapper<AppMessageBox> popup(
             GTK_DIALOG(dialog), [overwrite = std::move(writeTofile), file = std::move(file)](int response) mutable {
                 if (response == GTK_RESPONSE_OK) {
                     overwrite(file);
@@ -199,9 +199,9 @@ void AppMessageBox::replaceFileQuestion(GtkWindow* win, fs::path file,
     popup.show(win);
 }
 
-constexpr auto* XOJ_HELP = "https://github.com/saitatter/vertex-note";
+constexpr auto* VERTEX_NOTE_HELP_URL = "https://github.com/saitatter/vertex-note";
 
-void AppMessageBox::showHelp(GtkWindow* win) { openURL(win, XOJ_HELP); }
+void AppMessageBox::showHelp(GtkWindow* win) { openURL(win, VERTEX_NOTE_HELP_URL); }
 
 void AppMessageBox::openURL(GtkWindow* win, const char* url) {
 #ifdef _WIN32

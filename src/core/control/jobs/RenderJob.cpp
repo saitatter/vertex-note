@@ -24,9 +24,9 @@
 #include "view/Mask.h"                  // for Mask
 
 #if defined(__has_cpp_attribute) && __has_cpp_attribute(likely)
-#define XOJ_CPP20_UNLIKELY [[unlikely]]
+#define VN_CPP20_UNLIKELY [[unlikely]]
 #else
-#define XOJ_CPP20_UNLIKELY
+#define VN_CPP20_UNLIKELY
 #endif
 
 using xoj::util::Rectangle;
@@ -55,7 +55,7 @@ void RenderJob::rerenderRectangle(Rectangle<double> const& rect) {
     if (!view->buffer.isInitialized()) {
         // Todo: the buffer must not be uninitializable here, either by moving it into the job or by locking it at job
         // creation a shared prt may also be suffice.
-        XOJ_CPP20_UNLIKELY return;
+        VN_CPP20_UNLIKELY return;
     }
     newMask.paintTo(view->buffer.get());
 }

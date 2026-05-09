@@ -33,7 +33,7 @@ static GtkWindow* makeWindow(Settings* settings, fs::path suggestedPath, const c
     return GTK_WINDOW(dialog);
 }
 
-xoj::SaveExportDialog::SaveExportDialog(Settings* settings, fs::path suggestedPath, const char* windowTitle,
+vn::SaveExportDialog::SaveExportDialog(Settings* settings, fs::path suggestedPath, const char* windowTitle,
                                         const char* buttonLabel,
                                         std::function<bool(fs::path&, const char* filterName)> pathValidation,
                                         std::function<void(std::optional<fs::path>)> callback):
@@ -60,7 +60,7 @@ xoj::SaveExportDialog::SaveExportDialog(Settings* settings, fs::path suggestedPa
             this);
 }
 
-void xoj::SaveExportDialog::close(std::optional<fs::path> path) {
+void vn::SaveExportDialog::close(std::optional<fs::path> path) {
     // We need to call gtk_window_close() before invoking the callback, because if the callback pops up another dialog,
     // the first one won't close...
     // But since gtk_window_close() triggers the destruction of *this, we first move the callback
@@ -79,13 +79,13 @@ static bool xoppPathValidation(fs::path& p, const char*) {
     return true;
 }
 
-void xoj::SaveExportDialog::showSaveFileDialog(GtkWindow* parent, Settings* settings, fs::path suggestedPath,
+void vn::SaveExportDialog::showSaveFileDialog(GtkWindow* parent, Settings* settings, fs::path suggestedPath,
                                                std::function<void(std::optional<fs::path>)> callback) {
-    auto popup = xoj::popup::PopupWindowWrapper<SaveExportDialog>(settings, std::move(suggestedPath), _("Save File"),
+    auto popup = vn::popup::PopupWindowWrapper<SaveExportDialog>(settings, std::move(suggestedPath), _("Save File"),
                                                                   _("Save"), xoppPathValidation, std::move(callback));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
-    xoj::addFilterXopp(fc);
+    vn::addFilterXopp(fc);
 
     popup.show(parent);
 }

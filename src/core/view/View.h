@@ -51,3 +51,7 @@ class TextView;
 constexpr double OPACITY_NO_AUDIO = 0.3;
 };  // namespace view
 };  // namespace xoj
+
+namespace vn {
+namespace view = xoj::view;
+}

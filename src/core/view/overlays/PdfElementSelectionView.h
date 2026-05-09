@@ -54,4 +54,4 @@ public:
     // Opacity of the background
     static constexpr double SELECTION_OPACITY = 0.3;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

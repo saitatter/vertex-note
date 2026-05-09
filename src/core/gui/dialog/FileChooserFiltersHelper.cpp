@@ -2,7 +2,7 @@
 
 #include "util/i18n.h"
 
-namespace xoj {
+namespace vn {
 static void addMimeTypeFilter(GtkFileChooser* fc, const char* name, const char* mime) {
     GtkFileFilter* filterPdf = gtk_file_filter_new();
     gtk_file_filter_set_name(filterPdf, name);
@@ -41,4 +41,4 @@ void addFilterImages(GtkFileChooser* fc) {
     gtk_file_filter_add_pixbuf_formats(filter);
     gtk_file_chooser_add_filter(fc, filter);
 }
-};  // namespace xoj
+};  // namespace vn

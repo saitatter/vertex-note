@@ -38,4 +38,4 @@ protected:
     constexpr static double STAVES_SPACING = 40.0;  // Between two staves
     constexpr static double LINES_SPACING = 5.0;    // Between two lines within a staff
 };
-};  // namespace xoj::view
+};  // namespace vn::view

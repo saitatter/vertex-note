@@ -16,7 +16,7 @@ class GladeSearchpath;
 constexpr auto UI_FILE = "exportSettings.glade";
 constexpr auto UI_DIALOG_NAME = "exportDialog";
 
-using namespace xoj::popup;
+using namespace vn::popup;
 
 ExportDialog::ExportDialog(GladeSearchpath* gladeSearchPath, ExportGraphicsFormat format, size_t currentPage,
                            size_t pageCount, bool hasPdfBackground,

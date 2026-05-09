@@ -156,7 +156,7 @@ void PluginController::registerToolbar() {
 
 void PluginController::showPluginManager() const {
 #ifdef ENABLE_PLUGINS
-    xoj::popup::PopupWindowWrapper<PluginDialog> dlg(control->getGladeSearchPath(), control->getSettings(),
+    vn::popup::PopupWindowWrapper<PluginDialog> dlg(control->getGladeSearchPath(), control->getSettings(),
                                                      this->plugins);
     dlg.show(control->getGtkWindow());
 #endif

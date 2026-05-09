@@ -20,4 +20,4 @@
 namespace xoj::input {
 void printEvent(std::ostream& str, const InputEvent& e, guint32 timeRef);
 void printGdkEvent(std::ostream& str, GdkEvent* e, guint32 timeRef);
-};  // namespace xoj::input
+};  // namespace vn::input

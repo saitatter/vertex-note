@@ -35,7 +35,7 @@ namespace xoj::view {
 class OverlayView;
 class Repaintable;
 class StrokeToolView;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 namespace StrokeStabilizer {
 class Base;

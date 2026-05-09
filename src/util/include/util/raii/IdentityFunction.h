@@ -19,4 +19,4 @@ template <typename T>  // Todo(cpp20): use std:identity() and remove this header
 constexpr auto identity = [](T* p) { return p; };
 };
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

@@ -65,4 +65,4 @@ public:
      */
     virtual void deleteOverlayView(OverlayView* v, const Range& rg) = 0;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

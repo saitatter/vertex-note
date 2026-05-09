@@ -67,4 +67,4 @@ private:
 };
 
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

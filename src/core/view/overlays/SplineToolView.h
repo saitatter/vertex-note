@@ -76,4 +76,4 @@ public:
     static constexpr Color TANGENT_VECTOR_COLOR = Colors::lawngreen;
     static constexpr Color DYNAMIC_OBJECTS_COLOR = Colors::gray;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -107,16 +107,20 @@ constexpr std::underlying_type_t<Enum> to_underlying(Enum e) noexcept {
 }
 }  // namespace xoj
 
-#if defined __has_include && !defined(XOJ_USE_STD_BIT_CAST)
+namespace vn {
+using xoj::to_underlying;
+}
+
+#if defined __has_include && !defined(VN_USE_STD_BIT_CAST)
 #if __has_include(<bit>)
 #include <bit>
 #if defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806L
-#define XOJ_USE_STD_BIT_CAST 1
+#define VN_USE_STD_BIT_CAST 1
 #endif
 #endif
 #endif
 
-#if defined(XOJ_USE_STD_BIT_CAST) && XOJ_USE_STD_BIT_CAST == 1
+#if defined(VN_USE_STD_BIT_CAST) && VN_USE_STD_BIT_CAST == 1
 namespace xoj::util {
 using std::bit_cast;
 }  // namespace xoj::util

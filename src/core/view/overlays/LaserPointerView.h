@@ -80,4 +80,4 @@ private:
     uint8_t alpha = 255;  ///< for fadeout
     Range extents;        ///< for fadeout repaints
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -30,4 +30,4 @@ public:
 private:
     const BackgroundImage& image;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

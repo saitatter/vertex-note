@@ -25,7 +25,7 @@
 
 class GladeSearchpath;
 
-namespace xoj::popup {
+namespace vn::popup {
 class ExportDialog {
 public:
     ExportDialog(GladeSearchpath* gladeSearchPath, ExportGraphicsFormat format, size_t currentPage, size_t pageCount,
@@ -73,4 +73,4 @@ private:
 
     std::function<void(const ExportDialog&)> callbackFun;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

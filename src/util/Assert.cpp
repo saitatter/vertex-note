@@ -11,5 +11,5 @@ void assertFailure(const char* expr, const std::string& msg, const char* fileNam
                (!msg.empty() ? std::string("    Message: ") + msg + "\n" : "").c_str(), funcName, line, fileName);
     std::abort();
 }
-};  // namespace xoj::util
+};  // namespace vn::util
 #endif

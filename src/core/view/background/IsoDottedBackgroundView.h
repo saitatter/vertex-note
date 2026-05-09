@@ -32,4 +32,4 @@ protected:
 protected:
     constexpr static double DEFAULT_LINE_WIDTH = 1.5;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

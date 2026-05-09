@@ -48,4 +48,4 @@ private:
     static constexpr double BORDER_WIDTH_IN_PIXELS = 1;
     static constexpr double FILLING_OPACITY = 0.3;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

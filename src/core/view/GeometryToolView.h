@@ -129,4 +129,4 @@ private:
     mutable Mask mask;
     ZoomControl* zoomControl;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

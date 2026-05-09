@@ -547,7 +547,7 @@ auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<xoj::uti
 
 void LoadHandler::closeFile() noexcept { this->zipFp.reset(); }
 
-XOJ_GIO_GUARD_GENERATOR_TYPE(GMarkupParseContext, g_markup_parse_context_free);
+VN_GIO_GUARD_GENERATOR_TYPE(GMarkupParseContext, g_markup_parse_context_free);
 
 void LoadHandler::parseXml(std::unique_ptr<xoj::util::InputStream> xmlContentStream) {
     xoj_assert(xmlContentStream);

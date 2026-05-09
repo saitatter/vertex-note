@@ -34,4 +34,4 @@ protected:
     static constexpr Color DARK_GREY{Colors::gray};
     static constexpr Color LIGHT_GREY{Colors::silver};
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -53,4 +53,4 @@ private:
     static constexpr std::array<const double, 2> DASH_PATTERN = {6.0, 4.0};
 };
 
-};  // namespace xoj::view
+};  // namespace vn::view

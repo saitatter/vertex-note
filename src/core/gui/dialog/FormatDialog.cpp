@@ -7,7 +7,7 @@
 
 #include "control/settings/Settings.h"  // for Settings
 #include "gui/PaperFormatUtils.h"       // for PaperFormatUtils
-#include "model/FormatDefinitions.h"    // for FormatUnits, XOJ_UNITS, XOJ_U...
+#include "model/FormatDefinitions.h"    // for FormatUnits, NOTE_UNITS, NOTE_UNIT_COUNT
 #include "util/GListView.h"             // for GListView, GListView<>::GList...
 #include "util/StringUtils.h"           // for StringUtils
 #include "util/i18n.h"                  // for _
@@ -17,14 +17,14 @@ class GladeSearchpath;
 constexpr auto UI_FILE = "pageFormat.glade";
 constexpr auto UI_DIALOG_NAME = "pageFormatDialog";
 
-using namespace xoj::popup;
+using namespace vn::popup;
 using xoj::util::GtkPaperSizeUPtr;
 
 FormatDialog::FormatDialog(GladeSearchpath* gladeSearchPath, Settings* settings, double width, double height,
                            std::function<void(double, double)> callback):
         settings(settings),
         selectedScale(settings->getSizeUnitIndex()),
-        scale(XOJ_UNITS[selectedScale].scale),
+        scale(NOTE_UNITS[selectedScale].scale),
         origWidth(width),
         origHeight(height),
         callbackFun(callback) {
@@ -40,8 +40,8 @@ FormatDialog::FormatDialog(GladeSearchpath* gladeSearchPath, Settings* settings,
 
     GtkWidget* cbUnit = builder.get("cbUnit");
 
-    for (int i = 0; i < XOJ_UNIT_COUNT; i++) {
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cbUnit), XOJ_UNITS[i].name);
+    for (int i = 0; i < NOTE_UNIT_COUNT; i++) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(cbUnit), NOTE_UNITS[i].name);
     }
     gtk_combo_box_set_active(GTK_COMBO_BOX(cbUnit), this->selectedScale);
 
@@ -126,7 +126,7 @@ void FormatDialog::cbUnitChanged(GtkComboBox* widget, FormatDialog* dlg) {
     double height = gtk_spin_button_get_value(dlg->heightSpin) * dlg->scale;
 
     dlg->selectedScale = selectd;
-    dlg->scale = XOJ_UNITS[dlg->selectedScale].scale;
+    dlg->scale = NOTE_UNITS[dlg->selectedScale].scale;
 
     dlg->setSpinValues(width / dlg->scale, height / dlg->scale);
 }

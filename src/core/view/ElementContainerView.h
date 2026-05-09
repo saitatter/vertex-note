@@ -28,4 +28,4 @@ public:
 private:
     const ElementContainer* container;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

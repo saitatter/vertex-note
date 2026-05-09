@@ -139,4 +139,4 @@ public:
 private:
     std::weak_ptr<pool_type> pool;
 };
-};  // namespace xoj::util
+};  // namespace vn::util

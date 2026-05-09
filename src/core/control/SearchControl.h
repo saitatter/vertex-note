@@ -24,7 +24,7 @@ namespace xoj::view {
 class OverlayView;
 class Repaintable;
 class SearchResultView;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 class SearchControl: public OverlayBase {
 public:

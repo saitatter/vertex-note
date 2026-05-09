@@ -31,7 +31,7 @@ template <typename T>
 struct Point;
 template <typename T>
 class Rectangle;
-};  // namespace xoj::util
+};  // namespace vn::util
 
 /**
  * @brief The Layout manager for the VertexNoteWidget

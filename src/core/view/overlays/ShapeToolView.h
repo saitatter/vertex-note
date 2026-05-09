@@ -55,4 +55,4 @@ public:
 private:
     const BaseShapeHandler* toolHandler;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -41,4 +41,4 @@ private:
     const std::vector<Point>& path;
     const std::vector<double>& dashPattern;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -42,4 +42,4 @@ struct GSourceURef {
 private:
     unsigned int id = 0;  // handler id
 };
-};  // namespace xoj::util
+};  // namespace vn::util

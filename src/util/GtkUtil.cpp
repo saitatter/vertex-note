@@ -174,4 +174,4 @@ void fixActionableInitialSensitivity(GtkActionable* w) {
 }
 
 #endif
-};  // namespace xoj::util::gtk
+};  // namespace vn::util::gtk

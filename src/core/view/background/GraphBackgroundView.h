@@ -39,4 +39,4 @@ protected:
     constexpr static double DEFAULT_LINE_WIDTH = 0.5;
     constexpr static double DEFAULT_BOLD_LINE_WIDTH = 1.5;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -65,4 +65,4 @@ public:
     // Width of the cursor in insertion mode (or at the end of a line)
     static constexpr int INSERTION_CURSOR_WIDTH_IN_PIXELS = 2;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

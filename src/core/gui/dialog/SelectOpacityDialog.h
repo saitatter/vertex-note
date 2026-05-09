@@ -18,7 +18,7 @@
 
 class GladeSearchpath;
 
-namespace xoj::popup {
+namespace vn::popup {
 class SelectOpacityDialog {
 public:
     SelectOpacityDialog(GladeSearchpath* gladeSearchPath, int alpha, OpacityFeature type,
@@ -38,4 +38,4 @@ private:
     OpacityFeature opacityFeature;
     std::function<void(int, OpacityFeature)> callback;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

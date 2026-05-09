@@ -71,10 +71,10 @@ void CustomExportJob::showDialogAndRun() {
             }
 
             auto* ctrl = job->control;
-            xoj::popup::PopupWindowWrapper<xoj::popup::ExportDialog> popup(
+            vn::popup::PopupWindowWrapper<vn::popup::ExportDialog> popup(
                     ctrl->getGladeSearchPath(), job->format, ctrl->getCurrentPageNo() + 1,
                     ctrl->getDocument()->getPageCount(), !ctrl->getDocument()->getPdfFilepath().empty(),
-                    [job](const xoj::popup::ExportDialog& dialog) {
+                    [job](const vn::popup::ExportDialog& dialog) {
                         if (dialog.isConfirmed()) {
                             job->exportRange = dialog.getRange();
                             job->progressiveMode = dialog.progressiveModeSelected();

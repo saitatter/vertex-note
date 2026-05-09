@@ -56,7 +56,7 @@ GtkWidget* createPreviewGrid(const std::vector<std::unique_ptr<PageTypeInfo>>& p
 
 PageTypeSelectionPopoverGridOnly::PageTypeSelectionPopoverGridOnly(PageTypeHandler* typesHandler,
                                                                    const Settings* settings,
-                                                                   xoj::popup::PageTemplateDialog* parent):
+                                                                   vn::popup::PageTemplateDialog* parent):
         PageTypeSelectionMenuBase(typesHandler, settings, SELECTION_ACTION_NAME),
         parent(parent),
         popover(createPopover()) {

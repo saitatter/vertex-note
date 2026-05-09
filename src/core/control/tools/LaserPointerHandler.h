@@ -33,7 +33,7 @@ namespace xoj::view {
 class OverlayView;
 class Repaintable;
 class LaserPointerView;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 class LaserPointerHandler: public OverlayBase {
 public:

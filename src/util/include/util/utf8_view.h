@@ -177,4 +177,4 @@ static_assert(utf8_view{sv.data(), CharSentinelClass<char>{}}.str() == u8"Hello,
 static_assert((us | utf8).str() == u8"ℏⓔℓlơ");
 #endif
 };  // namespace
-};  // namespace xoj::util
+};  // namespace vn::util

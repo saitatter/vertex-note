@@ -29,4 +29,4 @@ public:
 private:
     const Layer* layer;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

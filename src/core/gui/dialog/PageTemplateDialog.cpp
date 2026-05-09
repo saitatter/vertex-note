@@ -16,7 +16,7 @@
 #include "gui/dialog/DocumentOpenDialog.h"             // for DocumentOpenDialog
 #include "gui/menus/popoverMenus/PageTypeSelectionPopoverGridOnly.h"
 #include "gui/toolbarMenubar/ToolMenuHandler.h"
-#include "model/FormatDefinitions.h"  // for FormatUnits, XOJ_UNITS
+#include "model/FormatDefinitions.h"  // for FormatUnits, NOTE_UNITS
 #include "model/PageType.h"           // for PageType
 #include "util/Color.h"               // for GdkRGBA_to_argb, rgb_t...
 #include "util/PathUtil.h"            // for fromGFile, readString
@@ -33,7 +33,7 @@ class GladeSearchpath;
 constexpr auto UI_FILE = "pageTemplate.glade";
 constexpr auto UI_DIALOG_NAME = "templateDialog";
 
-using namespace xoj::popup;
+using namespace vn::popup;
 
 PageTemplateDialog::PageTemplateDialog(GladeSearchpath* gladeSearchPath, Settings* settings, ToolMenuHandler* toolmenu,
                                        PageTypeHandler* types):
@@ -174,12 +174,12 @@ void PageTemplateDialog::saveToFile() {
         gulong signalId;
     };
 
-    auto popup = xoj::popup::PopupWindowWrapper<FileDlg>(GTK_DIALOG(dialog), this);
+    auto popup = vn::popup::PopupWindowWrapper<FileDlg>(GTK_DIALOG(dialog), this);
     popup.show(GTK_WINDOW(this->getWindow()));
 }
 
 void PageTemplateDialog::loadFromFile() {
-    xoj::OpenDlg::showOpenTemplateDialog(this->getWindow(), settings, [this](fs::path path) {
+    vn::OpenDlg::showOpenTemplateDialog(this->getWindow(), settings, [this](fs::path path) {
         auto contents = Util::readString(path);
         if (!contents.has_value()) {
             return;
@@ -191,7 +191,7 @@ void PageTemplateDialog::loadFromFile() {
 }
 
 void PageTemplateDialog::updatePageSize() {
-    const FormatUnits* formatUnit = &XOJ_UNITS[settings->getSizeUnitIndex()];
+    const FormatUnits* formatUnit = &NOTE_UNITS[settings->getSizeUnitIndex()];
 
     char buffer[64];
     sprintf(buffer, "%0.2lf", model.getPageWidth() / formatUnit->scale);
@@ -207,7 +207,7 @@ void PageTemplateDialog::updatePageSize() {
 }
 
 void PageTemplateDialog::showPageSizeDialog() {
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::popup::FormatDialog>(gladeSearchPath, settings,
+    auto popup = vn::popup::PopupWindowWrapper<vn::popup::FormatDialog>(gladeSearchPath, settings,
                                                                           model.getPageWidth(), model.getPageHeight(),
                                                                           [dlg = this](double width, double height) {
                                                                               dlg->model.setPageWidth(width);

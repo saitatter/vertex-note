@@ -24,4 +24,4 @@ std::string getOsInfo();
 
 /// Get a paragraph with all version info
 std::string getVersionInfo();
-};  // namespace xoj::util
+};  // namespace vn::util

@@ -41,4 +41,4 @@ GVariantSPtr makeGVariantSPtr(T t) {
 }
 
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

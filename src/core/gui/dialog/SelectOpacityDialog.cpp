@@ -49,7 +49,7 @@ static inline void buildLabel(Builder& builder, OpacityFeature opacityFeature) {
                         FC(_F("<b>{1}</b>\n{2}{3}") % toolOptionsDesc % selectOpacityFor % opacityFeatureDesc));
 }
 
-xoj::popup::SelectOpacityDialog::SelectOpacityDialog(GladeSearchpath* gladeSearchPath, int alpha,
+vn::popup::SelectOpacityDialog::SelectOpacityDialog(GladeSearchpath* gladeSearchPath, int alpha,
                                                      OpacityFeature feature,
                                                      std::function<void(int, OpacityFeature)> callback):
         opacityFeature(feature), callback(callback) {
@@ -84,13 +84,13 @@ xoj::popup::SelectOpacityDialog::SelectOpacityDialog(GladeSearchpath* gladeSearc
 #endif
 }
 
-xoj::popup::SelectOpacityDialog::~SelectOpacityDialog() = default;
+vn::popup::SelectOpacityDialog::~SelectOpacityDialog() = default;
 
 const int PREVIEW_WIDTH = 70;
 const int PREVIEW_HEIGTH = 50;
 const int PREVIEW_BORDER = 10;
 
-void xoj::popup::SelectOpacityDialog::setPreviewImage(int alpha) {
+void vn::popup::SelectOpacityDialog::setPreviewImage(int alpha) {
     xoj::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, PREVIEW_WIDTH, PREVIEW_HEIGTH),
                                         xoj::util::adopt);
     xoj::util::CairoSPtr cairo(cairo_create(surface.get()), xoj::util::adopt);

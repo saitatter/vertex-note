@@ -37,4 +37,4 @@ void drawNoPressure(cairo_t* cr, const std::vector<Point>& pts, const double str
  *      Effectively, the return value equals dashOffset + length of the path.
  */
 double drawWithPressure(cairo_t* cr, const std::vector<Point>& pts, const LineStyle& lineStyle, double dashOffset = 0);
-};  // namespace xoj::view::StrokeViewHelper
+};  // namespace vn::view::StrokeViewHelper

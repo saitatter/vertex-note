@@ -4,11 +4,11 @@
 
 class Settings;
 
-namespace xoj::popup {
+namespace vn::popup {
 
 class UpdateDialog {
 public:
     static void show(GtkWindow* parent, Settings* settings);
 };
 
-}  // namespace xoj::popup
+}  // namespace vn::popup

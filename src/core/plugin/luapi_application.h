@@ -293,12 +293,12 @@ static int applib_fileDialogSave(lua_State* L) {
         }
     };
 
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::SaveExportDialog>(ctrl->getSettings(), std::move(suggestedPath),
+    auto popup = vn::popup::PopupWindowWrapper<vn::SaveExportDialog>(ctrl->getSettings(), std::move(suggestedPath),
                                                                        _("Save File"), _("Save"),
                                                                        std::move(pathValidation), std::move(callback));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
-    xoj::addFilterAllFiles(fc);
+    vn::addFilterAllFiles(fc);
 
     popup.show(GTK_WINDOW(ctrl->getWindow()->getWindow()));
 
@@ -398,7 +398,7 @@ static int applib_fileDialogOpen(lua_State* L) {
     Plugin* plugin = Plugin::getPluginFromLua(L);
     Control* ctrl = plugin->getControl();
 
-    xoj::OpenDlg::showMultiFormatDialog(ctrl->getGtkWindow(), formats,
+    vn::OpenDlg::showMultiFormatDialog(ctrl->getGtkWindow(), formats,
                                         [plugin, callback = std::string(callback)](fs::path path) {
                                             g_message("%s", (_F("file: {1}") % path.string()).c_str());
                                             plugin->callFunction(callback, path.string().c_str());

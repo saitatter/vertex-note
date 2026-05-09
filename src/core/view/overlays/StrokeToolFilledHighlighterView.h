@@ -22,4 +22,4 @@ public:
 
     void draw(cairo_t* cr) const override;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

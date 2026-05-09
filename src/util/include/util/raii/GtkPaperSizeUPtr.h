@@ -31,4 +31,4 @@ using GtkPaperSizeUPtr = std::unique_ptr<GtkPaperSize, specialization::GtkPaperS
 
 
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

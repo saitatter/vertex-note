@@ -33,4 +33,4 @@ protected:
     constexpr static Color DEFAULT_V_LINE_COLOR = Colors::xopp_deeppink;
     constexpr static Color ALT_DEFAULT_V_LINE_COLOR = Colors::xopp_midnightblue;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

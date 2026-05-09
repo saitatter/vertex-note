@@ -55,4 +55,4 @@ private:
     char* data = nullptr;
 };
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

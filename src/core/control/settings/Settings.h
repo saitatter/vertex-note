@@ -481,7 +481,7 @@ public:
     std::string const& getSizeUnit() const;
 
     /**
-     * Get size index in XOJ_UNITS
+     * Get size index in NOTE_UNITS
      */
     int getSizeUnitIndex() const;
 
@@ -491,7 +491,7 @@ public:
     void setSizeUnit(const std::string& sizeUnit);
 
     /**
-     * Set size index in XOJ_UNITS
+     * Set size index in NOTE_UNITS
      */
     void setSizeUnitIndex(int sizeUnitId);
 
@@ -1050,7 +1050,7 @@ private:
     PageTemplateSettings pageTemplateSettings;
 
     /**
-     * Unit, see XOJ_UNITS
+     * Unit, see NOTE_UNITS
      */
     std::string sizeUnit;
 

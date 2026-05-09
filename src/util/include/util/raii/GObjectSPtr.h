@@ -45,4 +45,4 @@ using GObjectSPtr = CLibrariesSPtr<GlibClass, raii::specialization::GObjectHandl
 using WidgetSPtr = GObjectSPtr<GtkWidget>;
 
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

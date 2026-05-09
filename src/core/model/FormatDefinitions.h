@@ -16,5 +16,5 @@ typedef struct {
     const double scale;
 } FormatUnits;
 
-extern const FormatUnits XOJ_UNITS[];
-extern const int XOJ_UNIT_COUNT;
+extern const FormatUnits NOTE_UNITS[];
+extern const int NOTE_UNIT_COUNT;

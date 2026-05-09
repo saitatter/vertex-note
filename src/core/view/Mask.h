@@ -88,4 +88,4 @@ private:
     int yOffset = 0;
     double zoom = 1.0;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

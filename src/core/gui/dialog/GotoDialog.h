@@ -19,7 +19,7 @@
 
 class GladeSearchpath;
 
-namespace xoj::popup {
+namespace vn::popup {
 class GotoDialog {
 public:
     GotoDialog(GladeSearchpath* gladeSearchPath, size_t initialPage, size_t maxPage,
@@ -35,4 +35,4 @@ private:
 
     std::function<void(size_t)> callback;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

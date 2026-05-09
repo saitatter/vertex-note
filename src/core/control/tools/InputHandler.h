@@ -27,7 +27,7 @@ struct KeyEvent;
 namespace xoj::view {
 class OverlayView;
 class Repaintable;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 /**
  * @brief A base class to handle pointer input

@@ -486,7 +486,7 @@ void Control::selectAlpha(OpacityFeature feature) {
             Stacktrace::printStacktrace();
             break;
     }
-    auto dlg = xoj::popup::PopupWindowWrapper<xoj::popup::SelectOpacityDialog>(
+    auto dlg = vn::popup::PopupWindowWrapper<vn::popup::SelectOpacityDialog>(
             gladeSearchPath, alpha, feature, [&th = *toolHandler](int alpha, OpacityFeature feature) {
                 switch (feature) {
                     case OPACITY_FILL_PEN:
@@ -586,7 +586,7 @@ void Control::firePageSelected(size_t page) {
 }
 
 void Control::manageToolbars() {
-    xoj::popup::PopupWindowWrapper<ToolbarManageDialog> dlg(
+    vn::popup::PopupWindowWrapper<ToolbarManageDialog> dlg(
             this->gladeSearchPath, this->win->getToolbarModel(), [win = this->win]() {
                 if (const auto& tbs = win->getToolbarModel()->getToolbars();
                     std::none_of(tbs.begin(), tbs.end(),
@@ -943,7 +943,7 @@ void Control::insertPage(const PageRef& page, size_t position, bool shouldScroll
 }
 
 void Control::gotoPage() {
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::popup::GotoDialog>(
+    auto popup = vn::popup::PopupWindowWrapper<vn::popup::GotoDialog>(
             this->gladeSearchPath, this->getCurrentPageNo(), this->doc->getPageCount(),
             [scroll = this->scrollHandler](size_t pageNumber) {
                 xoj_assert(pageNumber != 0);
@@ -970,7 +970,7 @@ void Control::updateBackgroundSizeButton() {
 }
 
 void Control::paperTemplate() {
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::popup::PageTemplateDialog>(this->gladeSearchPath, settings,
+    auto popup = vn::popup::PopupWindowWrapper<vn::popup::PageTemplateDialog>(this->gladeSearchPath, settings,
                                                                                 win->getToolMenuHandler(), pageTypes);
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
@@ -982,7 +982,7 @@ void Control::paperFormat() {
     }
     clearSelectionEndText();
 
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::popup::FormatDialog>(
+    auto popup = vn::popup::PopupWindowWrapper<vn::popup::FormatDialog>(
             this->gladeSearchPath, settings, page->getWidth(), page->getHeight(),
             [ctrl = this, page](double width, double height) {
                 ctrl->doc->lock();
@@ -1017,7 +1017,7 @@ void Control::changePageBackgroundColor() {
         return;
     }
 
-    xoj::popup::PopupWindowWrapper<SelectBackgroundColorDialog> dlg(this, [p, pNr, ctrl = this](Color color) {
+    vn::popup::PopupWindowWrapper<SelectBackgroundColorDialog> dlg(this, [p, pNr, ctrl = this](Color color) {
         p->setBackgroundColor(color);
         ctrl->firePageChanged(pNr);
     });
@@ -1394,7 +1394,7 @@ void Control::showSettings() {
             settings->getRecolorParameters(),
     };
 
-    auto dlg = xoj::popup::PopupWindowWrapper<SettingsDialog>(
+    auto dlg = vn::popup::PopupWindowWrapper<SettingsDialog>(
             this->gladeSearchPath, settings, this,
             std::vector<fs::path>{Util::getBuiltInPaletteDirectoryPath(), Util::getCustomPaletteDirectoryPath()},
             [ctrl = this, settingsBeforeDialog]() {
@@ -1543,7 +1543,7 @@ void Control::askToOpenFile() {
      */
     this->close([ctrl = this](bool closed) {
         if (closed) {
-            xoj::OpenDlg::showOpenFileDialog(ctrl->getGtkWindow(), ctrl->settings, [ctrl](fs::path path) {
+            vn::OpenDlg::showOpenFileDialog(ctrl->getGtkWindow(), ctrl->settings, [ctrl](fs::path path) {
                 g_message("%s", (_F("file: {1}") % path.string()).c_str());
                 ctrl->openFileWithoutSavingTheCurrentDocument(std::move(path), false, -1, [](bool) {});
             });
@@ -1915,7 +1915,7 @@ void Control::missingPdfDialogResponseHandler(fs::path proposedPdfFilepath, int 
             break;
         case MissingPdfDialogOptions::SELECT_OTHER:
             Util::execInUiThread([this]() {
-                xoj::OpenDlg::showAnnotatePdfDialog(getGtkWindow(), settings, [this](fs::path path, bool attachPdf) {
+                vn::OpenDlg::showAnnotatePdfDialog(getGtkWindow(), settings, [this](fs::path path, bool attachPdf) {
                     if (!path.empty()) {
                         this->pageBackgroundChangeController->changePdfPagesBackground(path, attachPdf);
                     }
@@ -1967,7 +1967,7 @@ void Control::loadMetadata(MetadataEntry md) {
 void Control::askToAnnotatePdf() {
     this->close([ctrl = this](bool closed) {
         if (closed) {
-            xoj::OpenDlg::showAnnotatePdfDialog(ctrl->getGtkWindow(), ctrl->settings,
+            vn::OpenDlg::showAnnotatePdfDialog(ctrl->getGtkWindow(), ctrl->settings,
                                                 [ctrl](fs::path path, bool attachPdf) {
                                                     if (!path.empty()) {
                                                         ctrl->openPdfFile(std::move(path), attachPdf, -1);
@@ -2034,7 +2034,7 @@ void Control::showFontDialog() {
     auto* dlg = gtk_font_chooser_dialog_new(_("Select font"), GTK_WINDOW(this->win->getWindow()));
     gtk_font_chooser_set_font(GTK_FONT_CHOOSER(dlg), settings->getFont().asString().c_str());
 
-    auto popup = xoj::popup::PopupWindowWrapper<AppMessageBox>(
+    auto popup = vn::popup::PopupWindowWrapper<AppMessageBox>(
             GTK_DIALOG(dlg),
             [this, dlg](int response) {
                 if (response == GTK_RESPONSE_OK) {
@@ -2055,7 +2055,7 @@ void Control::showColorChooserDialog() {
     gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dlg), &c);
     gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(dlg), false);
 
-    auto popup = xoj::popup::PopupWindowWrapper<AppMessageBox>(
+    auto popup = vn::popup::PopupWindowWrapper<AppMessageBox>(
             GTK_DIALOG(dlg),
             [this, dlg](int response) {
                 if (response == GTK_RESPONSE_OK) {
@@ -2146,7 +2146,7 @@ void Control::saveImpl(bool saveAs, std::function<void(bool)> callback) {
         auto suggestedPath = this->doc->createSaveFoldername(this->settings->getLastSavePath());
         suggestedPath /= this->doc->createSaveFilename(Document::XOPP, this->settings->getDefaultSaveName());
         this->doc->unlock_shared();
-        xoj::SaveExportDialog::showSaveFileDialog(getGtkWindow(), settings, std::move(suggestedPath),
+        vn::SaveExportDialog::showSaveFileDialog(getGtkWindow(), settings, std::move(suggestedPath),
                                                   [doSave = std::move(doSave), ctrl = this](std::optional<fs::path> p) {
                                                       if (p && !p->empty()) {
                                                           ctrl->settings->setLastSavePath(p->parent_path());
@@ -2276,11 +2276,11 @@ void Control::initButtonTool() {
 }
 
 void Control::showAbout() {
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::popup::AboutDialog>(this->gladeSearchPath);
+    auto popup = vn::popup::PopupWindowWrapper<vn::popup::AboutDialog>(this->gladeSearchPath);
     popup.show(GTK_WINDOW(this->win->getWindow()));
 }
 
-void Control::showUpdateDialog() { xoj::popup::UpdateDialog::show(GTK_WINDOW(this->win->getWindow()), this->settings); }
+void Control::showUpdateDialog() { vn::popup::UpdateDialog::show(GTK_WINDOW(this->win->getWindow()), this->settings); }
 
 static void onGtkDemoShown(GObject* proc_object, GAsyncResult* res, gpointer) {
     gboolean success = g_subprocess_wait_finish(G_SUBPROCESS(proc_object), res, NULL);

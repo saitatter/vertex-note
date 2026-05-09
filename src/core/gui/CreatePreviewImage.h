@@ -23,4 +23,4 @@ constexpr auto PREVIEW_HEIGHT = 141;
  *      The returned widget is a floating ref.
  */
 auto createPreviewImage(const PageType& pt) -> GtkWidget*;
-};  // namespace xoj::helper
+};  // namespace vn::helper

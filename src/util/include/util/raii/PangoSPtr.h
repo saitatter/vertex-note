@@ -30,4 +30,4 @@ public:
 
 using PangoAttrListSPtr = CLibrariesSPtr<PangoAttrList, raii::specialization::PangoAttrListHandler>;
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

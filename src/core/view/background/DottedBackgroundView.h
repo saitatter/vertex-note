@@ -34,4 +34,4 @@ protected:
     constexpr static Color ALT_DEFAULT_LINE_COLOR = Colors::xopp_darkslategray;
     constexpr static double DEFAULT_LINE_WIDTH = 1.5;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

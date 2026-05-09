@@ -1824,13 +1824,13 @@ void Settings::setSizeUnit(const string& sizeUnit) {
 }
 
 /**
- * Get size index in XOJ_UNITS
+ * Get size index in NOTE_UNITS
  */
 auto Settings::getSizeUnitIndex() const -> int {
     string unit = getSizeUnit();
 
-    for (int i = 0; i < XOJ_UNIT_COUNT; i++) {
-        if (unit == XOJ_UNITS[i].name) {
+    for (int i = 0; i < NOTE_UNIT_COUNT; i++) {
+        if (unit == NOTE_UNITS[i].name) {
             return i;
         }
     }
@@ -1839,14 +1839,14 @@ auto Settings::getSizeUnitIndex() const -> int {
 }
 
 /**
- * Set size index in XOJ_UNITS
+ * Set size index in NOTE_UNITS
  */
 void Settings::setSizeUnitIndex(int sizeUnitId) {
-    if (sizeUnitId < 0 || sizeUnitId >= XOJ_UNIT_COUNT) {
+    if (sizeUnitId < 0 || sizeUnitId >= NOTE_UNIT_COUNT) {
         sizeUnitId = 0;
     }
 
-    setSizeUnit(XOJ_UNITS[sizeUnitId].name);
+    setSizeUnit(NOTE_UNITS[sizeUnitId].name);
 }
 
 void Settings::setShowPairedPages(bool showPairedPages) {

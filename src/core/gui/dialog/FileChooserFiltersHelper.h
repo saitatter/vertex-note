@@ -13,7 +13,7 @@
 
 #include <gtk/gtk.h>
 
-namespace xoj {
+namespace vn {
 void addFilterAllFiles(GtkFileChooser* fc);
 void addFilterSupported(GtkFileChooser* fc);
 void addFilterPdf(GtkFileChooser* fc);
@@ -23,4 +23,4 @@ void addFilterXopt(GtkFileChooser* fc);
 void addFilterSvg(GtkFileChooser* fc);
 void addFilterPng(GtkFileChooser* fc);
 void addFilterImages(GtkFileChooser* fc);  ///< All images supported by GdkPixbuf
-};  // namespace xoj
+};  // namespace vn

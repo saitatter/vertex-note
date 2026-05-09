@@ -42,4 +42,4 @@ protected:
     /// @brief The part of the mask that needs to be wiped to ensure the filling is correctly drawn.
     mutable Range maskWipeExtent;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

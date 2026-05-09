@@ -157,11 +157,11 @@ void LatexController::findSelectedTexElement() {
 void LatexController::showTexEditDialog(std::unique_ptr<LatexController> ctrl) {
     LatexController* texCtrl = ctrl.get();
     if (ctrl->settings.useExternalEditor) {
-        xoj::popup::PopupWindowWrapper<ExtEdLatexDialog> popup(texCtrl->control->getGladeSearchPath(), std::move(ctrl));
+        vn::popup::PopupWindowWrapper<ExtEdLatexDialog> popup(texCtrl->control->getGladeSearchPath(), std::move(ctrl));
 
         popup.show(GTK_WINDOW(texCtrl->control->getWindow()->getWindow()));
     } else {
-        xoj::popup::PopupWindowWrapper<IntEdLatexDialog> popup(texCtrl->control->getGladeSearchPath(), std::move(ctrl));
+        vn::popup::PopupWindowWrapper<IntEdLatexDialog> popup(texCtrl->control->getGladeSearchPath(), std::move(ctrl));
 
         popup.show(GTK_WINDOW(texCtrl->control->getWindow()->getWindow()));
     }

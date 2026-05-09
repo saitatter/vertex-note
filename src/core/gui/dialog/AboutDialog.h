@@ -15,7 +15,7 @@
 
 class GladeSearchpath;
 
-namespace xoj::popup {
+namespace vn::popup {
 class AboutDialog {
 public:
     AboutDialog(GladeSearchpath* gladeSearchPath);
@@ -26,4 +26,4 @@ public:
 private:
     xoj::util::GtkWindowUPtr window;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup

@@ -32,4 +32,4 @@ char** OwnedCString::contentReplacer() {
     return &data;
 }
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

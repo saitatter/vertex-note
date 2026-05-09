@@ -48,4 +48,4 @@ protected:
     const LineStyle lineStyle;
     double strokeWidth;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

@@ -430,17 +430,17 @@ void PageTypeSelectionPopover::changedPaperFormatTemplateCb(GtkComboBox* widget,
 
         self->setSelectedPaperSize<false>(paperSize);
     } else if (selected == self->customPaperSizeIndex) {
-        std::unique_ptr<xoj::popup::PopupWindowWrapper<xoj::popup::FormatDialog>> popup;
+        std::unique_ptr<vn::popup::PopupWindowWrapper<vn::popup::FormatDialog>> popup;
         auto callback = [self](double width, double height) {
             self->setSelectedPaperSize<true>(PaperSize(width, height));
         };
         if (self->selectedPageSize) {
-            popup = std::make_unique<xoj::popup::PopupWindowWrapper<xoj::popup::FormatDialog>>(
+            popup = std::make_unique<vn::popup::PopupWindowWrapper<vn::popup::FormatDialog>>(
                     self->control->getGladeSearchPath(), self->settings, self->selectedPageSize->width,
                     self->selectedPageSize->height, callback);
         } else {
             const auto& model = self->settings->getPageTemplateSettings();
-            popup = std::make_unique<xoj::popup::PopupWindowWrapper<xoj::popup::FormatDialog>>(
+            popup = std::make_unique<vn::popup::PopupWindowWrapper<vn::popup::FormatDialog>>(
                     self->control->getGladeSearchPath(), self->settings, model.getPageWidth(), model.getPageHeight(),
                     callback);
         }

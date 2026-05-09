@@ -260,7 +260,7 @@ auto PageBackgroundChangeController::commitPageSizeChange(const size_t pageNum, 
 void PageBackgroundChangeController::askForImageBackground(std::function<void(BackgroundImage)> callback) {
     Document* doc = control->getDocument();
 
-    auto dlg = xoj::popup::PopupWindowWrapper<ImagesDialog>(control->getGladeSearchPath(), doc, control->getSettings(),
+    auto dlg = vn::popup::PopupWindowWrapper<ImagesDialog>(control->getGladeSearchPath(), doc, control->getSettings(),
                                                             std::move(callback));
     dlg.show(control->getGtkWindow());
 }
@@ -275,7 +275,7 @@ void PageBackgroundChangeController::askForPdfBackground(std::function<void(size
         return;
     }
 
-    auto dlg = xoj::popup::PopupWindowWrapper<PdfPagesDialog>(control->getGladeSearchPath(), doc,
+    auto dlg = vn::popup::PopupWindowWrapper<PdfPagesDialog>(control->getGladeSearchPath(), doc,
                                                               control->getSettings(), std::move(callback));
     dlg.show(control->getGtkWindow());
 }

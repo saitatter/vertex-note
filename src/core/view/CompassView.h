@@ -102,4 +102,4 @@ private:
 public:
     static constexpr double LINE_WIDTH_IN_CM = .02;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

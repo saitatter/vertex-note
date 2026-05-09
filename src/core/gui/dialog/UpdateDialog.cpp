@@ -23,7 +23,7 @@
 
 #include "config.h"
 
-namespace xoj::popup {
+namespace vn::popup {
 namespace {
 
 constexpr auto RELEASES_URL = "https://github.com/saitatter/vertex-note/releases";
@@ -385,4 +385,4 @@ private:
 
 void UpdateDialog::show(GtkWindow* parent, Settings* settings) { new UpdateDialogController(parent, settings); }
 
-}  // namespace xoj::popup
+}  // namespace vn::popup

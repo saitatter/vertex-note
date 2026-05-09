@@ -33,4 +33,4 @@ using GtkWindowUPtr = std::unique_ptr<GtkWindow, specialization::GtkWindowDelete
 
 
 };  // namespace raii
-};  // namespace xoj::util
+};  // namespace vn::util

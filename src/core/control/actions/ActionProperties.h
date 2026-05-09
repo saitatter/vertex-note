@@ -1086,7 +1086,7 @@ struct ActionProperties<Action::LAYER_MERGE_DOWN> {
 template <>
 struct ActionProperties<Action::LAYER_RENAME> {
     static void callback(GSimpleAction*, GVariant*, Control* ctrl) {
-        xoj::popup::PopupWindowWrapper<RenameLayerDialog> dialog(
+        vn::popup::PopupWindowWrapper<RenameLayerDialog> dialog(
                 ctrl->getGladeSearchPath(), ctrl->getUndoRedoHandler(), ctrl->getLayerController(),
                 ctrl->getLayerController()->getCurrentPage()->getSelectedLayer());
         dialog.show(ctrl->getGtkWindow());

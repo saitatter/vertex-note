@@ -37,7 +37,7 @@ namespace xoj::view {
 class OverlayView;
 class Repaintable;
 class SplineToolView;
-};  // namespace xoj::view
+};  // namespace vn::view
 
 /**
  * @brief Helper structure for communication with the views

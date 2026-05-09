@@ -19,7 +19,7 @@
 #include "gui/menus/PageTypeSelectionMenuBase.h"
 #include "util/raii/GObjectSPtr.h"
 
-namespace xoj::popup {
+namespace vn::popup {
 class PageTemplateDialog;
 }
 class PageTypeHandler;
@@ -29,7 +29,7 @@ class Settings;
 class PageTypeSelectionPopoverGridOnly final: public PageTypeSelectionMenuBase {
 public:
     PageTypeSelectionPopoverGridOnly(PageTypeHandler* typesHandler, const Settings* settings,
-                                     xoj::popup::PageTemplateDialog* parent);
+                                     vn::popup::PageTemplateDialog* parent);
     ~PageTypeSelectionPopoverGridOnly() = default;
 
 public:
@@ -40,6 +40,6 @@ private:
     void entrySelected(const PageTypeInfo* info) override;
 
 private:
-    xoj::popup::PageTemplateDialog* parent;
+    vn::popup::PageTemplateDialog* parent;
     xoj::util::WidgetSPtr popover;
 };

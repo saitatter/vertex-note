@@ -74,7 +74,7 @@ void BaseExportJob::showFileChooser(std::function<void()> onFileSelected, std::f
         }
     };
 
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::SaveExportDialog>(control->getSettings(), std::move(suggestedPath),
+    auto popup = vn::popup::PopupWindowWrapper<vn::SaveExportDialog>(control->getSettings(), std::move(suggestedPath),
                                                                        _("Export File"), _("Export"),
                                                                        std::move(pathValidation), std::move(callback));
 

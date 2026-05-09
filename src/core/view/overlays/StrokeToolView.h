@@ -105,4 +105,4 @@ protected:
      */
     mutable Mask mask;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

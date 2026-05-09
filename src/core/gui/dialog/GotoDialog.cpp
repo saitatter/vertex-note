@@ -10,7 +10,7 @@ class GladeSearchpath;
 constexpr auto UI_FILE = "goto.glade";
 constexpr auto UI_DIALOG_NAME = "gotoDialog";
 
-using namespace xoj::popup;
+using namespace vn::popup;
 
 GotoDialog::GotoDialog(GladeSearchpath* gladeSearchPath, size_t initialPage, size_t maxPage,
                        std::function<void(size_t)> callback):

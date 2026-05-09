@@ -22,7 +22,7 @@
 
 class Settings;
 
-namespace xoj {
+namespace vn {
 /// Helper class, for a single dialog
 class SaveExportDialog {
 public:
@@ -53,4 +53,4 @@ private:
     std::function<bool(fs::path&, const char* filterName)> pathValidation;
     gulong signalId{};
 };
-};  // namespace xoj
+};  // namespace vn

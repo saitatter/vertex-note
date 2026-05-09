@@ -71,6 +71,6 @@ static GtkWindow* constructWindow(GladeSearchpath* gladeSearchPath) {
     return window;
 }
 
-xoj::popup::AboutDialog::AboutDialog(GladeSearchpath* gladeSearchPath): window(constructWindow(gladeSearchPath)) {}
+vn::popup::AboutDialog::AboutDialog(GladeSearchpath* gladeSearchPath): window(constructWindow(gladeSearchPath)) {}
 
-xoj::popup::AboutDialog::~AboutDialog() = default;
+vn::popup::AboutDialog::~AboutDialog() = default;

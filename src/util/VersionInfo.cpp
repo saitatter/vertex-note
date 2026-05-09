@@ -117,4 +117,4 @@ std::string getVersionInfo() {
 
     return str.str();
 }
-};  // namespace xoj::util
+};  // namespace vn::util

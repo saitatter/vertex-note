@@ -32,4 +32,4 @@ protected:
 
     static std::pair<int, int> getIndexBounds(double min, double max, double step, double margin, double length);
 };
-};  // namespace xoj::view
+};  // namespace vn::view

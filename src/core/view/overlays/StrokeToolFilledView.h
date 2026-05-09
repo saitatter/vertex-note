@@ -56,4 +56,4 @@ protected:
 
     mutable FillingData filling;
 };
-};  // namespace xoj::view
+};  // namespace vn::view

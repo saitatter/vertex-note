@@ -177,7 +177,7 @@ static void saveLog(const std::stringstream& fullLog, const std::stringstream& e
         }
     };
 
-    auto popup = xoj::popup::PopupWindowWrapper<xoj::SaveExportDialog>(
+    auto popup = vn::popup::PopupWindowWrapper<vn::SaveExportDialog>(
             nullptr, fs::path(), _("Export Logs"), _("Export"), std::move(pathValidation), std::move(callback));
 
     auto* fc = GTK_FILE_CHOOSER(popup.getPopup()->getWindow());
@@ -246,7 +246,7 @@ DeviceTestingArea::DeviceTestingArea(GladeSearchpath* gladeSearchPath, GtkBox* p
 
     g_signal_connect(builder.get("btnAllDevices"), "clicked", G_CALLBACK(+[](GtkButton* btn, gpointer d) {
                          auto* self = static_cast<DeviceTestingArea*>(d);
-                         auto dlg = xoj::popup::PopupWindowWrapper<DeviceListDialog>(self->gladeSearchPath,
+                         auto dlg = vn::popup::PopupWindowWrapper<DeviceListDialog>(self->gladeSearchPath,
                                                                                      self->settings);
                          dlg.show(GTK_WINDOW(gtk_widget_get_ancestor(GTK_WIDGET(btn), GTK_TYPE_WINDOW)));
                      }),

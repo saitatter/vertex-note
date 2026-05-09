@@ -18,7 +18,7 @@
 #include "util/Assert.h"
 #include "util/gtk4_helper.h"
 
-namespace xoj::popup {
+namespace vn::popup {
 
 /**
  * @brief The class PopupWindowWrapper allows a safe non-blocking creation and display of a popup window.
@@ -76,4 +76,4 @@ public:
 private:
     PopupType* popup = nullptr;
 };
-};  // namespace xoj::popup
+};  // namespace vn::popup
