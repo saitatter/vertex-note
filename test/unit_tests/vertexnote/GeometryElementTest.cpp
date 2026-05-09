@@ -84,6 +84,21 @@ TEST(VertexNoteGeometryElement, movesIndividualVertex) {
     EXPECT_FALSE(element.setVertexPosition(999, Vec2{1.0, 1.0}));
 }
 
+TEST(VertexNoteGeometryElement, insertsVertexOnEdgeAndInvalidatesBounds) {
+    GeometryElement element = makeLineElement();
+    static_cast<void>(element.getElementWidth());
+
+    const auto edgeId = element.geometry().edges().front().id;
+    auto inserted = element.insertVertexOnEdge(edgeId, Vec2{3.0, 2.0});
+
+    ASSERT_TRUE(inserted.has_value());
+    EXPECT_EQ(element.geometry().vertices().size(), 3U);
+    EXPECT_EQ(element.geometry().edges().size(), 2U);
+    EXPECT_NE(element.geometry().vertex(*inserted), nullptr);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 6.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 2.0);
+}
+
 TEST(VertexNoteGeometryElement, replacesGeometryStateAndInvalidatesBounds) {
     GeometryElement element = makeLineElement();
     static_cast<void>(element.getX());  // Populate cached bounds before replacing.

@@ -291,6 +291,8 @@ public:
 
     void copySelection();
     [[nodiscard]] auto deleteActiveGeometryVertex() -> bool;
+    [[nodiscard]] auto insertActiveGeometryVertexOnEdge() -> bool;
+    [[nodiscard]] auto insertGeometryVertexAt(double x, double y, double zoom) -> bool;
 
 public:
     PageView* getView();
@@ -324,9 +326,11 @@ private:
     /**
      * Draw VertexNote vertex handles for selected object-based geometry.
      */
+    void drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, double zoom) const;
     void drawGeometryVertexHandles(cairo_t* cr, double x, double y, double zoom) const;
     void drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const;
     bool selectGeometryVertexHandleAt(double x, double y, double zoom);
+    bool selectGeometryEdgeAt(double x, double y, double zoom);
     [[nodiscard]] auto geometryVertexPreviewToModel(double x, double y) const -> vn::geom::Vec2;
 
 
@@ -409,6 +413,9 @@ private:  // DATA
     vn::geom::Vec2 activeGeometryVertexStart;
     vn::geom::Vec2 activeGeometryVertexCurrent;
     bool activeGeometryVertexMoved = false;
+    vn::geom::GeometryElement* hoveredGeometryElement = nullptr;
+    vn::geom::EdgeId hoveredGeometryEdge = vn::geom::InvalidEdgeId;
+    vn::geom::Vec2 hoveredGeometryInsertPosition;
 
     /**
      * If both scale axes should have the same scale factor, e.g. for Text

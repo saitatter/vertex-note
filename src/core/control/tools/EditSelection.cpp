@@ -69,6 +69,22 @@ static auto computeBoxes(const InsertionOrder& elts) -> std::pair<Range, Range> 
             [](auto&& e) { return std::make_pair(Range(e.e->boundingRect()), Range(e.e->getSnappedBounds())); });
 }
 
+static auto distanceToSegment(double px, double py, double ax, double ay, double bx, double by)
+        -> std::pair<double, double> {
+    const double dx = bx - ax;
+    const double dy = by - ay;
+    const double lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared == 0.0) {
+        return {std::hypot(px - ax, py - ay), 0.0};
+    }
+
+    const double t = std::clamp(((px - ax) * dx + (py - ay) * dy) / lengthSquared, 0.0, 1.0);
+    const double projX = ax + t * dx;
+    const double projY = ay + t * dy;
+    return {std::hypot(px - projX, py - projY), t};
+}
+
 auto createFromFloatingElement(Control* ctrl, const PageRef& page, Layer* layer, PageView* view, ElementPtr eOwn)
         -> std::unique_ptr<EditSelection> {
     auto* e = eOwn.get();  // Order of parameter evaluation is unspecified, eOwn.get() must be evaluated before moving
@@ -562,6 +578,8 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y) {
         this->activeGeometryElement = nullptr;
         this->activeGeometryVertex = vn::geom::InvalidVertexId;
         this->activeGeometryVertexMoved = false;
+        this->hoveredGeometryElement = nullptr;
+        this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     }
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is not modified
@@ -923,11 +941,51 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
             this->sourcePage, this->activeGeometryElement, before, after, _("Delete geometry vertex")));
     this->activeGeometryVertex = vn::geom::InvalidVertexId;
     this->activeGeometryVertexMoved = false;
+    this->hoveredGeometryElement = nullptr;
+    this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
     rebaseSelectionBounds();
     this->contents->invalidateViewBuffer();
     this->view->getPage()->fireElementChanged(this->activeGeometryElement);
     this->view->getNoteView()->repaintSelection();
     return true;
+}
+
+auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
+    if (!this->hoveredGeometryElement || this->hoveredGeometryEdge == vn::geom::InvalidEdgeId) {
+        return false;
+    }
+
+    const auto before = this->hoveredGeometryElement->geometry();
+    auto inserted =
+            this->hoveredGeometryElement->insertVertexOnEdge(this->hoveredGeometryEdge, this->hoveredGeometryInsertPosition);
+    if (!inserted) {
+        return false;
+    }
+
+    const auto after = this->hoveredGeometryElement->geometry();
+    this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
+            this->sourcePage, this->hoveredGeometryElement, before, after, _("Insert geometry vertex")));
+
+    this->activeGeometryElement = this->hoveredGeometryElement;
+    this->activeGeometryVertex = *inserted;
+    this->activeGeometryVertexStart = this->hoveredGeometryInsertPosition;
+    this->activeGeometryVertexCurrent = this->hoveredGeometryInsertPosition;
+    this->activeGeometryVertexMoved = false;
+    this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
+    rebaseSelectionBounds();
+    this->contents->invalidateViewBuffer();
+    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    this->view->getNoteView()->repaintSelection();
+    return true;
+}
+
+auto EditSelection::insertGeometryVertexAt(double x, double y, double zoom) -> bool {
+    cairo_matrix_transform_point(&this->cmatrix, &x, &y);
+    if (!selectGeometryEdgeAt(x, y, zoom)) {
+        return false;
+    }
+
+    return insertActiveGeometryVertexOnEdge();
 }
 
 void EditSelection::setEdgePan(bool pan) {
@@ -1085,10 +1143,17 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
     cairo_matrix_transform_point(&this->cmatrix, &x, &y);
 
     if (selectGeometryVertexHandleAt(x, y, zoom)) {
+        this->hoveredGeometryElement = nullptr;
+        this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
         return CURSOR_SELECTION_GEOMETRY_VERTEX;
     }
     this->activeGeometryElement = nullptr;
     this->activeGeometryVertex = vn::geom::InvalidVertexId;
+    if (selectGeometryEdgeAt(x, y, zoom)) {
+        return CURSOR_SELECTION_MOVE;
+    }
+    this->hoveredGeometryElement = nullptr;
+    this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
 
     const int EDGE_PADDING = (this->btnWidth / 2) + 2;
     const int BORDER_PADDING = (this->btnWidth / 2);
@@ -1235,6 +1300,7 @@ void EditSelection::paint(cairo_t* cr, double zoom) {
         drawDeleteRect(cr, std::min(x, x + width) - (DELETE_PADDING + this->btnWidth) / zoom, y, zoom);
     }
 
+    drawGeometryEdgeHighlight(cr, x, y, zoom);
     drawGeometryVertexHandles(cr, x, y, zoom);
 }
 
@@ -1289,6 +1355,50 @@ void EditSelection::drawGeometryVertexHandles(cairo_t* cr, double x, double y, d
             drawGeometryVertexHandle(cr, handleX, handleY, zoom, active);
         }
     }
+}
+
+void EditSelection::drawGeometryEdgeHighlight(cairo_t* cr, double x, double y, double zoom) const {
+    if (!this->hoveredGeometryElement || this->hoveredGeometryEdge == vn::geom::InvalidEdgeId) {
+        return;
+    }
+
+    const auto original = this->contents->getOriginalBounds();
+    if (original.width == 0.0 && original.height == 0.0) {
+        return;
+    }
+
+    const bool hasWidth = original.width != 0.0;
+    const bool hasHeight = original.height != 0.0;
+    const double fx = hasWidth ? this->width / original.width : 0.0;
+    const double fy = hasHeight ? this->height / original.height : 0.0;
+
+    const auto& geometry = this->hoveredGeometryElement->geometry();
+    const auto* edge = geometry.edge(this->hoveredGeometryEdge);
+    if (!edge) {
+        return;
+    }
+
+    const auto* start = geometry.vertex(edge->start);
+    const auto* end = geometry.vertex(edge->end);
+    if (!start || !end) {
+        return;
+    }
+
+    const double startX = hasWidth ? x + (start->position.x - original.x) * fx : x + this->width / 2.0;
+    const double startY = hasHeight ? y + (start->position.y - original.y) * fy : y + this->height / 2.0;
+    const double endX = hasWidth ? x + (end->position.x - original.x) * fx : x + this->width / 2.0;
+    const double endY = hasHeight ? y + (end->position.y - original.y) * fy : y + this->height / 2.0;
+
+    GdkRGBA selectionColor = view->getSelectionColor();
+    cairo_save(cr);
+    cairo_set_dash(cr, nullptr, 0, 0);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_set_line_width(cr, std::max(3.0, static_cast<double>(this->btnWidth) * 0.45));
+    gdk_cairo_set_source_rgba(cr, &selectionColor);
+    cairo_move_to(cr, startX * zoom, startY * zoom);
+    cairo_line_to(cr, endX * zoom, endY * zoom);
+    cairo_stroke(cr);
+    cairo_restore(cr);
 }
 
 void EditSelection::drawGeometryVertexHandle(cairo_t* cr, double x, double y, double zoom, bool active) const {
@@ -1358,6 +1468,70 @@ bool EditSelection::selectGeometryVertexHandleAt(double x, double y, double zoom
                 selected = true;
                 return;
             }
+        }
+    });
+
+    return selected;
+}
+
+bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
+    this->hoveredGeometryElement = nullptr;
+    this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
+
+    const auto original = this->contents->getOriginalBounds();
+    if (original.width == 0.0 && original.height == 0.0) {
+        return false;
+    }
+
+    const bool hasWidth = original.width != 0.0;
+    const bool hasHeight = original.height != 0.0;
+    const double fx = hasWidth ? this->width / original.width : 0.0;
+    const double fy = hasHeight ? this->height / original.height : 0.0;
+    const double hitRadius = std::max(6.0, static_cast<double>(this->btnWidth));
+
+    bool selected = false;
+    this->contents->forEachMutableElement([&](Element* element) {
+        if (selected || element->getType() != ELEMENT_GEOMETRY) {
+            return;
+        }
+
+        auto* geometry = dynamic_cast<vn::geom::GeometryElement*>(element);
+        if (!geometry) {
+            return;
+        }
+
+        for (const auto& edge: geometry->geometry().edges()) {
+            if (edge.kind != vn::geom::EdgeKind::Line) {
+                continue;
+            }
+
+            const auto* start = geometry->geometry().vertex(edge.start);
+            const auto* end = geometry->geometry().vertex(edge.end);
+            if (!start || !end) {
+                continue;
+            }
+
+            const double startX =
+                    hasWidth ? this->x + (start->position.x - original.x) * fx : this->x + this->width / 2.0;
+            const double startY =
+                    hasHeight ? this->y + (start->position.y - original.y) * fy : this->y + this->height / 2.0;
+            const double endX = hasWidth ? this->x + (end->position.x - original.x) * fx : this->x + this->width / 2.0;
+            const double endY =
+                    hasHeight ? this->y + (end->position.y - original.y) * fy : this->y + this->height / 2.0;
+
+            const auto [distance, t] =
+                    SelectionFactory::distanceToSegment(x, y, startX * zoom, startY * zoom, endX * zoom, endY * zoom);
+            if (distance > hitRadius) {
+                continue;
+            }
+
+            const double projectedX = startX + (endX - startX) * t;
+            const double projectedY = startY + (endY - startY) * t;
+            this->hoveredGeometryElement = geometry;
+            this->hoveredGeometryEdge = edge.id;
+            this->hoveredGeometryInsertPosition = geometryVertexPreviewToModel(projectedX, projectedY);
+            selected = true;
+            return;
         }
     });
 

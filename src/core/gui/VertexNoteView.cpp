@@ -180,6 +180,12 @@ auto VertexNoteView::onKeyPressEvent(const KeyEvent& event) -> bool {
             }
         }
 
+        if (keyval == GDK_KEY_Insert || keyval == GDK_KEY_KP_Insert) {
+            if (selection->insertActiveGeometryVertexOnEdge()) {
+                return true;
+            }
+        }
+
         int d = REGULAR_MOVE_AMOUNT;
         if (state == GDK_MOD1_MASK) {
             d = SMALL_MOVE_AMOUNT;

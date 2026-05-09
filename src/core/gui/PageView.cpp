@@ -504,7 +504,9 @@ auto PageView::onButtonDoublePressEvent(const PositionInputData& pos) -> bool {
             // Enter editing mode on the selected object
             const Element* object = *it;
             ElementType elemType = object->getType();
-            if (elemType == ELEMENT_TEXT) {
+            if (elemType == ELEMENT_GEOMETRY && selection->insertGeometryVertexAt(pos.x, pos.y, zoom)) {
+                return true;
+            } else if (elemType == ELEMENT_TEXT) {
                 this->noteView->clearSelection();
                 toolHandler->selectTool(TOOL_TEXT);
                 toolHandler->fireToolChanged();
