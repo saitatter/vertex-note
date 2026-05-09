@@ -1,4 +1,49 @@
 # Changelog
+## vertex-note-v0.3.0 (2026-05-09)
+
+### ✨ Features
+* Deepen vertexnote rebrand and release assets ([cc1b7ac](https://github.com/saitatter/vertex-note/commit/cc1b7ace289245acd0957d4ecbc9b199e9a3e102))
+* Add vertexnote update checker ([c90b93e](https://github.com/saitatter/vertex-note/commit/c90b93e6b739ef56ab1eddd906a56560aa58909c))
+* Add geometry constraint catalog ([0f0ee22](https://github.com/saitatter/vertex-note/commit/0f0ee2252c30f0ea5484aa73c6922374e3f96428))
+* Improve geometry vertex handles ([4758933](https://github.com/saitatter/vertex-note/commit/4758933fa22c4765c1f451d6d5273b2c5f7f734c))
+* Clarify vertexnote snap indicators ([3655291](https://github.com/saitatter/vertex-note/commit/3655291ef3f22e6bfb0e9fc6a42d8457b0150dea))
+* Add vertexnote snap toggles ([c567c15](https://github.com/saitatter/vertex-note/commit/c567c15bdf3515daa127837b90a78937b220f4ab))
+* Support geometry clipboard paste ([aa1c7f2](https://github.com/saitatter/vertex-note/commit/aa1c7f2852d0426d3316457447741078304e9d62))
+
+### 🐛 Fixes
+* Harden cmake version parsing ([cbac17c](https://github.com/saitatter/vertex-note/commit/cbac17ce1f5773910277f5987a6453db217dcf12))
+* Correct upstream attribution and harden cmake version parsing ([6790ee3](https://github.com/saitatter/vertex-note/commit/6790ee37228cf4fab9080b3dcac7e4dc5c494ef5))
+* Harden release parsing and snap query bounds ([11cdba7](https://github.com/saitatter/vertex-note/commit/11cdba72b5202691a714936439f85029b91faf7a))
+* Keep pasted geometry ids unique ([6e5cd84](https://github.com/saitatter/vertex-note/commit/6e5cd843e4342c19a02306a309d3cfcd30f3390c))
+
+### ♻️ Refactors
+* Clean remaining active vertexnote naming ([3354a58](https://github.com/saitatter/vertex-note/commit/3354a58d7497d137dd99315f39d7d53f39aa0608))
+* Align active view internals with vertexnote naming ([5b75068](https://github.com/saitatter/vertex-note/commit/5b75068f7003f121584e7296774b34bff168faf2))
+* Migrate util consumers and legacy type names ([91a29fe](https://github.com/saitatter/vertex-note/commit/91a29fedda90c4a4cae5f5e780f3ba9a10bd2a69))
+* Align helper and input namespaces with vertexnote ([815e62e](https://github.com/saitatter/vertex-note/commit/815e62eb6de4c7c2e0491656d82c3b3fd5e572d1))
+* Move view definitions to vertexnote namespace ([a941640](https://github.com/saitatter/vertex-note/commit/a941640bde164383def2ec4fdb64485a147d58d4))
+* Migrate view consumers to vertexnote namespace ([1d24b5a](https://github.com/saitatter/vertex-note/commit/1d24b5a267be90a638dc152f1de1af99280d9c18))
+* Migrate util call sites to vertexnote namespace ([9b09b62](https://github.com/saitatter/vertex-note/commit/9b09b62ac69b523124bfe09013fc31938d207227))
+* Add vertexnote namespace aliases ([4bc5653](https://github.com/saitatter/vertex-note/commit/4bc56537b714ab13c61fd37756c3d1d6606b4ac7))
+* Align remaining vertexnote helper names ([e8f6250](https://github.com/saitatter/vertex-note/commit/e8f6250d06581aaf7a9bd1eed8aec2071db7f861))
+* Complete vertexnote rebrand across internals ([6bb9bb3](https://github.com/saitatter/vertex-note/commit/6bb9bb351ecd62823521d01684f197929ca704b4))
+
+### 🧰 CI & Build
+* Rebrand public surfaces for vertexnote ([2e9ab3d](https://github.com/saitatter/vertex-note/commit/2e9ab3dca1ee5aa81be47657bb3983d3f428af39))
+
+### 📚 Docs
+* Design vertexnote in-app updater ([3a41fd4](https://github.com/saitatter/vertex-note/commit/3a41fd4544117b5a12bb46a95c5367d04b21f425))
+* Map vertexnote lift-off rebrand ([0b38220](https://github.com/saitatter/vertex-note/commit/0b382200c24091331803679e548caa90b2b7ca5f))
+
+### 🧪 Tests
+* Cover nearby geometry intersection pairs ([4d3dd52](https://github.com/saitatter/vertex-note/commit/4d3dd52b17152770fd69427cc9f4524967ffa60f))
+
+### 🔧 Other Changes
+* Harden geometry spatial index hashing ([d474f48](https://github.com/saitatter/vertex-note/commit/d474f48818f698f23e296cff01dcbed7535fccef))
+* Index geometry snap vertices ([0d33d4e](https://github.com/saitatter/vertex-note/commit/0d33d4eae114aa665e9d161fc6681ac462357da2))
+* Index geometry snap segments ([24a5235](https://github.com/saitatter/vertex-note/commit/24a5235795cf48c111db25f6b3871a8666a3ed4e))
+
+
 ## vertex-note-v0.2.0 (2026-05-08)
 
 ### ✨ Features
@@ -55,7 +100,7 @@
   - palettes can be changed by changing `colorPaletteSetting`
 - the changes are also reflected when customizing the toolbar
 - two palettes are provided together with the application
-  - VertexNote Palette
+  - Xournal++ Palette
   - Xournal Pallete (currently the default)
 * Add various options to create empty last page ([2f2e7c6](https://github.com/saitatter/vertex-note/commit/2f2e7c66139438a71d1bb375ebaf4484815a835e))
 * Add duplicate page option under journal menu ([5aca1a7](https://github.com/saitatter/vertex-note/commit/5aca1a7b738f275aa26227b40966b212d1d001c2))
@@ -77,7 +122,7 @@
 * Argument forceopen in control::openfile has no effect ([32d2a47](https://github.com/saitatter/vertex-note/commit/32d2a4790a26222ef4ed5f63c4476108246ffed2))
 * Fix light color as recolor.light ([146f7bd](https://github.com/saitatter/vertex-note/commit/146f7bdeb95f11ad6fc45f66feeaadbd67cc9d65))
 * **luapi:** Preserve tool alpha when changing color via lua api #6883 ([76e3668](https://github.com/saitatter/vertex-note/commit/76e366814281fac100d695cd18e1e6db96274b46))
-* **windows:** Correctly handle utf-8 command-line arguments in vertexnote-wrapper ([050b2a5](https://github.com/saitatter/vertex-note/commit/050b2a551609d6e03a90b1da4a54a2abed4d742b))
+* **windows:** Correctly handle utf-8 command-line arguments in xournalpp-wrapper ([050b2a5](https://github.com/saitatter/vertex-note/commit/050b2a551609d6e03a90b1da4a54a2abed4d742b))
 * Prevent invalid bounds in floatingtoolbox clamping ([8ccef78](https://github.com/saitatter/vertex-note/commit/8ccef78a3873c684499ca4232ed2e698749f629e))
 * Use util::getdatapath() instead of hardcoded path for gladesearchpath ([67289c8](https://github.com/saitatter/vertex-note/commit/67289c8502a554a72e67b932e8b311bfc0c2232b))
 * Removing passing stroketool as int to `g_warning` ([e340499](https://github.com/saitatter/vertex-note/commit/e3404992e3561e4aa4f8d9c711484bbd595cf104))

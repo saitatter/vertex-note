@@ -1,6 +1,6 @@
 [project]
 name = "vertex-note"
-version = "0.2.0"
+version = "0.3.0"
 description = "CAD-inspired technical note-taking application based on VertexNote"
 requires-python = ">=3.11"
 dependencies = []
