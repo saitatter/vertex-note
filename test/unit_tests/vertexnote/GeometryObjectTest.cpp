@@ -67,6 +67,25 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackForPolyline) {
     EXPECT_DOUBLE_EQ(stroke->getPoint(2).y, 7.0);
 }
 
+TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForFullCircleArc) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 16U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 6.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 6.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 14.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
+}
+
 TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     GeometryObject object(42);
     auto a = object.addVertex(Vec2{1.0, 2.0});

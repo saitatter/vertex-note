@@ -38,6 +38,18 @@ auto makeLineElement() -> GeometryElement {
     return element;
 }
 
+auto makeCircleElement() -> GeometryElement {
+    GeometryObject object(43);
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(vn::geom::EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
 }  // namespace
 
 TEST(VertexNoteGeometryElement, exposesGeometryElementType) {
@@ -60,6 +72,15 @@ TEST(VertexNoteGeometryElement, computesDistanceToDrawnGeometry) {
 
     EXPECT_DOUBLE_EQ(element.distanceTo(3.0, 2.0), 0.0);
     EXPECT_DOUBLE_EQ(element.distanceTo(3.0, 5.0), 2.0);
+}
+
+TEST(VertexNoteGeometryElement, computesBoundsForFullCircleArc) {
+    GeometryElement element = makeCircleElement();
+
+    EXPECT_DOUBLE_EQ(element.getX(), 5.0);
+    EXPECT_DOUBLE_EQ(element.getY(), 5.0);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 10.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 10.0);
 }
 
 TEST(VertexNoteGeometryElement, movesGeometryAndCachedBounds) {

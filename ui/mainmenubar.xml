@@ -654,6 +654,11 @@
       <attribute name="action">win.tool-draw-spline</attribute>
       <attribute name="accel">&lt;Ctrl&gt;8</attribute>
      </item>
+     <item>
+      <attribute name="label" translatable="yes">Draw Vertex Circle by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-circle</attribute>
+      <attribute name="accel">&lt;Ctrl&gt;9</attribute>
+     </item>
     </submenu>
    </section>
    <section>

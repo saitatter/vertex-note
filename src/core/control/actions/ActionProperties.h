@@ -697,6 +697,7 @@ struct ActionPropDrawingTypes {
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_LINE, false);
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_POLYLINE, false);
         actionDB->setActionState(Action::TOOL_DRAW_VERTEX_RECTANGLE, false);
+        actionDB->setActionState(Action::TOOL_DRAW_VERTEX_CIRCLE, false);
 
         g_simple_action_set_state(ga, p);
         bool enabled = g_variant_get_boolean(p);
@@ -727,6 +728,8 @@ template <>
 struct ActionProperties<Action::TOOL_DRAW_VERTEX_POLYLINE>: ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_POLYLINE> {};
 template <>
 struct ActionProperties<Action::TOOL_DRAW_VERTEX_RECTANGLE>: ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_RECTANGLE> {};
+template <>
+struct ActionProperties<Action::TOOL_DRAW_VERTEX_CIRCLE>: ActionPropDrawingTypes<DRAWING_TYPE_VERTEX_CIRCLE> {};
 
 template <>
 struct ActionProperties<Action::SETSQUARE> {

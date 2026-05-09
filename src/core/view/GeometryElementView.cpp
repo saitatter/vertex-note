@@ -6,6 +6,8 @@
 
 #include "GeometryElementView.h"
 
+#include <cmath>
+
 #include <cairo.h>
 
 #include "util/Color.h"
@@ -33,6 +35,29 @@ void GeometryElementView::draw(const Context& ctx) const {
         const auto* end = object.vertex(edge.end);
         if (!start || !end) {
             continue;
+        }
+
+        if (edge.kind == vn::geom::EdgeKind::Arc && !edge.controls.empty()) {
+            const auto* center = object.vertex(edge.controls.front());
+            if (center) {
+                const double radius = std::hypot(start->position.x - center->position.x, start->position.y - center->position.y);
+                if (edge.start == edge.end) {
+                    cairo_arc(ctx.cr, center->position.x, center->position.y, radius, 0.0, 2.0 * M_PI);
+                    cairo_stroke(ctx.cr);
+                    continue;
+                }
+
+                const double startAngle =
+                        std::atan2(start->position.y - center->position.y, start->position.x - center->position.x);
+                double endAngle =
+                        std::atan2(end->position.y - center->position.y, end->position.x - center->position.x);
+                if (endAngle <= startAngle) {
+                    endAngle += 2.0 * M_PI;
+                }
+                cairo_arc(ctx.cr, center->position.x, center->position.y, radius, startAngle, endAngle);
+                cairo_stroke(ctx.cr);
+                continue;
+            }
         }
 
         cairo_move_to(ctx.cr, start->position.x, start->position.y);
