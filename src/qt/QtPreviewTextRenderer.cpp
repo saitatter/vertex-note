@@ -9,6 +9,9 @@
 #include <QColor>
 #include <QFont>
 #include <QPainter>
+#include <QRectF>
+#include <QTextDocument>
+#include <QTextOption>
 
 #include "view/render/QtPainterRenderContext.h"
 
@@ -24,13 +27,24 @@ void QtPreviewTextRenderer::draw(const TextRenderModel& text, RenderContext& con
         return;
     }
 
+    // Pango uses absolute size (fontSize is in device units, not typographic points).
+    // Qt's setPixelSize gives equivalent results.
     QFont font(QString::fromStdString(text.fontName));
-    font.setPointSizeF(text.fontSize);
+    font.setPixelSize(static_cast<int>(text.fontSize));
 
     painter->save();
+    painter->translate(text.x, text.y);
     painter->setFont(font);
-    painter->setPen(QColor(text.color.red, text.color.green, text.color.blue));
-    painter->drawText(QPointF(text.x, text.y + text.fontSize), QString::fromStdString(text.content));
+    painter->setPen(QColor(text.color.red, text.color.green, text.color.blue, text.color.alpha));
+
+    // Use QTextDocument for proper multi-line text layout
+    QTextDocument doc;
+    doc.setDefaultFont(font);
+    doc.setDocumentMargin(0.0);
+    doc.setPlainText(QString::fromStdString(text.content));
+
+    doc.drawContents(painter);
+
     painter->restore();
 }
 
