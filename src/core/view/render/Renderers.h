@@ -6,10 +6,13 @@
 
 #pragma once
 
+#include <cstddef>
+#include <string>
+
+#include "model/PageType.h"
 #include "RenderContext.h"
 
 class Image;
-class NotePage;
 class Stroke;
 class Text;
 
@@ -18,6 +21,22 @@ class OverlayView;
 }
 
 namespace vn::view::render {
+
+struct RenderRect {
+    double x = 0.0;
+    double y = 0.0;
+    double width = 0.0;
+    double height = 0.0;
+};
+
+struct PageBackgroundRenderModel {
+    PageTypeFormat backgroundFormat = PageTypeFormat::Plain;
+    bool annotated = false;
+    bool hasBackgroundName = false;
+    std::string backgroundName;
+    std::size_t layerCount = 0;
+    std::size_t pdfPageNumber = 0;
+};
 
 class StrokeRenderer {
 public:
@@ -40,7 +59,7 @@ public:
 class BackgroundRenderer {
 public:
     virtual ~BackgroundRenderer() = default;
-    virtual void draw(const NotePage& page, RenderContext& context) const = 0;
+    virtual void draw(const PageBackgroundRenderModel& page, const RenderRect& rect, RenderContext& context) const = 0;
 };
 
 class OverlayRenderer {

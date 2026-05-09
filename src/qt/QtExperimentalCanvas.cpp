@@ -23,6 +23,7 @@
 #include <QTransform>
 #include <QWheelEvent>
 
+#include "QtPreviewBackgroundRenderer.h"
 #include "view/render/QtPainterRenderContext.h"
 
 namespace {
@@ -57,10 +58,6 @@ auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
 
 auto clampZoom(double zoom) -> double { return std::clamp(zoom, MIN_ZOOM, MAX_ZOOM); }
 
-auto penWidthForZoom(double baseWidth, double zoomFactor) -> double {
-    return std::max(baseWidth / std::max(zoomFactor, 0.001), 0.35);
-}
-
 }  // namespace
 
 QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
@@ -74,6 +71,7 @@ QtExperimentalCanvas::QtExperimentalCanvas(QWidget* parent): QWidget(parent) {
     palette.setColor(QPalette::Window, QColor(236, 241, 247));
     setPalette(palette);
     this->inputAdapter = std::make_unique<QtInputAdapter>(this);
+    this->backgroundRenderer = std::make_unique<vn::view::render::QtPreviewBackgroundRenderer>();
     newBlankDocument();
 }
 
@@ -366,80 +364,23 @@ auto QtExperimentalCanvas::documentSceneBounds() const -> QRectF {
 
 void QtExperimentalCanvas::drawPageContents(QPainter& painter, const QRectF& rect, const QtExperimentalPageInfo& pageInfo,
                                             std::size_t pageIndex) const {
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(0, 0, 0, 18));
-    painter.drawRoundedRect(rect.translated(8.0, 8.0), 6.0, 6.0);
-    painter.setBrush(Qt::white);
-    painter.drawRoundedRect(rect, 6.0, 6.0);
-
-    const double zoom = std::max(this->zoomFactor, 0.001);
-    const QColor ruling(134, 177, 255);
-    const QColor margin(255, 79, 129);
-
-    switch (pageInfo.backgroundFormat) {
-        case PageTypeFormat::Graph:
-        case PageTypeFormat::IsoGraph: {
-            painter.setPen(QPen(QColor(184, 208, 248), penWidthForZoom(0.9, zoom)));
-            for (double x = rect.left() + 24.0; x < rect.right() - 20.0; x += 28.0) {
-                painter.drawLine(QPointF(x, rect.top() + 20.0), QPointF(x, rect.bottom() - 20.0));
-            }
-            for (double y = rect.top() + 24.0; y < rect.bottom() - 20.0; y += 28.0) {
-                painter.drawLine(QPointF(rect.left() + 20.0, y), QPointF(rect.right() - 20.0, y));
-            }
-            break;
-        }
-        case PageTypeFormat::Dotted:
-        case PageTypeFormat::IsoDotted: {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(QColor(180, 198, 221));
-            for (double y = rect.top() + 32.0; y < rect.bottom() - 24.0; y += 28.0) {
-                for (double x = rect.left() + 28.0; x < rect.right() - 24.0; x += 28.0) {
-                    painter.drawEllipse(QPointF(x, y), penWidthForZoom(1.6, zoom), penWidthForZoom(1.6, zoom));
-                }
-            }
-            break;
-        }
-        case PageTypeFormat::Staves: {
-            painter.setPen(QPen(ruling, penWidthForZoom(1.0, zoom)));
-            for (double bandTop = rect.top() + 52.0; bandTop < rect.bottom() - 60.0; bandTop += 132.0) {
-                for (int line = 0; line < 5; ++line) {
-                    const double y = bandTop + line * 12.0;
-                    painter.drawLine(QPointF(rect.left() + 24.0, y), QPointF(rect.right() - 24.0, y));
-                }
-            }
-            break;
-        }
-        case PageTypeFormat::Pdf: {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(QColor(232, 238, 247));
-            painter.drawRoundedRect(QRectF(rect.left() + 20.0, rect.top() + 20.0, rect.width() - 40.0, 54.0), 4.0, 4.0);
-            painter.setPen(QColor(82, 97, 118));
-            painter.drawText(QRectF(rect.left() + 34.0, rect.top() + 22.0, rect.width() - 68.0, 50.0), Qt::AlignLeft | Qt::AlignVCenter,
-                             QStringLiteral("PDF background page %1").arg(static_cast<int>(pageInfo.pdfPageNumber + 1)));
-            break;
-        }
-        case PageTypeFormat::Image: {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(QColor(227, 246, 236));
-            painter.drawRoundedRect(QRectF(rect.left() + 20.0, rect.top() + 20.0, rect.width() - 40.0, 54.0), 4.0, 4.0);
-            painter.setPen(QColor(58, 108, 81));
-            painter.drawText(QRectF(rect.left() + 34.0, rect.top() + 22.0, rect.width() - 68.0, 50.0), Qt::AlignLeft | Qt::AlignVCenter,
-                             QStringLiteral("Image background"));
-            break;
-        }
-        case PageTypeFormat::Plain:
-            break;
-        case PageTypeFormat::Ruled:
-        case PageTypeFormat::Lined:
-        default: {
-            painter.setPen(QPen(margin, penWidthForZoom(1.2, zoom)));
-            painter.drawLine(QPointF(rect.left() + 72.0, rect.top() + 16.0), QPointF(rect.left() + 72.0, rect.bottom() - 16.0));
-            painter.setPen(QPen(ruling, penWidthForZoom(1.0, zoom)));
-            for (double y = rect.top() + 112.0; y < rect.bottom() - 24.0; y += 48.0) {
-                painter.drawLine(QPointF(rect.left() + 18.0, y), QPointF(rect.right() - 18.0, y));
-            }
-            break;
-        }
+    if (this->backgroundRenderer) {
+        vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
+        const vn::view::render::PageBackgroundRenderModel model{
+                .backgroundFormat = pageInfo.backgroundFormat,
+                .annotated = pageInfo.annotated,
+                .hasBackgroundName = pageInfo.hasBackgroundName,
+                .backgroundName = pageInfo.backgroundName,
+                .layerCount = pageInfo.layerCount,
+                .pdfPageNumber = pageInfo.pdfPageNumber,
+        };
+        const vn::view::render::RenderRect renderRect{
+                .x = rect.x(),
+                .y = rect.y(),
+                .width = rect.width(),
+                .height = rect.height(),
+        };
+        this->backgroundRenderer->draw(model, renderRect, renderContext);
     }
 
     painter.setPen(QColor(61, 74, 89));

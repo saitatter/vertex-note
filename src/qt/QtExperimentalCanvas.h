@@ -7,6 +7,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <QWidget>
 
@@ -15,6 +16,7 @@
 #include "QtInputAdapter.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
+#include "view/render/Renderers.h"
 
 class QtExperimentalCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
     Q_OBJECT
@@ -69,6 +71,7 @@ private:
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
+    std::unique_ptr<vn::view::render::BackgroundRenderer> backgroundRenderer;
     QString lastEventSummary;
     const QtExperimentalDocumentController* documentController = nullptr;
     double zoomFactor = 1.0;
