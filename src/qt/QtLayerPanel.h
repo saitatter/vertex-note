@@ -10,7 +10,7 @@
 
 class QListWidget;
 class QListWidgetItem;
-class QPushButton;
+class QToolButton;
 class QtDocumentController;
 
 class QtLayerPanel: public QDockWidget {
@@ -36,10 +36,10 @@ private:
 
 private:
     QListWidget* layerList = nullptr;
-    QPushButton* addButton = nullptr;
-    QPushButton* removeButton = nullptr;
-    QPushButton* upButton = nullptr;
-    QPushButton* downButton = nullptr;
+    QToolButton* addButton = nullptr;
+    QToolButton* removeButton = nullptr;
+    QToolButton* upButton = nullptr;
+    QToolButton* downButton = nullptr;
     QtDocumentController* controller = nullptr;
     std::size_t currentPageIndex = 0U;
     bool refreshing = false;

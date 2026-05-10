@@ -49,9 +49,16 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QTabBar::tab:selected { background: #f7f7f7; }"
             "#vertexNoteQtPageSidebar QListWidget, #vertexNoteQtLayerPanel QListWidget {"
             " background: #fbfbfb; border: none; outline: none; }"
+            "#vertexNoteQtPageSidebar QListWidget::item { padding: 2px 0px 4px 0px; }"
+            "#vertexNoteQtLayerPanel QListWidget::item { padding: 2px 4px; }"
             "#vertexNoteQtLayerPanel QListWidget::item:selected {"
             " background: #e5efff; border: 1px solid #96b6ff; }"
             "#vertexNoteQtPageSidebar QListWidget::item:selected { background: #fff4f4; border: 1px solid #d85c5c; }"
+            "#vertexNoteQtLayerPanel QToolButton {"
+            " margin: 0px; padding: 1px; min-width: 22px; min-height: 22px;"
+            " border: 1px solid transparent; border-radius: 2px; }"
+            "#vertexNoteQtLayerPanel QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "#vertexNoteQtLayerPanel QToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
             "QStatusBar { background: #f7f7f7; border-top: 1px solid #d8d8d8; }"));
 
     this->documentToolBar = addToolBar(QStringLiteral("Document"));

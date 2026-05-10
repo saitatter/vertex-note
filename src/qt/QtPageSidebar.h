@@ -32,6 +32,7 @@ Q_SIGNALS:
 
 private:
     void onItemClicked(QListWidgetItem* item);
+    void syncCurrentSelection();
     auto renderThumbnail(std::size_t pageIndex) const -> QPixmap;
 
 private:

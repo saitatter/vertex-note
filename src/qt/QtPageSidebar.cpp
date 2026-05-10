@@ -6,6 +6,8 @@
 
 #include "QtPageSidebar.h"
 
+#include <algorithm>
+
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -43,12 +45,14 @@ QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages
     this->pageList->setMovement(QListView::Static);
     this->pageList->setIconSize(QSize(THUMB_WIDTH, THUMB_HEIGHT));
     this->pageList->setResizeMode(QListView::Adjust);
-    this->pageList->setSpacing(8);
+    this->pageList->setSpacing(4);
     this->pageList->setSelectionMode(QAbstractItemView::SingleSelection);
     this->pageList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->pageList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     this->pageList->setFrameShape(QFrame::NoFrame);
     this->pageList->setWordWrap(true);
+    this->pageList->setGridSize(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 26));
+    this->pageList->setUniformItemSizes(true);
     layout->addWidget(this->pageList);
 
     container->setLayout(layout);
@@ -67,7 +71,15 @@ void QtPageSidebar::setContentRenderer(vn::view::render::PageContentRenderer* re
 }
 
 void QtPageSidebar::setCurrentPage(std::size_t pageIndex) {
+    if (this->currentPageIndex == pageIndex && this->pageList->count() > 0) {
+        syncCurrentSelection();
+        return;
+    }
     this->currentPageIndex = pageIndex;
+    if (static_cast<int>(pageIndex) < this->pageList->count()) {
+        syncCurrentSelection();
+        return;
+    }
     refresh();
 }
 
@@ -87,11 +99,8 @@ void QtPageSidebar::refresh() {
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<qulonglong>(i)));
         item->setIcon(QIcon(renderThumbnail(i)));
         item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 28));
-        if (i == this->currentPageIndex) {
-            item->setSelected(true);
-            this->pageList->setCurrentItem(item);
-        }
     }
+    syncCurrentSelection();
 }
 
 void QtPageSidebar::onItemClicked(QListWidgetItem* item) {
@@ -100,6 +109,19 @@ void QtPageSidebar::onItemClicked(QListWidgetItem* item) {
     }
     const auto pageIndex = static_cast<std::size_t>(item->data(Qt::UserRole).toULongLong());
     Q_EMIT pageSelected(pageIndex);
+}
+
+void QtPageSidebar::syncCurrentSelection() {
+    if (!this->pageList || this->pageList->count() == 0) {
+        return;
+    }
+
+    const int itemIndex = std::clamp<int>(static_cast<int>(this->currentPageIndex), 0, this->pageList->count() - 1);
+    if (auto* item = this->pageList->item(itemIndex)) {
+        this->pageList->setCurrentItem(item);
+        item->setSelected(true);
+        this->pageList->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+    }
 }
 
 auto QtPageSidebar::renderThumbnail(std::size_t pageIndex) const -> QPixmap {
