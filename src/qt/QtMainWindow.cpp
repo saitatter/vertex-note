@@ -36,13 +36,13 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " border-left: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
             "QToolBar[vertexFloatToolbar=\"true\"] { border: 1px solid #d8d8d8; padding: 3px; }"
             "QToolBar::separator { background: #d8d8d8; width: 1px; margin: 2px 4px; }"
-            "QToolBar QToolButton { margin: 0px; padding: 2px; min-width: 26px; min-height: 26px; border: 1px solid transparent; border-radius: 2px; }"
+            "QToolBar QToolButton { margin: 0px; padding: 3px; min-width: 30px; min-height: 30px; border: 1px solid transparent; border-radius: 2px; }"
             "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
-            "#vertexNoteQtFamilyToolButton { padding-right: 10px; min-width: 28px; min-height: 26px; }"
+            "#vertexNoteQtFamilyToolButton { padding-right: 10px; min-width: 34px; min-height: 30px; }"
             "#vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner, #vertexNoteQtFillOpacitySpinner,"
             " #vertexNoteQtFooterPageSpin, #vertexNoteQtFooterLayerCombo {"
-            " min-height: 24px; margin: 0 1px; padding: 0px 3px; border: 1px solid #c9c9c9; background: #ffffff; }"
+            " min-height: 28px; margin: 0 1px; padding: 0px 4px; border: 1px solid #c9c9c9; background: #ffffff; }"
             "#vertexNoteQtFooterZoomSlider { margin: 0 3px; }"
             "#vertexNoteQtFooterZoomSlider::groove:horizontal { height: 4px; background: #c8c8c8; border-radius: 2px; }"
             "#vertexNoteQtFooterZoomSlider::sub-page:horizontal { background: #4f8fff; border-radius: 2px; }"
@@ -61,7 +61,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " background: #e5efff; border: 1px solid #96b6ff; }"
             "#vertexNoteQtPageSidebar QListWidget::item:selected { background: #fff4f4; border: 1px solid #d85c5c; }"
             "#vertexNoteQtLayerPanel QToolButton {"
-            " margin: 0px; padding: 2px; min-width: 24px; min-height: 24px;"
+            " margin: 0px; padding: 2px; min-width: 26px; min-height: 26px;"
             " border: 1px solid transparent; border-radius: 2px; }"
             "#vertexNoteQtLayerPanel QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "#vertexNoteQtLayerPanel QToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
@@ -71,20 +71,20 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->documentToolBar->setObjectName(QStringLiteral("vertexNoteQtDocumentToolBar"));
     this->documentToolBar->setMovable(false);
     this->documentToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->documentToolBar->setIconSize(QSize(20, 20));
+    this->documentToolBar->setIconSize(QSize(22, 22));
 
     addToolBarBreak();
     this->toolsToolBarWidget = addToolBar(QStringLiteral("Tools"));
     this->toolsToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtToolsToolBar"));
     this->toolsToolBarWidget->setMovable(false);
     this->toolsToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->toolsToolBarWidget->setIconSize(QSize(20, 20));
+    this->toolsToolBarWidget->setIconSize(QSize(22, 22));
 
     this->footerToolBarWidget = new QToolBar(QStringLiteral("Footer"), this);
     this->footerToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtFooterToolBar"));
     this->footerToolBarWidget->setMovable(false);
     this->footerToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->footerToolBarWidget->setIconSize(QSize(20, 20));
+    this->footerToolBarWidget->setIconSize(QSize(22, 22));
     addToolBar(Qt::BottomToolBarArea, this->footerToolBarWidget);
 
     this->leftPrimaryToolBarWidget = new QToolBar(QStringLiteral("Left Primary"), this);
@@ -93,7 +93,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->leftPrimaryToolBarWidget->setFloatable(false);
     this->leftPrimaryToolBarWidget->setOrientation(Qt::Vertical);
     this->leftPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->leftPrimaryToolBarWidget->setIconSize(QSize(20, 20));
+    this->leftPrimaryToolBarWidget->setIconSize(QSize(22, 22));
     addToolBar(Qt::LeftToolBarArea, this->leftPrimaryToolBarWidget);
 
     this->leftSecondaryToolBarWidget = new QToolBar(QStringLiteral("Left Secondary"), this);
@@ -102,7 +102,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->leftSecondaryToolBarWidget->setFloatable(false);
     this->leftSecondaryToolBarWidget->setOrientation(Qt::Vertical);
     this->leftSecondaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->leftSecondaryToolBarWidget->setIconSize(QSize(20, 20));
+    this->leftSecondaryToolBarWidget->setIconSize(QSize(22, 22));
     addToolBar(Qt::LeftToolBarArea, this->leftSecondaryToolBarWidget);
 
     this->rightPrimaryToolBarWidget = new QToolBar(QStringLiteral("Right Primary"), this);
@@ -111,7 +111,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->rightPrimaryToolBarWidget->setFloatable(false);
     this->rightPrimaryToolBarWidget->setOrientation(Qt::Vertical);
     this->rightPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->rightPrimaryToolBarWidget->setIconSize(QSize(20, 20));
+    this->rightPrimaryToolBarWidget->setIconSize(QSize(22, 22));
     addToolBar(Qt::RightToolBarArea, this->rightPrimaryToolBarWidget);
 
     for (int index = 0; index < 4; ++index) {
@@ -124,7 +124,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
         floatingToolBar->setMovable(true);
         floatingToolBar->setFloatable(true);
         floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        floatingToolBar->setIconSize(QSize(20, 20));
+        floatingToolBar->setIconSize(QSize(22, 22));
         floatingToolBar->setParent(this, Qt::Tool | Qt::WindowTitleHint | Qt::WindowCloseButtonHint |
                                            Qt::CustomizeWindowHint);
         floatingToolBar->setOrientation(Qt::Horizontal);
@@ -151,7 +151,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->footerPageSpinWidget->setObjectName(QStringLiteral("vertexNoteQtFooterPageSpin"));
     this->footerPageSpinWidget->setMinimum(1);
     this->footerPageSpinWidget->setMaximum(1);
-    this->footerPageSpinWidget->setFixedWidth(58);
+    this->footerPageSpinWidget->setFixedWidth(64);
 
     this->footerLayerComboWidget = new QComboBox(this);
     this->footerLayerComboWidget->setObjectName(QStringLiteral("vertexNoteQtFooterLayerCombo"));
@@ -161,7 +161,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->footerZoomSliderWidget = new QSlider(Qt::Horizontal, this);
     this->footerZoomSliderWidget->setObjectName(QStringLiteral("vertexNoteQtFooterZoomSlider"));
     this->footerZoomSliderWidget->setRange(10, 800);
-    this->footerZoomSliderWidget->setFixedWidth(124);
+    this->footerZoomSliderWidget->setFixedWidth(136);
 
     // Persistent status bar widgets
     this->pageLabel = new QLabel(QStringLiteral("Page 1 of 1"), this);
