@@ -142,9 +142,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   Lua runtime; plugins requiring Lua execution need the GTK shell.
 - The remaining parity backlog is now concentrated in deeper shell/workflow
   behavior rather than missing top-level toolbar tools. The largest remaining
-  shell-visible gaps are now concentrated in deeper workflow polish such as
-  floating toolbox behaviour, plugin/runtime parity, and final screenshot-level
-  chrome matching.
+  shell-visible gaps are now concentrated in plugin/runtime parity and final
+  screenshot-level chrome matching.
 
 ## Completed Slices
 
@@ -236,6 +235,9 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 39. ✓ Recent Documents submenu in the Qt shell:
     dynamic `File > Recent Documents` entries, open-from-recent wiring, missing-file
     cleanup, and clear-list action.
+40. ✓ Floating toolbox behavior in the Qt shell:
+    `toolbarFloat*` profiles now use standalone Qt tool windows with persisted
+    geometry, user-hidden state, and cascaded default placement.
 
 ### Phase 7 — Clipboard & element operations ✓
 

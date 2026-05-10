@@ -43,6 +43,7 @@ public:
     [[nodiscard]] auto pageStatusLabel() -> QLabel*;
     [[nodiscard]] auto layerStatusLabel() -> QLabel*;
     [[nodiscard]] auto zoomStatusLabel() -> QLabel*;
+    void cascadeFloatingToolBars();
 
 private:
     QtCanvas* canvasWidget = nullptr;

@@ -8,6 +8,7 @@
 
 #include <QComboBox>
 #include <QMenuBar>
+#include <QPoint>
 #include <QSlider>
 #include <QSpinBox>
 #include <QStatusBar>
@@ -104,11 +105,16 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
         auto* floatingToolBar = new QToolBar(QStringLiteral("Floating Toolbar %1").arg(index + 1), this);
         floatingToolBar->setObjectName(QStringLiteral("vertexNoteQtFloatingToolBar%1").arg(index + 1));
         floatingToolBar->setProperty("vertexFloatToolbar", true);
+        floatingToolBar->setProperty("vertexHasSavedGeometry", false);
+        floatingToolBar->setProperty("vertexUserHidden", false);
+        floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", false);
         floatingToolBar->setMovable(true);
         floatingToolBar->setFloatable(true);
         floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         floatingToolBar->setIconSize(QSize(20, 20));
-        addToolBar(Qt::TopToolBarArea, floatingToolBar);
+        floatingToolBar->setParent(this, Qt::Tool | Qt::WindowTitleHint | Qt::WindowCloseButtonHint |
+                                           Qt::CustomizeWindowHint);
+        floatingToolBar->setOrientation(Qt::Horizontal);
         floatingToolBar->hide();
         this->floatingToolBarWidgets.push_back(floatingToolBar);
     }
@@ -193,3 +199,21 @@ auto QtMainWindow::pageStatusLabel() -> QLabel* { return this->pageLabel; }
 auto QtMainWindow::layerStatusLabel() -> QLabel* { return this->layerLabel; }
 
 auto QtMainWindow::zoomStatusLabel() -> QLabel* { return this->zoomLabel; }
+
+void QtMainWindow::cascadeFloatingToolBars() {
+    const QPoint base = this->frameGeometry().topLeft() + QPoint(36, 92);
+    int visibleIndex = 0;
+    for (auto* floatingToolBar: this->floatingToolBarWidgets) {
+        if (!floatingToolBar || floatingToolBar->actions().isEmpty()) {
+            continue;
+        }
+        if (floatingToolBar->property("vertexHasSavedGeometry").toBool()) {
+            continue;
+        }
+
+        floatingToolBar->adjustSize();
+        const QPoint offset(visibleIndex * 28, visibleIndex * 34);
+        floatingToolBar->move(base + offset);
+        ++visibleIndex;
+    }
+}

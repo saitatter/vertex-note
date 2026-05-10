@@ -325,8 +325,22 @@ QtAppShell::QtAppShell():
     if (!this->persistedWindowState.isEmpty()) {
         this->window.restoreState(this->persistedWindowState);
     }
+    for (std::size_t index = 0; index < this->window.floatingToolBars().size(); ++index) {
+        auto* floatingToolBar = this->window.floatingToolBars()[index];
+        const bool hasSavedGeometry =
+                index < this->persistedFloatingToolBarGeometries.size() &&
+                !this->persistedFloatingToolBarGeometries[index].isEmpty();
+        floatingToolBar->setProperty("vertexHasSavedGeometry", hasSavedGeometry);
+        const bool userHidden =
+                index < this->persistedFloatingToolBarUserHidden.size() && this->persistedFloatingToolBarUserHidden[index];
+        floatingToolBar->setProperty("vertexUserHidden", userHidden);
+        if (hasSavedGeometry) {
+            floatingToolBar->restoreGeometry(this->persistedFloatingToolBarGeometries[index]);
+        }
+    }
     this->window.canvas()->newBlankDocument();
     this->window.canvas()->fitWidth();
+    this->window.cascadeFloatingToolBars();
     sidebar->refresh();
     updateWindowTitle();
     updateEditCommandStates();
@@ -354,7 +368,10 @@ auto QtAppShell::nativeMainWindowHandle() const -> void* {
     return reinterpret_cast<void*>(const_cast<QtMainWindow*>(&this->window));
 }
 
-void QtAppShell::showMainWindow() { this->window.show(); }
+void QtAppShell::showMainWindow() {
+    this->window.show();
+    this->window.cascadeFloatingToolBars();
+}
 
 void QtAppShell::requestQuit() { QApplication::quit(); }
 
@@ -1076,6 +1093,20 @@ void QtAppShell::wireWindowState() {
                          }
                          syncFooterWidgets();
                      });
+
+    for (auto* floatingToolBar: this->window.floatingToolBars()) {
+        QObject::connect(floatingToolBar, &QToolBar::visibilityChanged, &this->window, [this, floatingToolBar](bool visible) {
+            if (floatingToolBar->property("vertexProgrammaticVisibilityChange").toBool()) {
+                return;
+            }
+            if (floatingToolBar->actions().isEmpty()) {
+                return;
+            }
+
+            floatingToolBar->setProperty("vertexUserHidden", !visible);
+            savePersistentUiState();
+        });
+    }
 
     // Sidebar page selection → scroll canvas to that page
     QObject::connect(this->window.pageSidebar(), &QtPageSidebar::pageSelected, &this->window,
@@ -1844,10 +1875,6 @@ void QtAppShell::rebuildToolbar() {
         }
 
         const bool hasTokens = !tokens.empty();
-        const bool showToolbar = !this->presentationMode &&
-                                 this->window.commandHost()->actionForCommand("view.show-toolbar") &&
-                                 this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
-        floatingToolBar->setVisible(hasTokens && showToolbar);
         if (hasTokens) {
             floatingToolBar->setWindowTitle(QStringLiteral("Floating Toolbar %1").arg(floatingIndex + 1));
         }
@@ -1857,6 +1884,8 @@ void QtAppShell::rebuildToolbar() {
                              this->window.commandHost()->actionForCommand("view.show-toolbar") &&
                              this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
     rightPrimaryToolBar->setVisible(!rightToolbarTokens.empty() && showToolbar);
+    syncFloatingToolBarsVisibility(showToolbar);
+    this->window.cascadeFloatingToolBars();
 
     syncToolbarWidgets();
     syncFooterWidgets();
@@ -2095,6 +2124,14 @@ void QtAppShell::loadPersistentUiState() {
     this->recentFiles.setRecentFiles(recentPaths);
     this->persistedWindowGeometry = settings.value(QStringLiteral("window/geometry")).toByteArray();
     this->persistedWindowState = settings.value(QStringLiteral("window/state")).toByteArray();
+    this->persistedFloatingToolBarGeometries.clear();
+    this->persistedFloatingToolBarUserHidden.clear();
+    for (std::size_t index = 0; index < this->window.floatingToolBars().size(); ++index) {
+        this->persistedFloatingToolBarGeometries.push_back(
+                settings.value(QStringLiteral("window/floatingToolbar%1Geometry").arg(index)).toByteArray());
+        this->persistedFloatingToolBarUserHidden.push_back(
+                settings.value(QStringLiteral("window/floatingToolbar%1UserHidden").arg(index), false).toBool());
+    }
 
     if (this->currentSettings.audioFolder.empty()) {
         this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
@@ -2131,7 +2168,26 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("recentDocuments/files"), recentEntries);
     settings.setValue(QStringLiteral("window/geometry"), this->window.saveGeometry());
     settings.setValue(QStringLiteral("window/state"), this->window.saveState());
+    for (std::size_t index = 0; index < this->window.floatingToolBars().size(); ++index) {
+        auto* floatingToolBar = this->window.floatingToolBars()[index];
+        settings.setValue(QStringLiteral("window/floatingToolbar%1Geometry").arg(index), floatingToolBar->saveGeometry());
+        settings.setValue(QStringLiteral("window/floatingToolbar%1UserHidden").arg(index),
+                          floatingToolBar->property("vertexUserHidden").toBool());
+    }
     settings.sync();
+}
+
+void QtAppShell::syncFloatingToolBarsVisibility(bool showToolbars) {
+    for (auto* floatingToolBar: this->window.floatingToolBars()) {
+        const bool hasActions = !floatingToolBar->actions().isEmpty();
+        if (!hasActions) {
+            floatingToolBar->setProperty("vertexUserHidden", false);
+        }
+        const bool userHidden = floatingToolBar->property("vertexUserHidden").toBool();
+        floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", true);
+        floatingToolBar->setVisible(showToolbars && hasActions && !userHidden);
+        floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", false);
+    }
 }
 
 void QtAppShell::rebuildRecentDocumentsMenu() {
@@ -2470,9 +2526,7 @@ void QtAppShell::toggleFullscreen() {
         this->window.leftPrimaryToolBar()->setVisible(showToolbars);
         this->window.leftSecondaryToolBar()->setVisible(showToolbars);
         this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
-        for (auto* floatingToolBar: this->window.floatingToolBars()) {
-            floatingToolBar->setVisible(showToolbars && !floatingToolBar->actions().isEmpty());
-        }
+        syncFloatingToolBarsVisibility(showToolbars);
         this->window.pageSidebar()->setVisible(showSidebars);
         this->window.layerPanel()->setVisible(showSidebars);
     }
@@ -2494,9 +2548,7 @@ void QtAppShell::togglePresentationMode() {
         this->window.leftPrimaryToolBar()->setVisible(false);
         this->window.leftSecondaryToolBar()->setVisible(false);
         this->window.rightPrimaryToolBar()->setVisible(false);
-        for (auto* floatingToolBar: this->window.floatingToolBars()) {
-            floatingToolBar->setVisible(false);
-        }
+        syncFloatingToolBarsVisibility(false);
         this->window.pageSidebar()->setVisible(false);
         this->window.layerPanel()->setVisible(false);
         this->window.canvas()->fitPage(false);
@@ -2513,9 +2565,7 @@ void QtAppShell::togglePresentationMode() {
         this->window.leftPrimaryToolBar()->setVisible(showToolbars);
         this->window.leftSecondaryToolBar()->setVisible(showToolbars);
         this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
-        for (auto* floatingToolBar: this->window.floatingToolBars()) {
-            floatingToolBar->setVisible(showToolbars && !floatingToolBar->actions().isEmpty());
-        }
+        syncFloatingToolBarsVisibility(showToolbars);
         this->window.pageSidebar()->setVisible(showSidebars);
         this->window.layerPanel()->setVisible(showSidebars);
         if (this->window.isFullScreen()) {
@@ -3477,9 +3527,7 @@ void QtAppShell::toggleToolbarVisibility() {
     this->window.leftPrimaryToolBar()->setVisible(visible);
     this->window.leftSecondaryToolBar()->setVisible(visible);
     this->window.rightPrimaryToolBar()->setVisible(visible && this->window.rightPrimaryToolBar()->actions().size() > 0);
-    for (auto* floatingToolBar: this->window.floatingToolBars()) {
-        floatingToolBar->setVisible(visible && !floatingToolBar->actions().isEmpty());
-    }
+    syncFloatingToolBarsVisibility(visible);
     this->window.commandHost()->setCommandChecked("view.show-toolbar", visible);
 }
 

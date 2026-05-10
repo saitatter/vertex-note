@@ -55,6 +55,7 @@ private:
     void rebuildRecentDocumentsMenu();
     void loadPersistentUiState();
     void savePersistentUiState() const;
+    void syncFloatingToolBarsVisibility(bool showToolbars);
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();
@@ -205,6 +206,8 @@ private:
     std::size_t navHistoryIndex = 0U;
     QByteArray persistedWindowGeometry;
     QByteArray persistedWindowState;
+    std::vector<QByteArray> persistedFloatingToolBarGeometries;
+    std::vector<bool> persistedFloatingToolBarUserHidden;
     void recordNavPoint();
     [[nodiscard]] auto selectedElementsForAudioPlayback() const -> std::vector<const Element*>;
 };
