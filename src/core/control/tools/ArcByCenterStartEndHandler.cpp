@@ -97,6 +97,8 @@ void ArcByCenterStartEndHandler::onButtonPressEvent(const PositionInputData& pos
             return;
         }
         this->startPoint = this->currentPoint;
+        this->startRadius =
+                std::hypot(this->startPoint->x - this->centerPoint->x, this->startPoint->y - this->centerPoint->y);
         this->viewPool->dispatch(vn::view::ArcByCenterStartEndView::FLAG_DIRTY_REGION, previewRange());
         return;
     }
@@ -150,7 +152,9 @@ auto ArcByCenterStartEndHandler::previewRange() const -> Range {
     }
 
     const Point radiusReference = this->startPoint.value_or(this->currentPoint);
-    const double radius = std::hypot(radiusReference.x - this->centerPoint->x, radiusReference.y - this->centerPoint->y);
+    const double radius = this->startPoint ? currentStartRadius()
+                                           : std::hypot(radiusReference.x - this->centerPoint->x,
+                                                        radiusReference.y - this->centerPoint->y);
     Range range(this->centerPoint->x - radius, this->centerPoint->y - radius);
     range.addPoint(this->centerPoint->x + radius, this->centerPoint->y + radius);
     range.addPadding(this->strokeWidth + SNAP_INDICATOR_PADDING);
@@ -190,8 +194,7 @@ auto ArcByCenterStartEndHandler::projectToStartRadius(const Point& pagePoint) co
         return pagePoint;
     }
 
-    const double radius =
-            std::hypot(this->startPoint->x - this->centerPoint->x, this->startPoint->y - this->centerPoint->y);
+    const double radius = currentStartRadius();
     const double dx = pagePoint.x - this->centerPoint->x;
     const double dy = pagePoint.y - this->centerPoint->y;
     if (dx == 0.0 && dy == 0.0) {
@@ -201,6 +204,18 @@ auto ArcByCenterStartEndHandler::projectToStartRadius(const Point& pagePoint) co
     const double angle = std::atan2(dy, dx);
     return Point(this->centerPoint->x + std::cos(angle) * radius, this->centerPoint->y + std::sin(angle) * radius,
                  pagePoint.z);
+}
+
+auto ArcByCenterStartEndHandler::currentStartRadius() const -> double {
+    if (this->startRadius) {
+        return *this->startRadius;
+    }
+
+    if (!this->centerPoint || !this->startPoint) {
+        return 0.0;
+    }
+
+    return std::hypot(this->startPoint->x - this->centerPoint->x, this->startPoint->y - this->centerPoint->y);
 }
 
 void ArcByCenterStartEndHandler::finalizeArc() {
@@ -233,6 +248,7 @@ void ArcByCenterStartEndHandler::finalizeArc() {
     this->done = true;
     this->centerPoint.reset();
     this->startPoint.reset();
+    this->startRadius.reset();
     this->viewPool->dispatchAndClear(vn::view::ArcByCenterStartEndView::FINALIZATION_REQUEST, range);
     this->page->fireElementChanged(ptr);
 }
@@ -242,5 +258,6 @@ void ArcByCenterStartEndHandler::cancel() {
     this->done = true;
     this->centerPoint.reset();
     this->startPoint.reset();
+    this->startRadius.reset();
     this->viewPool->dispatchAndClear(vn::view::ArcByCenterStartEndView::CANCELLATION_REQUEST, range);
 }

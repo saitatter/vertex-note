@@ -813,8 +813,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
         }
 
         if (changed) {
-            this->activeGeometryVertexMoved =
-                    delta.x != 0.0 || delta.y != 0.0 || this->activeGeometryVertices.size() > 1U;
+            this->activeGeometryVertexMoved = true;
             this->contents->invalidateViewBuffer();
             this->view->getNoteView()->repaintSelection();
         }
@@ -2225,25 +2224,29 @@ bool EditSelection::selectGeometryEdgeAt(double x, double y, double zoom) {
                 const double queryY = y / zoom;
                 const double radius = std::hypot(startX - centerX, startY - centerY);
                 const double queryRadius = std::hypot(queryX - centerX, queryY - centerY);
-                if (queryRadius == 0.0 || radius == 0.0) {
+                if (radius == 0.0) {
                     continue;
                 }
 
                 const bool fullCircle = edge.start == edge.end;
                 bool withinSweep = true;
-                if (!fullCircle) {
+                if (queryRadius == 0.0) {
+                    distance = radius * zoom;
+                    projectedX = startX;
+                    projectedY = startY;
+                } else if (!fullCircle) {
                     const double queryAngle = std::atan2(queryY - centerY, queryX - centerX);
                     const double startAngle = std::atan2(startY - centerY, startX - centerX);
                     const double endAngle = std::atan2(endY - centerY, endX - centerX);
                     withinSweep = SelectionFactory::angleWithinSweep(queryAngle, startAngle, endAngle);
                 }
 
-                if (withinSweep) {
+                if (queryRadius != 0.0 && withinSweep) {
                     distance = std::abs(queryRadius - radius) * zoom;
                     const double scale = radius / queryRadius;
                     projectedX = centerX + (queryX - centerX) * scale;
                     projectedY = centerY + (queryY - centerY) * scale;
-                } else {
+                } else if (queryRadius != 0.0) {
                     // Outside angular sweep — fall back to distance to arc endpoints
                     const double dStart = std::hypot(queryX - startX, queryY - startY) * zoom;
                     const double dEnd = std::hypot(queryX - endX, queryY - endY) * zoom;

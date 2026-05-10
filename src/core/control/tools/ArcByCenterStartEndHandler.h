@@ -71,6 +71,7 @@ private:
     void updateCurrentPoint(const PositionInputData& pos, double zoom);
     [[nodiscard]] auto snapPoint(const Point& pagePoint, bool alt, double zoom) -> Point;
     [[nodiscard]] auto projectToStartRadius(const Point& pagePoint) const -> Point;
+    [[nodiscard]] auto currentStartRadius() const -> double;
     void finalizeArc();
     void cancel();
 
@@ -79,6 +80,7 @@ private:
     vn::snap::SnapEngine snapEngine;
     std::optional<Point> centerPoint;
     std::optional<Point> startPoint;
+    std::optional<double> startRadius;
     Point currentPoint;
     std::optional<vn::snap::SnapKind> currentSnapKind;
     bool geometrySnapEnabled = true;
