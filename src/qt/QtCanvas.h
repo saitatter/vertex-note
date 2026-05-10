@@ -47,8 +47,12 @@ public:
     void panBy(double dx, double dy);
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
+    void setRotationSnapEnabled(bool enabled);
+    void setTouchDrawingEnabled(bool enabled);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
+    [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
+    [[nodiscard]] auto isTouchDrawingEnabled() const -> bool;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
@@ -151,6 +155,8 @@ private:
     void cancelShape();
     void drawShapePreview(QPainter& painter) const;
     [[nodiscard]] auto isMultiClickShapeTool() const -> bool;
+    [[nodiscard]] auto applyRotationSnap(const QPointF& origin, const QPointF& point) const -> QPointF;
+    void processTouchDrawing(const vn::ui::input::TouchEvent& event);
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
@@ -167,6 +173,8 @@ private:
     double scrollY = 0.0;
     bool geometrySnapEnabled = true;
     bool gridSnapEnabled = false;
+    bool rotationSnapEnabled = false;
+    bool touchDrawingEnabled = false;
     bool spaceHeld = false;
     bool panning = false;
     bool drawing = false;
@@ -176,6 +184,7 @@ private:
     bool shapeDrawing = false;
     bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
+    int activeTouchPointId = -1;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
     QPointF shapeStartScene;

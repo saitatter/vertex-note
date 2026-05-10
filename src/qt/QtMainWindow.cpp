@@ -24,9 +24,16 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "#vertexNoteQtMainWindow { background: #d6d2c9; }"
             "QMenuBar { background: #f7f7f7; border-bottom: 1px solid #d8d8d8; }"
             "QMenuBar::item { padding: 3px 8px; }"
-            "QToolBar#vertexNoteQtDocumentToolBar, QToolBar#vertexNoteQtToolsToolBar, QToolBar#vertexNoteQtFooterToolBar {"
+            "QToolBar#vertexNoteQtDocumentToolBar, QToolBar#vertexNoteQtToolsToolBar, QToolBar#vertexNoteQtFooterToolBar,"
+            " QToolBar#vertexNoteQtLeftPrimaryToolBar, QToolBar#vertexNoteQtLeftSecondaryToolBar,"
+            " QToolBar#vertexNoteQtRightPrimaryToolBar, QToolBar[vertexFloatToolbar=\"true\"] {"
             " background: #f7f7f7; border: none; border-bottom: 1px solid #d8d8d8; spacing: 0px; padding: 1px 3px; }"
             "QToolBar#vertexNoteQtFooterToolBar { border-top: 1px solid #d8d8d8; border-bottom: none; }"
+            "QToolBar#vertexNoteQtLeftPrimaryToolBar, QToolBar#vertexNoteQtLeftSecondaryToolBar {"
+            " border-right: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
+            "QToolBar#vertexNoteQtRightPrimaryToolBar {"
+            " border-left: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
+            "QToolBar[vertexFloatToolbar=\"true\"] { border: 1px solid #d8d8d8; padding: 2px; }"
             "QToolBar QToolButton { margin: 0px; padding: 1px; min-width: 24px; min-height: 24px; border: 1px solid transparent; border-radius: 2px; }"
             "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
@@ -65,6 +72,46 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->footerToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
     this->footerToolBarWidget->setIconSize(QSize(18, 18));
     addToolBar(Qt::BottomToolBarArea, this->footerToolBarWidget);
+
+    this->leftPrimaryToolBarWidget = new QToolBar(QStringLiteral("Left Primary"), this);
+    this->leftPrimaryToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtLeftPrimaryToolBar"));
+    this->leftPrimaryToolBarWidget->setMovable(false);
+    this->leftPrimaryToolBarWidget->setFloatable(false);
+    this->leftPrimaryToolBarWidget->setOrientation(Qt::Vertical);
+    this->leftPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->leftPrimaryToolBarWidget->setIconSize(QSize(20, 20));
+    addToolBar(Qt::LeftToolBarArea, this->leftPrimaryToolBarWidget);
+
+    this->leftSecondaryToolBarWidget = new QToolBar(QStringLiteral("Left Secondary"), this);
+    this->leftSecondaryToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtLeftSecondaryToolBar"));
+    this->leftSecondaryToolBarWidget->setMovable(false);
+    this->leftSecondaryToolBarWidget->setFloatable(false);
+    this->leftSecondaryToolBarWidget->setOrientation(Qt::Vertical);
+    this->leftSecondaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->leftSecondaryToolBarWidget->setIconSize(QSize(20, 20));
+    addToolBar(Qt::LeftToolBarArea, this->leftSecondaryToolBarWidget);
+
+    this->rightPrimaryToolBarWidget = new QToolBar(QStringLiteral("Right Primary"), this);
+    this->rightPrimaryToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtRightPrimaryToolBar"));
+    this->rightPrimaryToolBarWidget->setMovable(false);
+    this->rightPrimaryToolBarWidget->setFloatable(false);
+    this->rightPrimaryToolBarWidget->setOrientation(Qt::Vertical);
+    this->rightPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->rightPrimaryToolBarWidget->setIconSize(QSize(20, 20));
+    addToolBar(Qt::RightToolBarArea, this->rightPrimaryToolBarWidget);
+
+    for (int index = 0; index < 4; ++index) {
+        auto* floatingToolBar = new QToolBar(QStringLiteral("Floating Toolbar %1").arg(index + 1), this);
+        floatingToolBar->setObjectName(QStringLiteral("vertexNoteQtFloatingToolBar%1").arg(index + 1));
+        floatingToolBar->setProperty("vertexFloatToolbar", true);
+        floatingToolBar->setMovable(true);
+        floatingToolBar->setFloatable(true);
+        floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        floatingToolBar->setIconSize(QSize(20, 20));
+        addToolBar(Qt::TopToolBarArea, floatingToolBar);
+        floatingToolBar->hide();
+        this->floatingToolBarWidgets.push_back(floatingToolBar);
+    }
 
     this->canvasWidget = new QtCanvas(this);
     setCentralWidget(this->canvasWidget);
@@ -120,6 +167,14 @@ auto QtMainWindow::mainToolBar() -> QToolBar* { return this->documentToolBar; }
 auto QtMainWindow::toolsToolBar() -> QToolBar* { return this->toolsToolBarWidget; }
 
 auto QtMainWindow::footerToolBar() -> QToolBar* { return this->footerToolBarWidget; }
+
+auto QtMainWindow::leftPrimaryToolBar() -> QToolBar* { return this->leftPrimaryToolBarWidget; }
+
+auto QtMainWindow::leftSecondaryToolBar() -> QToolBar* { return this->leftSecondaryToolBarWidget; }
+
+auto QtMainWindow::rightPrimaryToolBar() -> QToolBar* { return this->rightPrimaryToolBarWidget; }
+
+auto QtMainWindow::floatingToolBars() const -> const std::vector<QToolBar*>& { return this->floatingToolBarWidgets; }
 
 auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget; }
 

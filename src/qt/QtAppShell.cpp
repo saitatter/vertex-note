@@ -12,6 +12,7 @@
 
 #include <QApplication>
 #include <QAction>
+#include <QColorDialog>
 #include <QFile>
 #include <QFileDialog>
 #include <QFontComboBox>
@@ -34,6 +35,7 @@
 #include <QSpinBox>
 #include <QWidget>
 #include <QSizePolicy>
+#include <QFrame>
 
 #include "config-paths.h"
 #include "QtBackgroundDialog.h"
@@ -137,6 +139,15 @@ constexpr std::array<ToolActionSpec, 8> DRAWING_TOOL_SPECS = {{
         {"tool.draw-spline", QtToolType::DrawSpline},
 }};
 
+constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
+        Color{0x00, 0x00, 0x00, 0xff}, Color{0x00, 0x7a, 0x2f, 0xff}, Color{0x00, 0xa0, 0xa0, 0xff},
+        Color{0x29, 0x40, 0xd0, 0xff}, Color{0x5d, 0x5d, 0x5d, 0xff}, Color{0xc3, 0x00, 0x10, 0xff},
+        Color{0xc8, 0x00, 0x96, 0xff}, Color{0xff, 0x8c, 0x00, 0xff}, Color{0xff, 0xcc, 0x00, 0xff},
+        Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
+};
+
+auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
+
 auto findActionForTool(QtCommandHost* host, const auto& specs, QtToolType activeTool) -> QAction* {
     for (const auto& spec: specs) {
         if (spec.tool == activeTool) {
@@ -148,12 +159,20 @@ auto findActionForTool(QtCommandHost* host, const auto& specs, QtToolType active
     return host->actionForCommand(specs.front().commandId);
 }
 
+auto toolbarProfilePath() -> fs::path {
+    return fs::path(PROJECT_SOURCE_DIR) / "resources-templates" / "toolbar.ini.in";
+}
+
 }  // namespace
 
 QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost(), &this->window) {
+    for (const auto& profile: QtToolbarLayoutEngine::loadProfiles(toolbarProfilePath())) {
+        this->availableToolbarProfiles.push_back(
+                {.id = profile.id, .displayName = profile.displayName.empty() ? profile.id : profile.displayName});
+    }
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
     this->window.layerPanel()->setDocumentController(&this->documentController);
@@ -322,6 +341,30 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "view.toggle-grid-snap", .text = "Grid Snapping", .tooltip = "Toggle grid snapping",
              .menu = "Edit", .checkable = true, .checked = this->window.canvas()->isGridSnapEnabled()},
             [this]() { setGridSnapEnabled(!this->window.canvas()->isGridSnapEnabled()); });
+    ch->registerCommand(
+            {.id = "view.toggle-rotation-snap", .text = "Rotation Snapping", .tooltip = "Toggle angular snapping for shape tools",
+             .menu = "Edit", .checkable = true, .checked = this->window.canvas()->isRotationSnapEnabled()},
+            [this]() {
+                const bool enabled = !this->window.canvas()->isRotationSnapEnabled();
+                this->window.canvas()->setRotationSnapEnabled(enabled);
+                this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", enabled);
+                this->window.statusBar()->showMessage(
+                        enabled ? QStringLiteral("Rotation snapping enabled")
+                                : QStringLiteral("Rotation snapping disabled"),
+                        2500);
+            });
+    ch->registerCommand(
+            {.id = "view.toggle-touch-drawing", .text = "Touch Drawing", .tooltip = "Toggle finger drawing on touch devices",
+             .menu = "Edit", .checkable = true, .checked = this->window.canvas()->isTouchDrawingEnabled()},
+            [this]() {
+                const bool enabled = !this->window.canvas()->isTouchDrawingEnabled();
+                this->window.canvas()->setTouchDrawingEnabled(enabled);
+                this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", enabled);
+                this->window.statusBar()->showMessage(
+                        enabled ? QStringLiteral("Touch drawing enabled")
+                                : QStringLiteral("Touch drawing disabled"),
+                        2500);
+            });
     ch->addMenuSeparator("Edit");
 
     // Geometry Constraints submenu
@@ -637,6 +680,24 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "tool.hand", .text = "Hand Tool", .tooltip = "Pan the canvas", .shortcut = "Ctrl+Shift+A",
              .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Hand},
             [this]() { selectTool(QtToolType::Hand); });
+    ch->registerCommand(
+            {.id = "tool.default-preset", .text = "Default Tool", .tooltip = "Restore the default pen preset and select it",
+             .menu = "Tools"},
+            [this]() {
+                auto& ts = this->window.canvas()->toolState();
+                ts.activeTool = QtToolType::Pen;
+                ts.penWidth = this->currentSettings.defaultPenWidth;
+                ts.highlighterWidth = this->currentSettings.defaultHighlighterWidth;
+                ts.eraserWidth = this->currentSettings.defaultEraserWidth;
+                ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
+                ts.eraserMode = this->currentSettings.defaultEraserMode;
+                ts.penLineStyle = "plain";
+                ts.fillEnabled = false;
+                this->window.canvas()->setActiveTool(QtToolType::Pen);
+                this->window.toolPalette()->syncFromToolState(ts);
+                syncToolbarWidgets();
+                this->window.statusBar()->showMessage(QStringLiteral("Default pen preset restored"), 2500);
+            });
     ch->addMenuSeparator("Tools");
 
     // Pen Options submenu
@@ -908,13 +969,31 @@ void QtAppShell::rebuildToolbar() {
     auto* documentToolBar = this->window.mainToolBar();
     auto* toolsToolBar = this->window.toolsToolBar();
     auto* footerToolBar = this->window.footerToolBar();
+    auto* leftPrimaryToolBar = this->window.leftPrimaryToolBar();
+    auto* leftSecondaryToolBar = this->window.leftSecondaryToolBar();
+    auto* rightPrimaryToolBar = this->window.rightPrimaryToolBar();
     documentToolBar->clear();
     toolsToolBar->clear();
     footerToolBar->clear();
+    leftPrimaryToolBar->clear();
+    leftSecondaryToolBar->clear();
+    rightPrimaryToolBar->clear();
+    for (auto* floatingToolBar: this->window.floatingToolBars()) {
+        floatingToolBar->clear();
+    }
     this->selectionToolButton = nullptr;
     this->drawingToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
     this->fontSizeSpinner = nullptr;
+    this->toolbarFillAction = nullptr;
+    this->toolbarColorSelectButton = nullptr;
+    this->toolbarColorButtons.clear();
+    const auto wantedToolbarProfile =
+            this->currentSettings.toolbarProfileId.empty() ? std::string("All in") : this->currentSettings.toolbarProfileId;
+    this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), wantedToolbarProfile);
+    if (!this->activeToolbarProfile) {
+        this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), "All in");
+    }
 
     const auto setStandardIcon = [&](std::string_view id, QStyle::StandardPixmap sp) {
         if (auto* action = this->window.commandHost()->actionForCommand(id)) {
@@ -941,7 +1020,18 @@ void QtAppShell::rebuildToolbar() {
     documentToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     toolsToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     footerToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    leftPrimaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    leftSecondaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     footerToolBar->setIconSize(QSize(18, 18));
+    leftPrimaryToolBar->setIconSize(QSize(20, 20));
+    leftSecondaryToolBar->setIconSize(QSize(20, 20));
+    rightPrimaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    rightPrimaryToolBar->setIconSize(QSize(20, 20));
+    for (auto* floatingToolBar: this->window.floatingToolBars()) {
+        floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        floatingToolBar->setIconSize(QSize(20, 20));
+        floatingToolBar->hide();
+    }
 
     setNamedIcon("file.save", "document-save");
     setNamedIcon("app.save-as", "document-save");
@@ -1016,6 +1106,8 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("view.layout-vertical", "orientation-portrait");
     setNamedIcon("view.layout-ltr", "navigate-forward");
     setNamedIcon("view.layout-rtl", "navigate-back");
+    setNamedIcon("view.toggle-rotation-snap", "snapping-rotation");
+    setNamedIcon("view.toggle-touch-drawing", "touch-drawing");
     setThemeIcon("view.layout-ttb", "go-top");
     setThemeIcon("view.layout-btt", "go-bottom");
     setNamedIcon("pen.size-very-fine", "thickness-finer");
@@ -1039,6 +1131,7 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("pen.line-dot", "line-style-dot-with-pen");
     setNamedIcon("pen.fill-toggle", "fill");
     setNamedIcon("highlighter.fill-toggle", "fill");
+    setNamedIcon("tool.default-preset", "default");
     setNamedIcon("eraser.type-standard", "tool-eraser");
     setNamedIcon("eraser.type-whiteout", "transparent");
     setNamedIcon("eraser.type-delete-stroke", "edit-delete");
@@ -1117,139 +1210,432 @@ void QtAppShell::rebuildToolbar() {
         });
         action->setChecked(this->window.canvas()->toolState().fillEnabled);
         toolbar->addAction(action);
+        this->toolbarFillAction = action;
+    };
+    const auto ensureFillOpacityWidget = [&]() -> QSpinBox* {
+        if (!this->fillOpacitySpinner) {
+            this->fillOpacitySpinner = new QSpinBox(&this->window);
+            this->fillOpacitySpinner->setObjectName(QStringLiteral("vertexNoteQtFillOpacitySpinner"));
+            this->fillOpacitySpinner->setRange(0, 255);
+            this->fillOpacitySpinner->setSingleStep(8);
+            this->fillOpacitySpinner->setPrefix(QStringLiteral("A "));
+            this->fillOpacitySpinner->setToolTip(QStringLiteral("Fill opacity"));
+            this->fillOpacitySpinner->setFixedWidth(72);
+            QObject::connect(this->fillOpacitySpinner, &QSpinBox::valueChanged, &this->window,
+                             [this](int value) { setStrokeFill(value); });
+        }
+        return this->fillOpacitySpinner;
     };
 
-    addCommand(documentToolBar, "file.save");
-    addCommand(documentToolBar, "app.new");
-    addCommand(documentToolBar, "app.open");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "export.pdf");
-    addCommand(documentToolBar, "file.print");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "edit.cut");
-    addCommand(documentToolBar, "edit.copy");
-    addCommand(documentToolBar, "edit.paste");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "edit.undo-geometry");
-    addCommand(documentToolBar, "edit.redo-geometry");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "nav.first-page");
-    addCommand(documentToolBar, "nav.prev-page");
-    addCommand(documentToolBar, "nav.next-annotated");
-    addCommand(documentToolBar, "nav.next-page");
-    addCommand(documentToolBar, "nav.last-page");
-    addCommand(documentToolBar, "page.add");
-    addCommand(documentToolBar, "page.delete");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "view.fullscreen");
-    documentToolBar->addSeparator();
-    addPlaceholder(documentToolBar, "Audio Record", "Audio recording is not yet available in the Qt shell",
-                   "xopp-audio-record.svg");
-    addPlaceholder(documentToolBar, "Audio Back", "Audio controls are not yet available in the Qt shell",
-                   "xopp-audio-seek-backwards.svg");
-    addPlaceholder(documentToolBar, "Audio Play", "Audio controls are not yet available in the Qt shell",
-                   "xopp-audio-playback-pause.svg");
-    addPlaceholder(documentToolBar, "Audio Forward", "Audio controls are not yet available in the Qt shell",
-                   "xopp-audio-seek-forwards.svg");
-    addPlaceholder(documentToolBar, "Audio Stop", "Audio controls are not yet available in the Qt shell",
-                   "xopp-audio-playback-stop.svg");
-    documentToolBar->addSeparator();
-    addCommand(documentToolBar, "edit.select-font");
+    const auto currentStrokeColor = [&]() -> Color {
+        const auto& toolState = this->window.canvas()->toolState();
+        return toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterColor : toolState.penColor;
+    };
+    const auto applyToolbarColor = [&](Color color) {
+        auto& toolState = this->window.canvas()->toolState();
+        if (toolState.activeTool == QtToolType::Highlighter) {
+            toolState.highlighterColor = color;
+        } else {
+            toolState.penColor = color;
+        }
+        this->window.toolPalette()->syncFromToolState(toolState);
+        syncToolbarWidgets();
+    };
+    const auto ensureSelectionButton = [&]() -> QToolButton* {
+        if (!this->selectionToolButton) {
+            this->selectionToolButton = new QToolButton(&this->window);
+            this->selectionToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->selectionToolButton->setIcon(bundledQtIcon("xopp-combo-selection.svg"));
+            auto* selectionMenu = new QMenu(this->selectionToolButton);
+            for (const auto& spec: SELECTION_TOOL_SPECS) {
+                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                    selectionMenu->addAction(action);
+                }
+            }
+            this->selectionToolButton->setMenu(selectionMenu);
+        }
+        return this->selectionToolButton;
+    };
+    const auto ensureDrawingButton = [&]() -> QToolButton* {
+        if (!this->drawingToolButton) {
+            this->drawingToolButton = new QToolButton(&this->window);
+            this->drawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->drawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->drawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
+            auto* drawingMenu = new QMenu(this->drawingToolButton);
+            for (const auto& spec: DRAWING_TOOL_SPECS) {
+                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                    drawingMenu->addAction(action);
+                }
+            }
+            this->drawingToolButton->setMenu(drawingMenu);
+        }
+        return this->drawingToolButton;
+    };
+    const auto ensureFontWidgets = [&]() {
+        if (!this->fontFamilyCombo) {
+            this->fontFamilyCombo = new QFontComboBox(&this->window);
+            this->fontFamilyCombo->setObjectName(QStringLiteral("vertexNoteQtFontFamilyCombo"));
+            this->fontFamilyCombo->setMaximumWidth(150);
+            QObject::connect(this->fontFamilyCombo, &QFontComboBox::currentFontChanged, &this->window,
+                             [this](const QFont& font) {
+                                 this->window.canvas()->toolState().fontName = font.family().toStdString();
+                             });
+        }
+        if (!this->fontSizeSpinner) {
+            this->fontSizeSpinner = new QDoubleSpinBox(&this->window);
+            this->fontSizeSpinner->setObjectName(QStringLiteral("vertexNoteQtFontSizeSpinner"));
+            this->fontSizeSpinner->setRange(6.0, 96.0);
+            this->fontSizeSpinner->setDecimals(0);
+            this->fontSizeSpinner->setSingleStep(1.0);
+            this->fontSizeSpinner->setFixedWidth(58);
+            QObject::connect(this->fontSizeSpinner, &QDoubleSpinBox::valueChanged, &this->window,
+                             [this](double size) { this->window.canvas()->toolState().fontSize = size; });
+        }
+    };
+    const auto makeColorButton = [&](int colorIndex) -> QToolButton* {
+        auto* button = new QToolButton(&this->window);
+        button->setAutoRaise(true);
+        button->setFixedSize(16, 16);
+        button->setProperty("toolbarColorIndex", colorIndex);
+        button->setToolTip(QStringLiteral("Quick colour"));
+        QObject::connect(button, &QToolButton::clicked, &this->window,
+                         [applyToolbarColor, colorIndex]() { applyToolbarColor(TOOLBAR_QUICK_COLORS[static_cast<std::size_t>(colorIndex)]); });
+        this->toolbarColorButtons.push_back(button);
+        return button;
+    };
+    const auto ensureColorSelectButton = [&]() -> QToolButton* {
+        if (!this->toolbarColorSelectButton) {
+            this->toolbarColorSelectButton = new QToolButton(&this->window);
+            this->toolbarColorSelectButton->setAutoRaise(true);
+            this->toolbarColorSelectButton->setFixedSize(18, 18);
+            this->toolbarColorSelectButton->setToolTip(QStringLiteral("Choose colour"));
+            QObject::connect(this->toolbarColorSelectButton, &QToolButton::clicked, &this->window, [this, currentStrokeColor, applyToolbarColor]() {
+                const QColor initial = qColorFromColor(currentStrokeColor());
+                const QColor chosen = QColorDialog::getColor(initial, &this->window, QStringLiteral("Stroke Colour"),
+                                                             QColorDialog::ShowAlphaChannel);
+                if (chosen.isValid()) {
+                    applyToolbarColor(Color{static_cast<uint8_t>(chosen.red()), static_cast<uint8_t>(chosen.green()),
+                                           static_cast<uint8_t>(chosen.blue()), static_cast<uint8_t>(chosen.alpha())});
+                }
+            });
+        }
+        return this->toolbarColorSelectButton;
+    };
+    const auto addStretchSpacer = [&](QToolBar* toolbar) {
+        auto* spacer = new QWidget(toolbar);
+        spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        toolbar->addWidget(spacer);
+    };
+    const auto addToolbarToken = [&](QToolBar* toolbar, std::string_view rawToken) {
+        const std::string token(rawToken);
+        if (token == "SEPARATOR") {
+            toolbar->addSeparator();
+            return;
+        }
+        if (token == "SPACER") {
+            addStretchSpacer(toolbar);
+            return;
+        }
+        if (token == "SAVE") { addCommand(toolbar, "file.save"); return; }
+        if (token == "NEW") { addCommand(toolbar, "app.new"); return; }
+        if (token == "OPEN") { addCommand(toolbar, "app.open"); return; }
+        if (token == "SAVEPDF") { addCommand(toolbar, "export.pdf"); return; }
+        if (token == "PRINT") { addCommand(toolbar, "file.print"); return; }
+        if (token == "CUT") { addCommand(toolbar, "edit.cut"); return; }
+        if (token == "COPY") { addCommand(toolbar, "edit.copy"); return; }
+        if (token == "PASTE") { addCommand(toolbar, "edit.paste"); return; }
+        if (token == "SEARCH") { addCommand(toolbar, "edit.find"); return; }
+        if (token == "DELETE") { addCommand(toolbar, "edit.delete"); return; }
+        if (token == "UNDO") { addCommand(toolbar, "edit.undo-geometry"); return; }
+        if (token == "REDO") { addCommand(toolbar, "edit.redo-geometry"); return; }
+        if (token == "GOTO_FIRST") { addCommand(toolbar, "nav.first-page"); return; }
+        if (token == "GOTO_BACK") { addCommand(toolbar, "nav.prev-page"); return; }
+        if (token == "NAVIGATE_BACK") { addCommand(toolbar, "nav.back"); return; }
+        if (token == "NAVIGATE_FORWARD") { addCommand(toolbar, "nav.forward"); return; }
+        if (token == "GOTO_NEXT_ANNOTATED_PAGE") { addCommand(toolbar, "nav.next-annotated"); return; }
+        if (token == "GOTO_NEXT") { addCommand(toolbar, "nav.next-page"); return; }
+        if (token == "GOTO_LAST") { addCommand(toolbar, "nav.last-page"); return; }
+        if (token == "INSERT_NEW_PAGE") { addCommand(toolbar, "page.add"); return; }
+        if (token == "DELETE_CURRENT_PAGE") { addCommand(toolbar, "page.delete"); return; }
+        if (token == "FULLSCREEN") { addCommand(toolbar, "view.fullscreen"); return; }
+        if (token == "AUDIO_RECORDING") {
+            addPlaceholder(toolbar, "Audio Record", "Audio recording is not yet available in the Qt shell",
+                           "xopp-audio-record.svg");
+            return;
+        }
+        if (token == "AUDIO_SEEK_BACKWARDS") {
+            addPlaceholder(toolbar, "Audio Back", "Audio controls are not yet available in the Qt shell",
+                           "xopp-audio-seek-backwards.svg");
+            return;
+        }
+        if (token == "AUDIO_PAUSE_PLAYBACK") {
+            addPlaceholder(toolbar, "Audio Play", "Audio controls are not yet available in the Qt shell",
+                           "xopp-audio-playback-pause.svg");
+            return;
+        }
+        if (token == "AUDIO_SEEK_FORWARDS") {
+            addPlaceholder(toolbar, "Audio Forward", "Audio controls are not yet available in the Qt shell",
+                           "xopp-audio-seek-forwards.svg");
+            return;
+        }
+        if (token == "AUDIO_STOP_PLAYBACK") {
+            addPlaceholder(toolbar, "Audio Stop", "Audio controls are not yet available in the Qt shell",
+                           "xopp-audio-playback-stop.svg");
+            return;
+        }
+        if (token == "SELECT_FONT") {
+            ensureFontWidgets();
+            toolbar->addWidget(this->fontFamilyCombo);
+            toolbar->addWidget(this->fontSizeSpinner);
+            return;
+        }
+        if (token == "PEN") { addCommand(toolbar, "tool.pen"); return; }
+        if (token == "PLAIN") { addCommand(toolbar, "pen.line-solid"); return; }
+        if (token == "DASHED") { addCommand(toolbar, "pen.line-dash"); return; }
+        if (token == "DASH-/ DOTTED" || token == "DASH-DOTTED") { addCommand(toolbar, "pen.line-dashdot"); return; }
+        if (token == "DOTTED") { addCommand(toolbar, "pen.line-dot"); return; }
+        if (token == "ERASER") { addCommand(toolbar, "tool.eraser"); return; }
+        if (token == "HIGHLIGHTER" || token == "HILIGHTER") { addCommand(toolbar, "tool.highlighter"); return; }
+        if (token == "LASER_POINTER") {
+            addPlaceholder(toolbar, "Laser Pointer", "Laser pointer is not yet available in the Qt shell",
+                           "xopp-laser-pointer.svg");
+            return;
+        }
+        if (token == "IMAGE") { addCommand(toolbar, "edit.insert-image"); return; }
+        if (token == "TEXT") { addCommand(toolbar, "tool.text"); return; }
+        if (token == "MATH_TEX") {
+            addPlaceholder(toolbar, "Math TeX", "LaTeX insertion is not yet available in the Qt shell",
+                           "xopp-tool-math-tex.svg");
+            return;
+        }
+        if (token == "DRAW") { toolbar->addWidget(ensureDrawingButton()); return; }
+        if (token == "ROTATION_SNAPPING") {
+            addCommand(toolbar, "view.toggle-rotation-snap");
+            return;
+        }
+        if (token == "GRID_SNAPPING") {
+            addCommand(toolbar, "view.toggle-grid-snap");
+            return;
+        }
+        if (token == "VERTEXNOTE_GEOMETRY_SNAPPING") { addCommand(toolbar, "view.toggle-geometry-snap"); return; }
+        if (token == "VERTEXNOTE_GRID_SNAPPING") { addCommand(toolbar, "view.toggle-grid-snap"); return; }
+        if (token == "SHOW_SIDEBAR") { addCommand(toolbar, "view.show-sidebar"); return; }
+        if (token == "TOGGLE_TOUCH_DRAWING") {
+            addCommand(toolbar, "view.toggle-touch-drawing");
+            return;
+        }
+        if (token == "SELECT") { toolbar->addWidget(ensureSelectionButton()); return; }
+        if (token == "VERTICAL_SPACE") { addCommand(toolbar, "tool.vertical-space"); return; }
+        if (token == "HAND") { addCommand(toolbar, "tool.hand"); return; }
+        if (token == "SETSQUARE") {
+            addPlaceholder(toolbar, "Setsquare", "Setsquare is not yet available in the Qt shell", "xopp-setsquare.svg");
+            return;
+        }
+        if (token == "COMPASS") {
+            addPlaceholder(toolbar, "Compass", "Compass is not yet available in the Qt shell", "xopp-compass.svg");
+            return;
+        }
+        if (token == "DEFAULT_TOOL") {
+            addCommand(toolbar, "tool.default-preset");
+            return;
+        }
+        if (token == "MANAGE_TOOLBAR") {
+            addCommand(toolbar, "app.settings");
+            return;
+        }
+        if (token == "CUSTOMIZE_TOOLBAR") {
+            addCommand(toolbar, "app.settings");
+            return;
+        }
+        if (token == "GOTO_PAGE") { addCommand(toolbar, "nav.goto-page"); return; }
+        if (token == "SELECT_PDF_TEXT_LINEAR") {
+            addPlaceholder(toolbar, "Select PDF Text", "PDF text selection is not yet available in the Qt shell",
+                           "xopp-select-pdf-text-ht.svg");
+            return;
+        }
+        if (token == "PDF_TOOL") {
+            addPlaceholder(toolbar, "PDF Tool", "PDF annotation tools are not yet available in the Qt shell",
+                           "xopp-select-pdf-text-area.svg");
+            return;
+        }
+        if (token == "SELECT_PDF_TEXT_RECT") {
+            addPlaceholder(toolbar, "Select PDF Text Area", "Area PDF text selection is not yet available in the Qt shell",
+                           "xopp-select-pdf-text-area.svg");
+            return;
+        }
+        if (token == "SHAPE_RECOGNIZER") {
+            addPlaceholder(toolbar, "Shape Recognizer", "Shape recognizer is not yet available in the Qt shell",
+                           "xopp-shape-recognizer.svg");
+            return;
+        }
+        if (token == "DRAW_RECTANGLE") { addCommand(toolbar, "tool.draw-rectangle"); return; }
+        if (token == "DRAW_ELLIPSE") { addCommand(toolbar, "tool.draw-ellipse"); return; }
+        if (token == "DRAW_ARROW") { addCommand(toolbar, "tool.draw-arrow"); return; }
+        if (token == "DRAW_DOUBLE_ARROW") { addCommand(toolbar, "tool.draw-double-arrow"); return; }
+        if (token == "DRAW_COORDINATE_SYSTEM") { addCommand(toolbar, "tool.draw-coordinate-system"); return; }
+        if (token == "RULER") {
+            addPlaceholder(toolbar, "Ruler", "Ruler is not yet available in the Qt shell", "xopp-spacer.svg");
+            return;
+        }
+        if (token == "DRAW_SPLINE") { addCommand(toolbar, "tool.draw-spline"); return; }
+        if (token == "SELECT_REGION") { addCommand(toolbar, "tool.select-region"); return; }
+        if (token == "SELECT_RECTANGLE") { addCommand(toolbar, "tool.select"); return; }
+        if (token == "SELECT_MULTILAYER_REGION") { addCommand(toolbar, "tool.select-multilayer-region"); return; }
+        if (token == "SELECT_MULTILAYER_RECTANGLE") { addCommand(toolbar, "tool.select-multilayer-rect"); return; }
+        if (token == "SELECT_OBJECT") { addCommand(toolbar, "tool.select-object"); return; }
+        if (token == "PLAY_OBJECT") {
+            addPlaceholder(toolbar, "Play Object", "Embedded object playback is not yet available in the Qt shell",
+                           "xopp-object-play.svg");
+            return;
+        }
+        if (token == "GOTO_PREVIOUS_LAYER") { addCommand(toolbar, "layer.goto-prev"); return; }
+        if (token == "GOTO_NEXT_LAYER") { addCommand(toolbar, "layer.goto-next"); return; }
+        if (token == "GOTO_TOP_LAYER") { addCommand(toolbar, "layer.goto-top"); return; }
+        if (token == "FILL_OPACITY" || token == "PEN_FILL_OPACITY") {
+            toolbar->addWidget(createStaticIconWidget(toolbar, "xopp-fill-opacity.svg", "Fill opacity"));
+            toolbar->addWidget(ensureFillOpacityWidget());
+            return;
+        }
+        if (token == "CONSTRAINT_COINCIDENT") { addCommand(toolbar, "constraint.coincident"); return; }
+        if (token == "CONSTRAINT_HORIZONTAL") { addCommand(toolbar, "constraint.horizontal"); return; }
+        if (token == "CONSTRAINT_VERTICAL") { addCommand(toolbar, "constraint.vertical"); return; }
+        if (token == "CONSTRAINT_FIXED_LENGTH") { addCommand(toolbar, "constraint.fixed-length"); return; }
+        if (token == "CONSTRAINT_EDIT_FIXED_LENGTH") { addCommand(toolbar, "constraint.edit-length"); return; }
+        if (token == "CONSTRAINT_PARALLEL") { addCommand(toolbar, "constraint.parallel"); return; }
+        if (token == "CONSTRAINT_PERPENDICULAR") { addCommand(toolbar, "constraint.perpendicular"); return; }
+        if (token == "CONSTRAINT_DELETE") { addCommand(toolbar, "constraint.delete"); return; }
+        if (token == "VERY_FINE") { addGenericSizeAction(toolbar, "Very Fine", "xopp-thickness-finer.svg", 0); return; }
+        if (token == "FINE") { addGenericSizeAction(toolbar, "Fine", "xopp-thickness-fine.svg", 1); return; }
+        if (token == "MEDIUM") { addGenericSizeAction(toolbar, "Medium", "xopp-thickness-medium.svg", 2); return; }
+        if (token == "THICK") { addGenericSizeAction(toolbar, "Thick", "xopp-thickness-thick.svg", 3); return; }
+        if (token == "VERY_THICK") { addGenericSizeAction(toolbar, "Very Thick", "xopp-thickness-thicker.svg", 4); return; }
+        if (token == "TOOL_FILL") { addFillAction(toolbar); return; }
+        if (token == "PAGE_SPIN") {
+            toolbar->addWidget(createStaticIconWidget(toolbar, "xopp-page-spinner.svg", "Page number"));
+            toolbar->addWidget(this->window.footerPageSpin());
+            return;
+        }
+        if (token == "LAYER") {
+            toolbar->addWidget(createStaticIconWidget(toolbar, "xopp-combo-layer.svg", "Layer selector"));
+            toolbar->addWidget(this->window.footerLayerCombo());
+            return;
+        }
+        if (token == "PAIRED_PAGES") { addCommand(toolbar, "view.paired-pages"); return; }
+        if (token == "PRESENTATION_MODE") { addCommand(toolbar, "view.presentation"); return; }
+        if (token == "ZOOM_100") { addCommand(toolbar, "view.zoom-100"); return; }
+        if (token == "ZOOM_FIT") { addCommand(toolbar, "view.fit-page"); return; }
+        if (token == "ZOOM_OUT") { addCommand(toolbar, "view.zoom-out"); return; }
+        if (token == "ZOOM_SLIDER") {
+            toolbar->addWidget(createStaticIconWidget(toolbar, "xopp-zoom-slider.svg", "Zoom"));
+            toolbar->addWidget(this->window.footerZoomSlider());
+            return;
+        }
+        if (token == "ZOOM_IN") { addCommand(toolbar, "view.zoom-in"); return; }
+        if (token == "COLOR_SELECT") {
+            toolbar->addWidget(ensureColorSelectButton());
+            return;
+        }
+        if (token.rfind("COLOR(", 0) == 0 && token.back() == ')') {
+            const auto number = token.substr(6, token.size() - 7);
+            const auto index = std::stoi(number);
+            if (index >= 0 && index < static_cast<int>(TOOLBAR_QUICK_COLORS.size())) {
+                toolbar->addWidget(makeColorButton(index));
+            }
+            return;
+        }
+    };
 
-    this->selectionToolButton = new QToolButton(&this->window);
-    this->selectionToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-    this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-    this->selectionToolButton->setIcon(bundledQtIcon("xopp-combo-selection.svg"));
-    auto* selectionMenu = new QMenu(this->selectionToolButton);
-    for (const auto& spec: SELECTION_TOOL_SPECS) {
-        if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
-            selectionMenu->addAction(action);
+    const auto toolbarItems = [&](std::string_view key,
+                                  std::initializer_list<std::string_view> fallback) -> std::vector<std::string> {
+        if (this->activeToolbarProfile) {
+            if (const auto* items = this->activeToolbarProfile->itemsFor(key)) {
+                return *items;
+            }
+        }
+
+        std::vector<std::string> items;
+        items.reserve(fallback.size());
+        for (const auto token: fallback) {
+            items.emplace_back(token);
+        }
+        return items;
+    };
+
+    for (const auto& token: toolbarItems("toolbarTop1",
+                                         {"SAVE", "NEW", "OPEN", "SEPARATOR", "SAVEPDF", "PRINT", "SEPARATOR",
+                                          "CUT", "COPY", "PASTE", "SEPARATOR", "UNDO", "REDO", "SEPARATOR",
+                                          "GOTO_FIRST", "GOTO_BACK", "GOTO_NEXT_ANNOTATED_PAGE", "GOTO_NEXT",
+                                          "GOTO_LAST", "INSERT_NEW_PAGE", "DELETE_CURRENT_PAGE", "SEPARATOR",
+                                          "FULLSCREEN", "SEPARATOR", "AUDIO_RECORDING", "AUDIO_SEEK_BACKWARDS",
+                                          "AUDIO_PAUSE_PLAYBACK", "AUDIO_SEEK_FORWARDS", "AUDIO_STOP_PLAYBACK",
+                                          "SEPARATOR", "SELECT_FONT"})) {
+        addToolbarToken(documentToolBar, token);
+    }
+
+    for (const auto& token: toolbarItems("toolbarTop2",
+                                         {"PEN", "ERASER", "HILIGHTER", "LASER_POINTER", "IMAGE", "TEXT",
+                                          "MATH_TEX", "DRAW", "SEPARATOR", "ROTATION_SNAPPING", "GRID_SNAPPING",
+                                          "VERTEXNOTE_GEOMETRY_SNAPPING", "VERTEXNOTE_GRID_SNAPPING",
+                                          "TOGGLE_TOUCH_DRAWING", "SEPARATOR", "SELECT", "VERTICAL_SPACE", "HAND",
+                                          "SEPARATOR", "DEFAULT_TOOL", "SEPARATOR", "VERY_FINE", "FINE", "MEDIUM",
+                                          "THICK", "VERY_THICK", "SEPARATOR", "TOOL_FILL", "SEPARATOR", "COLOR(0)",
+                                          "COLOR(1)", "COLOR(2)", "COLOR(3)", "COLOR(4)", "COLOR(5)", "COLOR(6)",
+                                          "COLOR(7)", "COLOR(8)", "COLOR(9)", "COLOR(10)", "COLOR_SELECT"})) {
+        addToolbarToken(toolsToolBar, token);
+    }
+
+    for (const auto& token: toolbarItems("toolbarBottom1",
+                                         {"PAGE_SPIN", "SEPARATOR", "LAYER", "SPACER", "PAIRED_PAGES",
+                                          "PRESENTATION_MODE", "ZOOM_100", "ZOOM_FIT", "ZOOM_OUT", "ZOOM_SLIDER",
+                                          "ZOOM_IN"})) {
+        addToolbarToken(footerToolBar, token);
+    }
+
+    for (const auto& token: toolbarItems("toolbarLeft1",
+                                         {"SAVEPDF", "PRINT", "SEARCH", "DELETE", "SETSQUARE", "COMPASS",
+                                          "MANAGE_TOOLBAR", "CUSTOMIZE_TOOLBAR", "GOTO_PAGE",
+                                          "SELECT_PDF_TEXT_LINEAR", "PDF_TOOL", "SELECT_PDF_TEXT_RECT",
+                                          "SHAPE_RECOGNIZER", "DRAW_RECTANGLE", "DRAW_ELLIPSE", "DRAW_ARROW",
+                                          "DRAW_DOUBLE_ARROW", "DRAW_COORDINATE_SYSTEM", "RULER", "DRAW_SPLINE"})) {
+        addToolbarToken(leftPrimaryToolBar, token);
+    }
+
+    for (const auto& token: toolbarItems("toolbarLeft2",
+                                         {"SELECT_REGION", "SELECT_RECTANGLE", "SELECT_OBJECT", "PLAY_OBJECT",
+                                          "GOTO_PREVIOUS_LAYER", "GOTO_NEXT_LAYER", "GOTO_TOP_LAYER",
+                                          "FILL_OPACITY"})) {
+        addToolbarToken(leftSecondaryToolBar, token);
+    }
+
+    const auto rightToolbarTokens = toolbarItems("toolbarRight1", {});
+    for (const auto& token: rightToolbarTokens) {
+        addToolbarToken(rightPrimaryToolBar, token);
+    }
+
+    for (int floatingIndex = 0; floatingIndex < static_cast<int>(this->window.floatingToolBars().size()); ++floatingIndex) {
+        auto* floatingToolBar = this->window.floatingToolBars()[static_cast<std::size_t>(floatingIndex)];
+        const auto key = "toolbarfloat" + std::to_string(floatingIndex + 1);
+        const auto tokens = toolbarItems(key, {});
+        for (const auto& token: tokens) {
+            addToolbarToken(floatingToolBar, token);
+        }
+
+        const bool hasTokens = !tokens.empty();
+        const bool showToolbar = !this->presentationMode &&
+                                 this->window.commandHost()->actionForCommand("view.show-toolbar") &&
+                                 this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
+        floatingToolBar->setVisible(hasTokens && showToolbar);
+        if (hasTokens) {
+            floatingToolBar->setWindowTitle(QStringLiteral("Floating Toolbar %1").arg(floatingIndex + 1));
         }
     }
-    this->selectionToolButton->setMenu(selectionMenu);
-    toolsToolBar->addWidget(this->selectionToolButton);
 
-    this->drawingToolButton = new QToolButton(&this->window);
-    this->drawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-    this->drawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-    this->drawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
-    auto* drawingMenu = new QMenu(this->drawingToolButton);
-    for (const auto& spec: DRAWING_TOOL_SPECS) {
-        if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
-            drawingMenu->addAction(action);
-        }
-    }
-    this->drawingToolButton->setMenu(drawingMenu);
-    toolsToolBar->addAction(this->window.commandHost()->actionForCommand("tool.pen"));
-    toolsToolBar->addAction(this->window.commandHost()->actionForCommand("tool.eraser"));
-    toolsToolBar->addAction(this->window.commandHost()->actionForCommand("tool.highlighter"));
-    addPlaceholder(toolsToolBar, "Laser Pointer", "Laser pointer is not yet available in the Qt shell",
-                   "xopp-laser-pointer.svg");
-    addCommand(toolsToolBar, "edit.insert-image");
-    addCommand(toolsToolBar, "tool.text");
-    addPlaceholder(toolsToolBar, "Math TeX", "LaTeX insertion is not yet available in the Qt shell",
-                   "xopp-tool-math-tex.svg");
-    toolsToolBar->addWidget(this->drawingToolButton);
-    toolsToolBar->addSeparator();
-    addPlaceholder(toolsToolBar, "Rotation Snapping", "Rotation snapping is not yet available in the Qt shell",
-                   "xopp-snapping-rotation.svg");
-    addPlaceholder(toolsToolBar, "Grid Snapping", "Legacy grid snapping is not yet available in the Qt shell",
-                   "xopp-snapping-grid.svg");
-    addCommand(toolsToolBar, "view.toggle-geometry-snap");
-    addCommand(toolsToolBar, "view.toggle-grid-snap");
-    addPlaceholder(toolsToolBar, "Touch Drawing", "Touch drawing toggle is not yet available in the Qt shell",
-                   "xopp-touch-drawing.svg");
-    toolsToolBar->addSeparator();
-    toolsToolBar->addWidget(this->selectionToolButton);
-    addCommand(toolsToolBar, "tool.vertical-space");
-    addCommand(toolsToolBar, "tool.hand");
-    addPlaceholder(toolsToolBar, "Setsquare", "Setsquare is not yet available in the Qt shell", "xopp-setsquare.svg");
-    addPlaceholder(toolsToolBar, "Compass", "Compass is not yet available in the Qt shell", "xopp-compass.svg");
-    toolsToolBar->addSeparator();
-    addPlaceholder(toolsToolBar, "Default Tool", "Default tool preset is not yet available in the Qt shell",
-                   "xopp-default.svg");
-    toolsToolBar->addSeparator();
-    addGenericSizeAction(toolsToolBar, "Very Fine", "xopp-thickness-finer.svg", 0);
-    addGenericSizeAction(toolsToolBar, "Fine", "xopp-thickness-fine.svg", 1);
-    addGenericSizeAction(toolsToolBar, "Medium", "xopp-thickness-medium.svg", 2);
-    addGenericSizeAction(toolsToolBar, "Thick", "xopp-thickness-thick.svg", 3);
-    addGenericSizeAction(toolsToolBar, "Very Thick", "xopp-thickness-thicker.svg", 4);
-    toolsToolBar->addSeparator();
-    addFillAction(toolsToolBar);
-    toolsToolBar->addSeparator();
-    toolsToolBar->addWidget(this->window.toolPalette());
-
-    this->fontFamilyCombo = new QFontComboBox(&this->window);
-    this->fontFamilyCombo->setObjectName(QStringLiteral("vertexNoteQtFontFamilyCombo"));
-    this->fontFamilyCombo->setMaximumWidth(150);
-    documentToolBar->addWidget(this->fontFamilyCombo);
-
-    this->fontSizeSpinner = new QDoubleSpinBox(&this->window);
-    this->fontSizeSpinner->setObjectName(QStringLiteral("vertexNoteQtFontSizeSpinner"));
-    this->fontSizeSpinner->setRange(6.0, 96.0);
-    this->fontSizeSpinner->setDecimals(0);
-    this->fontSizeSpinner->setSingleStep(1.0);
-    this->fontSizeSpinner->setFixedWidth(58);
-    documentToolBar->addWidget(this->fontSizeSpinner);
-
-    footerToolBar->addWidget(createStaticIconWidget(footerToolBar, "xopp-page-spinner.svg", "Page number"));
-    footerToolBar->addWidget(this->window.footerPageSpin());
-    footerToolBar->addSeparator();
-    footerToolBar->addWidget(createStaticIconWidget(footerToolBar, "xopp-combo-layer.svg", "Layer selector"));
-    footerToolBar->addWidget(this->window.footerLayerCombo());
-    auto* spacer = new QWidget(footerToolBar);
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    footerToolBar->addWidget(spacer);
-    addCommand(footerToolBar, "view.paired-pages");
-    addCommand(footerToolBar, "view.presentation");
-    addCommand(footerToolBar, "view.zoom-100");
-    addCommand(footerToolBar, "view.fit-page");
-    addCommand(footerToolBar, "view.zoom-out");
-    footerToolBar->addWidget(createStaticIconWidget(footerToolBar, "xopp-zoom-slider.svg", "Zoom"));
-    footerToolBar->addWidget(this->window.footerZoomSlider());
-    addCommand(footerToolBar, "view.zoom-in");
-    footerToolBar->addSeparator();
-    addCommand(footerToolBar, "view.fullscreen");
+    const bool showToolbar = !this->presentationMode &&
+                             this->window.commandHost()->actionForCommand("view.show-toolbar") &&
+                             this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
+    rightPrimaryToolBar->setVisible(!rightToolbarTokens.empty() && showToolbar);
 
     syncToolbarWidgets();
     syncFooterWidgets();
@@ -1282,6 +1668,45 @@ void QtAppShell::syncToolbarWidgets() {
     if (this->fontSizeSpinner) {
         const QSignalBlocker blocker(this->fontSizeSpinner);
         this->fontSizeSpinner->setValue(toolState.fontSize);
+    }
+
+    if (this->toolbarFillAction) {
+        const QSignalBlocker blocker(this->toolbarFillAction);
+        const bool checked = toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterFillEnabled
+                                                                             : toolState.fillEnabled;
+        this->toolbarFillAction->setChecked(checked);
+    }
+
+    if (this->fillOpacitySpinner) {
+        const QSignalBlocker blocker(this->fillOpacitySpinner);
+        this->fillOpacitySpinner->setValue(toolState.fillOpacity);
+    }
+
+    const Color selectedColor = toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterColor
+                                                                                 : toolState.penColor;
+    for (auto* button: this->toolbarColorButtons) {
+        if (!button) {
+            continue;
+        }
+
+        const auto colorIndex = button->property("toolbarColorIndex").toInt();
+        if (colorIndex < 0 || colorIndex >= static_cast<int>(TOOLBAR_QUICK_COLORS.size())) {
+            continue;
+        }
+
+        const auto color = TOOLBAR_QUICK_COLORS[static_cast<std::size_t>(colorIndex)];
+        const bool selected = color == selectedColor;
+        button->setStyleSheet(QStringLiteral(
+                                      "QToolButton { background-color: %1; border-radius: 7px; border: %2; padding: 0px; }")
+                                      .arg(qColorFromColor(color).name(QColor::HexArgb))
+                                      .arg(selected ? QStringLiteral("2px solid #2f66ff")
+                                                    : QStringLiteral("1px solid #a0a0a0")));
+    }
+
+    if (this->toolbarColorSelectButton) {
+        this->toolbarColorSelectButton->setStyleSheet(
+                QStringLiteral("QToolButton { background-color: %1; border: 1px solid #8d8d8d; border-radius: 3px; }")
+                        .arg(qColorFromColor(selectedColor).name(QColor::HexArgb)));
     }
 }
 
@@ -1596,13 +2021,23 @@ void QtAppShell::toggleFullscreen() {
 
     // If leaving fullscreen while in presentation mode, exit presentation too
     if (isFullscreen && this->presentationMode) {
+        const bool showToolbars = this->window.commandHost()->actionForCommand("view.show-toolbar") &&
+                                  this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
+        const bool showSidebars = this->window.commandHost()->actionForCommand("view.show-sidebar") &&
+                                  this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked();
         this->presentationMode = false;
         this->window.commandHost()->setCommandChecked("view.presentation", false);
-        this->window.mainToolBar()->setVisible(true);
-        this->window.toolsToolBar()->setVisible(true);
-        this->window.footerToolBar()->setVisible(true);
-        this->window.pageSidebar()->setVisible(true);
-        this->window.layerPanel()->setVisible(true);
+        this->window.mainToolBar()->setVisible(showToolbars);
+        this->window.toolsToolBar()->setVisible(showToolbars);
+        this->window.footerToolBar()->setVisible(showToolbars);
+        this->window.leftPrimaryToolBar()->setVisible(showToolbars);
+        this->window.leftSecondaryToolBar()->setVisible(showToolbars);
+        this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
+        for (auto* floatingToolBar: this->window.floatingToolBars()) {
+            floatingToolBar->setVisible(showToolbars && !floatingToolBar->actions().isEmpty());
+        }
+        this->window.pageSidebar()->setVisible(showSidebars);
+        this->window.layerPanel()->setVisible(showSidebars);
     }
 }
 
@@ -1619,17 +2054,33 @@ void QtAppShell::togglePresentationMode() {
         this->window.mainToolBar()->setVisible(false);
         this->window.toolsToolBar()->setVisible(false);
         this->window.footerToolBar()->setVisible(false);
+        this->window.leftPrimaryToolBar()->setVisible(false);
+        this->window.leftSecondaryToolBar()->setVisible(false);
+        this->window.rightPrimaryToolBar()->setVisible(false);
+        for (auto* floatingToolBar: this->window.floatingToolBars()) {
+            floatingToolBar->setVisible(false);
+        }
         this->window.pageSidebar()->setVisible(false);
         this->window.layerPanel()->setVisible(false);
         this->window.canvas()->fitPage(false);
         this->window.statusBar()->showMessage(QStringLiteral("Presentation mode — press F5 or Escape to exit"), 4000);
     } else {
         // Exit presentation: restore toolbar + sidebar, leave fullscreen
-        this->window.mainToolBar()->setVisible(true);
-        this->window.toolsToolBar()->setVisible(true);
-        this->window.footerToolBar()->setVisible(true);
-        this->window.pageSidebar()->setVisible(true);
-        this->window.layerPanel()->setVisible(true);
+        const bool showToolbars = this->window.commandHost()->actionForCommand("view.show-toolbar") &&
+                                  this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
+        const bool showSidebars = this->window.commandHost()->actionForCommand("view.show-sidebar") &&
+                                  this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked();
+        this->window.mainToolBar()->setVisible(showToolbars);
+        this->window.toolsToolBar()->setVisible(showToolbars);
+        this->window.footerToolBar()->setVisible(showToolbars);
+        this->window.leftPrimaryToolBar()->setVisible(showToolbars);
+        this->window.leftSecondaryToolBar()->setVisible(showToolbars);
+        this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
+        for (auto* floatingToolBar: this->window.floatingToolBars()) {
+            floatingToolBar->setVisible(showToolbars && !floatingToolBar->actions().isEmpty());
+        }
+        this->window.pageSidebar()->setVisible(showSidebars);
+        this->window.layerPanel()->setVisible(showSidebars);
         if (this->window.isFullScreen()) {
             this->window.showNormal();
             this->window.commandHost()->setCommandChecked("view.fullscreen", false);
@@ -1798,11 +2249,12 @@ void QtAppShell::insertImage() {
 }
 
 void QtAppShell::showSettingsDialog() {
-    QtSettingsDialog dialog(this->currentSettings, &this->window);
+    QtSettingsDialog dialog(this->currentSettings, this->availableToolbarProfiles, &this->window);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }
 
+    const auto previousToolbarProfileId = this->currentSettings.toolbarProfileId;
     this->currentSettings = dialog.settings();
 
     // Apply relevant settings immediately
@@ -1815,10 +2267,17 @@ void QtAppShell::showSettingsDialog() {
 
     this->window.canvas()->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
     this->window.canvas()->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
+    this->window.canvas()->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
+    this->window.canvas()->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
+    this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", this->currentSettings.rotationSnapDefault);
+    this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", this->currentSettings.touchDrawingDefault);
 
     this->window.toolPalette()->syncFromToolState(ts);
+    if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
+        rebuildToolbar();
+    }
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
 }
 
@@ -2187,6 +2646,11 @@ void QtAppShell::setStrokeFill(int fillOpacity) {
     auto& ts = this->window.canvas()->toolState();
     ts.fillOpacity = fillOpacity;
     ts.fillEnabled = fillOpacity > 0;
+    if (this->toolbarFillAction) {
+        const QSignalBlocker blocker(this->toolbarFillAction);
+        this->toolbarFillAction->setChecked(ts.fillEnabled);
+    }
+    this->window.statusBar()->showMessage(QStringLiteral("Fill opacity: %1").arg(fillOpacity), 2500);
 }
 
 void QtAppShell::selectFont() {
@@ -2437,6 +2901,12 @@ void QtAppShell::toggleToolbarVisibility() {
     this->window.mainToolBar()->setVisible(visible);
     this->window.toolsToolBar()->setVisible(visible);
     this->window.footerToolBar()->setVisible(visible);
+    this->window.leftPrimaryToolBar()->setVisible(visible);
+    this->window.leftSecondaryToolBar()->setVisible(visible);
+    this->window.rightPrimaryToolBar()->setVisible(visible && this->window.rightPrimaryToolBar()->actions().size() > 0);
+    for (auto* floatingToolBar: this->window.floatingToolBars()) {
+        floatingToolBar->setVisible(visible && !floatingToolBar->actions().isEmpty());
+    }
     this->window.commandHost()->setCommandChecked("view.show-toolbar", visible);
 }
 

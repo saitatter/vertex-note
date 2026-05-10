@@ -197,8 +197,16 @@ public:
             -> const Element*;
     auto createCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color, double width)
             -> const Element*;
+    auto createEllipse(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width,
+                       const std::string& lineStyle, int fill) -> const Element*;
     auto createArc(std::size_t pageIndex, double cx, double cy, double sx, double sy, double ex, double ey, Color color,
                    double width) -> const Element*;
+    auto createArrow(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width,
+                     const std::string& lineStyle, bool doubleEnded) -> const Element*;
+    auto createCoordinateSystem(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
+                                double width, const std::string& lineStyle) -> const Element*;
+    auto createSpline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
+                      double width, const std::string& lineStyle) -> const Element*;
     auto createPolyline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
                         double width) -> const Element*;
     auto createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,

@@ -8,6 +8,7 @@
 
 #include <QLabel>
 #include <QMainWindow>
+#include <vector>
 
 #include "QtCanvas.h"
 #include "QtCommandHost.h"
@@ -29,6 +30,10 @@ public:
     [[nodiscard]] auto mainToolBar() -> QToolBar*;
     [[nodiscard]] auto toolsToolBar() -> QToolBar*;
     [[nodiscard]] auto footerToolBar() -> QToolBar*;
+    [[nodiscard]] auto leftPrimaryToolBar() -> QToolBar*;
+    [[nodiscard]] auto leftSecondaryToolBar() -> QToolBar*;
+    [[nodiscard]] auto rightPrimaryToolBar() -> QToolBar*;
+    [[nodiscard]] auto floatingToolBars() const -> const std::vector<QToolBar*>&;
     [[nodiscard]] auto layerPanel() -> QtLayerPanel*;
     [[nodiscard]] auto pageSidebar() -> QtPageSidebar*;
     [[nodiscard]] auto toolPalette() -> QtToolPalette*;
@@ -44,6 +49,10 @@ private:
     QToolBar* documentToolBar = nullptr;
     QToolBar* toolsToolBarWidget = nullptr;
     QToolBar* footerToolBarWidget = nullptr;
+    QToolBar* leftPrimaryToolBarWidget = nullptr;
+    QToolBar* leftSecondaryToolBarWidget = nullptr;
+    QToolBar* rightPrimaryToolBarWidget = nullptr;
+    std::vector<QToolBar*> floatingToolBarWidgets;
     QtLayerPanel* layerPanelWidget = nullptr;
     QtPageSidebar* pageSidebarWidget = nullptr;
     QtToolPalette* toolPaletteWidget = nullptr;

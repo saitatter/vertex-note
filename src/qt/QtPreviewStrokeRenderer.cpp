@@ -43,6 +43,8 @@ auto toPainterPath(const std::vector<Point>& points) -> QPainterPath {
         return path;
     }
 
+    path.setFillRule(Qt::WindingFill);
+
     path.moveTo(points.front().x, points.front().y);
     for (std::size_t i = 1; i < points.size(); ++i) {
         path.lineTo(points[i].x, points[i].y);
@@ -54,6 +56,7 @@ auto toPainterPath(const std::vector<Point>& points) -> QPainterPath {
 /// Each point's .z stores the width at that point.
 auto buildVariableWidthOutline(const std::vector<Point>& points, double fallbackWidth) -> QPainterPath {
     QPainterPath outline;
+    outline.setFillRule(Qt::WindingFill);
     if (points.size() < 2) {
         if (points.size() == 1) {
             const double r = (points[0].z > 0.0 ? points[0].z : fallbackWidth) * 0.5;

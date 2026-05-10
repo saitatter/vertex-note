@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <QDialog>
 
 #include "QtToolState.h"
@@ -14,6 +17,11 @@ class QDoubleSpinBox;
 class QSpinBox;
 class QCheckBox;
 class QComboBox;
+
+struct QtToolbarProfileOption {
+    std::string id;
+    std::string displayName;
+};
 
 struct QtSettings {
     double defaultPenWidth = 1.41;
@@ -26,13 +34,17 @@ struct QtSettings {
     int undoHistoryLimit = 50;
     bool geometrySnapDefault = true;
     bool gridSnapDefault = false;
+    bool rotationSnapDefault = false;
+    bool touchDrawingDefault = false;
+    std::string toolbarProfileId = "All in";
 };
 
 class QtSettingsDialog: public QDialog {
     Q_OBJECT
 
 public:
-    explicit QtSettingsDialog(const QtSettings& current, QWidget* parent = nullptr);
+    explicit QtSettingsDialog(const QtSettings& current, const std::vector<QtToolbarProfileOption>& toolbarProfiles,
+                              QWidget* parent = nullptr);
 
     [[nodiscard]] auto settings() const -> QtSettings;
 
@@ -47,4 +59,7 @@ private:
     QSpinBox* undoLimitSpin = nullptr;
     QCheckBox* geoSnapCheck = nullptr;
     QCheckBox* gridSnapCheck = nullptr;
+    QCheckBox* rotationSnapCheck = nullptr;
+    QCheckBox* touchDrawingCheck = nullptr;
+    QComboBox* toolbarProfileCombo = nullptr;
 };

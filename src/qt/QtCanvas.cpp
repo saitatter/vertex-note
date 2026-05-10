@@ -47,6 +47,7 @@ constexpr double PAGE_STACK_X = 120.0;
 constexpr double PAGE_STACK_Y = 100.0;
 constexpr double PAGE_STACK_GAP = 56.0;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
+constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
 
 auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
     using vn::ui::common::CanvasCursor;
@@ -119,6 +120,90 @@ auto snapColor(std::optional<vn::snap::SnapKind> kind) -> QColor {
     return QColor(45, 125, 255);
 }
 
+auto cubicSplinePath(const std::vector<QPointF>& points) -> QPainterPath {
+    QPainterPath path;
+    if (points.empty()) {
+        return path;
+    }
+
+    path.moveTo(points.front());
+    if (points.size() == 1U) {
+        return path;
+    }
+    if (points.size() == 2U) {
+        path.lineTo(points.back());
+        return path;
+    }
+
+    for (std::size_t index = 0; index + 1 < points.size(); ++index) {
+        const QPointF& p0 = index == 0 ? points[index] : points[index - 1];
+        const QPointF& p1 = points[index];
+        const QPointF& p2 = points[index + 1];
+        const QPointF& p3 = (index + 2 < points.size()) ? points[index + 2] : points[index + 1];
+        const QPointF c1(p1.x() + (p2.x() - p0.x()) / 6.0, p1.y() + (p2.y() - p0.y()) / 6.0);
+        const QPointF c2(p2.x() - (p3.x() - p1.x()) / 6.0, p2.y() - (p3.y() - p1.y()) / 6.0);
+        path.cubicTo(c1, c2, p2);
+    }
+
+    return path;
+}
+
+auto buildArrowPreviewPoints(const QPointF& start, const QPointF& end, double thickness, bool doubleEnded)
+        -> std::vector<QPointF> {
+    const double lineLength = std::hypot(end.x() - start.x(), end.y() - start.y());
+    if (lineLength <= 0.0001) {
+        return {start, end};
+    }
+
+    const double safeThickness = std::max(0.5, thickness);
+    const double slimness = lineLength / safeThickness;
+    double delta = M_PI / 6.0;
+    constexpr double THICK1 = 7.0;
+    constexpr double THICK3 = 1.6;
+    constexpr double LENGTH2 = 0.4;
+    constexpr double LENGTH4 = 0.8;
+    constexpr double LENGTH4_DOUBLE = 0.5;
+    double arrowDist = safeThickness * THICK1;
+    if (slimness >= THICK1 / LENGTH2) {
+        // keep default
+    } else if (slimness >= THICK3 / LENGTH2) {
+        arrowDist = lineLength * LENGTH2;
+    } else if (slimness >= THICK3 / (doubleEnded ? LENGTH4_DOUBLE : LENGTH4)) {
+        arrowDist = safeThickness * THICK3;
+        delta = (1 + (slimness - THICK3 / LENGTH2) /
+                            (THICK3 / (doubleEnded ? LENGTH4_DOUBLE : LENGTH4) - THICK3 / LENGTH2)) *
+                M_PI / 6.0;
+        arrowDist *= std::sin(M_PI / 6.0) / std::sin(delta);
+    } else {
+        arrowDist = lineLength * (doubleEnded ? LENGTH4_DOUBLE : LENGTH4);
+        delta = M_PI / 3.0;
+        arrowDist *= std::sin(M_PI / 6.0) / std::sin(M_PI / 3.0);
+    }
+
+    const double angle = std::atan2(end.y() - start.y(), end.x() - start.x());
+    std::vector<QPointF> shape;
+    shape.reserve(doubleEnded ? 10 : 6);
+    shape.emplace_back(start);
+    if (doubleEnded) {
+        shape.emplace_back(start.x() + arrowDist * std::cos(angle + delta),
+                           start.y() + arrowDist * std::sin(angle + delta));
+        shape.emplace_back(start);
+        shape.emplace_back(start.x() + arrowDist * std::cos(angle - delta),
+                           start.y() + arrowDist * std::sin(angle - delta));
+        shape.emplace_back(start);
+    }
+    shape.emplace_back(end);
+    shape.emplace_back(end.x() - arrowDist * std::cos(angle + delta), end.y() - arrowDist * std::sin(angle + delta));
+    shape.emplace_back(end);
+    shape.emplace_back(end.x() - arrowDist * std::cos(angle - delta), end.y() - arrowDist * std::sin(angle - delta));
+    shape.emplace_back(end);
+    return shape;
+}
+
+auto buildCoordinateSystemPreviewPoints(const QPointF& start, const QPointF& current) -> std::vector<QPointF> {
+    return {start, QPointF(start.x(), current.y()), QPointF(current.x(), current.y())};
+}
+
 }  // namespace
 
 QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
@@ -175,6 +260,7 @@ void QtCanvas::handleKeyboardEvent(const vn::ui::input::KeyboardEvent& event) {
 
 void QtCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& event) {
     updateDebugOverlay(QStringLiteral("touch points=%1").arg(static_cast<int>(event.points.size())));
+    processTouchDrawing(event);
 }
 
 void QtCanvas::setDocumentController(QtDocumentController* documentController) {
@@ -310,6 +396,22 @@ void QtCanvas::setGridSnapEnabled(bool enabled) {
 auto QtCanvas::isGeometrySnapEnabled() const -> bool { return this->geometrySnapEnabled; }
 
 auto QtCanvas::isGridSnapEnabled() const -> bool { return this->gridSnapEnabled; }
+
+void QtCanvas::setRotationSnapEnabled(bool enabled) {
+    this->rotationSnapEnabled = enabled;
+    update();
+}
+
+void QtCanvas::setTouchDrawingEnabled(bool enabled) {
+    if (!enabled && this->drawing) {
+        finalizeActiveStroke();
+    }
+    this->touchDrawingEnabled = enabled;
+}
+
+auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
+
+auto QtCanvas::isTouchDrawingEnabled() const -> bool { return this->touchDrawingEnabled; }
 
 auto QtCanvas::deleteSelectedGeometry() -> bool {
     if (!this->documentController) {
@@ -1102,6 +1204,11 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::DrawLine:
         case QtToolType::DrawRectangle:
         case QtToolType::DrawCircle:
+        case QtToolType::DrawEllipse:
+        case QtToolType::DrawArrow:
+        case QtToolType::DrawDoubleArrow:
+        case QtToolType::DrawCoordinateSystem:
+        case QtToolType::DrawSpline:
         case QtToolType::DrawArc:
         case QtToolType::DrawPolyline:
         case QtToolType::DrawConstructionLine:
@@ -1115,6 +1222,11 @@ void QtCanvas::setActiveTool(QtToolType tool) {
             setCursor(Qt::IBeamCursor);
             break;
         case QtToolType::SelectRect:
+        case QtToolType::SelectRegion:
+        case QtToolType::SelectMultiLayerRect:
+        case QtToolType::SelectMultiLayerRegion:
+        case QtToolType::SelectObject:
+        case QtToolType::VerticalSpace:
             setCursor(Qt::ArrowCursor);
             break;
     }
@@ -1242,6 +1354,7 @@ void QtCanvas::finalizeActiveStroke() {
 
     const bool added = this->documentController->finalizeStroke();
     this->drawing = false;
+    this->activeTouchPointId = -1;
     update();
     if (added) {
         Q_EMIT documentEdited();
@@ -1253,6 +1366,7 @@ void QtCanvas::cancelActiveStroke() {
         this->documentController->cancelStroke();
     }
     this->drawing = false;
+    this->activeTouchPointId = -1;
     update();
 }
 
@@ -1707,9 +1821,14 @@ void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
     const QPointF scenePoint = screenToScene(screenPoint);
     const auto rects = pageRects();
     if (this->shapePageIndex < rects.size()) {
-        this->shapeCurrentScene =
-                QPointF(scenePoint.x() - rects[this->shapePageIndex].x(),
-                        scenePoint.y() - rects[this->shapePageIndex].y());
+        QPointF pagePoint(scenePoint.x() - rects[this->shapePageIndex].x(),
+                          scenePoint.y() - rects[this->shapePageIndex].y());
+        if (this->rotationSnapEnabled) {
+            const QPointF origin =
+                    this->shapeClickPoints.empty() ? this->shapeStartScene : this->shapeClickPoints.back();
+            pagePoint = applyRotationSnap(origin, pagePoint);
+        }
+        this->shapeCurrentScene = pagePoint;
     }
     update();
 }
@@ -1720,6 +1839,9 @@ void QtCanvas::addShapeClickAtScreen(const QPointF& screenPoint) {
     if (this->shapePageIndex < rects.size()) {
         QPointF pagePoint(scenePoint.x() - rects[this->shapePageIndex].x(),
                           scenePoint.y() - rects[this->shapePageIndex].y());
+        if (this->rotationSnapEnabled && !this->shapeClickPoints.empty()) {
+            pagePoint = applyRotationSnap(this->shapeClickPoints.back(), pagePoint);
+        }
         this->shapeClickPoints.push_back(pagePoint);
         this->shapeCurrentScene = pagePoint;
     }
@@ -1740,6 +1862,8 @@ void QtCanvas::finalizeShape() {
 
     const Color color = this->currentToolState.penColor;
     const double width = this->currentToolState.penWidth;
+    const std::string& lineStyle = this->currentToolState.penLineStyle;
+    const int fill = this->currentToolState.fillEnabled ? this->currentToolState.fillOpacity : -1;
     const Element* created = nullptr;
 
     switch (this->currentToolState.activeTool) {
@@ -1758,6 +1882,26 @@ void QtCanvas::finalizeShape() {
                                                              this->shapeStartScene.y(), this->shapeCurrentScene.x(),
                                                              this->shapeCurrentScene.y(), color, width);
             break;
+        case QtToolType::DrawEllipse:
+            created = this->documentController->createEllipse(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, fill);
+            break;
+        case QtToolType::DrawArrow:
+            created = this->documentController->createArrow(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, false);
+            break;
+        case QtToolType::DrawDoubleArrow:
+            created = this->documentController->createArrow(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, true);
+            break;
+        case QtToolType::DrawCoordinateSystem:
+            created = this->documentController->createCoordinateSystem(
+                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle);
+            break;
         case QtToolType::DrawArc:
             if (this->shapeClickPoints.size() >= 3U) {
                 created = this->documentController->createArc(
@@ -1773,6 +1917,15 @@ void QtCanvas::finalizeShape() {
                 points.emplace_back(pt.x(), pt.y());
             }
             created = this->documentController->createPolyline(this->shapePageIndex, points, color, width);
+            break;
+        }
+        case QtToolType::DrawSpline: {
+            std::vector<std::pair<double, double>> points;
+            points.reserve(this->shapeClickPoints.size());
+            for (const auto& pt: this->shapeClickPoints) {
+                points.emplace_back(pt.x(), pt.y());
+            }
+            created = this->documentController->createSpline(this->shapePageIndex, points, color, width, lineStyle);
             break;
         }
         case QtToolType::DrawConstructionLine:
@@ -1844,6 +1997,26 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
             painter.drawEllipse(start, radius, radius);
             break;
         }
+        case QtToolType::DrawEllipse:
+            painter.drawEllipse(QRectF(start, current).normalized());
+            break;
+        case QtToolType::DrawArrow:
+        case QtToolType::DrawDoubleArrow: {
+            const auto points =
+                    buildArrowPreviewPoints(start, current, this->currentToolState.penWidth,
+                                            this->currentToolState.activeTool == QtToolType::DrawDoubleArrow);
+            for (std::size_t i = 1; i < points.size(); ++i) {
+                painter.drawLine(points[i - 1], points[i]);
+            }
+            break;
+        }
+        case QtToolType::DrawCoordinateSystem: {
+            const auto points = buildCoordinateSystemPreviewPoints(start, current);
+            for (std::size_t i = 1; i < points.size(); ++i) {
+                painter.drawLine(points[i - 1], points[i]);
+            }
+            break;
+        }
         case QtToolType::DrawArc:
             if (this->shapeClickPoints.size() == 1U) {
                 painter.drawLine(this->shapeClickPoints[0], current);
@@ -1863,6 +2036,14 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
                 painter.drawLine(this->shapeClickPoints.back(), current);
             }
             break;
+        case QtToolType::DrawSpline: {
+            std::vector<QPointF> points = this->shapeClickPoints;
+            if (points.empty() || points.back() != current) {
+                points.push_back(current);
+            }
+            painter.drawPath(cubicSplinePath(points));
+            break;
+        }
         default:
             break;
     }
@@ -1880,5 +2061,66 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
 
 auto QtCanvas::isMultiClickShapeTool() const -> bool {
     return this->currentToolState.activeTool == QtToolType::DrawPolyline ||
-           this->currentToolState.activeTool == QtToolType::DrawArc;
+           this->currentToolState.activeTool == QtToolType::DrawArc ||
+           this->currentToolState.activeTool == QtToolType::DrawSpline;
+}
+
+auto QtCanvas::applyRotationSnap(const QPointF& origin, const QPointF& point) const -> QPointF {
+    const QPointF delta = point - origin;
+    const double length = std::hypot(delta.x(), delta.y());
+    if (length <= 0.0001) {
+        return point;
+    }
+
+    const double angle = std::atan2(delta.y(), delta.x());
+    const double snappedAngle = std::round(angle / ROTATION_SNAP_STEP_RADIANS) * ROTATION_SNAP_STEP_RADIANS;
+    return QPointF(origin.x() + std::cos(snappedAngle) * length, origin.y() + std::sin(snappedAngle) * length);
+}
+
+void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
+    if (!this->touchDrawingEnabled) {
+        return;
+    }
+
+    const bool drawTool = this->currentToolState.activeTool == QtToolType::Pen ||
+                          this->currentToolState.activeTool == QtToolType::Highlighter;
+    if (!drawTool) {
+        return;
+    }
+
+    if (event.points.empty()) {
+        if (this->drawing && this->activeTouchPointId >= 0) {
+            finalizeActiveStroke();
+            this->activeTouchPointId = -1;
+        }
+        return;
+    }
+
+    const auto* touchPoint = [&]() -> const vn::ui::input::TouchPoint* {
+        if (this->activeTouchPointId >= 0) {
+            for (const auto& point: event.points) {
+                if (point.id == this->activeTouchPointId) {
+                    return &point;
+                }
+            }
+        }
+        return &event.points.front();
+    }();
+
+    if (!touchPoint) {
+        return;
+    }
+
+    const QPointF screenPoint(touchPoint->x, touchPoint->y);
+    const double pressure = touchPoint->pressure > 0.0 ? touchPoint->pressure : 0.5;
+
+    if (!this->drawing) {
+        this->activeTouchPointId = touchPoint->id;
+        beginStrokeAtScreen(screenPoint, pressure);
+        return;
+    }
+
+    if (this->activeTouchPointId == touchPoint->id) {
+        updateStrokeAtScreen(screenPoint, pressure);
+    }
 }

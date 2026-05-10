@@ -17,7 +17,9 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 
-QtSettingsDialog::QtSettingsDialog(const QtSettings& current, QWidget* parent): QDialog(parent) {
+QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<QtToolbarProfileOption>& toolbarProfiles,
+                                   QWidget* parent):
+        QDialog(parent) {
     setWindowTitle(QStringLiteral("Preferences"));
     setMinimumWidth(380);
 
@@ -102,6 +104,29 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, QWidget* parent): 
     this->gridSnapCheck->setChecked(current.gridSnapDefault);
     generalLayout->addRow(QStringLiteral("Grid snap enabled:"), this->gridSnapCheck);
 
+    this->rotationSnapCheck = new QCheckBox(generalPage);
+    this->rotationSnapCheck->setChecked(current.rotationSnapDefault);
+    generalLayout->addRow(QStringLiteral("Rotation snap enabled:"), this->rotationSnapCheck);
+
+    this->touchDrawingCheck = new QCheckBox(generalPage);
+    this->touchDrawingCheck->setChecked(current.touchDrawingDefault);
+    generalLayout->addRow(QStringLiteral("Touch drawing enabled:"), this->touchDrawingCheck);
+
+    this->toolbarProfileCombo = new QComboBox(generalPage);
+    int currentProfileIndex = -1;
+    for (int profileIndex = 0; profileIndex < static_cast<int>(toolbarProfiles.size()); ++profileIndex) {
+        const auto& profile = toolbarProfiles[static_cast<std::size_t>(profileIndex)];
+        const auto label = profile.displayName.empty() ? profile.id : profile.displayName;
+        this->toolbarProfileCombo->addItem(QString::fromStdString(label), QString::fromStdString(profile.id));
+        if (profile.id == current.toolbarProfileId) {
+            currentProfileIndex = profileIndex;
+        }
+    }
+    if (currentProfileIndex >= 0) {
+        this->toolbarProfileCombo->setCurrentIndex(currentProfileIndex);
+    }
+    generalLayout->addRow(QStringLiteral("Toolbar profile:"), this->toolbarProfileCombo);
+
     generalPage->setLayout(generalLayout);
     tabs->addTab(generalPage, QStringLiteral("General"));
 
@@ -129,5 +154,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .undoHistoryLimit = this->undoLimitSpin->value(),
             .geometrySnapDefault = this->geoSnapCheck->isChecked(),
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
+            .rotationSnapDefault = this->rotationSnapCheck->isChecked(),
+            .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
+            .toolbarProfileId = this->toolbarProfileCombo->currentData().toString().toStdString(),
     };
 }

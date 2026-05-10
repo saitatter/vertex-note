@@ -16,11 +16,14 @@
 #include "QtRecentFilesService.h"
 #include "QtSettingsDialog.h"
 #include "QtToolState.h"
+#include "QtToolbarLayoutEngine.h"
 #include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
 
 class QDoubleSpinBox;
 class QFontComboBox;
+class QSpinBox;
+class QAction;
 class QToolButton;
 
 class QtAppShell: public vn::ui::common::IAppShell {
@@ -166,6 +169,12 @@ private:
     QToolButton* drawingToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
     QDoubleSpinBox* fontSizeSpinner = nullptr;
+    QSpinBox* fillOpacitySpinner = nullptr;
+    QAction* toolbarFillAction = nullptr;
+    QToolButton* toolbarColorSelectButton = nullptr;
+    std::vector<QToolButton*> toolbarColorButtons;
+    std::optional<QtToolbarProfile> activeToolbarProfile;
+    std::vector<QtToolbarProfileOption> availableToolbarProfiles;
 
     // Navigation history
     struct NavPoint {
