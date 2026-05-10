@@ -354,7 +354,6 @@ QtAppShell::QtAppShell():
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
-    this->window.setGtkParitySidebarMode(isGtkParityProfileId(this->currentSettings.toolbarProfileId));
     if (!this->persistedWindowGeometry.isEmpty()) {
         this->window.restoreGeometry(this->persistedWindowGeometry);
     }
