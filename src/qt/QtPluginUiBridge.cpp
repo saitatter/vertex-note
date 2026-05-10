@@ -23,6 +23,7 @@ void QtPluginUiBridge::registerMenuAction(const vn::ui::common::PluginUiActionDe
     this->commandHost->registerCommand({.id = action.id,
                                         .text = action.label,
                                         .tooltip = action.tooltip,
+                                        .shortcut = action.shortcut,
                                         .menu = "Plugins"},
                                        std::move(callback));
     this->registeredActions.insert(action.id);

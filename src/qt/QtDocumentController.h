@@ -195,6 +195,8 @@ public:
 public:
     void newBlankDocument();
     auto loadFrom(const std::filesystem::path& path, std::string* errorMessage = nullptr) -> bool;
+    auto loadPdfAsDocument(const std::filesystem::path& path, bool attachToDocument,
+                           std::string* errorMessage = nullptr) -> bool;
 
     [[nodiscard]] auto hasDocument() const -> bool;
     [[nodiscard]] auto pageCount() const -> std::size_t;
@@ -350,6 +352,7 @@ public:
     void duplicatePage(std::size_t pageIndex);
     void deletePage(std::size_t pageIndex);
     void movePageTowards(std::size_t pageIndex, int direction);
+    auto appendNewPdfPages() -> int;
 
     // Document save
     auto saveDocument(const std::filesystem::path& path, std::string* errorMessage = nullptr) -> bool;

@@ -39,6 +39,9 @@ struct QtSettings {
     bool touchDrawingDefault = false;
     double strokeRecognizerMinSize = 40.0;
     int laserPointerFadeOutMs = 1500;
+    bool autoloadPdfXoj = true;
+    std::string defaultPdfExportName = "%{name}_annotated";
+    std::string latexTemplatePath;
     std::string audioFolder;
     double audioSampleRate = 44100.0;
     double audioGain = 1.0;
@@ -70,6 +73,9 @@ private:
     QCheckBox* touchDrawingCheck = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;
+    QCheckBox* autoloadPdfXojCheck = nullptr;
+    QLineEdit* defaultPdfExportNameEdit = nullptr;
+    QLineEdit* latexTemplatePathEdit = nullptr;
     QLineEdit* audioFolderEdit = nullptr;
     QDoubleSpinBox* audioSampleRateSpin = nullptr;
     QDoubleSpinBox* audioGainSpin = nullptr;

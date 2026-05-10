@@ -18,6 +18,7 @@
 #include <QColorDialog>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
 #include <QFontComboBox>
@@ -36,9 +37,11 @@
 #include <QDoubleSpinBox>
 #include <QStatusBar>
 #include <QString>
+#include <QStringList>
 #include <QStyle>
 #include <QToolBar>
 #include <QToolButton>
+#include <QUrl>
 #include <QComboBox>
 #include <QSlider>
 #include <QSpinBox>
@@ -130,16 +133,23 @@ constexpr std::array<ToolActionSpec, 5> SELECTION_TOOL_SPECS = {{
         {"tool.select-object", QtToolType::SelectObject},
 }};
 
-constexpr std::array<ToolActionSpec, 9> DRAWING_TOOL_SPECS = {{
+constexpr std::array<ToolActionSpec, 8> STROKE_DRAWING_TOOL_SPECS = {{
         {"tool.draw-line", QtToolType::DrawLine},
         {"tool.draw-rectangle", QtToolType::DrawRectangle},
+        {"tool.draw-ellipse", QtToolType::DrawEllipse},
+        {"tool.draw-arrow", QtToolType::DrawArrow},
+        {"tool.draw-double-arrow", QtToolType::DrawDoubleArrow},
+        {"tool.draw-coordinate-system", QtToolType::DrawCoordinateSystem},
+        {"tool.draw-spline", QtToolType::DrawSpline},
+        {"tool.draw-shape-recognizer", QtToolType::ShapeRecognizer},
+}};
+
+constexpr std::array<ToolActionSpec, 5> VERTEX_DRAWING_TOOL_SPECS = {{
         {"tool.draw-circle", QtToolType::DrawCircle},
         {"tool.draw-arc", QtToolType::DrawArc},
         {"tool.draw-polyline", QtToolType::DrawPolyline},
         {"tool.draw-construction-line", QtToolType::DrawConstructionLine},
         {"tool.draw-construction-circle", QtToolType::DrawConstructionCircle},
-        {"tool.draw-spline", QtToolType::DrawSpline},
-        {"tool.draw-shape-recognizer", QtToolType::ShapeRecognizer},
 }};
 
 constexpr std::array<ToolActionSpec, 2> LASER_TOOL_SPECS = {{
@@ -161,6 +171,11 @@ constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
 
 constexpr int QT_SHELL_LAYOUT_VERSION = 4;
 constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
+constexpr std::string_view QT_CUSTOM_PROFILE_ID = "Qt Custom";
+constexpr std::array<std::string_view, 9> QT_TOOLBAR_KEYS = {{
+        "toolbartop1", "toolbartop2", "toolbarbottom1", "toolbarleft1", "toolbarleft2",
+        "toolbarright1", "toolbarfloat1", "toolbarfloat2", "toolbarfloat3",
+}};
 
 auto isGtkParityProfileId(std::string_view profileId) -> bool { return profileId == QT_GTK_PARITY_PROFILE_ID; }
 
@@ -214,9 +229,9 @@ auto defaultLatexTemplatePath() -> fs::path {
     return fs::path(PROJECT_SOURCE_DIR) / "resources" / "default_template.tex";
 }
 
-auto buildQtLatexSettings() -> LatexSettings {
+auto buildQtLatexSettings(const std::string& templatePath) -> LatexSettings {
     LatexSettings settings;
-    settings.globalTemplatePath = defaultLatexTemplatePath();
+    settings.globalTemplatePath = templatePath.empty() ? defaultLatexTemplatePath() : fs::path(templatePath);
     return settings;
 }
 
@@ -307,17 +322,69 @@ auto profileUsesFloatingToolBars(const std::optional<QtToolbarProfile>& profile)
     return false;
 }
 
+auto joinToolbarTokens(const std::vector<std::string>& tokens) -> QString {
+    QStringList parts;
+    for (const auto& token: tokens) {
+        parts.push_back(QString::fromStdString(token));
+    }
+    return parts.join(QStringLiteral(","));
+}
+
+auto splitToolbarTokens(const QString& text) -> std::vector<std::string> {
+    std::vector<std::string> tokens;
+    const auto parts = text.split(QLatin1Char(','), Qt::SkipEmptyParts);
+    tokens.reserve(static_cast<std::size_t>(parts.size()));
+    for (const auto& part: parts) {
+        const auto token = part.trimmed();
+        if (!token.isEmpty()) {
+            tokens.push_back(token.toStdString());
+        }
+    }
+    return tokens;
+}
+
+auto customToolbarProfileFromSettings() -> std::optional<QtToolbarProfile> {
+    QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    QtToolbarProfile profile;
+    profile.id = std::string(QT_CUSTOM_PROFILE_ID);
+    profile.displayName = std::string(QT_CUSTOM_PROFILE_ID);
+    bool hasAnyToolbar = false;
+    for (const auto key: QT_TOOLBAR_KEYS) {
+        const auto value = settings.value(QStringLiteral("toolbar/custom/%1").arg(QString::fromUtf8(key.data(), static_cast<int>(key.size()))))
+                                   .toString();
+        if (value.trimmed().isEmpty()) {
+            continue;
+        }
+        profile.toolbars[std::string(key)] = splitToolbarTokens(value);
+        hasAnyToolbar = true;
+    }
+    return hasAnyToolbar ? std::optional<QtToolbarProfile>(std::move(profile)) : std::nullopt;
+}
+
+void saveCustomToolbarProfileToSettings(const QtToolbarProfile& profile) {
+    QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    for (const auto key: QT_TOOLBAR_KEYS) {
+        const auto* items = profile.itemsFor(key);
+        settings.setValue(QStringLiteral("toolbar/custom/%1").arg(QString::fromUtf8(key.data(), static_cast<int>(key.size()))),
+                          items ? joinToolbarTokens(*items) : QString());
+    }
+    settings.sync();
+}
+
 }  // namespace
 
 QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
-        plugins(this->window.commandHost(), &this->window) {
+        plugins(this->window.commandHost(), &this->window),
+        luaPlugins(&this->plugins, &this->window) {
     this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     for (const auto& profile: QtToolbarLayoutEngine::loadProfiles(toolbarProfilePath())) {
         this->availableToolbarProfiles.push_back(
                 {.id = profile.id, .displayName = profile.displayName.empty() ? profile.id : profile.displayName});
     }
+    this->availableToolbarProfiles.push_back(
+            {.id = std::string(QT_CUSTOM_PROFILE_ID), .displayName = std::string(QT_CUSTOM_PROFILE_ID)});
     loadPersistentUiState();
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
@@ -337,6 +404,7 @@ QtAppShell::QtAppShell():
     this->window.layerPanel()->setCurrentPage(0U);
 
     registerBootstrapCommands();
+    this->luaPlugins.loadEnabledPlugins();
     this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);
     this->window.commandHost()->setCommandChecked("view.show-menubar", this->persistedShowMenubar);
     this->window.commandHost()->setCommandChecked("view.show-sidebar", this->persistedShowSidebar);
@@ -347,10 +415,15 @@ QtAppShell::QtAppShell():
     this->window.commandHost()->setCommandChecked("view.layout-rtl", this->persistedLayoutRtl);
     this->window.commandHost()->setCommandChecked("view.layout-ttb", !this->persistedLayoutBtt);
     this->window.commandHost()->setCommandChecked("view.layout-btt", this->persistedLayoutBtt);
-    this->window.canvas()->setPairedPagesEnabled(this->persistedPairedPages);
+    if (this->persistedLayoutColumnsRows < 0) {
+        this->window.canvas()->setLayoutRows(std::abs(this->persistedLayoutColumnsRows));
+    } else {
+        this->window.canvas()->setLayoutColumns(std::max(1, this->persistedLayoutColumnsRows));
+    }
     this->window.canvas()->setVerticalLayout(this->persistedVerticalLayout);
     this->window.canvas()->setRightToLeftLayout(this->persistedLayoutRtl);
     this->window.canvas()->setBottomToTopLayout(this->persistedLayoutBtt);
+    syncLayoutSpanCommandStates();
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
@@ -432,6 +505,10 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "app.open", .text = "Open...", .tooltip = "Open a document", .shortcut = "Ctrl+O", .menu = "File"},
             [this]() { openSession(); });
+    ch->registerCommand(
+            {.id = "file.annotate-pdf", .text = "Annotate PDF...", .tooltip = "Open a PDF as an annotation document",
+             .menu = "File"},
+            [this]() { annotatePdf(); });
     (void) ch->menuForPath("File>Recent Documents");
     ch->addMenuSeparator("File");
     ch->registerCommand(
@@ -626,6 +703,10 @@ void QtAppShell::registerBootstrapCommands() {
              .shortcut = "F9", .menu = "View", .checkable = true, .checked = true},
             [this]() { toggleToolbarVisibility(); });
     ch->registerCommand(
+            {.id = "view.customize-toolbar", .text = "Customize Toolbars...", .tooltip = "Edit the Qt toolbar profile",
+             .menu = "View>Toolbars"},
+            [this]() { showToolbarCustomizeDialog(); });
+    ch->registerCommand(
             {.id = "view.show-menubar", .text = "Show Menubar", .tooltip = "Toggle menubar visibility",
              .shortcut = "F10", .menu = "View", .checkable = true, .checked = true},
             [this]() { toggleMenubarVisibility(); });
@@ -662,6 +743,25 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "view.layout-btt", .text = "Bottom to Top", .tooltip = "Bottom to top page order",
              .menu = "View>Layout", .checkable = true},
             [this]() { setLayoutBtt(true); });
+    ch->addMenuSeparator("View>Layout");
+    for (int columns = 1; columns <= 8; ++columns) {
+        ch->registerCommand(
+                {.id = "view.columns-" + std::to_string(columns),
+                 .text = std::to_string(columns) + (columns == 1 ? " Column" : " Columns"),
+                 .tooltip = "Use a fixed number of page columns",
+                 .menu = "View>Layout>Columns",
+                 .checkable = true},
+                [this, columns]() { setLayoutColumns(columns); });
+    }
+    for (int rows = 1; rows <= 8; ++rows) {
+        ch->registerCommand(
+                {.id = "view.rows-" + std::to_string(rows),
+                 .text = std::to_string(rows) + (rows == 1 ? " Row" : " Rows"),
+                 .tooltip = "Use a fixed number of page rows",
+                 .menu = "View>Layout>Rows",
+                 .checkable = true},
+                [this, rows]() { setLayoutRows(rows); });
+    }
 
     ch->addMenuSeparator("View");
     ch->registerCommand(
@@ -742,6 +842,10 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "page.duplicate", .text = "Duplicate Page", .tooltip = "Duplicate the current page", .menu = "Journal"},
             [this]() { duplicatePage(); });
+    ch->registerCommand(
+            {.id = "journal.append-new-pdf-pages", .text = "Append New PDF Pages",
+             .tooltip = "Append PDF pages not yet present in the document", .menu = "Journal"},
+            [this]() { appendNewPdfPages(); });
     ch->addMenuSeparator("Journal");
     ch->registerCommand(
             {.id = "page.delete", .text = "Delete Page", .tooltip = "Delete the current page", .shortcut = "Ctrl+Shift+Delete", .menu = "Journal"},
@@ -766,6 +870,10 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "page.format", .text = "Paper Format...", .tooltip = "Set page size and orientation", .menu = "Journal"},
             [this]() { paperFormatDialog(); });
+    ch->registerCommand(
+            {.id = "page.template", .text = "Configure Page Template...",
+             .tooltip = "Set the default page template for new Qt pages", .menu = "Journal"},
+            [this]() { configurePageTemplateDialog(); });
     ch->registerCommand(
             {.id = "page.background", .text = "Paper Color...", .tooltip = "Change page background color", .menu = "Journal"},
             [this]() { showBackgroundDialog(); });
@@ -819,6 +927,11 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Select PDF text inside a dragged rectangle", .menu = "Tools", .checkable = true},
             [this]() { selectTool(QtToolType::PdfTextRect); });
     ch->registerCommand(
+            {.id = "tool.select-pdf-text-marker-opacity", .text = "PDF Text Marker Opacity",
+             .tooltip = "PDF text marker annotations are not available in the Qt shell yet", .menu = "Tools",
+             .enabled = false},
+            []() {});
+    ch->registerCommand(
             {.id = "edit.insert-image", .text = "Image", .tooltip = "Insert image from file", .shortcut = "Ctrl+Shift+I", .menu = "Tools"},
             [this]() { insertImage(); });
     ch->registerCommand(
@@ -847,59 +960,60 @@ void QtAppShell::registerBootstrapCommands() {
             [this]() { toggleAudioPausePlayback(); });
     ch->addMenuSeparator("Tools");
 
-    // Drawing Type submenu
+    // Stroke Drawing submenu
     ch->registerCommand(
             {.id = "tool.draw-rectangle", .text = "Draw Rectangle", .tooltip = "Draw a rectangle", .shortcut = "Ctrl+2",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
+             .menu = "Tools>Stroke Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
             [this]() { selectTool(QtToolType::DrawRectangle); });
     ch->registerCommand(
             {.id = "tool.draw-ellipse", .text = "Draw Ellipse", .tooltip = "Draw an ellipse", .shortcut = "Ctrl+3",
-             .menu = "Tools>Drawing Type", .checkable = true},
+             .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawEllipse); });
     ch->registerCommand(
             {.id = "tool.draw-arrow", .text = "Draw Arrow", .tooltip = "Draw an arrow", .shortcut = "Ctrl+4",
-             .menu = "Tools>Drawing Type", .checkable = true},
+             .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawArrow); });
     ch->registerCommand(
             {.id = "tool.draw-double-arrow", .text = "Draw Double Arrow", .tooltip = "Draw a double-headed arrow", .shortcut = "Ctrl+5",
-             .menu = "Tools>Drawing Type", .checkable = true},
+             .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawDoubleArrow); });
     ch->registerCommand(
             {.id = "tool.draw-coordinate-system", .text = "Draw Coordinate System", .tooltip = "Draw X-Y axes", .shortcut = "Ctrl+6",
-             .menu = "Tools>Drawing Type", .checkable = true},
+             .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawCoordinateSystem); });
     ch->registerCommand(
             {.id = "tool.draw-line", .text = "Draw Line", .tooltip = "Draw a straight line", .shortcut = "Ctrl+7",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
+             .menu = "Tools>Stroke Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
             [this]() { selectTool(QtToolType::DrawLine); });
     ch->registerCommand(
             {.id = "tool.draw-spline", .text = "Draw Spline", .tooltip = "Draw a smooth spline curve", .shortcut = "Ctrl+8",
-             .menu = "Tools>Drawing Type", .checkable = true},
+             .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawSpline); });
     ch->registerCommand(
             {.id = "tool.draw-shape-recognizer", .text = "Shape Recognizer",
-             .tooltip = "Recognize strokes as clean geometric shapes", .menu = "Tools>Drawing Type", .checkable = true},
+             .tooltip = "Recognize strokes as clean geometric shapes", .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::ShapeRecognizer); });
-    ch->addMenuSeparator("Tools>Drawing Type");
+    ch->addMenuSeparator("Tools");
+    // Vertex Drawing submenu
     ch->registerCommand(
             {.id = "tool.draw-circle", .text = "Draw Vertex Circle", .tooltip = "Draw a geometry circle", .shortcut = "Ctrl+9",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
             [this]() { selectTool(QtToolType::DrawCircle); });
     ch->registerCommand(
             {.id = "tool.draw-arc", .text = "Draw Vertex Arc", .tooltip = "Draw a geometry arc", .shortcut = "Ctrl+0",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
             [this]() { selectTool(QtToolType::DrawArc); });
     ch->registerCommand(
             {.id = "tool.draw-construction-line", .text = "Draw Construction Line", .tooltip = "Draw a construction guide line", .shortcut = "Ctrl+Shift+0",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
             [this]() { selectTool(QtToolType::DrawConstructionLine); });
     ch->registerCommand(
             {.id = "tool.draw-construction-circle", .text = "Draw Construction Circle", .tooltip = "Draw a construction guide circle",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
             [this]() { selectTool(QtToolType::DrawConstructionCircle); });
     ch->registerCommand(
             {.id = "tool.draw-polyline", .text = "Draw Polyline", .tooltip = "Draw a multi-segment line",
-             .menu = "Tools>Drawing Type", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
             [this]() { selectTool(QtToolType::DrawPolyline); });
     ch->addMenuSeparator("Tools");
 
@@ -1072,6 +1186,13 @@ void QtAppShell::registerBootstrapCommands() {
     // =====================================================================
     // Menu 7: Help
     // =====================================================================
+    ch->registerCommand(
+            {.id = "plugins.manager", .text = "Plugin Manager...", .tooltip = "Show Qt plugin runtime status",
+             .menu = "Plugins"},
+            [this]() { showPluginManagerDialog(); });
+    ch->registerCommand(
+            {.id = "help.open", .text = "Help", .tooltip = "Open the VertexNote help page", .menu = "Help"},
+            []() { QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/saitatter/vertex-note"))); });
     ch->registerCommand(
             {.id = "app.check-updates", .text = "Check for Updates", .tooltip = "Check for new versions", .menu = "Help"},
             [this]() {
@@ -1276,7 +1397,8 @@ void QtAppShell::rebuildToolbar() {
         floatingToolBar->clear();
     }
     this->selectionToolButton = nullptr;
-    this->drawingToolButton = nullptr;
+    this->strokeDrawingToolButton = nullptr;
+    this->vertexDrawingToolButton = nullptr;
     this->laserToolButton = nullptr;
     this->pdfToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
@@ -1287,7 +1409,9 @@ void QtAppShell::rebuildToolbar() {
     const auto wantedToolbarProfile =
             this->currentSettings.toolbarProfileId.empty() ? std::string(QT_GTK_PARITY_PROFILE_ID)
                                                            : this->currentSettings.toolbarProfileId;
-    this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), wantedToolbarProfile);
+    this->activeToolbarProfile = wantedToolbarProfile == QT_CUSTOM_PROFILE_ID
+                                         ? customToolbarProfileFromSettings()
+                                         : QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), wantedToolbarProfile);
     if (!this->activeToolbarProfile) {
         this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), QT_GTK_PARITY_PROFILE_ID);
     }
@@ -1363,6 +1487,7 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("view.presentation", "presentation-mode");
     setNamedIcon("view.show-sidebar", "sidebar-show");
     setNamedIcon("app.settings", "toolbars-manage");
+    setNamedIcon("view.customize-toolbar", "toolbars-customize");
     setNamedIcon("tool.hand", "hand");
     setNamedIcon("tool.pen", "tool-pencil");
     setNamedIcon("tool.laser-pointer-pen", "laser-pointer");
@@ -1567,21 +1692,37 @@ void QtAppShell::rebuildToolbar() {
         }
         return this->selectionToolButton;
     };
-    const auto ensureDrawingButton = [&]() -> QToolButton* {
-        if (!this->drawingToolButton) {
-            this->drawingToolButton = new QToolButton(&this->window);
-            this->drawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-            this->drawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-            this->drawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
-            auto* drawingMenu = new QMenu(this->drawingToolButton);
-            for (const auto& spec: DRAWING_TOOL_SPECS) {
+    const auto ensureStrokeDrawingButton = [&]() -> QToolButton* {
+        if (!this->strokeDrawingToolButton) {
+            this->strokeDrawingToolButton = new QToolButton(&this->window);
+            this->strokeDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->strokeDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->strokeDrawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
+            auto* drawingMenu = new QMenu(this->strokeDrawingToolButton);
+            for (const auto& spec: STROKE_DRAWING_TOOL_SPECS) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                     drawingMenu->addAction(action);
                 }
             }
-            this->drawingToolButton->setMenu(drawingMenu);
+            this->strokeDrawingToolButton->setMenu(drawingMenu);
         }
-        return this->drawingToolButton;
+        return this->strokeDrawingToolButton;
+    };
+    const auto ensureVertexDrawingButton = [&]() -> QToolButton* {
+        if (!this->vertexDrawingToolButton) {
+            this->vertexDrawingToolButton = new QToolButton(&this->window);
+            this->vertexDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->vertexDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->vertexDrawingToolButton->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
+            auto* drawingMenu = new QMenu(this->vertexDrawingToolButton);
+            for (const auto& spec: VERTEX_DRAWING_TOOL_SPECS) {
+                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                    drawingMenu->addAction(action);
+                }
+            }
+            this->vertexDrawingToolButton->setMenu(drawingMenu);
+        }
+        return this->vertexDrawingToolButton;
     };
     const auto ensureLaserButton = [&]() -> QToolButton* {
         if (!this->laserToolButton) {
@@ -1730,7 +1871,13 @@ void QtAppShell::rebuildToolbar() {
             addCommand(toolbar, "tool.math-tex");
             return;
         }
-        if (token == "DRAW") { toolbar->addWidget(ensureDrawingButton()); return; }
+        if (token == "DRAW") {
+            toolbar->addWidget(ensureStrokeDrawingButton());
+            toolbar->addWidget(ensureVertexDrawingButton());
+            return;
+        }
+        if (token == "DRAW_STROKE") { toolbar->addWidget(ensureStrokeDrawingButton()); return; }
+        if (token == "DRAW_VERTEX") { toolbar->addWidget(ensureVertexDrawingButton()); return; }
         if (token == "ROTATION_SNAPPING") {
             addCommand(toolbar, "view.toggle-rotation-snap");
             return;
@@ -1766,7 +1913,7 @@ void QtAppShell::rebuildToolbar() {
             return;
         }
         if (token == "CUSTOMIZE_TOOLBAR") {
-            addCommand(toolbar, "app.settings");
+            addCommand(toolbar, "view.customize-toolbar");
             return;
         }
         if (token == "GOTO_PAGE") { addCommand(toolbar, "nav.goto-page"); return; }
@@ -1927,7 +2074,8 @@ void QtAppShell::rebuildToolbar() {
     }
 
     const bool hasSelectionFamily = presentTokens.contains("SELECT");
-    const bool hasDrawingFamily = presentTokens.contains("DRAW");
+    const bool hasDrawingFamily =
+            presentTokens.contains("DRAW") || presentTokens.contains("DRAW_STROKE") || presentTokens.contains("DRAW_VERTEX");
     const bool hasPdfFamily = presentTokens.contains("PDF_TOOL");
 
     const auto pruneRedundantFamilyTokens = [&](std::vector<std::string>& tokens) {
@@ -1943,7 +2091,9 @@ void QtAppShell::rebuildToolbar() {
             }
 
             if (hasDrawingFamily &&
-                (token == "DRAW_RECTANGLE" || token == "DRAW_SPLINE" || token == "SHAPE_RECOGNIZER")) {
+                (token == "DRAW_RECTANGLE" || token == "DRAW_ELLIPSE" || token == "DRAW_ARROW" ||
+                 token == "DRAW_DOUBLE_ARROW" || token == "DRAW_COORDINATE_SYSTEM" || token == "DRAW_SPLINE" ||
+                 token == "SHAPE_RECOGNIZER")) {
                 return true;
             }
 
@@ -2020,11 +2170,19 @@ void QtAppShell::syncToolbarWidgets() {
         }
     }
 
-    if (this->drawingToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), DRAWING_TOOL_SPECS, toolState.activeTool)) {
-            this->drawingToolButton->setDefaultAction(action);
-            this->drawingToolButton->setMenu(this->drawingToolButton->menu());
-            this->drawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+    if (this->strokeDrawingToolButton) {
+        if (auto* action = findActionForTool(this->window.commandHost(), STROKE_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+            this->strokeDrawingToolButton->setDefaultAction(action);
+            this->strokeDrawingToolButton->setMenu(this->strokeDrawingToolButton->menu());
+            this->strokeDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        }
+    }
+
+    if (this->vertexDrawingToolButton) {
+        if (auto* action = findActionForTool(this->window.commandHost(), VERTEX_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+            this->vertexDrawingToolButton->setDefaultAction(action);
+            this->vertexDrawingToolButton->setMenu(this->vertexDrawingToolButton->menu());
+            this->vertexDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
         }
     }
 
@@ -2215,6 +2373,17 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.laserPointerFadeOutMs =
             settings.value(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs)
                     .toInt();
+    this->currentSettings.autoloadPdfXoj =
+            settings.value(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj).toBool();
+    this->currentSettings.defaultPdfExportName =
+            settings.value(QStringLiteral("pdf/defaultExportName"),
+                           QString::fromStdString(this->currentSettings.defaultPdfExportName))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexTemplatePath =
+            settings.value(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath))
+                    .toString()
+                    .toStdString();
     this->currentSettings.audioFolder =
             settings.value(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder))
                     .toString()
@@ -2238,6 +2407,11 @@ void QtAppShell::loadPersistentUiState() {
     this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
     this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
     this->persistedPairedPages = settings.value(QStringLiteral("view/pairedPages"), false).toBool();
+    this->persistedLayoutColumnsRows =
+            settings.value(QStringLiteral("view/layoutColumnsRows"), this->persistedPairedPages ? 2 : 1).toInt();
+    if (this->persistedLayoutColumnsRows == 0 || std::abs(this->persistedLayoutColumnsRows) > 8) {
+        this->persistedLayoutColumnsRows = this->persistedPairedPages ? 2 : 1;
+    }
     this->persistedVerticalLayout = settings.value(QStringLiteral("view/verticalLayout"), true).toBool();
     this->persistedLayoutRtl = settings.value(QStringLiteral("view/layoutRtl"), false).toBool();
     this->persistedLayoutBtt = settings.value(QStringLiteral("view/layoutBtt"), false).toBool();
@@ -2274,6 +2448,7 @@ void QtAppShell::loadPersistentUiState() {
         this->persistedShowMenubar = true;
         this->persistedShowSidebar = true;
         this->persistedPairedPages = false;
+        this->persistedLayoutColumnsRows = 1;
         this->persistedVerticalLayout = true;
         this->persistedLayoutRtl = false;
         this->persistedLayoutBtt = false;
@@ -2315,12 +2490,16 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
+    settings.setValue(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj);
+    settings.setValue(QStringLiteral("pdf/defaultExportName"), QString::fromStdString(this->currentSettings.defaultPdfExportName));
+    settings.setValue(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath));
     settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
     settings.setValue(QStringLiteral("view/showToolbar"), showToolbar);
     settings.setValue(QStringLiteral("view/showMenubar"), showMenubar);
     settings.setValue(QStringLiteral("view/showSidebar"), showSidebar);
     settings.setValue(QStringLiteral("view/pairedPages"), canvas->isPairedPagesEnabled());
+    settings.setValue(QStringLiteral("view/layoutColumnsRows"), canvas->layoutColumnsRows());
     settings.setValue(QStringLiteral("view/verticalLayout"), canvas->isVerticalLayout());
     settings.setValue(QStringLiteral("view/layoutRtl"), canvas->isRightToLeftLayout());
     settings.setValue(QStringLiteral("view/layoutBtt"), canvas->isBottomToTopLayout());
@@ -2483,6 +2662,44 @@ void QtAppShell::openSession() {
         return;
     }
     openPath(*path, false);
+}
+
+void QtAppShell::annotatePdf() {
+    const QString filePath = QFileDialog::getOpenFileName(&this->window, QStringLiteral("Annotate PDF"),
+                                                          QString(), QStringLiteral("PDF Files (*.pdf)"));
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    const auto attachAnswer =
+            QMessageBox::question(&this->window, QStringLiteral("Annotate PDF"),
+                                  QStringLiteral("Attach the PDF data to the document when saving?"),
+                                  QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
+    if (attachAnswer == QMessageBox::Cancel) {
+        return;
+    }
+
+    std::string error;
+    const auto path = std::filesystem::path(filePath.toStdString());
+    if (!this->documentController.loadPdfAsDocument(path, attachAnswer == QMessageBox::Yes, &error)) {
+        this->dialogs.showError("Annotate PDF Failed",
+                                error.empty() ? "VertexNote could not open this PDF." : error);
+        return;
+    }
+
+    this->session.newDocument();
+    this->suppressDirtyTracking = true;
+    this->window.canvas()->fitWidth();
+    this->suppressDirtyTracking = false;
+    this->recentFiles.addRecentFile(path);
+    rebuildRecentDocumentsMenu();
+    savePersistentUiState();
+    updateEditCommandStates();
+    this->window.layerPanel()->refresh();
+    this->window.pageSidebar()->refresh();
+    syncFooterWidgets();
+    this->window.statusBar()->showMessage(QStringLiteral("PDF opened for annotation"), 4000);
+    updateWindowTitle();
 }
 
 void QtAppShell::saveSessionAs() {
@@ -2919,7 +3136,7 @@ void QtAppShell::insertMathTex() {
         return;
     }
 
-    const auto settings = buildQtLatexSettings();
+    const auto settings = buildQtLatexSettings(this->currentSettings.latexTemplatePath);
     if (!fs::is_regular_file(settings.globalTemplatePath)) {
         QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
                              QStringLiteral("VertexNote could not find the LaTeX template file."));
@@ -3039,6 +3256,142 @@ void QtAppShell::showSettingsDialog() {
     savePersistentUiState();
     updateAudioCommandStates();
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
+}
+
+void QtAppShell::showToolbarCustomizeDialog() {
+    QtToolbarProfile baseProfile = customToolbarProfileFromSettings().value_or(this->activeToolbarProfile.value_or(QtToolbarProfile{}));
+    if (baseProfile.id.empty()) {
+        baseProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), QT_GTK_PARITY_PROFILE_ID).value_or(QtToolbarProfile{});
+    }
+
+    QDialog dialog(&this->window);
+    dialog.setWindowTitle(QStringLiteral("Customize Toolbars"));
+    dialog.setMinimumSize(720, 460);
+    auto* layout = new QVBoxLayout(&dialog);
+    auto* hint = new QLabel(QStringLiteral("Edit comma-separated toolbar tokens. Unknown tokens are rejected."), &dialog);
+    layout->addWidget(hint);
+    auto* editor = new QPlainTextEdit(&dialog);
+    QStringList lines;
+    for (const auto key: QT_TOOLBAR_KEYS) {
+        const auto* items = baseProfile.itemsFor(key);
+        lines.push_back(QStringLiteral("%1=%2")
+                                .arg(QString::fromUtf8(key.data(), static_cast<int>(key.size())),
+                                     items ? joinToolbarTokens(*items) : QString()));
+    }
+    editor->setPlainText(lines.join(QStringLiteral("\n")));
+    layout->addWidget(editor, 1);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const std::unordered_set<std::string> knownTokens = {
+            "SAVE", "NEW", "OPEN", "SAVEPDF", "PRINT", "CUT", "COPY", "PASTE", "SEARCH", "DELETE", "UNDO",
+            "REDO", "GOTO_FIRST", "GOTO_BACK", "NAVIGATE_BACK", "NAVIGATE_FORWARD", "GOTO_NEXT_ANNOTATED_PAGE",
+            "GOTO_NEXT", "GOTO_LAST", "INSERT_NEW_PAGE", "DELETE_CURRENT_PAGE", "FULLSCREEN", "AUDIO_RECORDING",
+            "AUDIO_SEEK_BACKWARDS", "AUDIO_PAUSE_PLAYBACK", "AUDIO_SEEK_FORWARDS", "AUDIO_STOP_PLAYBACK",
+            "SELECT_FONT", "PEN", "PLAIN", "DASHED", "DASH-DOTTED", "DASH-/ DOTTED", "DOTTED", "ERASER",
+            "HIGHLIGHTER", "HILIGHTER", "LASER_POINTER", "IMAGE", "TEXT", "MATH_TEX", "DRAW", "DRAW_STROKE",
+            "DRAW_VERTEX", "ROTATION_SNAPPING", "GRID_SNAPPING", "VERTEXNOTE_GEOMETRY_SNAPPING",
+            "VERTEXNOTE_GRID_SNAPPING", "TOGGLE_TOUCH_DRAWING", "SELECT", "VERTICAL_SPACE", "HAND", "SETSQUARE",
+            "COMPASS", "DEFAULT_TOOL", "MANAGE_TOOLBAR", "CUSTOMIZE_TOOLBAR", "GOTO_PAGE", "PDF_TOOL",
+            "SELECT_PDF_TEXT_LINEAR", "SELECT_PDF_TEXT_RECT", "SHAPE_RECOGNIZER", "DRAW_RECTANGLE", "DRAW_ELLIPSE",
+            "DRAW_ARROW", "DRAW_DOUBLE_ARROW", "DRAW_COORDINATE_SYSTEM", "RULER", "DRAW_SPLINE", "SELECT_REGION",
+            "SELECT_RECTANGLE", "SELECT_MULTILAYER_REGION", "SELECT_MULTILAYER_RECTANGLE", "SELECT_OBJECT",
+            "PLAY_OBJECT", "GOTO_PREVIOUS_LAYER", "GOTO_NEXT_LAYER", "GOTO_TOP_LAYER", "FILL_OPACITY",
+            "GOTO_TOP_LAYER", "GOTO_PREVIOUS_LAYER", "GOTO_NEXT_LAYER", "LAYER", "PAGE_SPIN", "PAIRED_PAGES",
+            "PRESENTATION_MODE", "ZOOM_100", "ZOOM_FIT", "ZOOM_OUT", "ZOOM_SLIDER", "ZOOM_IN", "TOOL_FILL",
+            "VERY_FINE", "FINE", "MEDIUM", "THICK", "VERY_THICK", "COLOR_SELECT", "CONSTRAINT_COINCIDENT",
+            "CONSTRAINT_HORIZONTAL", "CONSTRAINT_VERTICAL", "CONSTRAINT_FIXED_LENGTH", "CONSTRAINT_EDIT_FIXED_LENGTH",
+            "CONSTRAINT_PARALLEL", "CONSTRAINT_PERPENDICULAR", "CONSTRAINT_DELETE", "SPACER", "SEPARATOR"};
+    const std::unordered_set<std::string> knownToolbarKeys(QT_TOOLBAR_KEYS.begin(), QT_TOOLBAR_KEYS.end());
+
+    QtToolbarProfile customProfile;
+    customProfile.id = std::string(QT_CUSTOM_PROFILE_ID);
+    customProfile.displayName = std::string(QT_CUSTOM_PROFILE_ID);
+    const auto editedLines = editor->toPlainText().split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const auto& rawLine: editedLines) {
+        const auto line = rawLine.trimmed();
+        if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) {
+            continue;
+        }
+        const int equalsIndex = line.indexOf(QLatin1Char('='));
+        if (equalsIndex <= 0) {
+            QMessageBox::warning(&dialog, QStringLiteral("Customize Toolbars"),
+                                 QStringLiteral("Each line must be key=tokens."));
+            return;
+        }
+        const auto key = line.left(equalsIndex).trimmed().toLower().toStdString();
+        if (!knownToolbarKeys.contains(key)) {
+            QMessageBox::warning(&dialog, QStringLiteral("Customize Toolbars"),
+                                 QStringLiteral("Unknown toolbar key: %1").arg(QString::fromStdString(key)));
+            return;
+        }
+        auto tokens = splitToolbarTokens(line.mid(equalsIndex + 1));
+        for (const auto& token: tokens) {
+            const bool colorToken = token.rfind("COLOR(", 0) == 0 && token.ends_with(')');
+            if (!colorToken && !knownTokens.contains(token)) {
+                QMessageBox::warning(&dialog, QStringLiteral("Customize Toolbars"),
+                                     QStringLiteral("Unknown toolbar token: %1").arg(QString::fromStdString(token)));
+                return;
+            }
+        }
+        customProfile.toolbars[key] = std::move(tokens);
+    }
+
+    saveCustomToolbarProfileToSettings(customProfile);
+    this->currentSettings.toolbarProfileId = std::string(QT_CUSTOM_PROFILE_ID);
+    this->activeToolbarProfile = std::move(customProfile);
+    rebuildToolbar();
+    savePersistentUiState();
+    this->window.statusBar()->showMessage(QStringLiteral("Custom Qt toolbar profile saved"), 3000);
+}
+
+void QtAppShell::showPluginManagerDialog() {
+    QDialog dialog(&this->window);
+    dialog.setWindowTitle(QStringLiteral("Plugin Manager"));
+    auto* layout = new QVBoxLayout(&dialog);
+    auto* details = new QPlainTextEdit(&dialog);
+    details->setReadOnly(true);
+    details->setMinimumSize(640, 360);
+
+    QStringList lines;
+    const auto statuses = this->luaPlugins.statuses();
+    if (statuses.empty()) {
+        lines << QStringLiteral("No Lua plugins were found.");
+    }
+    for (const auto& status: statuses) {
+        lines << QStringLiteral("%1 [%2, default %3] - %4 action(s)")
+                         .arg(QString::fromStdString(status.name),
+                              status.enabled ? QStringLiteral("enabled") : QStringLiteral("disabled"),
+                              status.defaultEnabled ? QStringLiteral("enabled") : QStringLiteral("disabled"))
+                         .arg(status.registeredActions);
+        if (!status.description.empty()) {
+            lines << QStringLiteral("  %1").arg(QString::fromStdString(status.description));
+        }
+        if (!status.version.empty() || !status.author.empty()) {
+            lines << QStringLiteral("  %1 %2")
+                             .arg(QString::fromStdString(status.version), QString::fromStdString(status.author))
+                             .trimmed();
+        }
+        lines << QStringLiteral("  %1").arg(QString::fromStdWString(status.path.wstring()));
+        if (!status.error.empty()) {
+            lines << QStringLiteral("  Error: %1").arg(QString::fromStdString(status.error));
+        }
+        lines << QString();
+    }
+
+    details->setPlainText(lines.join(QStringLiteral("\n")));
+    layout->addWidget(details);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    dialog.exec();
 }
 
 void QtAppShell::applyConstraint(vn::geom::ConstraintKind kind) {
@@ -3691,8 +4044,12 @@ void QtAppShell::setHighlighterSize(int sizeIndex) {
 
 void QtAppShell::togglePairedPages() {
     const bool enabled = !this->window.canvas()->isPairedPagesEnabled();
-    this->window.canvas()->setPairedPagesEnabled(enabled);
-    this->window.commandHost()->setCommandChecked("view.paired-pages", enabled);
+    if (enabled) {
+        this->window.canvas()->setLayoutColumns(2);
+    } else {
+        this->window.canvas()->setLayoutColumns(1);
+    }
+    syncLayoutSpanCommandStates();
     savePersistentUiState();
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Paired pages enabled") : QStringLiteral("Paired pages disabled"), 3000);
@@ -3755,6 +4112,37 @@ void QtAppShell::setLayoutBtt(bool btt) {
     syncFooterWidgets();
 }
 
+void QtAppShell::setLayoutColumns(int columns) {
+    this->window.canvas()->setLayoutColumns(columns);
+    syncLayoutSpanCommandStates();
+    savePersistentUiState();
+    this->window.statusBar()->showMessage(
+            QStringLiteral("%1 page %2").arg(columns).arg(columns == 1 ? QStringLiteral("column") : QStringLiteral("columns")),
+            3000);
+    syncFooterWidgets();
+}
+
+void QtAppShell::setLayoutRows(int rows) {
+    this->window.canvas()->setLayoutRows(rows);
+    syncLayoutSpanCommandStates();
+    savePersistentUiState();
+    this->window.statusBar()->showMessage(
+            QStringLiteral("%1 page %2").arg(rows).arg(rows == 1 ? QStringLiteral("row") : QStringLiteral("rows")),
+            3000);
+    syncFooterWidgets();
+}
+
+void QtAppShell::syncLayoutSpanCommandStates() {
+    const int value = this->window.canvas()->layoutColumnsRows();
+    this->window.commandHost()->setCommandChecked("view.paired-pages", value == 2);
+    for (int columns = 1; columns <= 8; ++columns) {
+        this->window.commandHost()->setCommandChecked("view.columns-" + std::to_string(columns), value == columns);
+    }
+    for (int rows = 1; rows <= 8; ++rows) {
+        this->window.commandHost()->setCommandChecked("view.rows-" + std::to_string(rows), value == -rows);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Journal extras
 // ---------------------------------------------------------------------------
@@ -3767,6 +4155,27 @@ void QtAppShell::addPageAtEnd() {
     this->window.pageSidebar()->refresh();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page added at end"), 3000);
+}
+
+void QtAppShell::appendNewPdfPages() {
+    const int inserted = this->documentController.appendNewPdfPages();
+    if (inserted < 0) {
+        QMessageBox::information(&this->window, QStringLiteral("Append PDF Pages"),
+                                 QStringLiteral("No PDF is attached to this document."));
+        return;
+    }
+    if (inserted == 0) {
+        this->window.statusBar()->showMessage(QStringLiteral("No new PDF pages to append"), 3000);
+        return;
+    }
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    syncFooterWidgets();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Appended %1 PDF page%2")
+                                                  .arg(inserted)
+                                                  .arg(inserted == 1 ? QString() : QStringLiteral("s")),
+                                          3000);
 }
 
 void QtAppShell::deleteLayer() {
@@ -3888,6 +4297,55 @@ void QtAppShell::paperFormatDialog() {
     updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page size updated"), 3000);
+}
+
+void QtAppShell::configurePageTemplateDialog() {
+    QDialog dialog(&this->window);
+    dialog.setWindowTitle(QStringLiteral("Configure Page Template"));
+    auto* rootLayout = new QVBoxLayout(&dialog);
+    auto* formLayout = new QFormLayout();
+
+    auto* presetCombo = new QComboBox(&dialog);
+    for (const auto& preset: PAPER_PRESETS) {
+        presetCombo->addItem(QString::fromUtf8(preset.label.data(), static_cast<int>(preset.label.size())));
+    }
+    auto* widthSpin = new QDoubleSpinBox(&dialog);
+    widthSpin->setRange(50.0, 4000.0);
+    widthSpin->setDecimals(1);
+    widthSpin->setSuffix(QStringLiteral(" pt"));
+    widthSpin->setValue(this->currentSettings.defaultPageWidth);
+    auto* heightSpin = new QDoubleSpinBox(&dialog);
+    heightSpin->setRange(50.0, 4000.0);
+    heightSpin->setDecimals(1);
+    heightSpin->setSuffix(QStringLiteral(" pt"));
+    heightSpin->setValue(this->currentSettings.defaultPageHeight);
+    presetCombo->setCurrentIndex(matchingPaperPreset(widthSpin->value(), heightSpin->value()));
+    QObject::connect(presetCombo, qOverload<int>(&QComboBox::currentIndexChanged), &dialog,
+                     [widthSpin, heightSpin](int index) {
+                         if (index <= 0 || index >= static_cast<int>(PAPER_PRESETS.size())) {
+                             return;
+                         }
+                         const auto& preset = PAPER_PRESETS[static_cast<std::size_t>(index)];
+                         widthSpin->setValue(preset.width);
+                         heightSpin->setValue(preset.height);
+                     });
+
+    formLayout->addRow(QStringLiteral("Preset"), presetCombo);
+    formLayout->addRow(QStringLiteral("Default width"), widthSpin);
+    formLayout->addRow(QStringLiteral("Default height"), heightSpin);
+    rootLayout->addLayout(formLayout);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    rootLayout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    this->currentSettings.defaultPageWidth = widthSpin->value();
+    this->currentSettings.defaultPageHeight = heightSpin->value();
+    savePersistentUiState();
+    this->window.statusBar()->showMessage(QStringLiteral("Page template updated"), 3000);
 }
 
 // ---------------------------------------------------------------------------

@@ -149,6 +149,40 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     generalPage->setLayout(generalLayout);
     tabs->addTab(generalPage, QStringLiteral("General"));
 
+    // --- PDF tab ---
+    auto* pdfPage = new QWidget(this);
+    auto* pdfLayout = new QFormLayout(pdfPage);
+    this->autoloadPdfXojCheck = new QCheckBox(pdfPage);
+    this->autoloadPdfXojCheck->setChecked(current.autoloadPdfXoj);
+    pdfLayout->addRow(QStringLiteral("Autoload PDF .xoj:"), this->autoloadPdfXojCheck);
+    this->defaultPdfExportNameEdit = new QLineEdit(QString::fromStdString(current.defaultPdfExportName), pdfPage);
+    pdfLayout->addRow(QStringLiteral("Default PDF export name:"), this->defaultPdfExportNameEdit);
+    pdfPage->setLayout(pdfLayout);
+    tabs->addTab(pdfPage, QStringLiteral("PDF"));
+
+    // --- LaTeX tab ---
+    auto* latexPage = new QWidget(this);
+    auto* latexLayout = new QFormLayout(latexPage);
+    auto* latexTemplateRow = new QWidget(latexPage);
+    auto* latexTemplateRowLayout = new QHBoxLayout(latexTemplateRow);
+    latexTemplateRowLayout->setContentsMargins(0, 0, 0, 0);
+    this->latexTemplatePathEdit = new QLineEdit(QString::fromStdString(current.latexTemplatePath), latexTemplateRow);
+    auto* browseLatexTemplateButton = new QPushButton(QStringLiteral("Browse..."), latexTemplateRow);
+    latexTemplateRowLayout->addWidget(this->latexTemplatePathEdit, 1);
+    latexTemplateRowLayout->addWidget(browseLatexTemplateButton, 0);
+    QObject::connect(browseLatexTemplateButton, &QPushButton::clicked, this, [this]() {
+        const QString selectedPath =
+                QFileDialog::getOpenFileName(this, QStringLiteral("Select LaTeX Template"),
+                                             this->latexTemplatePathEdit->text().trimmed(),
+                                             QStringLiteral("TeX Files (*.tex);;All Files (*)"));
+        if (!selectedPath.isEmpty()) {
+            this->latexTemplatePathEdit->setText(selectedPath);
+        }
+    });
+    latexLayout->addRow(QStringLiteral("Template path:"), latexTemplateRow);
+    latexPage->setLayout(latexLayout);
+    tabs->addTab(latexPage, QStringLiteral("LaTeX"));
+
     // --- Audio tab ---
     auto* audioPage = new QWidget(this);
     auto* audioLayout = new QFormLayout(audioPage);
@@ -223,6 +257,9 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
+            .autoloadPdfXoj = this->autoloadPdfXojCheck->isChecked(),
+            .defaultPdfExportName = this->defaultPdfExportNameEdit->text().trimmed().toStdString(),
+            .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
             .audioSampleRate = this->audioSampleRateSpin->value(),
             .audioGain = this->audioGainSpin->value(),

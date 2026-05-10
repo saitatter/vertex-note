@@ -22,6 +22,8 @@ set(vertexnote_qt_sources
         QtMainWindow.cpp
         QtPluginUiBridge.h
         QtPluginUiBridge.cpp
+        QtLuaPluginRuntime.h
+        QtLuaPluginRuntime.cpp
         QtPreviewBackgroundRenderer.h
         QtPreviewBackgroundRenderer.cpp
         QtPreviewGeometryRenderer.h
@@ -59,7 +61,7 @@ set(vertexnote_qt_sources
 
 add_executable(vertexnote-qt-shell ${vertexnote_qt_sources})
 target_compile_definitions(vertexnote-qt-shell PRIVATE QT_NO_KEYWORDS)
-target_link_libraries(vertexnote-qt-shell PRIVATE Qt6::Widgets Qt6::PrintSupport vertexnote::defaults vertexnote::util vertexnote::core)
+target_link_libraries(vertexnote-qt-shell PRIVATE Qt6::Widgets Qt6::PrintSupport vertexnote::defaults vertexnote::util vertexnote::core $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>)
 target_include_directories(vertexnote-qt-shell PRIVATE
         "${PROJECT_SOURCE_DIR}/src/core"
         "${PROJECT_SOURCE_DIR}/src"

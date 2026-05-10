@@ -50,6 +50,9 @@ public:
     void panBy(double dx, double dy);
     void setPairedPagesEnabled(bool enabled);
     [[nodiscard]] auto isPairedPagesEnabled() const -> bool;
+    void setLayoutColumns(int columns);
+    void setLayoutRows(int rows);
+    [[nodiscard]] auto layoutColumnsRows() const -> int;
     void setVerticalLayout(bool enabled);
     [[nodiscard]] auto isVerticalLayout() const -> bool;
     void setRightToLeftLayout(bool enabled);
@@ -236,6 +239,7 @@ private:
     bool rotationSnapEnabled = false;
     bool touchDrawingEnabled = false;
     bool pairedPagesEnabled = false;
+    int layoutColumnsRowsValue = 1;
     bool verticalLayoutEnabled = true;
     bool rightToLeftLayoutEnabled = false;
     bool bottomToTopLayoutEnabled = false;

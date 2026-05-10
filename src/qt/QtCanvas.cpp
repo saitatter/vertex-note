@@ -416,14 +416,39 @@ void QtCanvas::panBy(double dx, double dy) {
 }
 
 void QtCanvas::setPairedPagesEnabled(bool enabled) {
-    if (this->pairedPagesEnabled == enabled) {
+    const int wantedColumns = enabled ? 2 : 1;
+    if (this->pairedPagesEnabled == enabled && this->layoutColumnsRowsValue == wantedColumns) {
         return;
     }
     this->pairedPagesEnabled = enabled;
+    this->layoutColumnsRowsValue = wantedColumns;
     fitPage();
 }
 
 auto QtCanvas::isPairedPagesEnabled() const -> bool { return this->pairedPagesEnabled; }
+
+void QtCanvas::setLayoutColumns(int columns) {
+    columns = std::clamp(columns, 1, 8);
+    if (this->layoutColumnsRowsValue == columns) {
+        return;
+    }
+    this->layoutColumnsRowsValue = columns;
+    this->pairedPagesEnabled = columns == 2;
+    fitPage();
+}
+
+void QtCanvas::setLayoutRows(int rows) {
+    rows = std::clamp(rows, 1, 8);
+    const int value = -rows;
+    if (this->layoutColumnsRowsValue == value) {
+        return;
+    }
+    this->layoutColumnsRowsValue = value;
+    this->pairedPagesEnabled = false;
+    fitPage();
+}
+
+auto QtCanvas::layoutColumnsRows() const -> int { return this->layoutColumnsRowsValue; }
 
 void QtCanvas::setVerticalLayout(bool enabled) {
     if (this->verticalLayoutEnabled == enabled) {
@@ -1114,40 +1139,67 @@ auto QtCanvas::pageRects() const -> std::vector<QRectF> {
 
     rects.reserve(pages.size());
 
-    const std::size_t columnCount = this->pairedPagesEnabled ? 2U : 1U;
-    double primary = PAGE_STACK_Y;
-    double secondaryBase = PAGE_STACK_X;
-    double maxRowExtent = 0.0;
+    const int spanValue = this->layoutColumnsRowsValue == 0 ? 1 : this->layoutColumnsRowsValue;
+    const std::size_t spanCount = static_cast<std::size_t>(std::clamp(std::abs(spanValue), 1, 8));
+    const bool fixedRows = spanValue < 0;
+    std::vector<std::pair<std::size_t, std::size_t>> cells;
+    std::vector<double> columnWidths;
+    std::vector<double> rowHeights;
+    cells.reserve(pages.size());
+    for (std::size_t index = 0; index < pages.size(); ++index) {
+        const auto& page = pages[index];
+        const double pageWidth = std::max(page.width, 1.0);
+        const double pageHeight = std::max(page.height, 1.0);
+        std::size_t row = 0U;
+        std::size_t column = 0U;
+        if (fixedRows) {
+            row = index % spanCount;
+            column = index / spanCount;
+        } else if (this->verticalLayoutEnabled) {
+            column = index % spanCount;
+            row = index / spanCount;
+        } else {
+            row = index % spanCount;
+            column = index / spanCount;
+        }
 
-    if (!this->verticalLayoutEnabled) {
-        primary = PAGE_STACK_X;
-        secondaryBase = PAGE_STACK_Y;
+        if (column >= columnWidths.size()) {
+            columnWidths.resize(column + 1U, 0.0);
+        }
+        if (row >= rowHeights.size()) {
+            rowHeights.resize(row + 1U, 0.0);
+        }
+        columnWidths[column] = std::max(columnWidths[column], pageWidth);
+        rowHeights[row] = std::max(rowHeights[row], pageHeight);
+        cells.emplace_back(row, column);
+    }
+
+    std::vector<double> columnOffsets(columnWidths.size(), PAGE_STACK_X);
+    for (std::size_t index = 1; index < columnOffsets.size(); ++index) {
+        columnOffsets[index] = columnOffsets[index - 1U] + columnWidths[index - 1U] + PAGE_STACK_GAP;
+    }
+    std::vector<double> rowOffsets(rowHeights.size(), PAGE_STACK_Y);
+    for (std::size_t index = 1; index < rowOffsets.size(); ++index) {
+        rowOffsets[index] = rowOffsets[index - 1U] + rowHeights[index - 1U] + PAGE_STACK_GAP;
     }
 
     for (std::size_t index = 0; index < pages.size(); ++index) {
         const auto& page = pages[index];
         const double pageWidth = std::max(page.width, 1.0);
         const double pageHeight = std::max(page.height, 1.0);
-        const std::size_t column = index % columnCount;
+        const auto [row, column] = cells[index];
 
         double x = PAGE_STACK_X;
         double y = PAGE_STACK_Y;
         if (this->verticalLayoutEnabled) {
-            x = secondaryBase + static_cast<double>(column) * (pageWidth + PAGE_STACK_GAP);
-            y = primary;
+            x = columnOffsets[column];
+            y = rowOffsets[row];
         } else {
-            x = primary;
-            y = secondaryBase + static_cast<double>(column) * (pageHeight + PAGE_STACK_GAP);
+            x = rowOffsets[row];
+            y = columnOffsets[column];
         }
 
         rects.emplace_back(x, y, pageWidth, pageHeight);
-        maxRowExtent = std::max(maxRowExtent, this->verticalLayoutEnabled ? pageHeight : pageWidth);
-
-        const bool rowFinished = (column + 1U) == columnCount || index + 1U == pages.size();
-        if (rowFinished) {
-            primary += maxRowExtent + PAGE_STACK_GAP;
-            maxRowExtent = 0.0;
-        }
     }
 
     if (this->rightToLeftLayoutEnabled || this->bottomToTopLayoutEnabled) {

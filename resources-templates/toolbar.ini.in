@@ -35,6 +35,8 @@
 #          the respective toolbar configuration.
 #
 # Non-menu items: SELECT,DRAW,PDF_TOOL,TOGGLE_TOUCH_DRAWING
+# Qt shell also supports DRAW_STROKE and DRAW_VERTEX. DRAW remains a
+# backward-compatible alias that expands to both Qt drawing dropdowns.
 #
 # Tool configuration: VERY_FINE,FINE,MEDIUM,THICK,VERY_THICK
 #

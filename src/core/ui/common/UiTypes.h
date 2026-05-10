@@ -58,6 +58,7 @@ struct PluginUiActionDescriptor {
     std::string id;
     std::string label;
     std::string tooltip;
+    std::string shortcut;
     std::function<void()> callback;
 };
 

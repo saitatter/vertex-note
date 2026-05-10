@@ -15,6 +15,7 @@
 #include "QtDocumentExporter.h"
 #include "QtDocumentSession.h"
 #include "QtMainWindow.h"
+#include "QtLuaPluginRuntime.h"
 #include "QtPluginUiBridge.h"
 #include "QtRecentFilesService.h"
 #include "QtSettingsDialog.h"
@@ -64,6 +65,7 @@ private:
     void updateStatusBarLabels();
     void newSession();
     void openSession();
+    void annotatePdf();
     auto openPath(const std::filesystem::path& path, bool fromRecentDocuments) -> bool;
     void saveSessionAs();
     void markSessionDirty();
@@ -87,6 +89,8 @@ private:
     void insertImage();
     void insertMathTex();
     void showSettingsDialog();
+    void showToolbarCustomizeDialog();
+    void showPluginManagerDialog();
     void applyConstraint(vn::geom::ConstraintKind kind);
     void deleteConstraints();
     void editFixedLengthConstraint();
@@ -159,11 +163,16 @@ private:
     void setLayoutVertical(bool vertical);
     void setLayoutRtl(bool rtl);
     void setLayoutBtt(bool btt);
+    void setLayoutColumns(int columns);
+    void setLayoutRows(int rows);
+    void syncLayoutSpanCommandStates();
 
     // Journal extras
     void addPageAtEnd();
+    void appendNewPdfPages();
     void deleteLayer();
     void paperFormatDialog();
+    void configurePageTemplateDialog();
 
     // Edit extras
     void moveSelectionLayerUp();
@@ -177,6 +186,7 @@ private:
     QtRecentFilesService recentFiles;
     QtUpdatePresentationService updates;
     QtPluginUiBridge plugins;
+    QtLuaPluginRuntime luaPlugins;
     QtDocumentController documentController;
     QtDocumentSession session;
     std::unique_ptr<QtDocumentExporter> exporter;
@@ -185,7 +195,8 @@ private:
     QtSettings currentSettings;
     std::vector<ElementPtr> elementClipboard;
     QToolButton* selectionToolButton = nullptr;
-    QToolButton* drawingToolButton = nullptr;
+    QToolButton* strokeDrawingToolButton = nullptr;
+    QToolButton* vertexDrawingToolButton = nullptr;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
@@ -214,6 +225,7 @@ private:
     bool persistedShowMenubar = true;
     bool persistedShowSidebar = true;
     bool persistedPairedPages = false;
+    int persistedLayoutColumnsRows = 1;
     bool persistedVerticalLayout = true;
     bool persistedLayoutRtl = false;
     bool persistedLayoutBtt = false;
