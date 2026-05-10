@@ -7,6 +7,7 @@
 #include "QtCanvas.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <type_traits>
 
@@ -22,6 +23,8 @@
 #include <QPalette>
 #include <QPen>
 #include <QRect>
+#include <QApplication>
+#include <QClipboard>
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QTransform>
@@ -50,6 +53,11 @@ constexpr double PAGE_STACK_Y = 100.0;
 constexpr double PAGE_STACK_GAP = 56.0;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
+constexpr double CM_TO_PT = 28.3464566929;
+constexpr double INSTRUMENT_EDGE_HIT_BAND = 14.0;
+constexpr double INSTRUMENT_INNER_BAND = 12.0;
+constexpr double INSTRUMENT_MIN_SIZE = 48.0;
+constexpr double INSTRUMENT_MAX_SIZE = 420.0;
 
 auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
     using vn::ui::common::CanvasCursor;
@@ -204,6 +212,84 @@ auto buildArrowPreviewPoints(const QPointF& start, const QPointF& end, double th
 
 auto buildCoordinateSystemPreviewPoints(const QPointF& start, const QPointF& current) -> std::vector<QPointF> {
     return {start, QPointF(start.x(), current.y()), QPointF(current.x(), current.y())};
+}
+
+auto instrumentDefaultSize(QtToolType tool) -> double {
+    switch (tool) {
+        case QtToolType::Setsquare:
+            return 8.0 * CM_TO_PT;
+        case QtToolType::Compass:
+            return 3.0 * CM_TO_PT;
+        default:
+            return 4.0 * CM_TO_PT;
+    }
+}
+
+auto rotatePoint(const QPointF& point, double angle) -> QPointF {
+    const double c = std::cos(angle);
+    const double s = std::sin(angle);
+    return QPointF(point.x() * c - point.y() * s, point.x() * s + point.y() * c);
+}
+
+auto toLocalInstrument(const QPointF& point, const QPointF& origin, double rotation) -> QPointF {
+    return rotatePoint(point - origin, -rotation);
+}
+
+auto fromLocalInstrument(const QPointF& point, const QPointF& origin, double rotation) -> QPointF {
+    return origin + rotatePoint(point, rotation);
+}
+
+auto setsquareHalfSpan(double size) -> double { return size / std::sqrt(2.0); }
+
+auto setsquareRadius(double size) -> double { return std::max(0.0, setsquareHalfSpan(size) - 1.15 * CM_TO_PT); }
+
+auto insideSetsquare(const QPointF& local, double size) -> bool {
+    const double halfSpan = setsquareHalfSpan(size);
+    return local.y() <= 0.0 && local.y() >= local.x() - halfSpan && local.y() >= -local.x() - halfSpan;
+}
+
+auto insideCompass(const QPointF& local, double size) -> bool { return std::hypot(local.x(), local.y()) <= size; }
+
+auto buildSetsquareOutline(const QPointF& origin, double rotation, double size) -> std::array<QPointF, 4> {
+    const double halfSpan = setsquareHalfSpan(size);
+    return {fromLocalInstrument(QPointF(-halfSpan, 0.0), origin, rotation),
+            fromLocalInstrument(QPointF(halfSpan, 0.0), origin, rotation),
+            fromLocalInstrument(QPointF(0.0, -halfSpan), origin, rotation),
+            fromLocalInstrument(QPointF(-halfSpan, 0.0), origin, rotation)};
+}
+
+auto buildSetsquareStrokePoints(bool edgeStroke, const QPointF& origin, double rotation, double size, double a,
+                                double b) -> std::vector<QPointF> {
+    if (edgeStroke) {
+        return {fromLocalInstrument(QPointF(a, 0.0), origin, rotation),
+                fromLocalInstrument(QPointF(b, 0.0), origin, rotation)};
+    }
+
+    const double radius = std::min(std::max(0.0, b), setsquareRadius(size));
+    return {origin, fromLocalInstrument(QPointF(radius * std::cos(a), -radius * std::sin(a)), origin, rotation)};
+}
+
+auto normalizeAngleDelta(double previousAngle, double angle) -> double {
+    return previousAngle + std::remainder(angle - previousAngle, 2.0 * M_PI);
+}
+
+auto buildCompassArcPoints(const QPointF& origin, double rotation, double radius, double angleMin, double angleMax)
+        -> std::vector<QPointF> {
+    std::vector<QPointF> points;
+    const double clampedMax = std::min(angleMax, angleMin + 2.0 * M_PI);
+    const int samples = 100;
+    points.reserve(samples + 1);
+    for (int i = 0; i <= samples; ++i) {
+        const double angle = angleMin + (static_cast<double>(i) / samples) * (clampedMax - angleMin);
+        points.push_back(fromLocalInstrument(QPointF(radius * std::cos(angle), -radius * std::sin(angle)), origin, rotation));
+    }
+    return points;
+}
+
+auto buildCompassRadiusPoints(const QPointF& origin, double rotation, double radiusMin, double radiusMax)
+        -> std::vector<QPointF> {
+    return {fromLocalInstrument(QPointF(radiusMin, 0.0), origin, rotation),
+            fromLocalInstrument(QPointF(radiusMax, 0.0), origin, rotation)};
 }
 
 }  // namespace
@@ -559,8 +645,10 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawActiveStroke(painter);
     drawLaserPointerStrokes(painter);
     drawSelectionOverlay(painter);
+    drawPdfTextSelectionOverlay(painter);
     drawRubberBand(painter);
     drawShapePreview(painter);
+    drawInstrumentOverlay(painter);
 
     painter.resetTransform();
 
@@ -590,6 +678,12 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (this->currentToolState.activeTool == QtToolType::Setsquare ||
+        this->currentToolState.activeTool == QtToolType::Compass) {
+        beginInstrumentToolAtScreen(event->position(), event->button());
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton) {
         const auto tool = this->currentToolState.activeTool;
         if (tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::LaserPointerPen ||
@@ -605,6 +699,11 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         }
         if (tool == QtToolType::Text) {
             beginTextEditAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (tool == QtToolType::PdfTextLinear || tool == QtToolType::PdfTextRect) {
+            beginPdfTextSelectionAtScreen(event->position());
             event->accept();
             return;
         }
@@ -681,6 +780,20 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if ((this->currentToolState.activeTool == QtToolType::Setsquare ||
+         this->currentToolState.activeTool == QtToolType::Compass) &&
+        (event->button() == Qt::LeftButton || event->button() == Qt::RightButton)) {
+        if (this->movingInstrumentOverlay) {
+            this->movingInstrumentOverlay = false;
+            event->accept();
+            return;
+        }
+        if (this->activeInstrumentStroke && event->button() == Qt::LeftButton) {
+            finalizeInstrumentTool();
+            event->accept();
+            return;
+        }
+    }
     if (event->button() == Qt::LeftButton && this->drawing) {
         finalizeActiveStroke();
         event->accept();
@@ -698,6 +811,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton && this->rubberBanding) {
         finalizeRubberBand();
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::LeftButton && this->pdfTextSelecting) {
+        finalizePdfTextSelection();
         event->accept();
         return;
     }
@@ -738,6 +856,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (this->movingInstrumentOverlay || this->activeInstrumentStroke) {
+        updateInstrumentToolAtScreen(event->position());
+        event->accept();
+        return;
+    }
     if (this->erasing) {
         eraseAtScreen(event->position());
         event->accept();
@@ -750,6 +873,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
     if (this->rubberBanding) {
         updateRubberBand(event->position());
+        event->accept();
+        return;
+    }
+    if (this->pdfTextSelecting) {
+        updatePdfTextSelectionAtScreen(event->position());
         event->accept();
         return;
     }
@@ -780,6 +908,25 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
 
 void QtCanvas::wheelEvent(QWheelEvent* event) {
     this->inputAdapter->handleWheel(*event);
+    if ((this->currentToolState.activeTool == QtToolType::Setsquare ||
+         this->currentToolState.activeTool == QtToolType::Compass) &&
+        this->instrumentOverlay.visible) {
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            const double factor = event->angleDelta().y() >= 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
+            this->instrumentOverlay.size =
+                    std::clamp(this->instrumentOverlay.size * factor, INSTRUMENT_MIN_SIZE, INSTRUMENT_MAX_SIZE);
+            update();
+            event->accept();
+            return;
+        }
+        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            this->instrumentOverlay.rotation += event->angleDelta().y() >= 0 ? ROTATION_SNAP_STEP_RADIANS
+                                                                              : -ROTATION_SNAP_STEP_RADIANS;
+            update();
+            event->accept();
+            return;
+        }
+    }
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
         const double factor = event->angleDelta().y() >= 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
         zoomAroundScreenPoint(factor, event->position());
@@ -796,7 +943,9 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
     const auto tool = this->currentToolState.activeTool;
-    const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter;
+    const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter ||
+                            tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter ||
+                            tool == QtToolType::ShapeRecognizer;
     const bool isEraserTool = tool == QtToolType::Eraser;
     if (isDrawTool) {
         if (event->type() == QEvent::TabletPress && event->buttons().testFlag(Qt::LeftButton) && !this->spaceHeld) {
@@ -848,6 +997,12 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         event->accept();
         return;
     } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Escape && this->documentController) {
+        if (this->pdfTextSelecting) {
+            cancelPdfTextSelection();
+        }
+        if (this->activeInstrumentStroke || this->movingInstrumentOverlay) {
+            cancelInstrumentTool();
+        }
         if (this->rubberBanding) {
             cancelRubberBand();
         }
@@ -1299,11 +1454,20 @@ void QtCanvas::setActiveTool(QtToolType tool) {
     if (this->drawing) {
         cancelActiveStroke();
     }
+    if (this->pdfTextSelecting) {
+        cancelPdfTextSelection();
+    }
+    if (this->activeInstrumentStroke) {
+        cancelInstrumentTool();
+    }
+    this->movingInstrumentOverlay = false;
     this->currentToolState.activeTool = tool;
     switch (tool) {
         case QtToolType::Pen:
         case QtToolType::LaserPointerPen:
         case QtToolType::LaserPointerHighlighter:
+        case QtToolType::Setsquare:
+        case QtToolType::Compass:
         case QtToolType::Highlighter:
         case QtToolType::Eraser:
         case QtToolType::DrawLine:
@@ -1327,6 +1491,10 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::Text:
             setCursor(Qt::IBeamCursor);
             break;
+        case QtToolType::PdfTextLinear:
+        case QtToolType::PdfTextRect:
+            setCursor(Qt::IBeamCursor);
+            break;
         case QtToolType::SelectRect:
         case QtToolType::SelectRegion:
         case QtToolType::SelectMultiLayerRect:
@@ -1335,6 +1503,17 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::VerticalSpace:
             setCursor(Qt::ArrowCursor);
             break;
+    }
+
+    if ((tool == QtToolType::Setsquare || tool == QtToolType::Compass) && !this->instrumentOverlay.visible) {
+        const auto rects = pageRects();
+        if (!rects.empty()) {
+            const QPointF sceneCenter = screenToScene(rect().center());
+            const auto pageIdx = pageIndexAtScenePoint(sceneCenter).value_or(0U);
+            const QRectF& pageRect = rects[std::min(pageIdx, rects.size() - 1U)];
+            ensureInstrumentOverlay(std::min(pageIdx, rects.size() - 1U),
+                                    QPointF(pageRect.width() * 0.5, pageRect.height() * 0.35));
+        }
     }
     update();
 }
@@ -1717,6 +1896,82 @@ void QtCanvas::cancelTextEdit() {
     }
 }
 
+void QtCanvas::beginPdfTextSelectionAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[*pageIdx];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    const auto style = this->currentToolState.activeTool == QtToolType::PdfTextRect ? PdfPageSelectionStyle::Area
+                                                                                    : PdfPageSelectionStyle::Linear;
+    if (this->documentController->beginPdfTextSelection(*pageIdx, pageX, pageY, style)) {
+        this->pdfTextSelecting = true;
+        update();
+    }
+}
+
+void QtCanvas::updatePdfTextSelectionAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->pdfTextSelecting) {
+        return;
+    }
+
+    const auto* selection = this->documentController->pdfTextSelection() ? &*this->documentController->pdfTextSelection() : nullptr;
+    if (!selection) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (selection->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const QRectF& pageRect = rects[selection->pageIndex];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    if (this->documentController->updatePdfTextSelection(pageX, pageY)) {
+        update();
+    }
+}
+
+void QtCanvas::finalizePdfTextSelection() {
+    if (!this->documentController || !this->pdfTextSelecting) {
+        this->pdfTextSelecting = false;
+        return;
+    }
+
+    const auto selectedText = this->documentController->finalizePdfTextSelection();
+    this->pdfTextSelecting = false;
+    if (!selectedText.empty()) {
+        QApplication::clipboard()->setText(QString::fromStdString(selectedText));
+        Q_EMIT statusHintChanged(QStringLiteral("Copied selected PDF text"));
+    } else {
+        Q_EMIT statusHintChanged(QStringLiteral("No PDF text selected"));
+    }
+    update();
+}
+
+void QtCanvas::cancelPdfTextSelection() {
+    if (this->documentController) {
+        this->documentController->cancelPdfTextSelection();
+    }
+    this->pdfTextSelecting = false;
+    update();
+}
+
 // ---------------------------------------------------------------------------
 // Element selection (SelectRect tool)
 // ---------------------------------------------------------------------------
@@ -1938,6 +2193,43 @@ void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
                                outerRect.bottomRight()};
     for (const auto& corner: corners) {
         painter.drawRect(QRectF(corner.x() - handleSize / 2.0, corner.y() - handleSize / 2.0, handleSize, handleSize));
+    }
+
+    painter.restore();
+}
+
+void QtCanvas::drawPdfTextSelectionOverlay(QPainter& painter) const {
+    const auto* selection = this->documentController ? (this->documentController->pdfTextSelection()
+                                                                ? &*this->documentController->pdfTextSelection()
+                                                                : nullptr)
+                                                     : nullptr;
+    if (!selection) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (selection->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[selection->pageIndex];
+    painter.save();
+    painter.translate(pageRect.x(), pageRect.y());
+
+    QColor fill(255, 230, 90, 120);
+    QColor outline(220, 170, 0, 190);
+    painter.setPen(QPen(outline, 1.0 / this->zoomFactor));
+    painter.setBrush(fill);
+
+    if (!selection->previewRects.empty()) {
+        for (const auto& rect: selection->previewRects) {
+            const QRectF qrect(QPointF(rect.x1, rect.y1), QPointF(rect.x2, rect.y2));
+            painter.drawRect(qrect.normalized());
+        }
+    } else {
+        const QRectF qrect(QPointF(selection->bounds.x1, selection->bounds.y1),
+                           QPointF(selection->bounds.x2, selection->bounds.y2));
+        painter.drawRect(qrect.normalized());
     }
 
     painter.restore();
@@ -2224,6 +2516,289 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
     }
 
     painter.restore();
+}
+
+void QtCanvas::drawInstrumentOverlay(QPainter& painter) const {
+    const auto instrument = activeInstrumentTool();
+    if (instrument == InstrumentToolKind::None || !this->instrumentOverlay.visible) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (this->instrumentOverlay.pageIndex >= rects.size()) {
+        return;
+    }
+
+    painter.save();
+    const auto& pageRect = rects[this->instrumentOverlay.pageIndex];
+    painter.translate(pageRect.x(), pageRect.y());
+
+    QPen framePen(QColor(75, 104, 224, 190), 1.2 / std::max(0.1, this->zoomFactor));
+    framePen.setCosmetic(true);
+    painter.setPen(framePen);
+    painter.setBrush(QColor(120, 155, 255, 24));
+
+    if (instrument == InstrumentToolKind::Setsquare) {
+        const auto outline = buildSetsquareOutline(this->instrumentOverlay.origin, this->instrumentOverlay.rotation,
+                                                   this->instrumentOverlay.size);
+        QPainterPath outlinePath;
+        outlinePath.moveTo(outline.front());
+        for (std::size_t i = 1; i < outline.size(); ++i) {
+            outlinePath.lineTo(outline[i]);
+        }
+        painter.drawPath(outlinePath);
+
+        QPen guidePen(QColor(70, 70, 190, 150), 1.0 / std::max(0.1, this->zoomFactor), Qt::DashLine);
+        guidePen.setCosmetic(true);
+        painter.setPen(guidePen);
+        const double radius = setsquareRadius(this->instrumentOverlay.size);
+        painter.drawArc(QRectF(this->instrumentOverlay.origin.x() - radius, this->instrumentOverlay.origin.y() - radius,
+                               2.0 * radius, 2.0 * radius),
+                        0, 180 * 16);
+    } else {
+        const double radius = this->instrumentOverlay.size;
+        painter.drawEllipse(this->instrumentOverlay.origin, radius, radius);
+
+        QPen guidePen(QColor(70, 70, 190, 150), 1.0 / std::max(0.1, this->zoomFactor), Qt::DashLine);
+        guidePen.setCosmetic(true);
+        painter.setPen(guidePen);
+        const QPointF left = fromLocalInstrument(QPointF(0.0, 0.0), this->instrumentOverlay.origin,
+                                                 this->instrumentOverlay.rotation);
+        const QPointF right = fromLocalInstrument(QPointF(radius, 0.0), this->instrumentOverlay.origin,
+                                                  this->instrumentOverlay.rotation);
+        painter.drawLine(left, right);
+    }
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(45, 125, 255, 220));
+    const double handleRadius = 4.0 / std::max(0.1, this->zoomFactor);
+    painter.drawEllipse(this->instrumentOverlay.origin, handleRadius, handleRadius);
+
+    if (this->activeInstrumentStroke && this->activeInstrumentStroke->pageIndex == this->instrumentOverlay.pageIndex &&
+        this->activeInstrumentStroke->previewPoints.size() >= 2U) {
+        QPen previewPen(QColor(this->currentToolState.penColor.red, this->currentToolState.penColor.green,
+                               this->currentToolState.penColor.blue, 220),
+                        std::max(1.0, this->currentToolState.penWidth));
+        previewPen.setCosmetic(false);
+        painter.setPen(previewPen);
+        painter.setBrush(Qt::NoBrush);
+        for (std::size_t i = 1; i < this->activeInstrumentStroke->previewPoints.size(); ++i) {
+            painter.drawLine(this->activeInstrumentStroke->previewPoints[i - 1],
+                             this->activeInstrumentStroke->previewPoints[i]);
+        }
+    }
+
+    painter.restore();
+}
+
+auto QtCanvas::activeInstrumentTool() const -> InstrumentToolKind {
+    switch (this->currentToolState.activeTool) {
+        case QtToolType::Setsquare:
+            return InstrumentToolKind::Setsquare;
+        case QtToolType::Compass:
+            return InstrumentToolKind::Compass;
+        default:
+            return InstrumentToolKind::None;
+    }
+}
+
+void QtCanvas::ensureInstrumentOverlay(std::size_t pageIndex, const QPointF& pagePoint) {
+    this->instrumentOverlay.visible = true;
+    this->instrumentOverlay.pageIndex = pageIndex;
+    this->instrumentOverlay.origin = pagePoint;
+    if (this->instrumentOverlay.size <= 0.0) {
+        this->instrumentOverlay.size = instrumentDefaultSize(this->currentToolState.activeTool);
+    }
+}
+
+void QtCanvas::beginInstrumentToolAtScreen(const QPointF& screenPoint, Qt::MouseButton button) {
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        return;
+    }
+
+    const QPointF pagePoint(scenePoint.x() - rects[*pageIdx].x(), scenePoint.y() - rects[*pageIdx].y());
+    ensureInstrumentOverlay(*pageIdx, this->instrumentOverlay.visible && this->instrumentOverlay.pageIndex == *pageIdx
+                                              ? this->instrumentOverlay.origin
+                                              : pagePoint);
+
+    if (button == Qt::RightButton) {
+        this->movingInstrumentOverlay = true;
+        this->instrumentOverlay.pageIndex = *pageIdx;
+        this->instrumentOverlay.origin = pagePoint;
+        update();
+        return;
+    }
+
+    const QPointF local =
+            toLocalInstrument(pagePoint, this->instrumentOverlay.origin, this->instrumentOverlay.rotation);
+    if (activeInstrumentTool() == InstrumentToolKind::Setsquare) {
+        if (!insideSetsquare(local, this->instrumentOverlay.size)) {
+            this->instrumentOverlay.pageIndex = *pageIdx;
+            this->instrumentOverlay.origin = pagePoint;
+            update();
+            return;
+        }
+
+        InstrumentStrokeState state;
+        state.pageIndex = *pageIdx;
+        state.origin = this->instrumentOverlay.origin;
+        state.rotation = this->instrumentOverlay.rotation;
+        state.size = this->instrumentOverlay.size;
+        if (local.y() >= -this->instrumentOverlay.size * 0.2) {
+            state.kind = InstrumentStrokeKind::SetsquareEdge;
+            state.extentMin = local.x();
+            state.extentMax = local.x();
+            state.previewPoints =
+                    buildSetsquareStrokePoints(true, state.origin, state.rotation,
+                                               state.size, state.extentMin, state.extentMax);
+        } else {
+            state.kind = InstrumentStrokeKind::SetsquareRadial;
+            state.anchor = std::atan2(-local.y(), local.x());
+            state.extentMax = std::hypot(local.x(), local.y());
+            state.previewPoints =
+                    buildSetsquareStrokePoints(false, state.origin, state.rotation,
+                                               state.size, state.anchor, state.extentMax);
+        }
+        this->activeInstrumentStroke = std::move(state);
+    } else {
+        if (!insideCompass(local, this->instrumentOverlay.size)) {
+            this->instrumentOverlay.pageIndex = *pageIdx;
+            this->instrumentOverlay.origin = pagePoint;
+            update();
+            return;
+        }
+
+        InstrumentStrokeState state;
+        state.pageIndex = *pageIdx;
+        state.origin = this->instrumentOverlay.origin;
+        state.rotation = this->instrumentOverlay.rotation;
+        state.size = this->instrumentOverlay.size;
+        const double radius = std::hypot(local.x(), local.y());
+        if (std::abs(radius - this->instrumentOverlay.size) <= INSTRUMENT_EDGE_HIT_BAND / std::max(0.1, this->zoomFactor)) {
+            state.kind = InstrumentStrokeKind::CompassOutline;
+            state.anchor = std::atan2(-local.y(), local.x());
+            state.extentMin = state.anchor;
+            state.extentMax = state.anchor;
+            state.lastAngle = state.anchor;
+            state.previewPoints = buildCompassArcPoints(state.origin, state.rotation, state.size, state.extentMin,
+                                                        state.extentMax);
+        } else if (std::abs(local.y()) <= INSTRUMENT_INNER_BAND / std::max(0.1, this->zoomFactor) &&
+                   local.x() >= 0.0 && local.x() <= this->instrumentOverlay.size) {
+            state.kind = InstrumentStrokeKind::CompassRadius;
+            state.extentMin = local.x();
+            state.extentMax = local.x();
+            state.previewPoints = buildCompassRadiusPoints(state.origin, state.rotation, state.extentMin,
+                                                           state.extentMax);
+        } else {
+            this->instrumentOverlay.pageIndex = *pageIdx;
+            this->instrumentOverlay.origin = pagePoint;
+            update();
+            return;
+        }
+        this->activeInstrumentStroke = std::move(state);
+    }
+    update();
+}
+
+void QtCanvas::updateInstrumentToolAtScreen(const QPointF& screenPoint) {
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto rects = pageRects();
+
+    if (this->movingInstrumentOverlay) {
+        if (this->instrumentOverlay.pageIndex < rects.size()) {
+            this->instrumentOverlay.origin = QPointF(scenePoint.x() - rects[this->instrumentOverlay.pageIndex].x(),
+                                                     scenePoint.y() - rects[this->instrumentOverlay.pageIndex].y());
+            update();
+        }
+        return;
+    }
+
+    if (!this->activeInstrumentStroke || this->activeInstrumentStroke->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF pagePoint(scenePoint.x() - rects[this->activeInstrumentStroke->pageIndex].x(),
+                            scenePoint.y() - rects[this->activeInstrumentStroke->pageIndex].y());
+    const QPointF local =
+            toLocalInstrument(pagePoint, this->activeInstrumentStroke->origin, this->activeInstrumentStroke->rotation);
+    auto& state = *this->activeInstrumentStroke;
+    switch (state.kind) {
+        case InstrumentStrokeKind::SetsquareEdge:
+            state.extentMin = std::min(state.extentMin, local.x());
+            state.extentMax = std::max(state.extentMax, local.x());
+            state.previewPoints = buildSetsquareStrokePoints(true, state.origin,
+                                                             state.rotation, state.size, state.extentMin,
+                                                             state.extentMax);
+            break;
+        case InstrumentStrokeKind::SetsquareRadial:
+            state.extentMax = std::hypot(local.x(), local.y());
+            state.previewPoints = buildSetsquareStrokePoints(false, state.origin,
+                                                             state.rotation, state.size, state.anchor,
+                                                             state.extentMax);
+            break;
+        case InstrumentStrokeKind::CompassOutline: {
+            const double angle = normalizeAngleDelta(state.lastAngle, std::atan2(-local.y(), local.x()));
+            state.extentMin = std::min(state.extentMin, angle);
+            state.extentMax = std::max(state.extentMax, angle);
+            state.lastAngle = angle;
+            state.previewPoints = buildCompassArcPoints(state.origin, state.rotation, state.size, state.extentMin,
+                                                        state.extentMax);
+            break;
+        }
+        case InstrumentStrokeKind::CompassRadius:
+            state.extentMin = std::min(state.extentMin, std::max(0.0, local.x()));
+            state.extentMax = std::max(state.extentMax, std::max(0.0, local.x()));
+            state.previewPoints = buildCompassRadiusPoints(state.origin, state.rotation, state.extentMin,
+                                                           state.extentMax);
+            break;
+        default:
+            break;
+    }
+    update();
+}
+
+void QtCanvas::finalizeInstrumentTool() {
+    if (!this->documentController || !this->activeInstrumentStroke) {
+        return;
+    }
+
+    std::vector<std::pair<double, double>> points;
+    points.reserve(this->activeInstrumentStroke->previewPoints.size());
+    for (const auto& point: this->activeInstrumentStroke->previewPoints) {
+        points.emplace_back(point.x(), point.y());
+    }
+
+    const Element* created = nullptr;
+    if (this->currentToolState.activeTool == QtToolType::Setsquare) {
+        created = this->documentController->createSetsquareStroke(this->activeInstrumentStroke->pageIndex, points,
+                                                                  this->currentToolState.penColor,
+                                                                  this->currentToolState.penWidth,
+                                                                  this->currentToolState.penLineStyle);
+    } else if (this->currentToolState.activeTool == QtToolType::Compass) {
+        created = this->documentController->createCompassStroke(this->activeInstrumentStroke->pageIndex, points,
+                                                                this->currentToolState.penColor,
+                                                                this->currentToolState.penWidth,
+                                                                this->currentToolState.penLineStyle);
+    }
+
+    this->activeInstrumentStroke.reset();
+    if (created) {
+        Q_EMIT documentEdited();
+    }
+    update();
+}
+
+void QtCanvas::cancelInstrumentTool() {
+    this->activeInstrumentStroke.reset();
+    this->movingInstrumentOverlay = false;
+    update();
 }
 
 auto QtCanvas::isMultiClickShapeTool() const -> bool {

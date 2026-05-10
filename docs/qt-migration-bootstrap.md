@@ -56,6 +56,7 @@ This document tracks the executable slices of the Qt migration.
   - Tool types: Hand, Pen, Eraser, Highlighter, Text, SelectRect,
     DrawLine, DrawRectangle, DrawCircle, DrawEllipse, DrawArrow,
     DrawDoubleArrow, DrawCoordinateSystem, DrawSpline, DrawArc,
+    Setsquare, Compass,
     DrawPolyline, DrawConstructionLine, DrawConstructionCircle.
   - Tool commands with keyboard shortcuts and toolbar buttons.
   - Per-tool state: color, width, pressure sensitivity, line style, fill, font.
@@ -141,7 +142,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   Lua runtime; plugins requiring Lua execution need the GTK shell.
 - The following toolbar-visible features are still partial or placeholder in
   the Qt shell and remain on the parity backlog:
-  `PDF_TOOL`, `SELECT_PDF_TEXT_*`, `SETSQUARE`, `COMPASS`, `AUDIO_*`.
+  `AUDIO_*`.
 
 ## Completed Slices
 
@@ -218,6 +219,10 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
     pen/highlighter variants, toolbar family button, temporary fading overlay.
 35. ✓ Shape recognizer in the Qt shell:
     recognizer drawing tool, shared core recognition pass, recognizer settings.
+36. ✓ PDF text selection tools in the Qt shell:
+    linear and rectangle modes, toolbar family button, highlight overlay, clipboard copy.
+37. ✓ Setsquare and Compass tools in the Qt shell:
+    visible overlay instruments, guided stroke creation, Alt+wheel resize, Shift+wheel rotation.
 
 ### Phase 7 — Clipboard & element operations ✓
 

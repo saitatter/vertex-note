@@ -23,6 +23,7 @@
 #include "view/render/Renderers.h"
 
 class QTimer;
+class QString;
 
 class QtCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
     Q_OBJECT
@@ -113,6 +114,30 @@ Q_SIGNALS:
     void documentEdited();
 
 private:
+    enum class InstrumentToolKind { None, Setsquare, Compass };
+    enum class InstrumentStrokeKind { None, SetsquareEdge, SetsquareRadial, CompassOutline, CompassRadius };
+
+    struct InstrumentOverlayState {
+        bool visible = false;
+        std::size_t pageIndex = 0U;
+        QPointF origin;
+        double rotation = 0.0;
+        double size = 0.0;
+    };
+
+    struct InstrumentStrokeState {
+        InstrumentStrokeKind kind = InstrumentStrokeKind::None;
+        std::size_t pageIndex = 0U;
+        QPointF origin;
+        double rotation = 0.0;
+        double size = 0.0;
+        double anchor = 0.0;
+        double extentMin = 0.0;
+        double extentMax = 0.0;
+        double lastAngle = 0.0;
+        std::vector<QPointF> previewPoints;
+    };
+
     void updateDebugOverlay(QString summary);
     void emitViewportUpdate(bool edited = true);
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
@@ -159,7 +184,12 @@ private:
     void finalizeMoveSelection();
     void cancelMoveSelection();
     void drawSelectionOverlay(QPainter& painter) const;
+    void drawPdfTextSelectionOverlay(QPainter& painter) const;
     void drawRubberBand(QPainter& painter) const;
+    void beginPdfTextSelectionAtScreen(const QPointF& screenPoint);
+    void updatePdfTextSelectionAtScreen(const QPointF& screenPoint);
+    void finalizePdfTextSelection();
+    void cancelPdfTextSelection();
 
     // Shape drawing helpers
     void beginShapeAtScreen(const QPointF& screenPoint);
@@ -168,8 +198,15 @@ private:
     void finalizeShape();
     void cancelShape();
     void drawShapePreview(QPainter& painter) const;
+    void drawInstrumentOverlay(QPainter& painter) const;
     [[nodiscard]] auto isMultiClickShapeTool() const -> bool;
     [[nodiscard]] auto applyRotationSnap(const QPointF& origin, const QPointF& point) const -> QPointF;
+    [[nodiscard]] auto activeInstrumentTool() const -> InstrumentToolKind;
+    void ensureInstrumentOverlay(std::size_t pageIndex, const QPointF& pagePoint);
+    void beginInstrumentToolAtScreen(const QPointF& screenPoint, Qt::MouseButton button);
+    void updateInstrumentToolAtScreen(const QPointF& screenPoint);
+    void finalizeInstrumentTool();
+    void cancelInstrumentTool();
     void processTouchDrawing(const vn::ui::input::TouchEvent& event);
 
 private:
@@ -200,6 +237,8 @@ private:
     bool rubberBanding = false;
     bool movingSelection = false;
     bool shapeDrawing = false;
+    bool pdfTextSelecting = false;
+    bool movingInstrumentOverlay = false;
     bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
     int activeTouchPointId = -1;
@@ -209,6 +248,8 @@ private:
     QPointF shapeCurrentScene;
     std::vector<QPointF> shapeClickPoints;  // For multi-click tools (polyline, arc)
     std::size_t shapePageIndex = 0U;
+    InstrumentOverlayState instrumentOverlay;
+    std::optional<InstrumentStrokeState> activeInstrumentStroke;
     double shapeRecognizerMinSize = 40.0;
     int laserPointerFadeOutMs = 1500;
     struct QtLaserOverlayStroke {

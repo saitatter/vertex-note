@@ -69,6 +69,25 @@ TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifie
     EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyInstrumentStrokesForQtShell) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    ASSERT_NE(nullptr,
+              controller.createSetsquareStroke(PageIndex, {{32.0, 28.0}, {128.0, 28.0}}, Colors::blue, 2.0, "plain"));
+    ASSERT_NE(nullptr, controller.createCompassStroke(PageIndex,
+                                                      {{160.0, 120.0}, {170.0, 110.0}, {180.0, 104.0},
+                                                       {192.0, 102.0}, {205.0, 104.0}, {216.0, 110.0}},
+                                                      Colors::red, 1.5, "dash"));
+
+    const auto& page = controller.snapshotPages().front();
+    EXPECT_EQ(2U, strokeCount(page));
+    const auto& compassStroke = lastStroke(page);
+    EXPECT_EQ(Colors::red, compassStroke.color);
+    EXPECT_DOUBLE_EQ(1.5, compassStroke.width);
+    EXPECT_GE(compassStroke.points.size(), 6U);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeRecognizerStrokeFinalizesThroughQtPath) {
     QtDocumentController controller;
     ASSERT_TRUE(controller.beginStroke(0U, 20.0, 20.0, 0.5, Colors::black, 2.0, StrokeTool::PEN, false));

@@ -15,9 +15,13 @@ enum class QtToolType {
     Pen,
     LaserPointerPen,
     LaserPointerHighlighter,
+    Setsquare,
+    Compass,
     Eraser,
     Highlighter,
     Text,
+    PdfTextLinear,
+    PdfTextRect,
     SelectRect,
     SelectRegion,
     SelectMultiLayerRect,
@@ -62,9 +66,13 @@ struct QtToolState {
             case QtToolType::Pen: return "Pen";
             case QtToolType::LaserPointerPen: return "Laser Pointer Pen";
             case QtToolType::LaserPointerHighlighter: return "Laser Pointer Highlighter";
+            case QtToolType::Setsquare: return "Setsquare";
+            case QtToolType::Compass: return "Compass";
             case QtToolType::Eraser: return "Eraser";
             case QtToolType::Highlighter: return "Highlighter";
             case QtToolType::Text: return "Text";
+            case QtToolType::PdfTextLinear: return "Select Linear PDF Text";
+            case QtToolType::PdfTextRect: return "Select Area PDF Text";
             case QtToolType::SelectRect: return "Select Rectangle";
             case QtToolType::SelectRegion: return "Select Region";
             case QtToolType::SelectMultiLayerRect: return "Select Multi-Layer Rect";

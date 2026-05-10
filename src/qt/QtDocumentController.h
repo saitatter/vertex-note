@@ -23,6 +23,7 @@
 #include "model/Point.h"
 #include "model/Stroke.h"
 #include "model/Text.h"
+#include "pdf/base/PdfPage.h"
 #include "util/Color.h"
 #include "vertexnote/constraints/GeometryConstraintCatalog.h"
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
@@ -146,6 +147,15 @@ struct QtActiveStroke {
     bool hasPressure = false;
 };
 
+struct QtPdfTextSelectionState {
+    std::size_t pageIndex = 0U;
+    PdfPageSelectionStyle style = PdfPageSelectionStyle::Linear;
+    PdfRectangle bounds;
+    std::vector<PdfRectangle> previewRects;
+    std::string selectedText;
+    bool finalized = false;
+};
+
 struct QtLayerInfo {
     std::size_t index = 0U;
     std::string name;
@@ -207,6 +217,10 @@ public:
                                 double width, const std::string& lineStyle) -> const Element*;
     auto createSpline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
                       double width, const std::string& lineStyle) -> const Element*;
+    auto createSetsquareStroke(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points,
+                               Color color, double width, const std::string& lineStyle) -> const Element*;
+    auto createCompassStroke(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
+                             double width, const std::string& lineStyle) -> const Element*;
     auto createPolyline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
                         double width) -> const Element*;
     auto createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
@@ -230,6 +244,12 @@ public:
                         bool snapRecognizedToGrid = false) -> bool;
     auto cancelStroke() -> void;
     [[nodiscard]] auto activeStroke() const -> const QtActiveStroke*;
+    [[nodiscard]] auto beginPdfTextSelection(std::size_t pageIndex, double x, double y, PdfPageSelectionStyle style)
+            -> bool;
+    [[nodiscard]] auto updatePdfTextSelection(double x, double y) -> bool;
+    [[nodiscard]] auto finalizePdfTextSelection() -> std::string;
+    void cancelPdfTextSelection();
+    [[nodiscard]] auto pdfTextSelection() const -> const std::optional<QtPdfTextSelectionState>&;
 
     // Eraser
     auto beginErase(std::size_t pageIndex) -> void;
@@ -357,6 +377,7 @@ private:
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
     std::optional<QtActiveStroke> currentStroke;
+    std::optional<QtPdfTextSelectionState> activePdfTextSelection;
     std::optional<QtEraseHistoryEntry> pendingErase;
     std::optional<QtSegmentEraseHistoryEntry> pendingSegmentErase;
     std::optional<QtElementSelection> currentSelection;

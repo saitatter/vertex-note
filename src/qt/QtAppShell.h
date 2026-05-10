@@ -168,6 +168,7 @@ private:
     QToolButton* selectionToolButton = nullptr;
     QToolButton* drawingToolButton = nullptr;
     QToolButton* laserToolButton = nullptr;
+    QToolButton* pdfToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
     QDoubleSpinBox* fontSizeSpinner = nullptr;
     QSpinBox* fillOpacitySpinner = nullptr;

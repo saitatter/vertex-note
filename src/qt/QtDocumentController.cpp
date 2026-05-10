@@ -46,6 +46,7 @@ void QtDocumentController::newBlankDocument() {
     this->loadedPath.reset();
     clearGeometryHistory();
     clearInteractiveGeometryState();
+    this->activePdfTextSelection.reset();
     rebuildPageSnapshots();
 }
 
@@ -64,6 +65,7 @@ auto QtDocumentController::loadFrom(const std::filesystem::path& path, std::stri
             this->loadedPath = path;
             clearGeometryHistory();
             clearInteractiveGeometryState();
+            this->activePdfTextSelection.reset();
             rebuildPageSnapshots();
             return true;
         }
@@ -74,6 +76,7 @@ auto QtDocumentController::loadFrom(const std::filesystem::path& path, std::stri
         this->loadedPath = path;
         clearGeometryHistory();
         clearInteractiveGeometryState();
+        this->activePdfTextSelection.reset();
         rebuildPageSnapshots();
         return true;
     } catch (const std::exception& e) {
@@ -753,6 +756,71 @@ auto QtDocumentController::cancelStroke() -> void { this->currentStroke.reset();
 
 auto QtDocumentController::activeStroke() const -> const QtActiveStroke* {
     return this->currentStroke ? &*this->currentStroke : nullptr;
+}
+
+auto QtDocumentController::beginPdfTextSelection(std::size_t pageIndex, double x, double y, PdfPageSelectionStyle style)
+        -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    this->document->lock_shared();
+    auto page = this->document->getPage(pageIndex);
+    const bool hasPdf = page && page->getPdfPageNr() != npos && this->document->getPdfPage(page->getPdfPageNr());
+    this->document->unlock_shared();
+    if (!hasPdf) {
+        return false;
+    }
+
+    this->activePdfTextSelection = QtPdfTextSelectionState{
+            .pageIndex = pageIndex, .style = style, .bounds = PdfRectangle(x, y, x, y), .previewRects = {}, .selectedText = {}, .finalized = false};
+    return true;
+}
+
+auto QtDocumentController::updatePdfTextSelection(double x, double y) -> bool {
+    if (!this->document || !this->activePdfTextSelection) {
+        return false;
+    }
+
+    auto& selection = *this->activePdfTextSelection;
+    this->document->lock_shared();
+    auto page = selection.pageIndex < this->document->getPageCount() ? this->document->getPage(selection.pageIndex) : nullptr;
+    auto pdfPage = page && page->getPdfPageNr() != npos ? this->document->getPdfPage(page->getPdfPageNr()) : nullptr;
+    selection.bounds.x2 = x;
+    selection.bounds.y2 = y;
+    selection.previewRects.clear();
+    if (pdfPage) {
+        auto preview = pdfPage->selectTextLines(selection.bounds, selection.style);
+        selection.previewRects = std::move(preview.rects);
+    }
+    this->document->unlock_shared();
+    return true;
+}
+
+auto QtDocumentController::finalizePdfTextSelection() -> std::string {
+    if (!this->document || !this->activePdfTextSelection) {
+        return {};
+    }
+
+    auto selection = *this->activePdfTextSelection;
+    this->document->lock_shared();
+    auto page = selection.pageIndex < this->document->getPageCount() ? this->document->getPage(selection.pageIndex) : nullptr;
+    auto pdfPage = page && page->getPdfPageNr() != npos ? this->document->getPdfPage(page->getPdfPageNr()) : nullptr;
+    if (pdfPage) {
+        auto finalized = pdfPage->selectTextLines(selection.bounds, selection.style);
+        selection.previewRects = std::move(finalized.rects);
+        selection.selectedText = pdfPage->selectText(selection.bounds, selection.style);
+        selection.finalized = true;
+    }
+    this->document->unlock_shared();
+    this->activePdfTextSelection = std::move(selection);
+    return this->activePdfTextSelection->selectedText;
+}
+
+void QtDocumentController::cancelPdfTextSelection() { this->activePdfTextSelection.reset(); }
+
+auto QtDocumentController::pdfTextSelection() const -> const std::optional<QtPdfTextSelectionState>& {
+    return this->activePdfTextSelection;
 }
 
 // ---------------------------------------------------------------------------
@@ -2862,6 +2930,33 @@ auto buildSplinePoints(const std::vector<std::pair<double, double>>& points) -> 
     return result;
 }
 
+auto insertLegacyStroke(Document* doc, std::size_t pageIndex, const std::vector<std::pair<double, double>>& points,
+                        Color color, double width, const std::string& lineStyle, std::string_view actionText)
+        -> std::pair<const Element*, QtStrokeHistoryEntry> {
+    if (points.size() < 2U) {
+        return {nullptr, QtStrokeHistoryEntry{}};
+    }
+
+    auto stroke = std::make_unique<Stroke>();
+    configureStrokeStyle(*stroke, color, width, lineStyle, -1);
+    std::vector<Point> strokePoints;
+    strokePoints.reserve(points.size());
+    for (const auto& [x, y]: points) {
+        strokePoints.emplace_back(x, y);
+    }
+    stroke->setPointVector(std::move(strokePoints));
+    stroke->freeUnusedPointItems();
+
+    const auto* ptr = insertStrokeOnPage(doc, pageIndex, std::move(stroke));
+    QtStrokeHistoryEntry entry;
+    if (ptr) {
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = std::string(actionText);
+    }
+    return {ptr, std::move(entry)};
+}
+
 }  // namespace
 
 auto QtDocumentController::createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
@@ -3040,6 +3135,30 @@ auto QtDocumentController::createSpline(std::size_t pageIndex, const std::vector
         entry.pageIndex = pageIndex;
         entry.element = ptr;
         entry.text = "Draw spline";
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createSetsquareStroke(std::size_t pageIndex,
+                                                 const std::vector<std::pair<double, double>>& points, Color color,
+                                                 double width, const std::string& lineStyle) -> const Element* {
+    auto [ptr, entry] =
+            insertLegacyStroke(this->document.get(), pageIndex, points, color, width, lineStyle, "Draw setsquare stroke");
+    if (ptr) {
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createCompassStroke(std::size_t pageIndex,
+                                               const std::vector<std::pair<double, double>>& points, Color color,
+                                               double width, const std::string& lineStyle) -> const Element* {
+    auto [ptr, entry] =
+            insertLegacyStroke(this->document.get(), pageIndex, points, color, width, lineStyle, "Draw compass stroke");
+    if (ptr) {
         pushHistory(QtHistoryEntry{std::move(entry)});
         rebuildPageSnapshots();
     }

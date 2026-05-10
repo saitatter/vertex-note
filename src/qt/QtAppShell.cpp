@@ -145,6 +145,11 @@ constexpr std::array<ToolActionSpec, 2> LASER_TOOL_SPECS = {{
         {"tool.laser-pointer-highlighter", QtToolType::LaserPointerHighlighter},
 }};
 
+constexpr std::array<ToolActionSpec, 2> PDF_TOOL_SPECS = {{
+        {"tool.select-pdf-text-linear", QtToolType::PdfTextLinear},
+        {"tool.select-pdf-text-rect", QtToolType::PdfTextRect},
+}};
+
 constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
         Color{0x00, 0x00, 0x00, 0xff}, Color{0x00, 0x7a, 0x2f, 0xff}, Color{0x00, 0xa0, 0xa0, 0xff},
         Color{0x29, 0x40, 0xd0, 0xff}, Color{0x5d, 0x5d, 0x5d, 0xff}, Color{0xc3, 0x00, 0x10, 0xff},
@@ -607,9 +612,25 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Draw temporary laser highlighter strokes", .menu = "Tools", .checkable = true},
             [this]() { selectTool(QtToolType::LaserPointerHighlighter); });
     ch->registerCommand(
+            {.id = "tool.setsquare", .text = "Setsquare", .tooltip = "Draw guided straight strokes with a setsquare",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::Setsquare); });
+    ch->registerCommand(
+            {.id = "tool.compass", .text = "Compass", .tooltip = "Draw guided arcs and radius strokes with a compass",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::Compass); });
+    ch->registerCommand(
             {.id = "tool.text", .text = "Text", .tooltip = "Insert or edit text", .shortcut = "Ctrl+Shift+T",
              .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Text},
             [this]() { selectTool(QtToolType::Text); });
+    ch->registerCommand(
+            {.id = "tool.select-pdf-text-linear", .text = "Select Linear PDF Text",
+             .tooltip = "Select PDF text along dragged glyphs", .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::PdfTextLinear); });
+    ch->registerCommand(
+            {.id = "tool.select-pdf-text-rect", .text = "Select Area PDF Text",
+             .tooltip = "Select PDF text inside a dragged rectangle", .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::PdfTextRect); });
     ch->registerCommand(
             {.id = "edit.insert-image", .text = "Image", .tooltip = "Insert image from file", .shortcut = "Ctrl+Shift+I", .menu = "Tools"},
             [this]() { insertImage(); });
@@ -1004,6 +1025,7 @@ void QtAppShell::rebuildToolbar() {
     this->selectionToolButton = nullptr;
     this->drawingToolButton = nullptr;
     this->laserToolButton = nullptr;
+    this->pdfToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
     this->fontSizeSpinner = nullptr;
     this->toolbarFillAction = nullptr;
@@ -1085,9 +1107,13 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("tool.pen", "tool-pencil");
     setNamedIcon("tool.laser-pointer-pen", "laser-pointer");
     setNamedIcon("tool.laser-pointer-highlighter", "laser-pointer");
+    setNamedIcon("tool.setsquare", "setsquare");
+    setNamedIcon("tool.compass", "compass");
     setNamedIcon("tool.eraser", "tool-eraser");
     setNamedIcon("tool.highlighter", "tool-highlighter");
     setNamedIcon("tool.text", "tool-text");
+    setNamedIcon("tool.select-pdf-text-linear", "select-pdf-text-ht");
+    setNamedIcon("tool.select-pdf-text-rect", "select-pdf-text-area");
     setNamedIcon("edit.insert-image", "tool-image");
     setNamedIcon("tool.select", "select-rect");
     setNamedIcon("tool.select-region", "select-lasso");
@@ -1316,6 +1342,22 @@ void QtAppShell::rebuildToolbar() {
         }
         return this->laserToolButton;
     };
+    const auto ensurePdfButton = [&]() -> QToolButton* {
+        if (!this->pdfToolButton) {
+            this->pdfToolButton = new QToolButton(&this->window);
+            this->pdfToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->pdfToolButton->setIcon(bundledQtIcon("xopp-select-pdf-text-ht.svg"));
+            auto* pdfMenu = new QMenu(this->pdfToolButton);
+            for (const auto& spec: PDF_TOOL_SPECS) {
+                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                    pdfMenu->addAction(action);
+                }
+            }
+            this->pdfToolButton->setMenu(pdfMenu);
+        }
+        return this->pdfToolButton;
+    };
     const auto ensureFontWidgets = [&]() {
         if (!this->fontFamilyCombo) {
             this->fontFamilyCombo = new QFontComboBox(&this->window);
@@ -1472,11 +1514,11 @@ void QtAppShell::rebuildToolbar() {
         if (token == "VERTICAL_SPACE") { addCommand(toolbar, "tool.vertical-space"); return; }
         if (token == "HAND") { addCommand(toolbar, "tool.hand"); return; }
         if (token == "SETSQUARE") {
-            addPlaceholder(toolbar, "Setsquare", "Setsquare is not yet available in the Qt shell", "xopp-setsquare.svg");
+            addCommand(toolbar, "tool.setsquare");
             return;
         }
         if (token == "COMPASS") {
-            addPlaceholder(toolbar, "Compass", "Compass is not yet available in the Qt shell", "xopp-compass.svg");
+            addCommand(toolbar, "tool.compass");
             return;
         }
         if (token == "DEFAULT_TOOL") {
@@ -1493,18 +1535,15 @@ void QtAppShell::rebuildToolbar() {
         }
         if (token == "GOTO_PAGE") { addCommand(toolbar, "nav.goto-page"); return; }
         if (token == "SELECT_PDF_TEXT_LINEAR") {
-            addPlaceholder(toolbar, "Select PDF Text", "PDF text selection is not yet available in the Qt shell",
-                           "xopp-select-pdf-text-ht.svg");
+            toolbar->addWidget(ensurePdfButton());
             return;
         }
         if (token == "PDF_TOOL") {
-            addPlaceholder(toolbar, "PDF Tool", "PDF annotation tools are not yet available in the Qt shell",
-                           "xopp-select-pdf-text-area.svg");
+            toolbar->addWidget(ensurePdfButton());
             return;
         }
         if (token == "SELECT_PDF_TEXT_RECT") {
-            addPlaceholder(toolbar, "Select PDF Text Area", "Area PDF text selection is not yet available in the Qt shell",
-                           "xopp-select-pdf-text-area.svg");
+            toolbar->addWidget(ensurePdfButton());
             return;
         }
         if (token == "SHAPE_RECOGNIZER") {
@@ -1706,6 +1745,14 @@ void QtAppShell::syncToolbarWidgets() {
             this->laserToolButton->setDefaultAction(action);
             this->laserToolButton->setMenu(this->laserToolButton->menu());
             this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        }
+    }
+
+    if (this->pdfToolButton) {
+        if (auto* action = findActionForTool(this->window.commandHost(), PDF_TOOL_SPECS, toolState.activeTool)) {
+            this->pdfToolButton->setDefaultAction(action);
+            this->pdfToolButton->setMenu(this->pdfToolButton->menu());
+            this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
         }
     }
 
@@ -1958,9 +2005,13 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.laser-pointer-pen", active == QtToolType::LaserPointerPen);
     this->window.commandHost()->setCommandChecked("tool.laser-pointer-highlighter",
                                                   active == QtToolType::LaserPointerHighlighter);
+    this->window.commandHost()->setCommandChecked("tool.setsquare", active == QtToolType::Setsquare);
+    this->window.commandHost()->setCommandChecked("tool.compass", active == QtToolType::Compass);
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
+    this->window.commandHost()->setCommandChecked("tool.select-pdf-text-linear", active == QtToolType::PdfTextLinear);
+    this->window.commandHost()->setCommandChecked("tool.select-pdf-text-rect", active == QtToolType::PdfTextRect);
     this->window.commandHost()->setCommandChecked("tool.select-region", active == QtToolType::SelectRegion);
     this->window.commandHost()->setCommandChecked("tool.select-multilayer-rect", active == QtToolType::SelectMultiLayerRect);
     this->window.commandHost()->setCommandChecked("tool.select-multilayer-region", active == QtToolType::SelectMultiLayerRegion);
