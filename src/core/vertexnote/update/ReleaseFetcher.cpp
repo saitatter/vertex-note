@@ -130,6 +130,11 @@ auto fetchWithWinHttp() -> std::string {
         throw std::runtime_error(formatWinHttpError(GetLastError()));
     }
 
+    DWORD redirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS;
+    if (!WinHttpSetOption(request.get(), WINHTTP_OPTION_REDIRECT_POLICY, &redirectPolicy, sizeof(redirectPolicy))) {
+        throw std::runtime_error(formatWinHttpError(GetLastError()));
+    }
+
     constexpr auto requestHeaders =
             L"Accept: application/vnd.github+json\r\n"
             L"X-GitHub-Api-Version: 2022-11-28\r\n";

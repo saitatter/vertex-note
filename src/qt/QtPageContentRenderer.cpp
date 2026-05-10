@@ -9,6 +9,10 @@
 #include <type_traits>
 #include <variant>
 
+#include <QPainter>
+
+#include "view/render/QtPainterRenderContext.h"
+
 namespace vn::view::render {
 
 PageContentRenderer::PageContentRenderer(StrokeRenderer* stroke, TextRenderer* text, ImageRenderer* image,
@@ -20,6 +24,42 @@ void PageContentRenderer::drawPage(const PageRenderSnapshot& page, const RenderR
                                    RenderContext& context) const {
     if (this->backgroundRenderer) {
         this->backgroundRenderer->draw(page.background, rect, context);
+    }
+
+    if (context.backend() == RenderBackend::QtPainter) {
+        auto* painter = static_cast<QtPainterRenderContext&>(context).native();
+        if (painter) {
+            painter->save();
+            painter->translate(rect.x, rect.y);
+
+            for (const auto& drawable: page.drawables) {
+                std::visit(
+                        [this, &context](const auto& model) {
+                            using Model = std::decay_t<decltype(model)>;
+                            if constexpr (std::is_same_v<Model, StrokeRenderModel>) {
+                                if (this->strokeRenderer) {
+                                    this->strokeRenderer->draw(model, context);
+                                }
+                            } else if constexpr (std::is_same_v<Model, TextRenderModel>) {
+                                if (this->textRenderer) {
+                                    this->textRenderer->draw(model, context);
+                                }
+                            } else if constexpr (std::is_same_v<Model, ImageRenderModel>) {
+                                if (this->imageRenderer) {
+                                    this->imageRenderer->draw(model, context);
+                                }
+                            } else if constexpr (std::is_same_v<Model, GeometryRenderModel>) {
+                                if (this->geometryRenderer) {
+                                    this->geometryRenderer->draw(model, context);
+                                }
+                            }
+                        },
+                        drawable);
+            }
+
+            painter->restore();
+            return;
+        }
     }
 
     for (const auto& drawable: page.drawables) {
