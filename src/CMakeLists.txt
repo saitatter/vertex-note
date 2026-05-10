@@ -182,4 +182,6 @@ if (ENABLE_QT_SHELL)
   add_subdirectory(qt)
 endif ()
 
-add_subdirectory(xoj-preview-extractor)
+if (ENABLE_LEGACY_GTK_SHELL)
+  add_subdirectory(xoj-preview-extractor)
+endif ()

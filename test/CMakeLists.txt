@@ -74,20 +74,22 @@ if (ENABLE_QT_SHELL)
   target_include_directories(test-units PRIVATE "${PROJECT_SOURCE_DIR}/src")
 endif ()
 
-###############################################################################
-# Define test-gtk-integration
-###############################################################################
+if (ENABLE_LEGACY_GTK_SHELL)
+  ###############################################################################
+  # Define test-gtk-integration
+  ###############################################################################
 
-# Get all test-gtk test source files
-file (GLOB_RECURSE test-gtk-sources CONFIGURE_DEPENDS
-        gtk_tests/*.cpp
-        )
+  # Get all test-gtk test source files
+  file (GLOB_RECURSE test-gtk-sources CONFIGURE_DEPENDS
+          gtk_tests/*.cpp
+          )
 
-# Define test-gtk-integration target
-add_executable (test-gtk-integration EXCLUDE_FROM_ALL ${test-gtk-sources})
-target_link_libraries (test-gtk-integration vertexnote::core vertexnote::util gtest_main gtest)
-target_compile_features(test-gtk-integration PRIVATE cxx_std_20)
-target_include_directories(test-gtk-integration PRIVATE "${PROJECT_BINARY_DIR}/test")
+  # Define test-gtk-integration target
+  add_executable (test-gtk-integration EXCLUDE_FROM_ALL ${test-gtk-sources})
+  target_link_libraries (test-gtk-integration vertexnote::core vertexnote::util gtest_main gtest)
+  target_compile_features(test-gtk-integration PRIVATE cxx_std_20)
+  target_include_directories(test-gtk-integration PRIVATE "${PROJECT_BINARY_DIR}/test")
+endif ()
 
 ###############################################################################
 # Discover and Register Tests
@@ -102,13 +104,15 @@ gtest_discover_tests(test-units
   $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
     DEPENDS create-gdk-pixbuf-loader-cache>
 )
-gtest_discover_tests(test-gtk-integration
-        DISCOVERY_TIMEOUT 30
-        PROPERTIES
-        ENVIRONMENT "${TEST_ENV_VARS}"
-        $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
-        DEPENDS create-gdk-pixbuf-loader-cache>
-)
+if (TARGET test-gtk-integration)
+  gtest_discover_tests(test-gtk-integration
+          DISCOVERY_TIMEOUT 30
+          PROPERTIES
+          ENVIRONMENT "${TEST_ENV_VARS}"
+          $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
+          DEPENDS create-gdk-pixbuf-loader-cache>
+  )
+endif ()
 
 ###############################################################################
 # Define benchmarks: gtest-like app with benchmark units - not added to CTest or the `test` target

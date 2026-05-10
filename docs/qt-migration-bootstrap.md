@@ -158,9 +158,19 @@ The shell migration now follows this order:
 2. Isolate the remaining Cairo/GTK paths into explicit legacy boundaries
    (`legacy/gtk`, `legacy/render`). The build now tracks these surfaces through
    `src/legacy/LegacyBoundaries.cmake` and reports their size during configure.
-3. Make the Qt shell the only active application shell.
+3. Make the Qt shell the only active application shell. This is now true for
+   local development workflows (`configure/build/test/run/all` default to Qt);
+   the GTK shell remains available only through explicit `*-gtk` fallback tasks.
 4. Remove Cairo once no active runtime, preview, export, or print path still
    depends on it.
+
+### Legacy-only build targets
+
+The following build targets now stay behind `ENABLE_LEGACY_GTK_SHELL` because
+they do not participate in the active Qt shell path:
+
+- `test-gtk-integration`
+- `vertexnote-thumbnailer`
 
 ## Completed Slices
 
