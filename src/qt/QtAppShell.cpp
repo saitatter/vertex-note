@@ -1124,6 +1124,12 @@ void QtAppShell::wireWindowState() {
 
     QObject::connect(this->window.canvas(), &QtCanvas::selectionStateChanged, &this->window,
                      [this]() { updateEditCommandStates(); });
+    QObject::connect(this->window.canvas(), &QtCanvas::toolStateChanged, &this->window,
+                     [this]() {
+                         updateToolCommandStates();
+                         this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
+                         syncToolbarWidgets();
+                     });
 
     QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
                      [this]() {

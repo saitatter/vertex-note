@@ -113,6 +113,7 @@ Q_SIGNALS:
     void statusHintChanged(const QString& text);
     void documentEdited();
     void selectionStateChanged();
+    void toolStateChanged();
 
 private:
     enum class InstrumentToolKind { None, Setsquare, Compass };
@@ -172,6 +173,7 @@ private:
     void updateEraserPreviewAtScreen(const QPointF& screenPoint);
     void clearEraserPreview();
     [[nodiscard]] auto usesMaskEraser() const -> bool;
+    [[nodiscard]] auto currentEraserHalfSize() const -> double;
 
     // Text editing helpers
     void beginTextEditAtScreen(const QPointF& screenPoint);
