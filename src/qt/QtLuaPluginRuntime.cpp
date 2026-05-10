@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <cstdint>
 #include <limits>
 #include <sstream>
 #include <string_view>
@@ -26,7 +27,10 @@
 #include "config-features.h"
 #include "config-paths.h"
 #include "config.h"
+#include "control/pagetype/PageTypeHandler.h"
 #include "filesystem.h"
+#include "model/Document.h"
+#include "QtDocumentController.h"
 #include "ui/common/ICommandHost.h"
 #include "util/PathUtil.h"
 
@@ -155,9 +159,12 @@ auto legacyActionCommand(std::string_view action) -> std::string {
             {"tool-fill", "pen.fill-toggle"},
             {"layer-new-above-current", "layer.add-above"},
             {"layer-new-below-current", "layer.add-below"},
+            {"layer-copy", "layer.copy"},
             {"layer-delete", "page.delete-layer"},
             {"layer-merge-down", "layer.merge-down"},
             {"layer-rename", "layer.rename"},
+            {"layer-show-all", "layer.show-all"},
+            {"layer-hide-all", "layer.hide-all"},
             {"layer-goto-next", "layer.goto-next"},
             {"layer-goto-previous", "layer.goto-prev"},
             {"layer-goto-top", "layer.goto-top"},
@@ -376,6 +383,51 @@ auto pluginFromLua(lua_State* lua) -> QtLuaPluginRuntime::Plugin* {
     return plugin;
 }
 
+auto documentControllerFromLua(lua_State* lua) -> QtDocumentController* {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->documentControllerPtr() ||
+        !plugin->runtime->documentControllerPtr()->hasDocument()) {
+        return nullptr;
+    }
+    return plugin->runtime->documentControllerPtr();
+}
+
+void luaSetStringField(lua_State* lua, const char* name, const std::string& value) {
+    lua_pushstring(lua, value.c_str());
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetNumberField(lua_State* lua, const char* name, lua_Number value) {
+    lua_pushnumber(lua, value);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetIntegerField(lua_State* lua, const char* name, lua_Integer value) {
+    lua_pushinteger(lua, value);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetBoolField(lua_State* lua, const char* name, bool value) {
+    lua_pushboolean(lua, value ? 1 : 0);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetLayerFields(lua_State* lua, std::string name, bool visible, bool annotated) {
+    lua_newtable(lua);
+    luaSetStringField(lua, "name", name);
+    luaSetBoolField(lua, "isVisible", visible);
+    luaSetBoolField(lua, "isAnnotated", annotated);
+}
+
+auto clampLuaPageIndex(QtLuaPluginRuntime::Plugin* plugin, ptrdiff_t pageNumber) -> std::size_t {
+    auto* controller = plugin && plugin->runtime ? plugin->runtime->documentControllerPtr() : nullptr;
+    if (!controller || controller->pageCount() == 0) {
+        return 0U;
+    }
+    const auto zeroBased = std::max<ptrdiff_t>(0, pageNumber - 1);
+    return std::min<std::size_t>(static_cast<std::size_t>(zeroBased), controller->pageCount() - 1U);
+}
+
 auto luaRegisterUi(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     if (!plugin || !plugin->inInitUi) {
@@ -452,6 +504,166 @@ auto luaOpenDialog(lua_State* lua) -> int {
             plugin->callFunction(callback, static_cast<ptrdiff_t>(std::distance(buttons.begin(), it) + 1));
         }
     }
+    return 0;
+}
+
+auto luaGetDocumentStructure(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto& pages = controller->snapshotPages();
+    lua_newtable(lua);
+
+    lua_newtable(lua);
+    for (std::size_t pageIndex = 0; pageIndex < pages.size(); ++pageIndex) {
+        const auto& page = pages[pageIndex];
+        const auto& background = page.background;
+
+        lua_newtable(lua);
+        luaSetNumberField(lua, "pageWidth", page.width);
+        luaSetNumberField(lua, "pageHeight", page.height);
+        luaSetBoolField(lua, "isAnnotated", controller->isPageAnnotated(pageIndex));
+        luaSetStringField(lua, "pageTypeFormat",
+                          PageTypeHandler::getStringForPageTypeFormat(background.backgroundFormat));
+        luaSetStringField(lua, "pageTypeConfig", "");
+        luaSetIntegerField(lua, "backgroundColor",
+                           static_cast<lua_Integer>(static_cast<uint32_t>(background.backgroundColor) & 0x00ffffffU));
+        luaSetIntegerField(lua, "pdfBackgroundPageNo", static_cast<lua_Integer>(background.pdfPageNumber + 1U));
+
+        lua_newtable(lua);
+        luaSetLayerFields(lua, background.hasBackgroundName ? background.backgroundName : std::string("Background"),
+                          true, background.annotated);
+        lua_rawseti(lua, -2, 0);
+
+        const auto layers = controller->layerInfos(pageIndex);
+        for (const auto& layer: layers) {
+            luaSetLayerFields(lua, layer.name, layer.visible, layer.elementCount > 0U);
+            lua_rawseti(lua, -2, static_cast<lua_Integer>(layer.index + 1U));
+        }
+        lua_setfield(lua, -2, "layers");
+
+        luaSetIntegerField(lua, "currentLayer",
+                           static_cast<lua_Integer>(controller->selectedLayerIndex(pageIndex) + 1U));
+        lua_rawseti(lua, -2, static_cast<lua_Integer>(pageIndex + 1U));
+    }
+    lua_setfield(lua, -2, "pages");
+
+    luaSetIntegerField(lua, "currentPage",
+                       static_cast<lua_Integer>(plugin->runtime->currentDocumentPageIndex() + 1U));
+    const auto* document = controller->documentPtr();
+    luaSetStringField(lua, "pdfBackgroundFilename", document ? document->getPdfFilepath().string() : std::string());
+    luaSetStringField(lua, "xoppFilename", document ? document->getFilepath().string() : std::string());
+    return 1;
+}
+
+auto luaSetCurrentPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    plugin->runtime->navigateToDocumentPage(clampLuaPageIndex(plugin, luaOptionalInteger(lua, 1, 1)));
+    return 0;
+}
+
+auto luaScrollToPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageArgument = luaOptionalInteger(lua, 1, 1);
+    const bool relative = luaOptionalBool(lua, 2, false);
+    ptrdiff_t targetPage = pageArgument;
+    if (relative) {
+        targetPage = static_cast<ptrdiff_t>(plugin->runtime->currentDocumentPageIndex()) + 1 + pageArgument;
+    }
+    plugin->runtime->navigateToDocumentPage(clampLuaPageIndex(plugin, targetPage));
+    return 0;
+}
+
+auto luaSetCurrentLayer(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    const auto layerCount = controller->layerCount(pageIndex);
+    if (layerCount == 0U) {
+        return 0;
+    }
+
+    const auto requested = std::max<ptrdiff_t>(1, luaOptionalInteger(lua, 1, 1));
+    const auto layerIndex = std::min<std::size_t>(static_cast<std::size_t>(requested - 1), layerCount - 1U);
+    const bool changeVisibility = luaOptionalBool(lua, 2, false);
+    if (changeVisibility) {
+        for (std::size_t index = 0; index < layerCount; ++index) {
+            controller->setLayerVisible(pageIndex, index, index <= layerIndex);
+        }
+    }
+    controller->selectLayer(pageIndex, layerIndex);
+    plugin->runtime->refreshDocumentUi();
+    if (changeVisibility) {
+        plugin->runtime->markDocumentDirty();
+    }
+    return 0;
+}
+
+auto luaSetLayerVisibility(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    const auto layerIndex = controller->selectedLayerIndex(pageIndex);
+    controller->setLayerVisible(pageIndex, layerIndex, luaOptionalBool(lua, 1, true));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaSetCurrentLayerName(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    controller->renameLayer(pageIndex, controller->selectedLayerIndex(pageIndex), luaOptionalString(lua, 1));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaChangeCurrentPageBackground(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto format = PageTypeHandler::getPageTypeFormatForString(luaOptionalString(lua, 1, "plain"));
+    controller->setPageBackgroundType(plugin->runtime->currentDocumentPageIndex(), format);
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaRefreshPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->refreshDocumentUi();
     return 0;
 }
 
@@ -536,6 +748,14 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"registerUi", luaRegisterUi},
         {"openDialog", luaOpenDialog},
         {"msgbox", luaOpenDialog},
+        {"getDocumentStructure", luaGetDocumentStructure},
+        {"setCurrentPage", luaSetCurrentPage},
+        {"scrollToPage", luaScrollToPage},
+        {"setCurrentLayer", luaSetCurrentLayer},
+        {"setLayerVisibility", luaSetLayerVisibility},
+        {"setCurrentLayerName", luaSetCurrentLayerName},
+        {"changeCurrentPageBackground", luaChangeCurrentPageBackground},
+        {"refreshPage", luaRefreshPage},
         {"changeActionState", luaChangeActionState},
         {"activateAction", luaActivateAction},
         {"getActionState", luaUnsupported},
@@ -674,6 +894,17 @@ QtLuaPluginRuntime::QtLuaPluginRuntime(vn::ui::common::IPluginUiBridge* bridge,
 
 QtLuaPluginRuntime::~QtLuaPluginRuntime() = default;
 
+void QtLuaPluginRuntime::configureDocumentAccess(QtDocumentController* controller,
+                                                 std::function<std::size_t()> currentPageProvider,
+                                                 std::function<void(std::size_t)> pageNavigator,
+                                                 std::function<void()> refreshUi, std::function<void()> markDirty) {
+    this->documentController = controller;
+    this->currentPageProvider = std::move(currentPageProvider);
+    this->pageNavigator = std::move(pageNavigator);
+    this->refreshUi = std::move(refreshUi);
+    this->markDirty = std::move(markDirty);
+}
+
 void QtLuaPluginRuntime::loadEnabledPlugins() {
     for (const auto& plugin: this->plugins) {
         for (const auto& actionId: plugin->actionIds) {
@@ -727,6 +958,30 @@ void QtLuaPluginRuntime::saveEnabledStates(const std::vector<std::pair<std::stri
 }
 
 auto QtLuaPluginRuntime::parentWidget() const -> QWidget* { return this->parent; }
+
+auto QtLuaPluginRuntime::documentControllerPtr() const -> QtDocumentController* { return this->documentController; }
+
+auto QtLuaPluginRuntime::currentDocumentPageIndex() const -> std::size_t {
+    return this->currentPageProvider ? this->currentPageProvider() : 0U;
+}
+
+void QtLuaPluginRuntime::navigateToDocumentPage(std::size_t pageIndex) const {
+    if (this->pageNavigator) {
+        this->pageNavigator(pageIndex);
+    }
+}
+
+void QtLuaPluginRuntime::refreshDocumentUi() const {
+    if (this->refreshUi) {
+        this->refreshUi();
+    }
+}
+
+void QtLuaPluginRuntime::markDocumentDirty() const {
+    if (this->markDirty) {
+        this->markDirty();
+    }
+}
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {
     std::vector<PluginStatus> result;

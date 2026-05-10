@@ -7,12 +7,14 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "ui/common/IPluginUiBridge.h"
 
+class QtDocumentController;
 class QWidget;
 namespace vn::ui::common {
 class ICommandHost;
@@ -40,9 +42,17 @@ public:
 
 public:
     void loadEnabledPlugins();
+    void configureDocumentAccess(QtDocumentController* controller, std::function<std::size_t()> currentPageProvider,
+                                 std::function<void(std::size_t)> pageNavigator,
+                                 std::function<void()> refreshUi, std::function<void()> markDirty);
     void saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states);
     [[nodiscard]] auto statuses() const -> std::vector<PluginStatus>;
     [[nodiscard]] auto parentWidget() const -> QWidget*;
+    [[nodiscard]] auto documentControllerPtr() const -> QtDocumentController*;
+    [[nodiscard]] auto currentDocumentPageIndex() const -> std::size_t;
+    void navigateToDocumentPage(std::size_t pageIndex) const;
+    void refreshDocumentUi() const;
+    void markDocumentDirty() const;
 
 public:
     struct Plugin;
@@ -51,5 +61,10 @@ private:
     vn::ui::common::IPluginUiBridge* bridge = nullptr;
     vn::ui::common::ICommandHost* commandHost = nullptr;
     QWidget* parent = nullptr;
+    QtDocumentController* documentController = nullptr;
+    std::function<std::size_t()> currentPageProvider;
+    std::function<void(std::size_t)> pageNavigator;
+    std::function<void()> refreshUi;
+    std::function<void()> markDirty;
     std::vector<std::unique_ptr<Plugin>> plugins;
 };

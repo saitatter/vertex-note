@@ -407,6 +407,21 @@ QtAppShell::QtAppShell():
     this->window.layerPanel()->setCurrentPage(0U);
 
     registerBootstrapCommands();
+    this->luaPlugins.configureDocumentAccess(
+            &this->documentController, [this]() { return this->window.canvas()->currentPageIndex(); },
+            [this](std::size_t pageIndex) {
+                goToPage(pageIndex);
+                this->window.pageSidebar()->setCurrentPage(pageIndex);
+                this->window.layerPanel()->setCurrentPage(pageIndex);
+                updateStatusBarLabels();
+            },
+            [this]() {
+                this->window.canvas()->update();
+                this->window.pageSidebar()->refresh();
+                this->window.layerPanel()->refresh();
+                updateStatusBarLabels();
+            },
+            [this]() { markSessionDirty(); });
     this->luaPlugins.loadEnabledPlugins();
     this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);
     this->window.commandHost()->setCommandChecked("view.show-menubar", this->persistedShowMenubar);
@@ -861,6 +876,9 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "layer.add-below", .text = "Add Layer Below", .tooltip = "Add layer below current", .menu = "Journal"},
             [this]() { addLayerBelow(); });
     ch->registerCommand(
+            {.id = "layer.copy", .text = "Copy Layer", .tooltip = "Copy the current layer", .menu = "Journal"},
+            [this]() { copyLayer(); });
+    ch->registerCommand(
             {.id = "page.delete-layer", .text = "Delete Layer", .tooltip = "Delete the current layer", .shortcut = "Ctrl+Shift+L", .menu = "Journal"},
             [this]() { deleteLayer(); });
     ch->registerCommand(
@@ -869,6 +887,12 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "layer.rename", .text = "Rename Layer...", .tooltip = "Rename the current layer", .shortcut = "Ctrl+R", .menu = "Journal"},
             [this]() { renameLayerDialog(); });
+    ch->registerCommand(
+            {.id = "layer.show-all", .text = "Show All Layers", .tooltip = "Show all layers on the current page", .menu = "Journal"},
+            [this]() { showAllLayers(); });
+    ch->registerCommand(
+            {.id = "layer.hide-all", .text = "Hide All Layers", .tooltip = "Hide all layers on the current page", .menu = "Journal"},
+            [this]() { hideAllLayers(); });
     ch->addMenuSeparator("Journal");
     ch->registerCommand(
             {.id = "page.format", .text = "Paper Format...", .tooltip = "Set page size and orientation", .menu = "Journal"},
@@ -3698,6 +3722,7 @@ void QtAppShell::showAllLayers() {
     this->documentController.showAllLayers(pageIndex);
     this->window.canvas()->update();
     this->window.layerPanel()->refresh();
+    markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("All layers visible"), 3000);
 }
 
@@ -3709,6 +3734,7 @@ void QtAppShell::hideAllLayers() {
     this->documentController.hideAllLayers(pageIndex);
     this->window.canvas()->update();
     this->window.layerPanel()->refresh();
+    markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("All layers hidden"), 3000);
 }
 
