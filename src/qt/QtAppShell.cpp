@@ -29,6 +29,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QPlainTextEdit>
+#include <QSettings>
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QDoubleSpinBox>
@@ -296,6 +297,7 @@ QtAppShell::QtAppShell():
         this->availableToolbarProfiles.push_back(
                 {.id = profile.id, .displayName = profile.displayName.empty() ? profile.id : profile.displayName});
     }
+    loadPersistentUiState();
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
     this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
@@ -317,12 +319,20 @@ QtAppShell::QtAppShell():
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
+    if (!this->persistedWindowGeometry.isEmpty()) {
+        this->window.restoreGeometry(this->persistedWindowGeometry);
+    }
+    if (!this->persistedWindowState.isEmpty()) {
+        this->window.restoreState(this->persistedWindowState);
+    }
     this->window.canvas()->newBlankDocument();
     this->window.canvas()->fitWidth();
     sidebar->refresh();
     updateWindowTitle();
     updateEditCommandStates();
 }
+
+QtAppShell::~QtAppShell() { savePersistentUiState(); }
 
 auto QtAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
 
@@ -2017,6 +2027,113 @@ void QtAppShell::newSession() {
     updateWindowTitle();
 }
 
+void QtAppShell::loadPersistentUiState() {
+    QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+
+    this->currentSettings.defaultPenWidth =
+            settings.value(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth).toDouble();
+    this->currentSettings.defaultHighlighterWidth =
+            settings.value(QStringLiteral("tools/defaultHighlighterWidth"), this->currentSettings.defaultHighlighterWidth)
+                    .toDouble();
+    this->currentSettings.defaultEraserWidth =
+            settings.value(QStringLiteral("tools/defaultEraserWidth"), this->currentSettings.defaultEraserWidth)
+                    .toDouble();
+    this->currentSettings.defaultPressureSensitive =
+            settings.value(QStringLiteral("tools/defaultPressureSensitive"), this->currentSettings.defaultPressureSensitive)
+                    .toBool();
+    this->currentSettings.defaultEraserMode = settings.value(
+                                                      QStringLiteral("tools/defaultEraserMode"),
+                                                      static_cast<int>(this->currentSettings.defaultEraserMode))
+                                                      .toInt() == static_cast<int>(QtEraserMode::Segment)
+                                                      ? QtEraserMode::Segment
+                                                      : QtEraserMode::Standard;
+    this->currentSettings.defaultPageWidth =
+            settings.value(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth).toDouble();
+    this->currentSettings.defaultPageHeight =
+            settings.value(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight).toDouble();
+    this->currentSettings.undoHistoryLimit =
+            settings.value(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit).toInt();
+    this->currentSettings.geometrySnapDefault =
+            settings.value(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault).toBool();
+    this->currentSettings.gridSnapDefault =
+            settings.value(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault).toBool();
+    this->currentSettings.rotationSnapDefault =
+            settings.value(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault).toBool();
+    this->currentSettings.touchDrawingDefault =
+            settings.value(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault).toBool();
+    this->currentSettings.strokeRecognizerMinSize =
+            settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
+                    .toDouble();
+    this->currentSettings.laserPointerFadeOutMs =
+            settings.value(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs)
+                    .toInt();
+    this->currentSettings.audioFolder =
+            settings.value(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.audioSampleRate =
+            settings.value(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate).toDouble();
+    this->currentSettings.audioGain =
+            settings.value(QStringLiteral("audio/gain"), this->currentSettings.audioGain).toDouble();
+    this->currentSettings.defaultSeekTimeSeconds =
+            settings.value(QStringLiteral("audio/defaultSeekTimeSeconds"), this->currentSettings.defaultSeekTimeSeconds)
+                    .toInt();
+    this->currentSettings.toolbarProfileId = settings.value(
+                                                     QStringLiteral("general/toolbarProfileId"),
+                                                     QString::fromStdString(this->currentSettings.toolbarProfileId))
+                                                     .toString()
+                                                     .toStdString();
+
+    std::vector<std::filesystem::path> recentPaths;
+    const auto recentEntries = settings.value(QStringLiteral("recentDocuments/files")).toStringList();
+    recentPaths.reserve(static_cast<std::size_t>(recentEntries.size()));
+    for (const auto& entry: recentEntries) {
+        if (!entry.trimmed().isEmpty()) {
+            recentPaths.emplace_back(entry.toStdString());
+        }
+    }
+    this->recentFiles.setRecentFiles(recentPaths);
+    this->persistedWindowGeometry = settings.value(QStringLiteral("window/geometry")).toByteArray();
+    this->persistedWindowState = settings.value(QStringLiteral("window/state")).toByteArray();
+
+    if (this->currentSettings.audioFolder.empty()) {
+        this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
+    }
+}
+
+void QtAppShell::savePersistentUiState() const {
+    QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+
+    settings.setValue(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth);
+    settings.setValue(QStringLiteral("tools/defaultHighlighterWidth"), this->currentSettings.defaultHighlighterWidth);
+    settings.setValue(QStringLiteral("tools/defaultEraserWidth"), this->currentSettings.defaultEraserWidth);
+    settings.setValue(QStringLiteral("tools/defaultPressureSensitive"), this->currentSettings.defaultPressureSensitive);
+    settings.setValue(QStringLiteral("tools/defaultEraserMode"), static_cast<int>(this->currentSettings.defaultEraserMode));
+    settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
+    settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
+    settings.setValue(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit);
+    settings.setValue(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault);
+    settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
+    settings.setValue(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault);
+    settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
+    settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
+    settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
+    settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
+    settings.setValue(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder));
+    settings.setValue(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate);
+    settings.setValue(QStringLiteral("audio/gain"), this->currentSettings.audioGain);
+    settings.setValue(QStringLiteral("audio/defaultSeekTimeSeconds"), this->currentSettings.defaultSeekTimeSeconds);
+
+    QStringList recentEntries;
+    for (const auto& path: this->recentFiles.recentFiles()) {
+        recentEntries.push_back(QString::fromStdString(path.string()));
+    }
+    settings.setValue(QStringLiteral("recentDocuments/files"), recentEntries);
+    settings.setValue(QStringLiteral("window/geometry"), this->window.saveGeometry());
+    settings.setValue(QStringLiteral("window/state"), this->window.saveState());
+    settings.sync();
+}
+
 void QtAppShell::rebuildRecentDocumentsMenu() {
     auto* menu = this->window.commandHost()->menuForPath("File>Recent Documents");
     menu->clear();
@@ -2044,6 +2161,7 @@ void QtAppShell::rebuildRecentDocumentsMenu() {
     QObject::connect(clearAction, &QAction::triggered, &this->window, [this]() {
         this->recentFiles.setRecentFiles({});
         rebuildRecentDocumentsMenu();
+        savePersistentUiState();
         this->window.statusBar()->showMessage(QStringLiteral("Recent documents cleared"), 3000);
     });
 }
@@ -2055,6 +2173,7 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
             recentPaths.erase(std::remove(recentPaths.begin(), recentPaths.end(), path), recentPaths.end());
             this->recentFiles.setRecentFiles(recentPaths);
             rebuildRecentDocumentsMenu();
+            savePersistentUiState();
         }
         this->dialogs.showError("Open Failed",
                                 "VertexNote could not find this recent document anymore. It was removed from the list.");
@@ -2085,6 +2204,7 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
         this->suppressDirtyTracking = false;
         this->recentFiles.addRecentFile(path);
         rebuildRecentDocumentsMenu();
+        savePersistentUiState();
         updateEditCommandStates();
         this->window.layerPanel()->refresh();
         this->window.pageSidebar()->refresh();
@@ -2106,6 +2226,7 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(path);
     rebuildRecentDocumentsMenu();
+    savePersistentUiState();
     updateEditCommandStates();
     this->window.layerPanel()->refresh();
     this->window.pageSidebar()->refresh();
@@ -2139,6 +2260,7 @@ void QtAppShell::saveSessionAs() {
 
     this->recentFiles.addRecentFile(*path);
     rebuildRecentDocumentsMenu();
+    savePersistentUiState();
     this->window.statusBar()->showMessage(QString::fromStdString("Saved " + path->filename().string()), 4000);
     updateWindowTitle();
 }
@@ -2428,6 +2550,7 @@ void QtAppShell::saveDocument() {
         this->session.markDirty(false);
         this->recentFiles.addRecentFile(savePath);
         rebuildRecentDocumentsMenu();
+        savePersistentUiState();
         updateWindowTitle();
         this->window.statusBar()->showMessage(QStringLiteral("Document saved"), 3000);
     } else {
@@ -2684,6 +2807,7 @@ void QtAppShell::showSettingsDialog() {
     if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
         rebuildToolbar();
     }
+    savePersistentUiState();
     updateAudioCommandStates();
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
 }

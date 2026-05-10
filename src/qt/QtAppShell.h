@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <QByteArray>
+
 #include "QtAudioController.h"
 #include "QtClipboardService.h"
 #include "QtDialogService.h"
@@ -30,6 +32,7 @@ class QToolButton;
 class QtAppShell: public vn::ui::common::IAppShell {
 public:
     QtAppShell();
+    ~QtAppShell() override;
 
 public:
     [[nodiscard]] auto commandHost() -> vn::ui::common::ICommandHost* override;
@@ -50,6 +53,8 @@ private:
     void wireWindowState();
     void rebuildToolbar();
     void rebuildRecentDocumentsMenu();
+    void loadPersistentUiState();
+    void savePersistentUiState() const;
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();
@@ -198,6 +203,8 @@ private:
     };
     std::vector<NavPoint> navHistory;
     std::size_t navHistoryIndex = 0U;
+    QByteArray persistedWindowGeometry;
+    QByteArray persistedWindowState;
     void recordNavPoint();
     [[nodiscard]] auto selectedElementsForAudioPlayback() const -> std::vector<const Element*>;
 };
