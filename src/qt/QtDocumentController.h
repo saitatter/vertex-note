@@ -306,6 +306,7 @@ public:
             -> std::vector<QtPluginElementRef>;
     [[nodiscard]] auto selectElementsByPluginRefs(std::size_t pageIndex,
                                                   const std::vector<const Element*>& refs) -> bool;
+    [[nodiscard]] auto colorSelectedElements(Color color) -> bool;
 
     // Element operations
     [[nodiscard]] auto deleteSelectedElements() -> bool;

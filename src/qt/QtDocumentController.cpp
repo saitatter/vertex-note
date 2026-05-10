@@ -1270,6 +1270,37 @@ auto QtDocumentController::selectElementsByPluginRefs(std::size_t pageIndex,
     return true;
 }
 
+auto QtDocumentController::colorSelectedElements(Color color) -> bool {
+    if (!this->document || !this->currentSelection || this->currentSelection->elements.empty() ||
+        this->currentSelection->pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    bool changed = false;
+    this->document->lock();
+    auto page = this->document->getPage(this->currentSelection->pageIndex);
+    if (page) {
+        for (auto* layer: page->getLayers()) {
+            if (!layer) {
+                continue;
+            }
+            for (auto& element: layer->getElements()) {
+                const auto* ptr = element.get();
+                if (ptr && std::find(this->currentSelection->elements.begin(), this->currentSelection->elements.end(),
+                                     ptr) != this->currentSelection->elements.end()) {
+                    element->setColor(color);
+                    changed = true;
+                }
+            }
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
 // ---------------------------------------------------------------------------
 // Element operations (delete, select all, clipboard)
 // ---------------------------------------------------------------------------

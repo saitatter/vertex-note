@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,7 @@ public:
                                  std::function<void()> refreshUi, std::function<void()> markDirty);
     void configureExportAccess(std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
                                std::function<bool(const std::filesystem::path&, std::string*)> pngExporter);
+    void configureToolAccess(std::function<void(uint32_t, const std::string&, bool)> toolColorChanger);
     void saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states);
     [[nodiscard]] auto statuses() const -> std::vector<PluginStatus>;
     [[nodiscard]] auto parentWidget() const -> QWidget*;
@@ -57,6 +59,7 @@ public:
     void markDocumentDirty() const;
     [[nodiscard]] auto exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     [[nodiscard]] auto exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
+    void changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const;
 
 public:
     struct Plugin;
@@ -72,5 +75,6 @@ private:
     std::function<void()> markDirty;
     std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter;
     std::function<bool(const std::filesystem::path&, std::string*)> pngExporter;
+    std::function<void(uint32_t, const std::string&, bool)> toolColorChanger;
     std::vector<std::unique_ptr<Plugin>> plugins;
 };

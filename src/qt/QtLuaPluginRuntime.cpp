@@ -21,6 +21,7 @@
 #include <utility>
 
 #include <QMessageBox>
+#include <QFileDialog>
 #include <QPushButton>
 #include <QSettings>
 #include <QString>
@@ -314,6 +315,32 @@ struct QtLuaPluginRuntime::Plugin {
         }
 
         if (lua_pcall(lua.get(), argumentCount, 0, 0) != LUA_OK) {
+            const char* err = lua_tostring(lua.get(), -1);
+            error = err ? err : "Unknown Lua error";
+            lua_pop(lua.get(), 1);
+            if (runtime && runtime->parent) {
+                QMessageBox::warning(runtime->parent, QStringLiteral("Plugin Error"),
+                                     QString::fromStdString(name + ": " + error));
+            }
+            return false;
+        }
+        return true;
+    }
+
+    auto callFunctionWithString(const std::string& functionName, const std::string& value) -> bool {
+        if (!lua) {
+            return false;
+        }
+
+        lua_getglobal(lua.get(), functionName.c_str());
+        if (lua_isfunction(lua.get(), -1) != 1) {
+            lua_pop(lua.get(), 1);
+            error = "Missing Lua callback: " + functionName;
+            return false;
+        }
+
+        lua_pushstring(lua.get(), value.c_str());
+        if (lua_pcall(lua.get(), 1, 0, 0) != LUA_OK) {
             const char* err = lua_tostring(lua.get(), -1);
             error = err ? err : "Unknown Lua error";
             lua_pop(lua.get(), 1);
@@ -1180,6 +1207,68 @@ auto luaAddToSelection(lua_State* lua) -> int {
     return 0;
 }
 
+auto luaChangeToolColor(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "color");
+    if (lua_isinteger(lua, -1) != 1) {
+        return luaL_error(lua, "Missing integer color");
+    }
+    const auto rgb = static_cast<uint32_t>(lua_tointeger(lua, -1)) & 0x00ffffffU;
+    lua_pop(lua, 1);
+    lua_getfield(lua, 1, "tool");
+    const auto tool = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    lua_getfield(lua, 1, "selection");
+    const bool selection = lua_toboolean(lua, -1) != 0;
+    lua_pop(lua, 1);
+
+    plugin->runtime->changeToolColor(rgb, tool, selection);
+    return 0;
+}
+
+auto luaFileDialogSave(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto callback = luaOptionalString(lua, 1);
+    const auto suggested = luaOptionalString(lua, 2, "Untitled");
+    if (callback.empty()) {
+        return luaL_error(lua, "Missing file dialog callback");
+    }
+
+    const auto filename = QFileDialog::getSaveFileName(plugin->runtime->parentWidget(), QStringLiteral("Save File"),
+                                                       QString::fromStdString(suggested));
+    plugin->callFunctionWithString(callback, filename.toStdString());
+    return 0;
+}
+
+auto luaGlibRename(lua_State* lua) -> int {
+    const auto from = std::filesystem::path(luaL_checkstring(lua, 1));
+    const auto to = std::filesystem::path(luaL_checkstring(lua, 2));
+    std::error_code ec;
+    std::filesystem::rename(from, to, ec);
+    if (ec) {
+        std::filesystem::copy_file(from, to, std::filesystem::copy_options::overwrite_existing, ec);
+        if (!ec) {
+            std::filesystem::remove(from, ec);
+        }
+    }
+    if (ec) {
+        lua_pushnil(lua);
+        lua_pushstring(lua, ec.message().c_str());
+        return 2;
+    }
+    lua_pushinteger(lua, 1);
+    return 1;
+}
+
 auto luaExport(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     if (!plugin || !plugin->runtime) {
@@ -1287,6 +1376,9 @@ auto luaChangeActionState(lua_State* lua) -> int {
         return plugin->setBooleanCommand("view.toggle-rotation-snap", luaOptionalBool(lua, 2)) ? 0
                                                                                               : luaL_error(lua, "Qt shell cannot set rotation snapping");
     }
+    if (action == "position-highlighting") {
+        return 0;
+    }
     if (action == "tool-pen-line-style") {
         const auto command = lineStyleCommand(luaOptionalString(lua, 2));
         if (command.empty() || !plugin->triggerCommand(command)) {
@@ -1319,6 +1411,9 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"addImages", luaAddImages},
         {"clearSelection", luaClearSelection},
         {"addToSelection", luaAddToSelection},
+        {"changeToolColor", luaChangeToolColor},
+        {"fileDialogSave", luaFileDialogSave},
+        {"glib_rename", luaGlibRename},
         {"export", luaExport},
         {"refreshPage", luaRefreshPage},
         {"changeActionState", luaChangeActionState},
@@ -1477,6 +1572,11 @@ void QtLuaPluginRuntime::configureExportAccess(
     this->pngExporter = std::move(pngExporter);
 }
 
+void QtLuaPluginRuntime::configureToolAccess(
+        std::function<void(uint32_t, const std::string&, bool)> toolColorChanger) {
+    this->toolColorChanger = std::move(toolColorChanger);
+}
+
 void QtLuaPluginRuntime::loadEnabledPlugins() {
     for (const auto& plugin: this->plugins) {
         for (const auto& actionId: plugin->actionIds) {
@@ -1573,6 +1673,12 @@ auto QtLuaPluginRuntime::exportPng(const std::filesystem::path& path, std::strin
         return false;
     }
     return this->pngExporter(path, errorMessage);
+}
+
+void QtLuaPluginRuntime::changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const {
+    if (this->toolColorChanger) {
+        this->toolColorChanger(rgb, tool, selection);
+    }
 }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {
