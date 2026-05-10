@@ -133,7 +133,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run
 
 For local development, the default `configure/build/test/run/all` tasks in
 `scripts/mingw64-dev.ps1` now point at the Qt shell path. The GTK shell remains
-available through the explicit `*-gtk` tasks.
+available through the explicit `*-gtk` tasks. The default Qt configure path
+also sets `-DENABLE_LEGACY_GTK_SHELL=OFF`.
 
 ## Intentional Limits
 

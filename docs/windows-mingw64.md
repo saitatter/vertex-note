@@ -42,6 +42,8 @@ From PowerShell at the repository root:
 ```
 
 Those default commands now target the Qt shell and the Qt-backed build tree.
+They also configure that build with `-DENABLE_LEGACY_GTK_SHELL=OFF`, so the
+active shell path no longer carries the legacy GTK wrapper/thumbnailer targets.
 
 For the legacy GTK shell explicitly:
 
