@@ -226,7 +226,8 @@ public:
                      StrokeTool::Value toolType, bool pressureSensitive, const std::string& lineStyle = "plain",
                      int fill = -1) -> bool;
     auto updateStroke(double x, double y, double pressure) -> bool;
-    auto finalizeStroke() -> bool;
+    auto finalizeStroke(bool recognizeShape = false, double recognizerMinSize = 40.0,
+                        bool snapRecognizedToGrid = false) -> bool;
     auto cancelStroke() -> void;
     [[nodiscard]] auto activeStroke() const -> const QtActiveStroke*;
 

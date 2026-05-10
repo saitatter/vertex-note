@@ -22,6 +22,8 @@
 #include "ui/input/UiInputEvents.h"
 #include "view/render/Renderers.h"
 
+class QTimer;
+
 class QtCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
     Q_OBJECT
 
@@ -57,6 +59,8 @@ public:
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
     void setTouchDrawingEnabled(bool enabled);
+    void setShapeRecognizerMinSize(double value);
+    void setLaserPointerFadeOutMs(int value);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
@@ -132,6 +136,8 @@ private:
     void finalizeActiveStroke();
     void cancelActiveStroke();
     void drawActiveStroke(QPainter& painter) const;
+    void drawLaserPointerStrokes(QPainter& painter) const;
+    void pruneLaserPointerStrokes();
     void beginEraseAtScreen(const QPointF& screenPoint);
     void eraseAtScreen(const QPointF& screenPoint);
     void finalizeErase();
@@ -203,6 +209,15 @@ private:
     QPointF shapeCurrentScene;
     std::vector<QPointF> shapeClickPoints;  // For multi-click tools (polyline, arc)
     std::size_t shapePageIndex = 0U;
+    double shapeRecognizerMinSize = 40.0;
+    int laserPointerFadeOutMs = 1500;
+    struct QtLaserOverlayStroke {
+        std::size_t pageIndex = 0U;
+        vn::view::render::StrokeRenderModel model;
+        qint64 createdMs = 0;
+    };
+    std::vector<QtLaserOverlayStroke> laserOverlayStrokes;
+    QTimer* laserFadeTimer = nullptr;
     QtToolState currentToolState;
     QtTextEditor* textEditor = nullptr;
 };

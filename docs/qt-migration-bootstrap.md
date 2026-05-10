@@ -141,8 +141,7 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   Lua runtime; plugins requiring Lua execution need the GTK shell.
 - The following toolbar-visible features are still partial or placeholder in
   the Qt shell and remain on the parity backlog:
-  `LASER_POINTER`, `PDF_TOOL`, `SELECT_PDF_TEXT_*`, `SETSQUARE`,
-  `COMPASS`, `RULER`, `SHAPE_RECOGNIZER`, `AUDIO_*`.
+  `PDF_TOOL`, `SELECT_PDF_TEXT_*`, `SETSQUARE`, `COMPASS`, `AUDIO_*`.
 
 ## Completed Slices
 
@@ -215,6 +214,10 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
     ellipse, arrow, double arrow, coordinate system, spline.
 33. ✓ View layout controls now affect the Qt canvas:
     paired pages, vertical/horizontal flow, RTL/LTR, BTT/TTB.
+34. ✓ Laser pointer tools in the Qt shell:
+    pen/highlighter variants, toolbar family button, temporary fading overlay.
+35. ✓ Shape recognizer in the Qt shell:
+    recognizer drawing tool, shared core recognition pass, recognizer settings.
 
 ### Phase 7 — Clipboard & element operations ✓
 

@@ -167,6 +167,7 @@ private:
     std::vector<ElementPtr> elementClipboard;
     QToolButton* selectionToolButton = nullptr;
     QToolButton* drawingToolButton = nullptr;
+    QToolButton* laserToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
     QDoubleSpinBox* fontSizeSpinner = nullptr;
     QSpinBox* fillOpacitySpinner = nullptr;

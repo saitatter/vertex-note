@@ -112,6 +112,21 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->touchDrawingCheck->setChecked(current.touchDrawingDefault);
     generalLayout->addRow(QStringLiteral("Touch drawing enabled:"), this->touchDrawingCheck);
 
+    this->strokeRecognizerMinSizeSpin = new QDoubleSpinBox(generalPage);
+    this->strokeRecognizerMinSizeSpin->setRange(5.0, 500.0);
+    this->strokeRecognizerMinSizeSpin->setSingleStep(5.0);
+    this->strokeRecognizerMinSizeSpin->setDecimals(1);
+    this->strokeRecognizerMinSizeSpin->setValue(current.strokeRecognizerMinSize);
+    this->strokeRecognizerMinSizeSpin->setSuffix(QStringLiteral(" pt"));
+    generalLayout->addRow(QStringLiteral("Shape recognizer min size:"), this->strokeRecognizerMinSizeSpin);
+
+    this->laserPointerFadeOutSpin = new QSpinBox(generalPage);
+    this->laserPointerFadeOutSpin->setRange(100, 10000);
+    this->laserPointerFadeOutSpin->setSingleStep(100);
+    this->laserPointerFadeOutSpin->setValue(current.laserPointerFadeOutMs);
+    this->laserPointerFadeOutSpin->setSuffix(QStringLiteral(" ms"));
+    generalLayout->addRow(QStringLiteral("Laser pointer fade-out:"), this->laserPointerFadeOutSpin);
+
     this->toolbarProfileCombo = new QComboBox(generalPage);
     int currentProfileIndex = -1;
     for (int profileIndex = 0; profileIndex < static_cast<int>(toolbarProfiles.size()); ++profileIndex) {
@@ -156,6 +171,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
             .rotationSnapDefault = this->rotationSnapCheck->isChecked(),
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
+            .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
+            .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
             .toolbarProfileId = this->toolbarProfileCombo->currentData().toString().toStdString(),
     };
 }

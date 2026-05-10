@@ -36,6 +36,8 @@ struct QtSettings {
     bool gridSnapDefault = false;
     bool rotationSnapDefault = false;
     bool touchDrawingDefault = false;
+    double strokeRecognizerMinSize = 40.0;
+    int laserPointerFadeOutMs = 1500;
     std::string toolbarProfileId = "All in";
 };
 
@@ -61,5 +63,7 @@ private:
     QCheckBox* gridSnapCheck = nullptr;
     QCheckBox* rotationSnapCheck = nullptr;
     QCheckBox* touchDrawingCheck = nullptr;
+    QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
+    QSpinBox* laserPointerFadeOutSpin = nullptr;
     QComboBox* toolbarProfileCombo = nullptr;
 };

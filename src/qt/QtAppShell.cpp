@@ -128,7 +128,7 @@ constexpr std::array<ToolActionSpec, 5> SELECTION_TOOL_SPECS = {{
         {"tool.select-object", QtToolType::SelectObject},
 }};
 
-constexpr std::array<ToolActionSpec, 8> DRAWING_TOOL_SPECS = {{
+constexpr std::array<ToolActionSpec, 9> DRAWING_TOOL_SPECS = {{
         {"tool.draw-line", QtToolType::DrawLine},
         {"tool.draw-rectangle", QtToolType::DrawRectangle},
         {"tool.draw-circle", QtToolType::DrawCircle},
@@ -137,6 +137,12 @@ constexpr std::array<ToolActionSpec, 8> DRAWING_TOOL_SPECS = {{
         {"tool.draw-construction-line", QtToolType::DrawConstructionLine},
         {"tool.draw-construction-circle", QtToolType::DrawConstructionCircle},
         {"tool.draw-spline", QtToolType::DrawSpline},
+        {"tool.draw-shape-recognizer", QtToolType::ShapeRecognizer},
+}};
+
+constexpr std::array<ToolActionSpec, 2> LASER_TOOL_SPECS = {{
+        {"tool.laser-pointer-pen", QtToolType::LaserPointerPen},
+        {"tool.laser-pointer-highlighter", QtToolType::LaserPointerHighlighter},
 }};
 
 constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
@@ -175,6 +181,8 @@ QtAppShell::QtAppShell():
     }
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
+    this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
+    this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
     this->window.layerPanel()->setDocumentController(&this->documentController);
     this->window.toolPalette()->setCompactToolbarMode(true);
 
@@ -591,6 +599,14 @@ void QtAppShell::registerBootstrapCommands() {
              .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Highlighter},
             [this]() { selectTool(QtToolType::Highlighter); });
     ch->registerCommand(
+            {.id = "tool.laser-pointer-pen", .text = "Laser Pointer Pen", .tooltip = "Draw temporary laser pen strokes",
+             .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::LaserPointerPen); });
+    ch->registerCommand(
+            {.id = "tool.laser-pointer-highlighter", .text = "Laser Pointer Highlighter",
+             .tooltip = "Draw temporary laser highlighter strokes", .menu = "Tools", .checkable = true},
+            [this]() { selectTool(QtToolType::LaserPointerHighlighter); });
+    ch->registerCommand(
             {.id = "tool.text", .text = "Text", .tooltip = "Insert or edit text", .shortcut = "Ctrl+Shift+T",
              .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Text},
             [this]() { selectTool(QtToolType::Text); });
@@ -628,6 +644,10 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "tool.draw-spline", .text = "Draw Spline", .tooltip = "Draw a smooth spline curve", .shortcut = "Ctrl+8",
              .menu = "Tools>Drawing Type", .checkable = true},
             [this]() { selectTool(QtToolType::DrawSpline); });
+    ch->registerCommand(
+            {.id = "tool.draw-shape-recognizer", .text = "Shape Recognizer",
+             .tooltip = "Recognize strokes as clean geometric shapes", .menu = "Tools>Drawing Type", .checkable = true},
+            [this]() { selectTool(QtToolType::ShapeRecognizer); });
     ch->addMenuSeparator("Tools>Drawing Type");
     ch->registerCommand(
             {.id = "tool.draw-circle", .text = "Draw Vertex Circle", .tooltip = "Draw a geometry circle", .shortcut = "Ctrl+9",
@@ -983,6 +1003,7 @@ void QtAppShell::rebuildToolbar() {
     }
     this->selectionToolButton = nullptr;
     this->drawingToolButton = nullptr;
+    this->laserToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
     this->fontSizeSpinner = nullptr;
     this->toolbarFillAction = nullptr;
@@ -1062,6 +1083,8 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("app.settings", "toolbars-manage");
     setNamedIcon("tool.hand", "hand");
     setNamedIcon("tool.pen", "tool-pencil");
+    setNamedIcon("tool.laser-pointer-pen", "laser-pointer");
+    setNamedIcon("tool.laser-pointer-highlighter", "laser-pointer");
     setNamedIcon("tool.eraser", "tool-eraser");
     setNamedIcon("tool.highlighter", "tool-highlighter");
     setNamedIcon("tool.text", "tool-text");
@@ -1229,11 +1252,15 @@ void QtAppShell::rebuildToolbar() {
 
     const auto currentStrokeColor = [&]() -> Color {
         const auto& toolState = this->window.canvas()->toolState();
-        return toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterColor : toolState.penColor;
+        return toolState.activeTool == QtToolType::Highlighter ||
+                       toolState.activeTool == QtToolType::LaserPointerHighlighter
+               ? toolState.highlighterColor
+               : toolState.penColor;
     };
     const auto applyToolbarColor = [&](Color color) {
         auto& toolState = this->window.canvas()->toolState();
-        if (toolState.activeTool == QtToolType::Highlighter) {
+        if (toolState.activeTool == QtToolType::Highlighter ||
+            toolState.activeTool == QtToolType::LaserPointerHighlighter) {
             toolState.highlighterColor = color;
         } else {
             toolState.penColor = color;
@@ -1272,6 +1299,22 @@ void QtAppShell::rebuildToolbar() {
             this->drawingToolButton->setMenu(drawingMenu);
         }
         return this->drawingToolButton;
+    };
+    const auto ensureLaserButton = [&]() -> QToolButton* {
+        if (!this->laserToolButton) {
+            this->laserToolButton = new QToolButton(&this->window);
+            this->laserToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+            this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            this->laserToolButton->setIcon(bundledQtIcon("xopp-laser-pointer.svg"));
+            auto* laserMenu = new QMenu(this->laserToolButton);
+            for (const auto& spec: LASER_TOOL_SPECS) {
+                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                    laserMenu->addAction(action);
+                }
+            }
+            this->laserToolButton->setMenu(laserMenu);
+        }
+        return this->laserToolButton;
     };
     const auto ensureFontWidgets = [&]() {
         if (!this->fontFamilyCombo) {
@@ -1399,8 +1442,7 @@ void QtAppShell::rebuildToolbar() {
         if (token == "ERASER") { addCommand(toolbar, "tool.eraser"); return; }
         if (token == "HIGHLIGHTER" || token == "HILIGHTER") { addCommand(toolbar, "tool.highlighter"); return; }
         if (token == "LASER_POINTER") {
-            addPlaceholder(toolbar, "Laser Pointer", "Laser pointer is not yet available in the Qt shell",
-                           "xopp-laser-pointer.svg");
+            toolbar->addWidget(ensureLaserButton());
             return;
         }
         if (token == "IMAGE") { addCommand(toolbar, "edit.insert-image"); return; }
@@ -1466,8 +1508,7 @@ void QtAppShell::rebuildToolbar() {
             return;
         }
         if (token == "SHAPE_RECOGNIZER") {
-            addPlaceholder(toolbar, "Shape Recognizer", "Shape recognizer is not yet available in the Qt shell",
-                           "xopp-shape-recognizer.svg");
+            addCommand(toolbar, "tool.draw-shape-recognizer");
             return;
         }
         if (token == "DRAW_RECTANGLE") { addCommand(toolbar, "tool.draw-rectangle"); return; }
@@ -1476,7 +1517,7 @@ void QtAppShell::rebuildToolbar() {
         if (token == "DRAW_DOUBLE_ARROW") { addCommand(toolbar, "tool.draw-double-arrow"); return; }
         if (token == "DRAW_COORDINATE_SYSTEM") { addCommand(toolbar, "tool.draw-coordinate-system"); return; }
         if (token == "RULER") {
-            addPlaceholder(toolbar, "Ruler", "Ruler is not yet available in the Qt shell", "xopp-spacer.svg");
+            addCommand(toolbar, "tool.draw-line");
             return;
         }
         if (token == "DRAW_SPLINE") { addCommand(toolbar, "tool.draw-spline"); return; }
@@ -1660,6 +1701,14 @@ void QtAppShell::syncToolbarWidgets() {
         }
     }
 
+    if (this->laserToolButton) {
+        if (auto* action = findActionForTool(this->window.commandHost(), LASER_TOOL_SPECS, toolState.activeTool)) {
+            this->laserToolButton->setDefaultAction(action);
+            this->laserToolButton->setMenu(this->laserToolButton->menu());
+            this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        }
+    }
+
     if (this->fontFamilyCombo) {
         const QSignalBlocker blocker(this->fontFamilyCombo);
         this->fontFamilyCombo->setCurrentFont(QFont(QString::fromStdString(toolState.fontName)));
@@ -1672,8 +1721,10 @@ void QtAppShell::syncToolbarWidgets() {
 
     if (this->toolbarFillAction) {
         const QSignalBlocker blocker(this->toolbarFillAction);
-        const bool checked = toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterFillEnabled
-                                                                             : toolState.fillEnabled;
+        const bool checked = toolState.activeTool == QtToolType::Highlighter ||
+                                             toolState.activeTool == QtToolType::LaserPointerHighlighter
+                                     ? toolState.highlighterFillEnabled
+                                     : toolState.fillEnabled;
         this->toolbarFillAction->setChecked(checked);
     }
 
@@ -1682,8 +1733,10 @@ void QtAppShell::syncToolbarWidgets() {
         this->fillOpacitySpinner->setValue(toolState.fillOpacity);
     }
 
-    const Color selectedColor = toolState.activeTool == QtToolType::Highlighter ? toolState.highlighterColor
-                                                                                 : toolState.penColor;
+    const Color selectedColor = toolState.activeTool == QtToolType::Highlighter ||
+                                                toolState.activeTool == QtToolType::LaserPointerHighlighter
+                                        ? toolState.highlighterColor
+                                        : toolState.penColor;
     for (auto* button: this->toolbarColorButtons) {
         if (!button) {
             continue;
@@ -1902,6 +1955,9 @@ void QtAppShell::updateToolCommandStates() {
     const auto active = this->window.canvas()->activeTool();
     this->window.commandHost()->setCommandChecked("tool.hand", active == QtToolType::Hand);
     this->window.commandHost()->setCommandChecked("tool.pen", active == QtToolType::Pen);
+    this->window.commandHost()->setCommandChecked("tool.laser-pointer-pen", active == QtToolType::LaserPointerPen);
+    this->window.commandHost()->setCommandChecked("tool.laser-pointer-highlighter",
+                                                  active == QtToolType::LaserPointerHighlighter);
     this->window.commandHost()->setCommandChecked("tool.eraser", active == QtToolType::Eraser);
     this->window.commandHost()->setCommandChecked("tool.highlighter", active == QtToolType::Highlighter);
     this->window.commandHost()->setCommandChecked("tool.select", active == QtToolType::SelectRect);
@@ -1919,6 +1975,7 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.draw-double-arrow", active == QtToolType::DrawDoubleArrow);
     this->window.commandHost()->setCommandChecked("tool.draw-coordinate-system", active == QtToolType::DrawCoordinateSystem);
     this->window.commandHost()->setCommandChecked("tool.draw-spline", active == QtToolType::DrawSpline);
+    this->window.commandHost()->setCommandChecked("tool.draw-shape-recognizer", active == QtToolType::ShapeRecognizer);
     this->window.commandHost()->setCommandChecked("tool.draw-arc", active == QtToolType::DrawArc);
     this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
@@ -2269,6 +2326,8 @@ void QtAppShell::showSettingsDialog() {
     this->window.canvas()->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
     this->window.canvas()->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
     this->window.canvas()->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
+    this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
+    this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", this->currentSettings.rotationSnapDefault);

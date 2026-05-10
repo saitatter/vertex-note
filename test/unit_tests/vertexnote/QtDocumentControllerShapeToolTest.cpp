@@ -1,3 +1,4 @@
+#include <array>
 #include <stdexcept>
 
 #include <gtest/gtest.h>
@@ -66,4 +67,28 @@ TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifie
 
     EXPECT_TRUE(controller.redo());
     EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, shapeRecognizerStrokeFinalizesThroughQtPath) {
+    QtDocumentController controller;
+    ASSERT_TRUE(controller.beginStroke(0U, 20.0, 20.0, 0.5, Colors::black, 2.0, StrokeTool::PEN, false));
+
+    static constexpr std::array<std::pair<double, double>, 8> RectangleLikePoints = {{
+            {120.0, 20.0},
+            {120.0, 70.0},
+            {120.0, 120.0},
+            {70.0, 120.0},
+            {20.0, 120.0},
+            {20.0, 70.0},
+            {20.0, 20.0},
+            {120.0, 20.0},
+    }};
+
+    for (const auto& [x, y]: RectangleLikePoints) {
+        ASSERT_TRUE(controller.updateStroke(x, y, 0.5));
+    }
+
+    ASSERT_TRUE(controller.finalizeStroke(true, 20.0, false));
+    ASSERT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+    EXPECT_TRUE(controller.canUndo());
 }

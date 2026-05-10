@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include <QCursor>
+#include <QDateTime>
 #include <QEvent>
 #include <QFontMetrics>
 #include <QKeyEvent>
@@ -27,6 +28,7 @@
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QStringList>
+#include <QTimer>
 #include <QWheelEvent>
 
 #include "QtPreviewBackgroundRenderer.h"
@@ -225,6 +227,15 @@ QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
     this->pageContentRenderer = std::make_unique<vn::view::render::PageContentRenderer>(
             this->strokeRenderer.get(), this->textRenderer.get(), this->imageRenderer.get(),
             this->backgroundRenderer.get(), this->geometryRenderer.get());
+    this->laserFadeTimer = new QTimer(this);
+    this->laserFadeTimer->setInterval(33);
+    QObject::connect(this->laserFadeTimer, &QTimer::timeout, this, [this]() {
+        pruneLaserPointerStrokes();
+        if (this->laserOverlayStrokes.empty()) {
+            this->laserFadeTimer->stop();
+        }
+        update();
+    });
     newBlankDocument();
 }
 
@@ -449,6 +460,10 @@ void QtCanvas::setTouchDrawingEnabled(bool enabled) {
     this->touchDrawingEnabled = enabled;
 }
 
+void QtCanvas::setShapeRecognizerMinSize(double value) { this->shapeRecognizerMinSize = std::max(5.0, value); }
+
+void QtCanvas::setLaserPointerFadeOutMs(int value) { this->laserPointerFadeOutMs = std::max(100, value); }
+
 auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
 
 auto QtCanvas::isTouchDrawingEnabled() const -> bool { return this->touchDrawingEnabled; }
@@ -542,6 +557,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     }
 
     drawActiveStroke(painter);
+    drawLaserPointerStrokes(painter);
     drawSelectionOverlay(painter);
     drawRubberBand(painter);
     drawShapePreview(painter);
@@ -576,7 +592,8 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton) {
         const auto tool = this->currentToolState.activeTool;
-        if (tool == QtToolType::Pen || tool == QtToolType::Highlighter) {
+        if (tool == QtToolType::Pen || tool == QtToolType::Highlighter || tool == QtToolType::LaserPointerPen ||
+            tool == QtToolType::LaserPointerHighlighter || tool == QtToolType::ShapeRecognizer) {
             beginStrokeAtScreen(event->position(), 0.5);
             event->accept();
             return;
@@ -1285,6 +1302,8 @@ void QtCanvas::setActiveTool(QtToolType tool) {
     this->currentToolState.activeTool = tool;
     switch (tool) {
         case QtToolType::Pen:
+        case QtToolType::LaserPointerPen:
+        case QtToolType::LaserPointerHighlighter:
         case QtToolType::Highlighter:
         case QtToolType::Eraser:
         case QtToolType::DrawLine:
@@ -1295,6 +1314,7 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::DrawDoubleArrow:
         case QtToolType::DrawCoordinateSystem:
         case QtToolType::DrawSpline:
+        case QtToolType::ShapeRecognizer:
         case QtToolType::DrawArc:
         case QtToolType::DrawPolyline:
         case QtToolType::DrawConstructionLine:
@@ -1385,11 +1405,11 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
     double width;
     StrokeTool::Value toolType;
     const auto tool = this->currentToolState.activeTool;
-    if (tool == QtToolType::Pen) {
+    if (tool == QtToolType::Pen || tool == QtToolType::ShapeRecognizer || tool == QtToolType::LaserPointerPen) {
         color = this->currentToolState.penColor;
         width = this->currentToolState.penWidth;
         toolType = StrokeTool::PEN;
-    } else if (tool == QtToolType::Highlighter) {
+    } else if (tool == QtToolType::Highlighter || tool == QtToolType::LaserPointerHighlighter) {
         color = this->currentToolState.highlighterColor;
         width = this->currentToolState.highlighterWidth;
         toolType = StrokeTool::HIGHLIGHTER;
@@ -1438,7 +1458,22 @@ void QtCanvas::finalizeActiveStroke() {
         return;
     }
 
-    const bool added = this->documentController->finalizeStroke();
+    const auto tool = this->currentToolState.activeTool;
+    bool added = false;
+    if (tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter) {
+        if (const auto* active = this->documentController->activeStroke(); active && active->stroke) {
+            this->laserOverlayStrokes.push_back({.pageIndex = active->pageIndex,
+                                                 .model = vn::view::render::StrokeRenderModelFactory::fromStroke(*active->stroke),
+                                                 .createdMs = QDateTime::currentMSecsSinceEpoch()});
+            if (this->laserFadeTimer) {
+                this->laserFadeTimer->start();
+            }
+        }
+        this->documentController->cancelStroke();
+    } else {
+        added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
+                                                         this->shapeRecognizerMinSize, this->gridSnapEnabled);
+    }
     this->drawing = false;
     this->activeTouchPointId = -1;
     update();
@@ -1479,6 +1514,52 @@ void QtCanvas::drawActiveStroke(QPainter& painter) const {
     this->pageContentRenderer->drawStroke(model, renderContext);
 
     painter.restore();
+}
+
+void QtCanvas::drawLaserPointerStrokes(QPainter& painter) const {
+    if (this->laserOverlayStrokes.empty() || !this->pageContentRenderer) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    const auto now = QDateTime::currentMSecsSinceEpoch();
+    for (const auto& overlay: this->laserOverlayStrokes) {
+        if (overlay.pageIndex >= rects.size()) {
+            continue;
+        }
+
+        const auto age = std::max<qint64>(0, now - overlay.createdMs);
+        const double alpha = std::clamp(1.0 - static_cast<double>(age) / this->laserPointerFadeOutMs, 0.0, 1.0);
+        if (alpha <= 0.0) {
+            continue;
+        }
+
+        auto model = overlay.model;
+        model.color.alpha = static_cast<uint8_t>(std::round(static_cast<double>(model.color.alpha) * alpha));
+        if (model.highlighter && model.fill > 0) {
+            model.fill = static_cast<int>(std::round(static_cast<double>(model.fill) * alpha));
+        }
+
+        const QRectF& pageRect = rects[overlay.pageIndex];
+        painter.save();
+        painter.setClipRect(pageRect);
+        painter.translate(pageRect.x(), pageRect.y());
+
+        vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
+        this->pageContentRenderer->drawStroke(model, renderContext);
+        painter.restore();
+    }
+}
+
+void QtCanvas::pruneLaserPointerStrokes() {
+    if (this->laserOverlayStrokes.empty()) {
+        return;
+    }
+
+    const auto now = QDateTime::currentMSecsSinceEpoch();
+    std::erase_if(this->laserOverlayStrokes, [this, now](const QtLaserOverlayStroke& overlay) {
+        return now - overlay.createdMs >= this->laserPointerFadeOutMs;
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -2169,7 +2250,10 @@ void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
     }
 
     const bool drawTool = this->currentToolState.activeTool == QtToolType::Pen ||
-                          this->currentToolState.activeTool == QtToolType::Highlighter;
+                          this->currentToolState.activeTool == QtToolType::Highlighter ||
+                          this->currentToolState.activeTool == QtToolType::LaserPointerPen ||
+                          this->currentToolState.activeTool == QtToolType::LaserPointerHighlighter ||
+                          this->currentToolState.activeTool == QtToolType::ShapeRecognizer;
     if (!drawTool) {
         return;
     }

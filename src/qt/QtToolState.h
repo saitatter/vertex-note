@@ -13,6 +13,8 @@
 enum class QtToolType {
     Hand,
     Pen,
+    LaserPointerPen,
+    LaserPointerHighlighter,
     Eraser,
     Highlighter,
     Text,
@@ -30,6 +32,7 @@ enum class QtToolType {
     DrawDoubleArrow,
     DrawCoordinateSystem,
     DrawSpline,
+    ShapeRecognizer,
     DrawArc,
     DrawPolyline,
     DrawConstructionLine,
@@ -57,6 +60,8 @@ struct QtToolState {
         switch (activeTool) {
             case QtToolType::Hand: return "Hand";
             case QtToolType::Pen: return "Pen";
+            case QtToolType::LaserPointerPen: return "Laser Pointer Pen";
+            case QtToolType::LaserPointerHighlighter: return "Laser Pointer Highlighter";
             case QtToolType::Eraser: return "Eraser";
             case QtToolType::Highlighter: return "Highlighter";
             case QtToolType::Text: return "Text";
@@ -74,6 +79,7 @@ struct QtToolState {
             case QtToolType::DrawDoubleArrow: return "Double Arrow";
             case QtToolType::DrawCoordinateSystem: return "Coordinate System";
             case QtToolType::DrawSpline: return "Spline";
+            case QtToolType::ShapeRecognizer: return "Shape Recognizer";
             case QtToolType::DrawArc: return "Arc";
             case QtToolType::DrawPolyline: return "Polyline";
             case QtToolType::DrawConstructionLine: return "Construction Line";
@@ -92,6 +98,7 @@ struct QtToolState {
             case QtToolType::DrawDoubleArrow:
             case QtToolType::DrawCoordinateSystem:
             case QtToolType::DrawSpline:
+            case QtToolType::ShapeRecognizer:
             case QtToolType::DrawArc:
             case QtToolType::DrawPolyline:
             case QtToolType::DrawConstructionLine:

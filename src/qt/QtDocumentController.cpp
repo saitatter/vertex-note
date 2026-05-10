@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <limits>
 #include <memory>
 
+#include "control/shaperecognizer/ShapeRecognizer.h"
 #include "control/xojfile/LoadHandler.h"
 #include "control/xojfile/SaveHandler.h"
 #include "model/Element.h"
@@ -670,7 +672,8 @@ auto QtDocumentController::updateStroke(double x, double y, double pressure) -> 
     return true;
 }
 
-auto QtDocumentController::finalizeStroke() -> bool {
+auto QtDocumentController::finalizeStroke(bool recognizeShape, double recognizerMinSize, bool snapRecognizedToGrid)
+        -> bool {
     if (!this->currentStroke) {
         return false;
     }
@@ -690,6 +693,36 @@ auto QtDocumentController::finalizeStroke() -> bool {
 
     stroke->freeUnusedPointItems();
     const std::size_t pageIndex = this->currentStroke->pageIndex;
+
+    if (recognizeShape) {
+        ShapeRecognizer recognizer;
+        if (auto recognized = recognizer.recognizePatterns(stroke.get(), recognizerMinSize)) {
+            recognized->setColor(stroke->getColor());
+            recognized->setWidth(stroke->hasPressure() ? stroke->getAvgPressure() : stroke->getWidth());
+
+            if (snapRecognizedToGrid) {
+                const auto oldSnappedBounds = recognized->getSnappedBounds();
+                Point topLeft(oldSnappedBounds.x, oldSnappedBounds.y);
+                Point topLeftSnapped = Point(std::round(topLeft.x / 28.0) * 28.0, std::round(topLeft.y / 28.0) * 28.0);
+
+                recognized->move(topLeftSnapped.x - topLeft.x, topLeftSnapped.y - topLeft.y);
+                const auto snappedBounds = recognized->getSnappedBounds();
+                Point bottomRight(snappedBounds.x + snappedBounds.width, snappedBounds.y + snappedBounds.height);
+                Point bottomRightSnapped = Point(std::round(bottomRight.x / 28.0) * 28.0,
+                                                 std::round(bottomRight.y / 28.0) * 28.0);
+
+                const double fx = std::abs(snappedBounds.width) > std::numeric_limits<double>::epsilon()
+                                          ? (bottomRightSnapped.x - topLeftSnapped.x) / snappedBounds.width
+                                          : 1.0;
+                const double fy = std::abs(snappedBounds.height) > std::numeric_limits<double>::epsilon()
+                                          ? (bottomRightSnapped.y - topLeftSnapped.y) / snappedBounds.height
+                                          : 1.0;
+                recognized->scale(topLeftSnapped.x, topLeftSnapped.y, fx, fy, 0.0, false);
+            }
+
+            stroke = std::move(recognized);
+        }
+    }
 
     this->document->lock();
     if (pageIndex >= this->document->getPageCount()) {
