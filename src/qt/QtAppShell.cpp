@@ -1594,7 +1594,7 @@ void QtAppShell::rebuildToolbar() {
         if (!this->fontFamilyCombo) {
             this->fontFamilyCombo = new QFontComboBox(&this->window);
             this->fontFamilyCombo->setObjectName(QStringLiteral("vertexNoteQtFontFamilyCombo"));
-            this->fontFamilyCombo->setMaximumWidth(150);
+            this->fontFamilyCombo->setMaximumWidth(128);
             QObject::connect(this->fontFamilyCombo, &QFontComboBox::currentFontChanged, &this->window,
                              [this](const QFont& font) {
                                  this->window.canvas()->toolState().fontName = font.family().toStdString();
@@ -1606,7 +1606,7 @@ void QtAppShell::rebuildToolbar() {
             this->fontSizeSpinner->setRange(6.0, 96.0);
             this->fontSizeSpinner->setDecimals(0);
             this->fontSizeSpinner->setSingleStep(1.0);
-            this->fontSizeSpinner->setFixedWidth(58);
+            this->fontSizeSpinner->setFixedWidth(50);
             QObject::connect(this->fontSizeSpinner, &QDoubleSpinBox::valueChanged, &this->window,
                              [this](double size) { this->window.canvas()->toolState().fontSize = size; });
         }
@@ -1614,7 +1614,7 @@ void QtAppShell::rebuildToolbar() {
     const auto makeColorButton = [&](int colorIndex) -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setAutoRaise(true);
-        button->setFixedSize(16, 16);
+        button->setFixedSize(15, 15);
         button->setProperty("toolbarColorIndex", colorIndex);
         button->setToolTip(QStringLiteral("Quick colour"));
         QObject::connect(button, &QToolButton::clicked, &this->window,
@@ -1626,7 +1626,7 @@ void QtAppShell::rebuildToolbar() {
         if (!this->toolbarColorSelectButton) {
             this->toolbarColorSelectButton = new QToolButton(&this->window);
             this->toolbarColorSelectButton->setAutoRaise(true);
-            this->toolbarColorSelectButton->setFixedSize(18, 18);
+            this->toolbarColorSelectButton->setFixedSize(16, 16);
             this->toolbarColorSelectButton->setToolTip(QStringLiteral("Choose colour"));
             QObject::connect(this->toolbarColorSelectButton, &QToolButton::clicked, &this->window, [this, currentStrokeColor, applyToolbarColor]() {
                 const QColor initial = qColorFromColor(currentStrokeColor());
