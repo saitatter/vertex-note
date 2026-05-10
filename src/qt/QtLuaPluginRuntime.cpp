@@ -8,12 +8,16 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <limits>
 #include <sstream>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
+#include <utility>
 
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSettings>
 #include <QString>
 #include <QStringList>
@@ -23,6 +27,7 @@
 #include "config-paths.h"
 #include "config.h"
 #include "filesystem.h"
+#include "ui/common/ICommandHost.h"
 #include "util/PathUtil.h"
 
 #ifdef ENABLE_PLUGINS
@@ -86,6 +91,139 @@ auto gtkAcceleratorToQtShortcut(std::string_view accelerator) -> std::string {
 auto luaOptionalString(lua_State* lua, int index, const char* fallback = "") -> std::string {
     return lua_isnil(lua, index) == 1 ? std::string(fallback) : std::string(luaL_optstring(lua, index, fallback));
 }
+
+auto luaOptionalInteger(lua_State* lua, int index, ptrdiff_t fallback = 0) -> ptrdiff_t {
+    return lua_isnil(lua, index) == 1 ? fallback : static_cast<ptrdiff_t>(luaL_checkinteger(lua, index));
+}
+
+auto luaOptionalBool(lua_State* lua, int index, bool fallback = false) -> bool {
+    return lua_isnil(lua, index) == 1 ? fallback : lua_toboolean(lua, index) != 0;
+}
+
+auto legacyActionCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"new-file", "app.new"},
+            {"open", "app.open"},
+            {"annotate-pdf", "file.annotate-pdf"},
+            {"save", "file.save"},
+            {"save-as", "app.save-as"},
+            {"export-as-pdf", "export.pdf"},
+            {"export-as", "export.png"},
+            {"print", "file.print"},
+            {"quit", "app.quit"},
+            {"undo", "edit.undo-geometry"},
+            {"redo", "edit.redo-geometry"},
+            {"cut", "edit.cut"},
+            {"copy", "edit.copy"},
+            {"paste", "edit.paste"},
+            {"search", "edit.find"},
+            {"select-all", "edit.select-all"},
+            {"delete", "edit.delete"},
+            {"move-selection-layer-up", "edit.move-selection-layer-up"},
+            {"move-selection-layer-down", "edit.move-selection-layer-down"},
+            {"preferences", "app.settings"},
+            {"manage-toolbar", "app.settings"},
+            {"customize-toolbar", "view.customize-toolbar"},
+            {"paired-pages-mode", "view.paired-pages"},
+            {"presentation-mode", "view.presentation"},
+            {"fullscreen", "view.fullscreen"},
+            {"show-sidebar", "view.show-sidebar"},
+            {"show-toolbar", "view.show-toolbar"},
+            {"show-menubar", "view.show-menubar"},
+            {"zoom-in", "view.zoom-in"},
+            {"zoom-out", "view.zoom-out"},
+            {"zoom-100", "view.zoom-100"},
+            {"zoom-fit", "view.fit-page"},
+            {"goto-first", "nav.first-page"},
+            {"goto-previous", "nav.prev-page"},
+            {"goto-page", "nav.goto-page"},
+            {"goto-next", "nav.next-page"},
+            {"goto-last", "nav.last-page"},
+            {"goto-next-annotated-page", "nav.next-annotated"},
+            {"goto-previous-annotated-page", "nav.prev-annotated"},
+            {"new-page-before", "page.add-before"},
+            {"new-page-after", "page.add"},
+            {"new-page-at-end", "page.add-end"},
+            {"duplicate-page", "page.duplicate"},
+            {"append-new-pdf-pages", "journal.append-new-pdf-pages"},
+            {"configure-page-template", "page.template"},
+            {"delete-page", "page.delete"},
+            {"paper-format", "page.format"},
+            {"paper-background-color", "page.background"},
+            {"setsquare", "tool.setsquare"},
+            {"compass", "tool.compass"},
+            {"tool-fill", "pen.fill-toggle"},
+            {"layer-new-above-current", "layer.add-above"},
+            {"layer-new-below-current", "layer.add-below"},
+            {"layer-delete", "page.delete-layer"},
+            {"layer-merge-down", "layer.merge-down"},
+            {"layer-rename", "layer.rename"},
+            {"layer-goto-next", "layer.goto-next"},
+            {"layer-goto-previous", "layer.goto-prev"},
+            {"layer-goto-top", "layer.goto-top"},
+            {"plugin-manager", "plugins.manager"},
+            {"help", "help.open"},
+            {"check-for-updates", "app.check-updates"},
+            {"about", "app.about-qt-shell"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string(action) : std::string(it->second);
+}
+
+auto selectToolCommand(ptrdiff_t tool) -> std::string {
+    static const std::unordered_map<ptrdiff_t, std::string_view> TOOLS = {
+            {1, "tool.pen"},
+            {2, "tool.eraser"},
+            {3, "tool.highlighter"},
+            {4, "tool.text"},
+            {6, "tool.select"},
+            {7, "tool.select-region"},
+            {8, "tool.select-multilayer-rect"},
+            {9, "tool.select-multilayer-region"},
+            {10, "tool.select-object"},
+            {12, "tool.vertical-space"},
+            {13, "tool.hand"},
+            {14, "tool.draw-rectangle"},
+            {15, "tool.draw-ellipse"},
+            {16, "tool.draw-arrow"},
+            {17, "tool.draw-double-arrow"},
+            {18, "tool.draw-coordinate-system"},
+            {20, "tool.draw-spline"},
+            {21, "tool.select-pdf-text-linear"},
+            {22, "tool.select-pdf-text-rect"},
+            {23, "tool.laser-pointer-pen"},
+            {24, "tool.laser-pointer-highlighter"},
+    };
+    const auto it = TOOLS.find(tool);
+    return it == TOOLS.end() ? std::string() : std::string(it->second);
+}
+
+auto arrangementCommand(ptrdiff_t orderChange) -> std::string {
+    static const std::unordered_map<ptrdiff_t, std::string_view> COMMANDS = {
+            {0, "edit.bring-to-front"},
+            {1, "edit.bring-forward"},
+            {2, "edit.send-backward"},
+            {3, "edit.send-to-back"},
+    };
+    const auto it = COMMANDS.find(orderChange);
+    return it == COMMANDS.end() ? std::string() : std::string(it->second);
+}
+
+auto lineStyleCommand(std::string_view style) -> std::string {
+    if (style == "plain") {
+        return "pen.line-solid";
+    }
+    if (style == "dash") {
+        return "pen.line-dash";
+    }
+    if (style == "dashdot") {
+        return "pen.line-dashdot";
+    }
+    if (style == "dot") {
+        return "pen.line-dot";
+    }
+    return {};
+}
 #endif
 
 }  // namespace
@@ -103,6 +241,7 @@ struct QtLuaPluginRuntime::Plugin {
     bool inInitUi = false;
     int registeredActions = 0;
     std::string error;
+    std::vector<std::string> actionIds;
     QtLuaPluginRuntime* runtime = nullptr;
 
 #ifdef ENABLE_PLUGINS
@@ -190,13 +329,37 @@ struct QtLuaPluginRuntime::Plugin {
         };
 
         if (!menu.empty() && runtime && runtime->bridge) {
-            runtime->bridge->registerMenuAction(makeDescriptor(baseId + ".menu", menu));
+            const auto id = baseId + ".menu";
+            runtime->bridge->registerMenuAction(makeDescriptor(id, menu));
+            actionIds.push_back(id);
         }
         if (!toolbarId.empty() && runtime && runtime->bridge) {
             const auto label = iconName.empty() ? toolbarId : iconName;
-            runtime->bridge->registerToolbarAction(makeDescriptor(baseId + ".toolbar", label));
+            const auto id = baseId + ".toolbar";
+            runtime->bridge->registerToolbarAction(makeDescriptor(id, label));
+            actionIds.push_back(id);
         }
         return menuId;
+    }
+
+    auto triggerCommand(std::string_view commandId) -> bool {
+        if (!runtime || !runtime->commandHost || !runtime->commandHost->hasCommand(commandId)) {
+            error = "Qt command is not available: " + std::string(commandId);
+            return false;
+        }
+        runtime->commandHost->triggerCommand(commandId);
+        return true;
+    }
+
+    auto setBooleanCommand(std::string_view commandId, bool checked) -> bool {
+        if (!runtime || !runtime->commandHost || !runtime->commandHost->hasCommand(commandId)) {
+            error = "Qt command is not available: " + std::string(commandId);
+            return false;
+        }
+        if (runtime->commandHost->isCommandChecked(commandId) != checked) {
+            runtime->commandHost->triggerCommand(commandId);
+        }
+        return true;
     }
 #endif
 };
@@ -254,12 +417,127 @@ auto luaUnsupported(lua_State* lua) -> int {
     return luaL_error(lua, "This VertexNote plugin API is not available in the Qt shell yet");
 }
 
+auto luaOpenDialog(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto message = luaOptionalString(lua, 1);
+    luaL_checktype(lua, 2, LUA_TTABLE);
+    const auto callback = luaOptionalString(lua, 3);
+    const bool error = luaOptionalBool(lua, 4, false);
+
+    QMessageBox box(plugin->runtime->parentWidget());
+    box.setWindowTitle(error ? QStringLiteral("Plugin Error") : QStringLiteral("Plugin Message"));
+    box.setIcon(error ? QMessageBox::Warning : QMessageBox::Information);
+    box.setText(QString::fromStdString(message));
+
+    std::vector<QPushButton*> buttons;
+    lua_pushnil(lua);
+    while (lua_next(lua, 2) != 0) {
+        if (lua_isstring(lua, -1) == 1) {
+            buttons.push_back(box.addButton(QString::fromUtf8(lua_tostring(lua, -1)), QMessageBox::AcceptRole));
+        }
+        lua_pop(lua, 1);
+    }
+    if (buttons.empty()) {
+        buttons.push_back(box.addButton(QStringLiteral("OK"), QMessageBox::AcceptRole));
+    }
+
+    box.exec();
+    if (!callback.empty()) {
+        const auto it = std::ranges::find(buttons, box.clickedButton());
+        if (it != buttons.end()) {
+            plugin->callFunction(callback, static_cast<ptrdiff_t>(std::distance(buttons.begin(), it) + 1));
+        }
+    }
+    return 0;
+}
+
+auto luaActivateAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    std::string command;
+    if (action == "arrange-selection-order") {
+        command = arrangementCommand(luaOptionalInteger(lua, 2, -1));
+    } else {
+        command = legacyActionCommand(action);
+    }
+
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaChangeActionState(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    if (action == "select-tool") {
+        const auto command = selectToolCommand(luaOptionalInteger(lua, 2, 0));
+        if (command.empty() || !plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot select requested tool");
+        }
+        return 0;
+    }
+    if (action == "set-columns-or-rows") {
+        const auto value = luaOptionalInteger(lua, 2, 1);
+        if (value == 0 || std::abs(value) > 8) {
+            return luaL_error(lua, "Unsupported Qt page layout span");
+        }
+        const auto command = value > 0 ? "view.columns-" + std::to_string(value) : "view.rows-" + std::to_string(-value);
+        if (!plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot set page layout span");
+        }
+        return 0;
+    }
+    if (action == "set-layout-vertical") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-vertical" : "view.layout-horizontal") ? 0
+                                                                                                                   : luaL_error(lua, "Qt shell cannot set layout direction");
+    }
+    if (action == "set-layout-right-to-left") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-rtl" : "view.layout-ltr") ? 0
+                                                                                                      : luaL_error(lua, "Qt shell cannot set page order");
+    }
+    if (action == "set-layout-bottom-to-top") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-btt" : "view.layout-ttb") ? 0
+                                                                                                      : luaL_error(lua, "Qt shell cannot set page order");
+    }
+    if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {
+        return plugin->setBooleanCommand("view.toggle-grid-snap", luaOptionalBool(lua, 2)) ? 0
+                                                                                          : luaL_error(lua, "Qt shell cannot set grid snapping");
+    }
+    if (action == "vertexnote-geometry-snapping") {
+        return plugin->setBooleanCommand("view.toggle-geometry-snap", luaOptionalBool(lua, 2)) ? 0
+                                                                                              : luaL_error(lua, "Qt shell cannot set geometry snapping");
+    }
+    if (action == "rotation-snapping") {
+        return plugin->setBooleanCommand("view.toggle-rotation-snap", luaOptionalBool(lua, 2)) ? 0
+                                                                                              : luaL_error(lua, "Qt shell cannot set rotation snapping");
+    }
+    if (action == "tool-pen-line-style") {
+        const auto command = lineStyleCommand(luaOptionalString(lua, 2));
+        if (command.empty() || !plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot set requested pen line style");
+        }
+        return 0;
+    }
+
+    return luaL_error(lua, "This VertexNote plugin action state is not available in the Qt shell yet: %s",
+                      action.c_str());
+}
+
 constexpr luaL_Reg QT_APP_LIB[] = {
         {"registerUi", luaRegisterUi},
-        {"openDialog", luaUnsupported},
-        {"msgbox", luaUnsupported},
-        {"changeActionState", luaUnsupported},
-        {"activateAction", luaUnsupported},
+        {"openDialog", luaOpenDialog},
+        {"msgbox", luaOpenDialog},
+        {"changeActionState", luaChangeActionState},
+        {"activateAction", luaActivateAction},
         {"getActionState", luaUnsupported},
         {"registerPlaceholder", luaUnsupported},
         {nullptr, nullptr},
@@ -267,7 +545,36 @@ constexpr luaL_Reg QT_APP_LIB[] = {
 
 auto luaOpenQtApp(lua_State* lua) -> int {
     luaL_newlib(lua, QT_APP_LIB);
-    lua_createtable(lua, 0, 0);
+    lua_createtable(lua, 0, 32);
+    const auto addConstant = [&](const char* name, lua_Integer value) {
+        lua_pushinteger(lua, value);
+        lua_setfield(lua, -2, name);
+    };
+    addConstant("Tool_pen", 1);
+    addConstant("Tool_eraser", 2);
+    addConstant("Tool_highlighter", 3);
+    addConstant("Tool_text", 4);
+    addConstant("Tool_selectRect", 6);
+    addConstant("Tool_selectRegion", 7);
+    addConstant("Tool_selectMultiLayerRect", 8);
+    addConstant("Tool_selectMultiLayerRegion", 9);
+    addConstant("Tool_selectObject", 10);
+    addConstant("Tool_verticalSpace", 12);
+    addConstant("Tool_hand", 13);
+    addConstant("Tool_drawRect", 14);
+    addConstant("Tool_drawEllipse", 15);
+    addConstant("Tool_drawArrow", 16);
+    addConstant("Tool_drawDoubleArrow", 17);
+    addConstant("Tool_drawCoordinateSystem", 18);
+    addConstant("Tool_drawSpline", 20);
+    addConstant("Tool_selectPdfTextLinear", 21);
+    addConstant("Tool_selectPdfTextRect", 22);
+    addConstant("Tool_laserPointerPen", 23);
+    addConstant("Tool_laserPointerHighlighter", 24);
+    addConstant("OrderChange_bringToFront", 0);
+    addConstant("OrderChange_bringForward", 1);
+    addConstant("OrderChange_sendBackward", 2);
+    addConstant("OrderChange_sendToBack", 3);
     lua_setfield(lua, -2, "C");
     return 1;
 }
@@ -306,7 +613,7 @@ auto loadIni(const std::filesystem::path& pluginPath) -> std::unique_ptr<QtLuaPl
         return plugin;
     }
 
-    QSettings appSettings;
+    QSettings appSettings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
     plugin->enabled = appSettings.value(QStringLiteral("plugins/enabled/") + pluginSettingsKey(plugin->name),
                                         plugin->defaultEnabled)
                               .toBool();
@@ -361,12 +668,20 @@ void loadPluginScript(QtLuaPluginRuntime::Plugin& plugin) {
 }  // namespace
 #endif
 
-QtLuaPluginRuntime::QtLuaPluginRuntime(vn::ui::common::IPluginUiBridge* bridge, QWidget* parent):
-        bridge(bridge), parent(parent) {}
+QtLuaPluginRuntime::QtLuaPluginRuntime(vn::ui::common::IPluginUiBridge* bridge,
+                                       vn::ui::common::ICommandHost* commandHost, QWidget* parent):
+        bridge(bridge), commandHost(commandHost), parent(parent) {}
 
 QtLuaPluginRuntime::~QtLuaPluginRuntime() = default;
 
 void QtLuaPluginRuntime::loadEnabledPlugins() {
+    for (const auto& plugin: this->plugins) {
+        for (const auto& actionId: plugin->actionIds) {
+            if (this->bridge) {
+                this->bridge->removeAction(actionId);
+            }
+        }
+    }
     this->plugins.clear();
 
 #ifdef ENABLE_PLUGINS
@@ -401,6 +716,17 @@ void QtLuaPluginRuntime::loadEnabledPlugins() {
     this->plugins.push_back(std::move(plugin));
 #endif
 }
+
+void QtLuaPluginRuntime::saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states) {
+    QSettings appSettings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    for (const auto& [name, enabled]: states) {
+        appSettings.setValue(QStringLiteral("plugins/enabled/") + pluginSettingsKey(name), enabled);
+    }
+    appSettings.sync();
+    loadEnabledPlugins();
+}
+
+auto QtLuaPluginRuntime::parentWidget() const -> QWidget* { return this->parent; }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {
     std::vector<PluginStatus> result;

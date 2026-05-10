@@ -51,6 +51,13 @@ auto QtCommandHost::hasCommand(std::string_view id) const -> bool {
     return this->actions.contains(std::string(id));
 }
 
+auto QtCommandHost::isCommandChecked(std::string_view id) const -> bool {
+    if (auto* action = actionFor(id)) {
+        return action->isChecked();
+    }
+    return false;
+}
+
 void QtCommandHost::triggerCommand(std::string_view id) {
     if (auto* action = actionFor(id)) {
         action->trigger();

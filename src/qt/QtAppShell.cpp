@@ -39,6 +39,9 @@
 #include <QString>
 #include <QStringList>
 #include <QStyle>
+#include <QHeaderView>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QToolBar>
 #include <QToolButton>
 #include <QUrl>
@@ -377,7 +380,7 @@ QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost(), &this->window),
-        luaPlugins(&this->plugins, &this->window) {
+        luaPlugins(&this->plugins, this->window.commandHost(), &this->window) {
     this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     for (const auto& profile: QtToolbarLayoutEngine::loadProfiles(toolbarProfilePath())) {
         this->availableToolbarProfiles.push_back(
@@ -3355,43 +3358,90 @@ void QtAppShell::showPluginManagerDialog() {
     QDialog dialog(&this->window);
     dialog.setWindowTitle(QStringLiteral("Plugin Manager"));
     auto* layout = new QVBoxLayout(&dialog);
-    auto* details = new QPlainTextEdit(&dialog);
-    details->setReadOnly(true);
-    details->setMinimumSize(640, 360);
-
-    QStringList lines;
     const auto statuses = this->luaPlugins.statuses();
-    if (statuses.empty()) {
-        lines << QStringLiteral("No Lua plugins were found.");
-    }
-    for (const auto& status: statuses) {
-        lines << QStringLiteral("%1 [%2, default %3] - %4 action(s)")
-                         .arg(QString::fromStdString(status.name),
-                              status.enabled ? QStringLiteral("enabled") : QStringLiteral("disabled"),
-                              status.defaultEnabled ? QStringLiteral("enabled") : QStringLiteral("disabled"))
-                         .arg(status.registeredActions);
+
+    auto* table = new QTableWidget(static_cast<int>(statuses.size()), 5, &dialog);
+    table->setHorizontalHeaderLabels(
+            {QStringLiteral("Enabled"), QStringLiteral("Plugin"), QStringLiteral("Actions"),
+             QStringLiteral("Status"), QStringLiteral("Description")});
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->verticalHeader()->setVisible(false);
+    table->setMinimumSize(760, 360);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
+
+    for (int row = 0; row < static_cast<int>(statuses.size()); ++row) {
+        const auto& status = statuses[static_cast<std::size_t>(row)];
+        auto* enabledItem = new QTableWidgetItem();
+        enabledItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        enabledItem->setCheckState(status.enabled ? Qt::Checked : Qt::Unchecked);
+        enabledItem->setData(Qt::UserRole, QString::fromStdString(status.name));
+        table->setItem(row, 0, enabledItem);
+
+        auto* nameItem = new QTableWidgetItem(QString::fromStdString(status.name));
+        nameItem->setToolTip(QString::fromStdWString(status.path.wstring()));
+        table->setItem(row, 1, nameItem);
+        table->setItem(row, 2, new QTableWidgetItem(QString::number(status.registeredActions)));
+
+        QString statusText;
+        if (!status.valid) {
+            statusText = QStringLiteral("Invalid");
+        } else if (!status.enabled) {
+            statusText = QStringLiteral("Disabled");
+        } else if (!status.error.empty()) {
+            statusText = QStringLiteral("Error");
+        } else {
+            statusText = QStringLiteral("Loaded");
+        }
+        auto* statusItem = new QTableWidgetItem(statusText);
+        if (!status.error.empty()) {
+            statusItem->setToolTip(QString::fromStdString(status.error));
+        }
+        table->setItem(row, 3, statusItem);
+
+        QString description = QString::fromStdString(status.description);
         if (!status.description.empty()) {
-            lines << QStringLiteral("  %1").arg(QString::fromStdString(status.description));
+            description += QStringLiteral("\n");
         }
         if (!status.version.empty() || !status.author.empty()) {
-            lines << QStringLiteral("  %1 %2")
-                             .arg(QString::fromStdString(status.version), QString::fromStdString(status.author))
-                             .trimmed();
+            description += QStringLiteral("%1 %2")
+                                   .arg(QString::fromStdString(status.version), QString::fromStdString(status.author))
+                                   .trimmed();
         }
-        lines << QStringLiteral("  %1").arg(QString::fromStdWString(status.path.wstring()));
         if (!status.error.empty()) {
-            lines << QStringLiteral("  Error: %1").arg(QString::fromStdString(status.error));
+            if (!description.isEmpty()) {
+                description += QStringLiteral("\n");
+            }
+            description += QStringLiteral("Error: %1").arg(QString::fromStdString(status.error));
         }
-        lines << QString();
+        table->setItem(row, 4, new QTableWidgetItem(description));
     }
 
-    details->setPlainText(lines.join(QStringLiteral("\n")));
-    layout->addWidget(details);
+    layout->addWidget(table);
 
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     layout->addWidget(buttons);
-    dialog.exec();
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    std::vector<std::pair<std::string, bool>> states;
+    states.reserve(static_cast<std::size_t>(table->rowCount()));
+    for (int row = 0; row < table->rowCount(); ++row) {
+        const auto* item = table->item(row, 0);
+        if (!item) {
+            continue;
+        }
+        states.emplace_back(item->data(Qt::UserRole).toString().toStdString(), item->checkState() == Qt::Checked);
+    }
+    this->luaPlugins.saveEnabledStates(states);
+    this->window.statusBar()->showMessage(QStringLiteral("Plugin settings saved"), 3000);
 }
 
 void QtAppShell::applyConstraint(vn::geom::ConstraintKind kind) {

@@ -24,6 +24,7 @@ public:
     void setCommandEnabled(std::string_view id, bool enabled) override;
     void setCommandChecked(std::string_view id, bool checked) override;
     [[nodiscard]] auto hasCommand(std::string_view id) const -> bool override;
+    [[nodiscard]] auto isCommandChecked(std::string_view id) const -> bool override;
     void triggerCommand(std::string_view id) override;
     void removeCommand(std::string_view id);
     [[nodiscard]] auto actionForCommand(std::string_view id) const -> QAction*;

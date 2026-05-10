@@ -24,6 +24,7 @@ public:
     virtual void setCommandEnabled(std::string_view id, bool enabled) = 0;
     virtual void setCommandChecked(std::string_view id, bool checked) = 0;
     [[nodiscard]] virtual auto hasCommand(std::string_view id) const -> bool = 0;
+    [[nodiscard]] virtual auto isCommandChecked(std::string_view id) const -> bool = 0;
     virtual void triggerCommand(std::string_view id) = 0;
 };
 
