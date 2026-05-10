@@ -28,21 +28,21 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QToolBar#vertexNoteQtDocumentToolBar, QToolBar#vertexNoteQtToolsToolBar, QToolBar#vertexNoteQtFooterToolBar,"
             " QToolBar#vertexNoteQtLeftPrimaryToolBar, QToolBar#vertexNoteQtLeftSecondaryToolBar,"
             " QToolBar#vertexNoteQtRightPrimaryToolBar, QToolBar[vertexFloatToolbar=\"true\"] {"
-            " background: #f7f7f7; border: none; border-bottom: 1px solid #d8d8d8; spacing: 0px; padding: 1px 2px; }"
+            " background: #f7f7f7; border: none; border-bottom: 1px solid #d8d8d8; spacing: 0px; padding: 2px 3px; }"
             "QToolBar#vertexNoteQtFooterToolBar { border-top: 1px solid #d8d8d8; border-bottom: none; }"
             "QToolBar#vertexNoteQtLeftPrimaryToolBar, QToolBar#vertexNoteQtLeftSecondaryToolBar {"
             " border-right: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
             "QToolBar#vertexNoteQtRightPrimaryToolBar {"
             " border-left: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
-            "QToolBar[vertexFloatToolbar=\"true\"] { border: 1px solid #d8d8d8; padding: 2px; }"
+            "QToolBar[vertexFloatToolbar=\"true\"] { border: 1px solid #d8d8d8; padding: 3px; }"
             "QToolBar::separator { background: #d8d8d8; width: 1px; margin: 2px 4px; }"
-            "QToolBar QToolButton { margin: 0px; padding: 1px; min-width: 22px; min-height: 22px; border: 1px solid transparent; border-radius: 2px; }"
+            "QToolBar QToolButton { margin: 0px; padding: 2px; min-width: 26px; min-height: 26px; border: 1px solid transparent; border-radius: 2px; }"
             "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
-            "#vertexNoteQtFamilyToolButton { padding-right: 9px; min-width: 24px; min-height: 22px; }"
+            "#vertexNoteQtFamilyToolButton { padding-right: 10px; min-width: 28px; min-height: 26px; }"
             "#vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner, #vertexNoteQtFillOpacitySpinner,"
             " #vertexNoteQtFooterPageSpin, #vertexNoteQtFooterLayerCombo {"
-            " min-height: 20px; margin: 0 1px; padding: 0px 2px; border: 1px solid #c9c9c9; background: #ffffff; }"
+            " min-height: 24px; margin: 0 1px; padding: 0px 3px; border: 1px solid #c9c9c9; background: #ffffff; }"
             "#vertexNoteQtFooterZoomSlider { margin: 0 3px; }"
             "#vertexNoteQtFooterZoomSlider::groove:horizontal { height: 4px; background: #c8c8c8; border-radius: 2px; }"
             "#vertexNoteQtFooterZoomSlider::sub-page:horizontal { background: #4f8fff; border-radius: 2px; }"
@@ -61,7 +61,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " background: #e5efff; border: 1px solid #96b6ff; }"
             "#vertexNoteQtPageSidebar QListWidget::item:selected { background: #fff4f4; border: 1px solid #d85c5c; }"
             "#vertexNoteQtLayerPanel QToolButton {"
-            " margin: 0px; padding: 1px; min-width: 22px; min-height: 22px;"
+            " margin: 0px; padding: 2px; min-width: 24px; min-height: 24px;"
             " border: 1px solid transparent; border-radius: 2px; }"
             "#vertexNoteQtLayerPanel QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "#vertexNoteQtLayerPanel QToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
@@ -71,20 +71,20 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->documentToolBar->setObjectName(QStringLiteral("vertexNoteQtDocumentToolBar"));
     this->documentToolBar->setMovable(false);
     this->documentToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->documentToolBar->setIconSize(QSize(18, 18));
+    this->documentToolBar->setIconSize(QSize(20, 20));
 
     addToolBarBreak();
     this->toolsToolBarWidget = addToolBar(QStringLiteral("Tools"));
     this->toolsToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtToolsToolBar"));
     this->toolsToolBarWidget->setMovable(false);
     this->toolsToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->toolsToolBarWidget->setIconSize(QSize(18, 18));
+    this->toolsToolBarWidget->setIconSize(QSize(20, 20));
 
     this->footerToolBarWidget = new QToolBar(QStringLiteral("Footer"), this);
     this->footerToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtFooterToolBar"));
     this->footerToolBarWidget->setMovable(false);
     this->footerToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->footerToolBarWidget->setIconSize(QSize(18, 18));
+    this->footerToolBarWidget->setIconSize(QSize(20, 20));
     addToolBar(Qt::BottomToolBarArea, this->footerToolBarWidget);
 
     this->leftPrimaryToolBarWidget = new QToolBar(QStringLiteral("Left Primary"), this);
@@ -93,7 +93,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->leftPrimaryToolBarWidget->setFloatable(false);
     this->leftPrimaryToolBarWidget->setOrientation(Qt::Vertical);
     this->leftPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->leftPrimaryToolBarWidget->setIconSize(QSize(18, 18));
+    this->leftPrimaryToolBarWidget->setIconSize(QSize(20, 20));
     addToolBar(Qt::LeftToolBarArea, this->leftPrimaryToolBarWidget);
 
     this->leftSecondaryToolBarWidget = new QToolBar(QStringLiteral("Left Secondary"), this);
@@ -102,7 +102,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->leftSecondaryToolBarWidget->setFloatable(false);
     this->leftSecondaryToolBarWidget->setOrientation(Qt::Vertical);
     this->leftSecondaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->leftSecondaryToolBarWidget->setIconSize(QSize(18, 18));
+    this->leftSecondaryToolBarWidget->setIconSize(QSize(20, 20));
     addToolBar(Qt::LeftToolBarArea, this->leftSecondaryToolBarWidget);
 
     this->rightPrimaryToolBarWidget = new QToolBar(QStringLiteral("Right Primary"), this);
@@ -111,7 +111,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->rightPrimaryToolBarWidget->setFloatable(false);
     this->rightPrimaryToolBarWidget->setOrientation(Qt::Vertical);
     this->rightPrimaryToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->rightPrimaryToolBarWidget->setIconSize(QSize(18, 18));
+    this->rightPrimaryToolBarWidget->setIconSize(QSize(20, 20));
     addToolBar(Qt::RightToolBarArea, this->rightPrimaryToolBarWidget);
 
     for (int index = 0; index < 4; ++index) {
@@ -124,7 +124,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
         floatingToolBar->setMovable(true);
         floatingToolBar->setFloatable(true);
         floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        floatingToolBar->setIconSize(QSize(18, 18));
+        floatingToolBar->setIconSize(QSize(20, 20));
         floatingToolBar->setParent(this, Qt::Tool | Qt::WindowTitleHint | Qt::WindowCloseButtonHint |
                                            Qt::CustomizeWindowHint);
         floatingToolBar->setOrientation(Qt::Horizontal);

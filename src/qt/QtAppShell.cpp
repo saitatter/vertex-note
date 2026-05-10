@@ -111,8 +111,8 @@ auto createStaticIconWidget(QWidget* parent, std::string_view iconFile, std::str
     button->setFocusPolicy(Qt::NoFocus);
     button->setToolTip(QString::fromUtf8(tooltip.data(), static_cast<int>(tooltip.size())));
     button->setIcon(bundledQtIcon(iconFile));
-    button->setIconSize(QSize(18, 18));
-    button->setFixedSize(22, 22);
+    button->setIconSize(QSize(20, 20));
+    button->setFixedSize(26, 26);
     return button;
 }
 
@@ -1294,14 +1294,14 @@ void QtAppShell::rebuildToolbar() {
     footerToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     leftPrimaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     leftSecondaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    footerToolBar->setIconSize(QSize(18, 18));
-    leftPrimaryToolBar->setIconSize(QSize(20, 20));
-    leftSecondaryToolBar->setIconSize(QSize(20, 20));
+    footerToolBar->setIconSize(QSize(20, 20));
+    leftPrimaryToolBar->setIconSize(QSize(22, 22));
+    leftSecondaryToolBar->setIconSize(QSize(22, 22));
     rightPrimaryToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    rightPrimaryToolBar->setIconSize(QSize(20, 20));
+    rightPrimaryToolBar->setIconSize(QSize(22, 22));
     for (auto* floatingToolBar: this->window.floatingToolBars()) {
         floatingToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        floatingToolBar->setIconSize(QSize(20, 20));
+        floatingToolBar->setIconSize(QSize(22, 22));
         floatingToolBar->hide();
     }
 
@@ -1614,7 +1614,7 @@ void QtAppShell::rebuildToolbar() {
     const auto makeColorButton = [&](int colorIndex) -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setAutoRaise(true);
-        button->setFixedSize(15, 15);
+        button->setFixedSize(17, 17);
         button->setProperty("toolbarColorIndex", colorIndex);
         button->setToolTip(QStringLiteral("Quick colour"));
         QObject::connect(button, &QToolButton::clicked, &this->window,
@@ -1626,7 +1626,7 @@ void QtAppShell::rebuildToolbar() {
         if (!this->toolbarColorSelectButton) {
             this->toolbarColorSelectButton = new QToolButton(&this->window);
             this->toolbarColorSelectButton->setAutoRaise(true);
-            this->toolbarColorSelectButton->setFixedSize(16, 16);
+            this->toolbarColorSelectButton->setFixedSize(18, 18);
             this->toolbarColorSelectButton->setToolTip(QStringLiteral("Choose colour"));
             QObject::connect(this->toolbarColorSelectButton, &QToolButton::clicked, &this->window, [this, currentStrokeColor, applyToolbarColor]() {
                 const QColor initial = qColorFromColor(currentStrokeColor());

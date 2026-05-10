@@ -40,7 +40,7 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     // Colour swatch button
     this->colorSwatch = new QToolButton(this);
     this->colorSwatch->setObjectName(QStringLiteral("vertexNoteQtPrimaryColorSwatch"));
-    this->colorSwatch->setFixedSize(22, 22);
+    this->colorSwatch->setFixedSize(24, 24);
     this->colorSwatch->setToolTip(QStringLiteral("Stroke colour"));
     updateSwatchColor();
     connect(this->colorSwatch, &QToolButton::clicked, this, &QtToolPalette::pickColor);
@@ -49,7 +49,7 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     for (const auto& preset: QUICK_COLORS) {
         auto* button = new QToolButton(this);
         button->setObjectName(QStringLiteral("vertexNoteQtQuickColor"));
-        button->setFixedSize(15, 15);
+        button->setFixedSize(17, 17);
         button->setAutoRaise(true);
         button->setToolTip(QStringLiteral("Quick colour"));
         connect(button, &QToolButton::clicked, this, [this, preset]() { selectPresetColor(preset); });
@@ -95,7 +95,7 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
             "#vertexNoteQtPrimaryColorSwatch { border: 1px solid #8d8d8d; border-radius: 3px; }"
             "#vertexNoteQtQuickColor { border-radius: 7px; border: 1px solid #a0a0a0; padding: 0px; }"
             "#vertexNoteQtToolMetricLabel { color: #4c4c4c; }"
-            "#vertexNoteQtWidthSpinner { min-height: 22px; }"
+            "#vertexNoteQtWidthSpinner { min-height: 24px; }"
             "#vertexNoteQtToolToggle { spacing: 4px; }"));
 
     setLayout(layout);
