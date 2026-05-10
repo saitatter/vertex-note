@@ -158,6 +158,9 @@ constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
         Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
 };
 
+constexpr int QT_SHELL_LAYOUT_VERSION = 2;
+constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
+
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
 
 auto findActionForTool(QtCommandHost* host, const auto& specs, QtToolType activeTool) -> QAction* {
@@ -361,11 +364,7 @@ QtAppShell::QtAppShell():
     this->window.mainToolBar()->setVisible(this->persistedShowToolbar);
     this->window.toolsToolBar()->setVisible(this->persistedShowToolbar);
     this->window.footerToolBar()->setVisible(this->persistedShowToolbar);
-    this->window.leftPrimaryToolBar()->setVisible(this->persistedShowToolbar);
-    this->window.leftSecondaryToolBar()->setVisible(this->persistedShowToolbar);
-    this->window.rightPrimaryToolBar()->setVisible(this->persistedShowToolbar &&
-                                                   this->window.rightPrimaryToolBar()->actions().size() > 0);
-    syncFloatingToolBarsVisibility(this->persistedShowToolbar);
+    applyAuxiliaryToolBarVisibility(this->persistedShowToolbar);
     sidebar->refresh();
     updateWindowTitle();
     updateEditCommandStates();
@@ -2093,6 +2092,7 @@ void QtAppShell::newSession() {
 
 void QtAppShell::loadPersistentUiState() {
     QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    const int savedLayoutVersion = settings.value(QStringLiteral("general/uiLayoutVersion"), 0).toInt();
 
     this->currentSettings.defaultPenWidth =
             settings.value(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth).toDouble();
@@ -2147,6 +2147,9 @@ void QtAppShell::loadPersistentUiState() {
                                                      QString::fromStdString(this->currentSettings.toolbarProfileId))
                                                      .toString()
                                                      .toStdString();
+    if (this->currentSettings.toolbarProfileId.empty()) {
+        this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+    }
     this->persistedShowToolbar = settings.value(QStringLiteral("view/showToolbar"), true).toBool();
     this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
     this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
@@ -2173,6 +2176,22 @@ void QtAppShell::loadPersistentUiState() {
                 settings.value(QStringLiteral("window/floatingToolbar%1Geometry").arg(index)).toByteArray());
         this->persistedFloatingToolBarUserHidden.push_back(
                 settings.value(QStringLiteral("window/floatingToolbar%1UserHidden").arg(index), false).toBool());
+    }
+
+    if (savedLayoutVersion < QT_SHELL_LAYOUT_VERSION && this->currentSettings.toolbarProfileId == "All in") {
+        // Migrate the old dense default shell to the GTK-like portrait shell.
+        // Resetting dock state lets Pages/Layers and top-only toolbars snap back into the expected arrangement.
+        this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+        this->persistedWindowState.clear();
+        this->persistedFloatingToolBarGeometries.clear();
+        this->persistedFloatingToolBarUserHidden.clear();
+        this->persistedShowToolbar = true;
+        this->persistedShowMenubar = true;
+        this->persistedShowSidebar = true;
+        this->persistedPairedPages = false;
+        this->persistedVerticalLayout = true;
+        this->persistedLayoutRtl = false;
+        this->persistedLayoutBtt = false;
     }
 
     if (this->currentSettings.audioFolder.empty()) {
@@ -2211,6 +2230,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
+    settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
     settings.setValue(QStringLiteral("view/showToolbar"), showToolbar);
     settings.setValue(QStringLiteral("view/showMenubar"), showMenubar);
@@ -2251,6 +2271,15 @@ void QtAppShell::syncFloatingToolBarsVisibility(bool showToolbars) {
         floatingToolBar->setVisible(showToolbars && hasActions && !userHidden);
         floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", false);
     }
+}
+
+void QtAppShell::applyAuxiliaryToolBarVisibility(bool showToolbars) {
+    this->window.leftPrimaryToolBar()->setVisible(showToolbars && !this->window.leftPrimaryToolBar()->actions().isEmpty());
+    this->window.leftSecondaryToolBar()->setVisible(showToolbars &&
+                                                    !this->window.leftSecondaryToolBar()->actions().isEmpty());
+    this->window.rightPrimaryToolBar()->setVisible(showToolbars &&
+                                                   !this->window.rightPrimaryToolBar()->actions().isEmpty());
+    syncFloatingToolBarsVisibility(showToolbars);
 }
 
 void QtAppShell::rebuildRecentDocumentsMenu() {
@@ -2586,10 +2615,7 @@ void QtAppShell::toggleFullscreen() {
         this->window.mainToolBar()->setVisible(showToolbars);
         this->window.toolsToolBar()->setVisible(showToolbars);
         this->window.footerToolBar()->setVisible(showToolbars);
-        this->window.leftPrimaryToolBar()->setVisible(showToolbars);
-        this->window.leftSecondaryToolBar()->setVisible(showToolbars);
-        this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
-        syncFloatingToolBarsVisibility(showToolbars);
+        applyAuxiliaryToolBarVisibility(showToolbars);
         this->window.pageSidebar()->setVisible(showSidebars);
         this->window.layerPanel()->setVisible(showSidebars);
     }
@@ -2625,10 +2651,7 @@ void QtAppShell::togglePresentationMode() {
         this->window.mainToolBar()->setVisible(showToolbars);
         this->window.toolsToolBar()->setVisible(showToolbars);
         this->window.footerToolBar()->setVisible(showToolbars);
-        this->window.leftPrimaryToolBar()->setVisible(showToolbars);
-        this->window.leftSecondaryToolBar()->setVisible(showToolbars);
-        this->window.rightPrimaryToolBar()->setVisible(showToolbars && this->window.rightPrimaryToolBar()->actions().size() > 0);
-        syncFloatingToolBarsVisibility(showToolbars);
+        applyAuxiliaryToolBarVisibility(showToolbars);
         this->window.pageSidebar()->setVisible(showSidebars);
         this->window.layerPanel()->setVisible(showSidebars);
         if (this->window.isFullScreen()) {
@@ -3588,10 +3611,7 @@ void QtAppShell::toggleToolbarVisibility() {
     this->window.mainToolBar()->setVisible(visible);
     this->window.toolsToolBar()->setVisible(visible);
     this->window.footerToolBar()->setVisible(visible);
-    this->window.leftPrimaryToolBar()->setVisible(visible);
-    this->window.leftSecondaryToolBar()->setVisible(visible);
-    this->window.rightPrimaryToolBar()->setVisible(visible && this->window.rightPrimaryToolBar()->actions().size() > 0);
-    syncFloatingToolBarsVisibility(visible);
+    applyAuxiliaryToolBarVisibility(visible);
     this->window.commandHost()->setCommandChecked("view.show-toolbar", visible);
     savePersistentUiState();
 }

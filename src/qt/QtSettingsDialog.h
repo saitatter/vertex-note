@@ -43,7 +43,7 @@ struct QtSettings {
     double audioSampleRate = 44100.0;
     double audioGain = 1.0;
     int defaultSeekTimeSeconds = 5;
-    std::string toolbarProfileId = "All in";
+    std::string toolbarProfileId = "Portrait";
 };
 
 class QtSettingsDialog: public QDialog {

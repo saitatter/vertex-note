@@ -499,6 +499,7 @@ void QtCanvas::fitWidth() {
     }
     if (!isVisible()) {
         this->deferredFitWidthPending = true;
+        return;
     }
     // Find the widest page
     double maxWidth = 0.0;
