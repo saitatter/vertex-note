@@ -1,5 +1,7 @@
 set(vertexnote_qt_sources
         main.cpp
+        QtAudioController.h
+        QtAudioController.cpp
         QtAppShell.h
         QtAppShell.cpp
         QtBackgroundDialog.h

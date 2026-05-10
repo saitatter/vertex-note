@@ -7,6 +7,7 @@
 #include "ImageRenderModelFactory.h"
 
 #include "model/Image.h"
+#include "model/TexImage.h"
 
 namespace vn::view::render {
 
@@ -15,6 +16,16 @@ auto ImageRenderModelFactory::fromImage(const Image& image) -> ImageRenderModel 
     if (image.hasData() && image.getRawData() && image.getRawDataLength() > 0) {
         model.encodedBytes.assign(reinterpret_cast<const char*>(image.getRawData()), image.getRawDataLength());
     }
+    model.x = image.getX();
+    model.y = image.getY();
+    model.width = image.getElementWidth();
+    model.height = image.getElementHeight();
+    return model;
+}
+
+auto ImageRenderModelFactory::fromTexImage(const TexImage& image) -> ImageRenderModel {
+    ImageRenderModel model;
+    model.rasterContent = image.renderPreviewRaster();
     model.x = image.getX();
     model.y = image.getY();
     model.width = image.getElementWidth();

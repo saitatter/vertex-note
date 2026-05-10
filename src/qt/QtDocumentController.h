@@ -120,9 +120,33 @@ struct QtDeleteHistoryEntry {
     std::string text;
 };
 
+struct QtLayerTransferRecord {
+    const Element* element = nullptr;
+    std::size_t fromLayerIndex = 0U;
+    std::size_t toLayerIndex = 0U;
+    Element::Index fromPos{};
+    Element::Index toPos{};
+};
+
+struct QtLayerTransferHistoryEntry {
+    std::size_t pageIndex = 0U;
+    std::vector<QtLayerTransferRecord> records;
+    std::string text;
+};
+
+struct QtPageSizeHistoryEntry {
+    std::size_t pageIndex = 0U;
+    double beforeWidth = 0.0;
+    double beforeHeight = 0.0;
+    double afterWidth = 0.0;
+    double afterHeight = 0.0;
+    std::string text;
+};
+
 struct QtHistoryEntry {
     std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtSegmentEraseHistoryEntry,
-                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry>
+                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry, QtLayerTransferHistoryEntry,
+                 QtPageSizeHistoryEntry>
             data;
     [[nodiscard]] auto text() const -> std::string;
 };
@@ -304,6 +328,8 @@ public:
     void mergeLayerDown(std::size_t pageIndex, std::size_t layerIndex);
     void showAllLayers(std::size_t pageIndex);
     void hideAllLayers(std::size_t pageIndex);
+    [[nodiscard]] auto canMoveSelectionToAdjacentLayer(int direction) const -> bool;
+    [[nodiscard]] auto moveSelectionToAdjacentLayer(int direction) -> bool;
 
     // Annotated page query
     [[nodiscard]] auto isPageAnnotated(std::size_t pageIndex) const -> bool;
@@ -311,6 +337,8 @@ public:
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);
     void setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format);
+    [[nodiscard]] auto canResizePage(std::size_t pageIndex) const -> bool;
+    [[nodiscard]] auto resizePage(std::size_t pageIndex, double width, double height) -> bool;
 
     // Text editing
     auto insertTextElement(std::size_t pageIndex, std::unique_ptr<Text> text) -> const Element*;
@@ -329,6 +357,7 @@ public:
     // Image insertion
     auto insertImage(std::size_t pageIndex, double x, double y, const std::string& imageData, double width,
                      double height) -> const Element*;
+    auto insertElement(std::size_t pageIndex, ElementPtr element, std::string historyText) -> const Element*;
 
     // Text search
     struct TextSearchResult {

@@ -16,7 +16,7 @@
 namespace vn::view::render {
 
 void QtPreviewImageRenderer::draw(const ImageRenderModel& image, RenderContext& context) const {
-    if (context.backend() != RenderBackend::QtPainter || image.encodedBytes.empty()) {
+    if (context.backend() != RenderBackend::QtPainter) {
         return;
     }
 
@@ -26,8 +26,18 @@ void QtPreviewImageRenderer::draw(const ImageRenderModel& image, RenderContext& 
     }
 
     QImage raster;
-    if (!raster.loadFromData(QByteArray(image.encodedBytes.data(), static_cast<qsizetype>(image.encodedBytes.size())))) {
-        return;
+    if (!image.rasterContent.empty()) {
+        const auto imageFormat = image.rasterContent.format == xoj::util::RasterPixelFormat::Argb32Premultiplied ?
+                                         QImage::Format_ARGB32_Premultiplied :
+                                         QImage::Format_RGBA8888;
+        raster = QImage(image.rasterContent.pixels.data(), image.rasterContent.width, image.rasterContent.height,
+                        image.rasterContent.stride, imageFormat)
+                         .copy();
+    } else {
+        if (image.encodedBytes.empty() ||
+            !raster.loadFromData(QByteArray(image.encodedBytes.data(), static_cast<qsizetype>(image.encodedBytes.size())))) {
+            return;
+        }
     }
 
     painter->drawImage(QRectF(image.x, image.y, image.width, image.height), raster);

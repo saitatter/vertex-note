@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>  // for make_unique, unique_ptr
 #include <vector>  // for vector
 
@@ -28,6 +29,7 @@ class VorbisProducer;
 class AudioPlayer final {
 public:
     explicit AudioPlayer(Control& control, Settings& settings);
+    explicit AudioPlayer(Settings& settings, std::function<void(bool playing, bool paused)> stateObserver = {});
     AudioPlayer(AudioPlayer const&) = delete;
     AudioPlayer(AudioPlayer&&) = delete;
     auto operator=(AudioPlayer const&) -> AudioPlayer& = delete;
@@ -47,8 +49,11 @@ public:
     void disableAudioPlaybackButtons();
 
 private:
-    Control& control;
+    void notifyPlaybackState(bool playing, bool paused);
+
+    Control* control = nullptr;
     Settings& settings;
+    std::function<void(bool playing, bool paused)> stateObserver;
 
     std::unique_ptr<AudioQueue<float>> audioQueue;
     std::unique_ptr<PortAudioConsumer> portAudioConsumer;

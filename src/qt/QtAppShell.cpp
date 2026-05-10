@@ -6,22 +6,29 @@
 
 #include "QtAppShell.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 #include <vector>
 
 #include <QApplication>
 #include <QAction>
 #include <QColorDialog>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFile>
 #include <QFileDialog>
 #include <QFontComboBox>
 #include <QFontDialog>
+#include <QFormLayout>
 #include <QInputDialog>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMenu>
+#include <QPlainTextEdit>
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QDoubleSpinBox>
@@ -33,15 +40,20 @@
 #include <QComboBox>
 #include <QSlider>
 #include <QSpinBox>
+#include <QVBoxLayout>
 #include <QWidget>
 #include <QSizePolicy>
 #include <QFrame>
 
 #include "config-paths.h"
+#include "control/latex/LatexGenerator.h"
+#include "control/settings/LatexSettings.h"
+#include "model/TexImage.h"
 #include "QtBackgroundDialog.h"
 #include "QtPageSidebar.h"
 #include "QtSettingsDialog.h"
 #include "filesystem.h"
+#include "util/PathUtil.h"
 
 namespace {
 
@@ -89,18 +101,6 @@ auto themeSymbolicIcon(std::string_view iconBaseName) -> QIcon {
         return QIcon(QString::fromStdString(symbolicPath.string()));
     }
     return QIcon::fromTheme(QString::fromUtf8(iconBaseName.data(), static_cast<int>(iconBaseName.size())));
-}
-
-auto createToolbarPlaceholder(QWidget* parent, std::string_view text, std::string_view tooltip, std::string_view iconFile)
-        -> QAction* {
-    auto* action = new QAction(QString::fromUtf8(text.data(), static_cast<int>(text.size())), parent);
-    action->setToolTip(QString::fromUtf8(tooltip.data(), static_cast<int>(tooltip.size())));
-    action->setEnabled(false);
-    const auto icon = bundledQtIcon(iconFile);
-    if (!icon.isNull()) {
-        action->setIcon(icon);
-    }
-    return action;
 }
 
 auto createStaticIconWidget(QWidget* parent, std::string_view iconFile, std::string_view tooltip) -> QToolButton* {
@@ -174,12 +174,124 @@ auto toolbarProfilePath() -> fs::path {
     return fs::path(PROJECT_SOURCE_DIR) / "resources-templates" / "toolbar.ini.in";
 }
 
+struct PaperPresetSpec {
+    std::string_view id;
+    std::string_view label;
+    double width = 0.0;
+    double height = 0.0;
+};
+
+constexpr std::array<PaperPresetSpec, 5> PAPER_PRESETS = {{
+        {"custom", "Custom", 0.0, 0.0},
+        {"a5", "A5", 420.0, 595.0},
+        {"a4", "A4", 595.0, 842.0},
+        {"letter", "Letter", 612.0, 792.0},
+        {"legal", "Legal", 612.0, 1008.0},
+}};
+
+auto matchingPaperPreset(double width, double height) -> int {
+    for (std::size_t i = 1; i < PAPER_PRESETS.size(); ++i) {
+        const auto& preset = PAPER_PRESETS[i];
+        const bool portrait = std::abs(width - preset.width) < 0.5 && std::abs(height - preset.height) < 0.5;
+        const bool landscape = std::abs(width - preset.height) < 0.5 && std::abs(height - preset.width) < 0.5;
+        if (portrait || landscape) {
+            return static_cast<int>(i);
+        }
+    }
+    return 0;
+}
+
+auto isLandscapeSize(double width, double height) -> bool { return width > height; }
+
+auto defaultLatexTemplatePath() -> fs::path {
+    return fs::path(PROJECT_SOURCE_DIR) / "resources" / "default_template.tex";
+}
+
+auto buildQtLatexSettings() -> LatexSettings {
+    LatexSettings settings;
+    settings.globalTemplatePath = defaultLatexTemplatePath();
+    return settings;
+}
+
+auto loadLatexTemplate(const LatexSettings& settings) -> std::optional<std::string> {
+    if (settings.globalTemplatePath.empty()) {
+        return std::nullopt;
+    }
+
+    return Util::readString(settings.globalTemplatePath, false, std::ios::binary);
+}
+
+auto renderMathTex(const std::string& formula, const LatexSettings& settings, Color textColor, double x, double y)
+        -> std::variant<std::unique_ptr<TexImage>, std::string> {
+    const auto latexTemplate = loadLatexTemplate(settings);
+    if (!latexTemplate) {
+        return std::string("VertexNote could not load the LaTeX template file.");
+    }
+
+    auto texDir = Util::getTmpDirSubfolder("vertexnote-qt-tex");
+    Util::ensureFolderExists(texDir);
+
+    LatexGenerator generator(settings);
+    const auto texContents = LatexGenerator::templateSub(formula, *latexTemplate, textColor);
+    auto result = generator.asyncRun(texDir, texContents);
+    if (auto* err = std::get_if<LatexGenerator::GenError>(&result)) {
+        return err->message;
+    }
+
+    vn::util::GObjectSPtr<GSubprocess> process(std::get<GSubprocess*>(result), vn::util::adopt);
+    GError* error = nullptr;
+    char* stdoutBuffer = nullptr;
+    const bool communicated =
+            g_subprocess_communicate_utf8(process.get(), nullptr, nullptr, &stdoutBuffer, nullptr, &error);
+    const std::string processOutput = stdoutBuffer ? stdoutBuffer : "";
+    g_free(stdoutBuffer);
+
+    if (!communicated) {
+        const std::string message = error ? error->message : "VertexNote could not run the LaTeX generator.";
+        if (error) {
+            g_error_free(error);
+        }
+        return message;
+    }
+
+    const int exitStatus = g_subprocess_get_exit_status(process.get());
+    if (exitStatus != 0) {
+        if (!processOutput.empty()) {
+            return processOutput;
+        }
+        return std::string("The LaTeX generator exited with an error.");
+    }
+
+    auto contents = Util::readString(texDir / "tex.pdf", false, std::ios::binary);
+    if (!contents) {
+        return std::string("VertexNote could not read the generated LaTeX PDF.");
+    }
+
+    auto image = std::make_unique<TexImage>();
+    error = nullptr;
+    const bool loaded = image->loadData(std::move(*contents), &error);
+    if (error) {
+        const std::string message = error->message;
+        g_error_free(error);
+        return message;
+    }
+    if (!loaded || !image->getPdf()) {
+        return std::string("VertexNote could not load the generated LaTeX preview.");
+    }
+
+    image->setX(x);
+    image->setY(y);
+    image->setText(formula);
+    return image;
+}
+
 }  // namespace
 
 QtAppShell::QtAppShell():
         dialogs(&this->window),
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost(), &this->window) {
+    this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     for (const auto& profile: QtToolbarLayoutEngine::loadProfiles(toolbarProfilePath())) {
         this->availableToolbarProfiles.push_back(
                 {.id = profile.id, .displayName = profile.displayName.empty() ? profile.id : profile.displayName});
@@ -188,6 +300,7 @@ QtAppShell::QtAppShell():
     this->window.canvas()->setDocumentController(&this->documentController);
     this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
     this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    this->audioController.applySettings(this->currentSettings);
     this->window.layerPanel()->setDocumentController(&this->documentController);
     this->window.toolPalette()->setCompactToolbarMode(true);
 
@@ -203,10 +316,12 @@ QtAppShell::QtAppShell():
     registerBootstrapCommands();
     wireWindowState();
     rebuildToolbar();
+    rebuildRecentDocumentsMenu();
     this->window.canvas()->newBlankDocument();
     this->window.canvas()->fitWidth();
     sidebar->refresh();
     updateWindowTitle();
+    updateEditCommandStates();
 }
 
 auto QtAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
@@ -249,7 +364,7 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "app.open", .text = "Open...", .tooltip = "Open a document", .shortcut = "Ctrl+O", .menu = "File"},
             [this]() { openSession(); });
-    // TODO: Recent Documents submenu (dynamic)
+    (void) ch->menuForPath("File>Recent Documents");
     ch->addMenuSeparator("File");
     ch->registerCommand(
             {.id = "file.save", .text = "Save", .tooltip = "Save the document", .shortcut = "Ctrl+S", .menu = "File"},
@@ -624,6 +739,10 @@ void QtAppShell::registerBootstrapCommands() {
              .menu = "Tools", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::Text},
             [this]() { selectTool(QtToolType::Text); });
     ch->registerCommand(
+            {.id = "tool.math-tex", .text = "Math TeX", .tooltip = "Insert a LaTeX formula", .shortcut = "Ctrl+Shift+X",
+             .menu = "Tools"},
+            [this]() { insertMathTex(); });
+    ch->registerCommand(
             {.id = "tool.select-pdf-text-linear", .text = "Select Linear PDF Text",
              .tooltip = "Select PDF text along dragged glyphs", .menu = "Tools", .checkable = true},
             [this]() { selectTool(QtToolType::PdfTextLinear); });
@@ -634,6 +753,30 @@ void QtAppShell::registerBootstrapCommands() {
     ch->registerCommand(
             {.id = "edit.insert-image", .text = "Image", .tooltip = "Insert image from file", .shortcut = "Ctrl+Shift+I", .menu = "Tools"},
             [this]() { insertImage(); });
+    ch->registerCommand(
+            {.id = "audio.record", .text = "Audio Record", .tooltip = "Start or stop audio recording",
+             .menu = "Tools", .checkable = true},
+            [this]() { toggleAudioRecording(); });
+    ch->registerCommand(
+            {.id = "audio.pause-playback", .text = "Audio Play / Pause", .tooltip = "Play, pause, or resume audio",
+             .menu = "Tools", .checkable = true},
+            [this]() { toggleAudioPausePlayback(); });
+    ch->registerCommand(
+            {.id = "audio.seek-backwards", .text = "Audio Back", .tooltip = "Seek backwards in the active clip",
+             .menu = "Tools"},
+            [this]() { seekAudioBackwards(); });
+    ch->registerCommand(
+            {.id = "audio.seek-forwards", .text = "Audio Forward", .tooltip = "Seek forwards in the active clip",
+             .menu = "Tools"},
+            [this]() { seekAudioForwards(); });
+    ch->registerCommand(
+            {.id = "audio.stop-playback", .text = "Audio Stop", .tooltip = "Stop audio playback",
+             .menu = "Tools"},
+            [this]() { stopAudioPlayback(); });
+    ch->registerCommand(
+            {.id = "audio.play-object", .text = "Play Object", .tooltip = "Play audio attached to the selected object",
+             .menu = "Tools"},
+            [this]() { toggleAudioPausePlayback(); });
     ch->addMenuSeparator("Tools");
 
     // Drawing Type submenu
@@ -878,6 +1021,11 @@ void QtAppShell::registerBootstrapCommands() {
 }
 
 void QtAppShell::wireWindowState() {
+    QObject::connect(&this->audioController, &QtAudioController::statusMessage, &this->window,
+                     [this](const QString& text, int timeoutMs) { this->window.statusBar()->showMessage(text, timeoutMs); });
+    QObject::connect(&this->audioController, &QtAudioController::audioStateChanged, &this->window,
+                     [this]() { updateAudioCommandStates(); });
+
     QObject::connect(this->window.canvas(), &QtCanvas::statusHintChanged, &this->window,
                      [this](const QString& text) { this->window.statusBar()->showMessage(text); });
 
@@ -886,6 +1034,7 @@ void QtAppShell::wireWindowState() {
                          const auto currentPage = this->window.canvas()->currentPageIndex();
                          this->window.pageSidebar()->setCurrentPage(currentPage);
                          this->window.layerPanel()->setCurrentPage(currentPage);
+                         updateEditCommandStates();
                          updateWindowTitle();
                          updateStatusBarLabels();
                          syncFooterWidgets();
@@ -905,6 +1054,9 @@ void QtAppShell::wireWindowState() {
                          updateStatusBarLabels();
                          syncFooterWidgets();
                      });
+
+    QObject::connect(this->window.canvas(), &QtCanvas::selectionStateChanged, &this->window,
+                     [this]() { updateEditCommandStates(); });
 
     QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
                      [this]() {
@@ -1003,6 +1155,7 @@ void QtAppShell::wireWindowState() {
     }
 
     updateEditCommandStates();
+    updateAudioCommandStates();
     syncFooterWidgets();
 }
 
@@ -1099,6 +1252,12 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("page.delete", "page-delete");
     setNamedIcon("page.delete-layer", "page-delete");
     setNamedIcon("view.fullscreen", "fullscreen");
+    setNamedIcon("audio.record", "audio-record");
+    setNamedIcon("audio.pause-playback", "audio-playback-pause");
+    setNamedIcon("audio.seek-backwards", "audio-seek-backwards");
+    setNamedIcon("audio.seek-forwards", "audio-seek-forwards");
+    setNamedIcon("audio.stop-playback", "audio-playback-stop");
+    setNamedIcon("audio.play-object", "object-play");
     setNamedIcon("view.paired-pages", "show-paired-pages");
     setNamedIcon("view.presentation", "presentation-mode");
     setNamedIcon("view.show-sidebar", "sidebar-show");
@@ -1112,6 +1271,7 @@ void QtAppShell::rebuildToolbar() {
     setNamedIcon("tool.eraser", "tool-eraser");
     setNamedIcon("tool.highlighter", "tool-highlighter");
     setNamedIcon("tool.text", "tool-text");
+    setNamedIcon("tool.math-tex", "tool-math-tex");
     setNamedIcon("tool.select-pdf-text-linear", "select-pdf-text-ht");
     setNamedIcon("tool.select-pdf-text-rect", "select-pdf-text-area");
     setNamedIcon("edit.insert-image", "tool-image");
@@ -1218,10 +1378,6 @@ void QtAppShell::rebuildToolbar() {
         if (auto* action = this->window.commandHost()->actionForCommand(id)) {
             toolbar->addAction(action);
         }
-    };
-    const auto addPlaceholder = [&](QToolBar* toolbar, std::string_view text, std::string_view tooltip,
-                                    std::string_view iconFile) {
-        toolbar->addAction(createToolbarPlaceholder(toolbar, text, tooltip, iconFile));
     };
     const auto addGenericSizeAction = [&](QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex) {
         auto* action = new QAction(QString::fromUtf8(text), toolbar);
@@ -1445,31 +1601,11 @@ void QtAppShell::rebuildToolbar() {
         if (token == "INSERT_NEW_PAGE") { addCommand(toolbar, "page.add"); return; }
         if (token == "DELETE_CURRENT_PAGE") { addCommand(toolbar, "page.delete"); return; }
         if (token == "FULLSCREEN") { addCommand(toolbar, "view.fullscreen"); return; }
-        if (token == "AUDIO_RECORDING") {
-            addPlaceholder(toolbar, "Audio Record", "Audio recording is not yet available in the Qt shell",
-                           "xopp-audio-record.svg");
-            return;
-        }
-        if (token == "AUDIO_SEEK_BACKWARDS") {
-            addPlaceholder(toolbar, "Audio Back", "Audio controls are not yet available in the Qt shell",
-                           "xopp-audio-seek-backwards.svg");
-            return;
-        }
-        if (token == "AUDIO_PAUSE_PLAYBACK") {
-            addPlaceholder(toolbar, "Audio Play", "Audio controls are not yet available in the Qt shell",
-                           "xopp-audio-playback-pause.svg");
-            return;
-        }
-        if (token == "AUDIO_SEEK_FORWARDS") {
-            addPlaceholder(toolbar, "Audio Forward", "Audio controls are not yet available in the Qt shell",
-                           "xopp-audio-seek-forwards.svg");
-            return;
-        }
-        if (token == "AUDIO_STOP_PLAYBACK") {
-            addPlaceholder(toolbar, "Audio Stop", "Audio controls are not yet available in the Qt shell",
-                           "xopp-audio-playback-stop.svg");
-            return;
-        }
+        if (token == "AUDIO_RECORDING") { addCommand(toolbar, "audio.record"); return; }
+        if (token == "AUDIO_SEEK_BACKWARDS") { addCommand(toolbar, "audio.seek-backwards"); return; }
+        if (token == "AUDIO_PAUSE_PLAYBACK") { addCommand(toolbar, "audio.pause-playback"); return; }
+        if (token == "AUDIO_SEEK_FORWARDS") { addCommand(toolbar, "audio.seek-forwards"); return; }
+        if (token == "AUDIO_STOP_PLAYBACK") { addCommand(toolbar, "audio.stop-playback"); return; }
         if (token == "SELECT_FONT") {
             ensureFontWidgets();
             toolbar->addWidget(this->fontFamilyCombo);
@@ -1490,8 +1626,7 @@ void QtAppShell::rebuildToolbar() {
         if (token == "IMAGE") { addCommand(toolbar, "edit.insert-image"); return; }
         if (token == "TEXT") { addCommand(toolbar, "tool.text"); return; }
         if (token == "MATH_TEX") {
-            addPlaceholder(toolbar, "Math TeX", "LaTeX insertion is not yet available in the Qt shell",
-                           "xopp-tool-math-tex.svg");
+            addCommand(toolbar, "tool.math-tex");
             return;
         }
         if (token == "DRAW") { toolbar->addWidget(ensureDrawingButton()); return; }
@@ -1565,11 +1700,7 @@ void QtAppShell::rebuildToolbar() {
         if (token == "SELECT_MULTILAYER_REGION") { addCommand(toolbar, "tool.select-multilayer-region"); return; }
         if (token == "SELECT_MULTILAYER_RECTANGLE") { addCommand(toolbar, "tool.select-multilayer-rect"); return; }
         if (token == "SELECT_OBJECT") { addCommand(toolbar, "tool.select-object"); return; }
-        if (token == "PLAY_OBJECT") {
-            addPlaceholder(toolbar, "Play Object", "Embedded object playback is not yet available in the Qt shell",
-                           "xopp-object-play.svg");
-            return;
-        }
+        if (token == "PLAY_OBJECT") { addCommand(toolbar, "audio.play-object"); return; }
         if (token == "GOTO_PREVIOUS_LAYER") { addCommand(toolbar, "layer.goto-prev"); return; }
         if (token == "GOTO_NEXT_LAYER") { addCommand(toolbar, "layer.goto-next"); return; }
         if (token == "GOTO_TOP_LAYER") { addCommand(toolbar, "layer.goto-top"); return; }
@@ -1886,17 +2017,55 @@ void QtAppShell::newSession() {
     updateWindowTitle();
 }
 
-void QtAppShell::openSession() {
-    const auto path = this->dialogs.openDocument(SESSION_FILTERS);
-    if (!path) {
+void QtAppShell::rebuildRecentDocumentsMenu() {
+    auto* menu = this->window.commandHost()->menuForPath("File>Recent Documents");
+    menu->clear();
+
+    const auto recentPaths = this->recentFiles.recentFiles();
+    if (recentPaths.empty()) {
+        auto* emptyAction = menu->addAction(QStringLiteral("No Recent Documents"));
+        emptyAction->setEnabled(false);
         return;
     }
 
-    if (isSessionFile(*path)) {
-        const auto sessionState = this->session.openFrom(*path);
+    for (std::size_t index = 0; index < recentPaths.size(); ++index) {
+        const auto& path = recentPaths[index];
+        const QString filename = QString::fromStdString(path.filename().string());
+        const QString fullPath = QString::fromStdString(path.string());
+        auto* action =
+                menu->addAction(QStringLiteral("&%1 %2").arg(index + 1).arg(filename.isEmpty() ? fullPath : filename));
+        action->setToolTip(fullPath);
+        action->setStatusTip(fullPath);
+        QObject::connect(action, &QAction::triggered, &this->window, [this, path]() { openPath(path, true); });
+    }
+
+    menu->addSeparator();
+    auto* clearAction = menu->addAction(QStringLiteral("Clear Recent Documents"));
+    QObject::connect(clearAction, &QAction::triggered, &this->window, [this]() {
+        this->recentFiles.setRecentFiles({});
+        rebuildRecentDocumentsMenu();
+        this->window.statusBar()->showMessage(QStringLiteral("Recent documents cleared"), 3000);
+    });
+}
+
+auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocuments) -> bool {
+    if (!std::filesystem::exists(path)) {
+        if (fromRecentDocuments) {
+            auto recentPaths = this->recentFiles.recentFiles();
+            recentPaths.erase(std::remove(recentPaths.begin(), recentPaths.end(), path), recentPaths.end());
+            this->recentFiles.setRecentFiles(recentPaths);
+            rebuildRecentDocumentsMenu();
+        }
+        this->dialogs.showError("Open Failed",
+                                "VertexNote could not find this recent document anymore. It was removed from the list.");
+        return false;
+    }
+
+    if (isSessionFile(path)) {
+        const auto sessionState = this->session.openFrom(path);
         if (!sessionState) {
             this->dialogs.showError("Open Failed", "VertexNote could not parse this Qt session file.");
-            return;
+            return false;
         }
 
         if (sessionState->linkedDocumentPath) {
@@ -1904,7 +2073,7 @@ void QtAppShell::openSession() {
             if (!this->documentController.loadFrom(*sessionState->linkedDocumentPath, &error)) {
                 this->dialogs.showError("Open Failed", error.empty() ? "VertexNote could not open the linked document."
                                                                      : error);
-                return;
+                return false;
             }
         } else {
             this->documentController.newBlankDocument();
@@ -1914,33 +2083,44 @@ void QtAppShell::openSession() {
         this->window.canvas()->setViewportState(sessionState->viewport.zoom, sessionState->viewport.scrollX,
                                                 sessionState->viewport.scrollY);
         this->suppressDirtyTracking = false;
-        this->recentFiles.addRecentFile(*path);
+        this->recentFiles.addRecentFile(path);
+        rebuildRecentDocumentsMenu();
         updateEditCommandStates();
         this->window.layerPanel()->refresh();
         this->window.pageSidebar()->refresh();
         syncFooterWidgets();
-        this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path->filename().string()), 4000);
+        this->window.statusBar()->showMessage(QString::fromStdString("Opened session " + path.filename().string()), 4000);
         updateWindowTitle();
-        return;
+        return true;
     }
 
     std::string error;
-    if (!this->documentController.loadFrom(*path, &error)) {
+    if (!this->documentController.loadFrom(path, &error)) {
         this->dialogs.showError("Open Failed", error.empty() ? "VertexNote could not open this document." : error);
-        return;
+        return false;
     }
 
     this->session.newDocument();
     this->suppressDirtyTracking = true;
     this->window.canvas()->fitWidth();
     this->suppressDirtyTracking = false;
-    this->recentFiles.addRecentFile(*path);
+    this->recentFiles.addRecentFile(path);
+    rebuildRecentDocumentsMenu();
     updateEditCommandStates();
     this->window.layerPanel()->refresh();
     this->window.pageSidebar()->refresh();
     syncFooterWidgets();
-    this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path->filename().string()), 4000);
+    this->window.statusBar()->showMessage(QString::fromStdString("Opened document " + path.filename().string()), 4000);
     updateWindowTitle();
+    return true;
+}
+
+void QtAppShell::openSession() {
+    const auto path = this->dialogs.openDocument(SESSION_FILTERS);
+    if (!path) {
+        return;
+    }
+    openPath(*path, false);
 }
 
 void QtAppShell::saveSessionAs() {
@@ -1958,6 +2138,7 @@ void QtAppShell::saveSessionAs() {
     }
 
     this->recentFiles.addRecentFile(*path);
+    rebuildRecentDocumentsMenu();
     this->window.statusBar()->showMessage(QString::fromStdString("Saved " + path->filename().string()), 4000);
     updateWindowTitle();
 }
@@ -1972,7 +2153,14 @@ void QtAppShell::markSessionDirty() {
 void QtAppShell::updateEditCommandStates() {
     this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndo());
     this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedo());
+    const auto currentPage = this->window.canvas()->currentPageIndex();
+    this->window.commandHost()->setCommandEnabled("page.format", this->documentController.canResizePage(currentPage));
+    this->window.commandHost()->setCommandEnabled("edit.move-selection-layer-up",
+                                                  this->documentController.canMoveSelectionToAdjacentLayer(+1));
+    this->window.commandHost()->setCommandEnabled("edit.move-selection-layer-down",
+                                                  this->documentController.canMoveSelectionToAdjacentLayer(-1));
     updateToolCommandStates();
+    updateAudioCommandStates();
 }
 
 void QtAppShell::setGeometrySnapEnabled(bool enabled) {
@@ -2032,6 +2220,25 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-circle", active == QtToolType::DrawConstructionCircle);
     syncToolbarWidgets();
+}
+
+void QtAppShell::updateAudioCommandStates() {
+    const bool audioAvailable = this->audioController.isAudioAvailable();
+    const bool canPlayTarget =
+            audioAvailable && this->audioController.canStartPlayback(selectedElementsForAudioPlayback(),
+                                                                    this->documentController.sourcePath());
+    const bool canSeekOrStop = audioAvailable &&
+                               (this->audioController.hasCurrentPlayback() || this->audioController.isPlaying() ||
+                                this->audioController.isPaused());
+
+    this->window.commandHost()->setCommandEnabled("audio.record", audioAvailable);
+    this->window.commandHost()->setCommandChecked("audio.record", this->audioController.isRecording());
+    this->window.commandHost()->setCommandEnabled("audio.pause-playback", audioAvailable && canPlayTarget);
+    this->window.commandHost()->setCommandChecked("audio.pause-playback", this->audioController.isPaused());
+    this->window.commandHost()->setCommandEnabled("audio.play-object", audioAvailable && canPlayTarget);
+    this->window.commandHost()->setCommandEnabled("audio.seek-backwards", canSeekOrStop);
+    this->window.commandHost()->setCommandEnabled("audio.seek-forwards", canSeekOrStop);
+    this->window.commandHost()->setCommandEnabled("audio.stop-playback", canSeekOrStop);
 }
 
 void QtAppShell::showBackgroundDialog() {
@@ -2219,6 +2426,8 @@ void QtAppShell::saveDocument() {
     std::string errorMsg;
     if (this->documentController.saveDocument(savePath, &errorMsg)) {
         this->session.markDirty(false);
+        this->recentFiles.addRecentFile(savePath);
+        rebuildRecentDocumentsMenu();
         updateWindowTitle();
         this->window.statusBar()->showMessage(QStringLiteral("Document saved"), 3000);
     } else {
@@ -2356,6 +2565,89 @@ void QtAppShell::insertImage() {
     this->window.statusBar()->showMessage(QStringLiteral("Image inserted"), 3000);
 }
 
+void QtAppShell::insertMathTex() {
+    if (!this->documentController.hasDocument()) {
+        return;
+    }
+
+    const auto settings = buildQtLatexSettings();
+    if (!fs::is_regular_file(settings.globalTemplatePath)) {
+        QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
+                             QStringLiteral("VertexNote could not find the LaTeX template file."));
+        return;
+    }
+
+    QDialog dialog(&this->window);
+    dialog.setWindowTitle(QStringLiteral("Insert Math TeX"));
+    dialog.resize(560, 360);
+
+    auto* layout = new QVBoxLayout(&dialog);
+    auto* hint = new QLabel(
+            QStringLiteral("Enter LaTeX to render into the current page. VertexNote will compile it with the shared LaTeX pipeline."),
+            &dialog);
+    hint->setWordWrap(true);
+    layout->addWidget(hint);
+
+    auto* editor = new QPlainTextEdit(&dialog);
+    editor->setObjectName(QStringLiteral("vertexNoteQtMathTexEditor"));
+    editor->setPlainText(QStringLiteral("x^2"));
+    layout->addWidget(editor, 1);
+
+    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttonBox);
+    QObject::connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const QString formulaText = editor->toPlainText().trimmed();
+    if (formulaText.isEmpty()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Math TeX insertion canceled: empty formula"), 3000);
+        return;
+    }
+
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    const auto& pages = this->documentController.snapshotPages();
+    if (pageIndex >= pages.size()) {
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    auto renderResult = renderMathTex(formulaText.toStdString(), settings, this->window.canvas()->toolState().penColor,
+                                      pages[pageIndex].width * 0.5, pages[pageIndex].height * 0.5);
+    QApplication::restoreOverrideCursor();
+
+    if (const auto* error = std::get_if<std::string>(&renderResult)) {
+        QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
+                             QStringLiteral("VertexNote could not render this LaTeX formula.\n\n%1")
+                                     .arg(QString::fromStdString(*error)));
+        return;
+    }
+
+    auto* texImage = std::get_if<std::unique_ptr<TexImage>>(&renderResult);
+    if (!texImage || !*texImage) {
+        QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
+                             QStringLiteral("VertexNote could not create the rendered TeX image."));
+        return;
+    }
+
+    ElementPtr element(texImage->release());
+    if (!this->documentController.insertElement(pageIndex, std::move(element), "Insert LaTeX")) {
+        QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
+                             QStringLiteral("VertexNote could not insert the rendered TeX image into the document."));
+        return;
+    }
+
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    this->window.layerPanel()->refresh();
+    syncFooterWidgets();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("LaTeX formula inserted"), 3000);
+}
+
 void QtAppShell::showSettingsDialog() {
     QtSettingsDialog dialog(this->currentSettings, this->availableToolbarProfiles, &this->window);
     if (dialog.exec() != QDialog::Accepted) {
@@ -2364,6 +2656,9 @@ void QtAppShell::showSettingsDialog() {
 
     const auto previousToolbarProfileId = this->currentSettings.toolbarProfileId;
     this->currentSettings = dialog.settings();
+    if (this->currentSettings.audioFolder.empty()) {
+        this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
+    }
 
     // Apply relevant settings immediately
     auto& ts = this->window.canvas()->toolState();
@@ -2379,6 +2674,7 @@ void QtAppShell::showSettingsDialog() {
     this->window.canvas()->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
     this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
     this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    this->audioController.applySettings(this->currentSettings);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", this->currentSettings.rotationSnapDefault);
@@ -2388,6 +2684,7 @@ void QtAppShell::showSettingsDialog() {
     if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
         rebuildToolbar();
     }
+    updateAudioCommandStates();
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
 }
 
@@ -2436,6 +2733,37 @@ void QtAppShell::editFixedLengthConstraint() {
     this->window.canvas()->update();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Constraint value updated"), 3000);
+}
+
+void QtAppShell::toggleAudioRecording() {
+    if (this->audioController.toggleRecording()) {
+        updateAudioCommandStates();
+    }
+}
+
+void QtAppShell::toggleAudioPausePlayback() {
+    if (this->audioController.togglePausePlayback(selectedElementsForAudioPlayback(),
+                                                  this->documentController.sourcePath())) {
+        updateAudioCommandStates();
+    }
+}
+
+void QtAppShell::stopAudioPlayback() {
+    if (this->audioController.stopPlayback()) {
+        updateAudioCommandStates();
+    }
+}
+
+void QtAppShell::seekAudioBackwards() {
+    if (this->audioController.seekBackwards()) {
+        updateAudioCommandStates();
+    }
+}
+
+void QtAppShell::seekAudioForwards() {
+    if (this->audioController.seekForwards()) {
+        updateAudioCommandStates();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2816,6 +3144,13 @@ void QtAppShell::recordNavPoint() {
     }
 }
 
+auto QtAppShell::selectedElementsForAudioPlayback() const -> std::vector<const Element*> {
+    if (const auto& selection = this->documentController.elementSelection(); selection.has_value()) {
+        return selection->elements;
+    }
+    return {};
+}
+
 void QtAppShell::navigateBack() {
     if (this->navHistoryIndex == 0 || this->navHistory.empty()) {
         this->window.statusBar()->showMessage(QStringLiteral("No previous position"), 3000);
@@ -3098,8 +3433,108 @@ void QtAppShell::deleteLayer() {
 }
 
 void QtAppShell::paperFormatDialog() {
-    // TODO: implement full paper format dialog (page size, orientation)
-    this->window.statusBar()->showMessage(QStringLiteral("Paper format dialog not yet implemented"), 3000);
+    const auto pageIndex = this->window.canvas()->currentPageIndex();
+    if (!this->documentController.hasDocument() || pageIndex >= this->documentController.snapshotPages().size()) {
+        return;
+    }
+    if (!this->documentController.canResizePage(pageIndex)) {
+        this->window.statusBar()->showMessage(QStringLiteral("Paper format is fixed for PDF-backed pages"), 3000);
+        return;
+    }
+
+    const auto& snapshot = this->documentController.snapshotPages()[pageIndex];
+    QDialog dialog(&this->window);
+    dialog.setWindowTitle(QStringLiteral("Paper Format"));
+    auto* rootLayout = new QVBoxLayout(&dialog);
+    auto* formLayout = new QFormLayout();
+
+    auto* presetCombo = new QComboBox(&dialog);
+    for (const auto& preset: PAPER_PRESETS) {
+        presetCombo->addItem(QString::fromUtf8(preset.label.data(), static_cast<int>(preset.label.size())));
+    }
+
+    auto* orientationCombo = new QComboBox(&dialog);
+    orientationCombo->addItems({QStringLiteral("Portrait"), QStringLiteral("Landscape")});
+
+    auto* widthSpin = new QDoubleSpinBox(&dialog);
+    widthSpin->setRange(50.0, 4000.0);
+    widthSpin->setDecimals(1);
+    widthSpin->setSuffix(QStringLiteral(" pt"));
+    widthSpin->setValue(snapshot.width);
+
+    auto* heightSpin = new QDoubleSpinBox(&dialog);
+    heightSpin->setRange(50.0, 4000.0);
+    heightSpin->setDecimals(1);
+    heightSpin->setSuffix(QStringLiteral(" pt"));
+    heightSpin->setValue(snapshot.height);
+
+    auto* helpLabel = new QLabel(QStringLiteral("Built-in presets use document points, matching the shared core page model."),
+                                 &dialog);
+    helpLabel->setWordWrap(true);
+    helpLabel->setObjectName(QStringLiteral("paperFormatHelp"));
+
+    formLayout->addRow(QStringLiteral("Preset"), presetCombo);
+    formLayout->addRow(QStringLiteral("Orientation"), orientationCombo);
+    formLayout->addRow(QStringLiteral("Width"), widthSpin);
+    formLayout->addRow(QStringLiteral("Height"), heightSpin);
+    rootLayout->addLayout(formLayout);
+    rootLayout->addWidget(helpLabel);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    rootLayout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    bool syncingPreset = false;
+    auto syncPresetFromSize = [&]() {
+        const QSignalBlocker presetBlocker(presetCombo);
+        const QSignalBlocker orientationBlocker(orientationCombo);
+        presetCombo->setCurrentIndex(matchingPaperPreset(widthSpin->value(), heightSpin->value()));
+        orientationCombo->setCurrentIndex(isLandscapeSize(widthSpin->value(), heightSpin->value()) ? 1 : 0);
+    };
+    auto applyPreset = [&](int presetIndex) {
+        if (syncingPreset || presetIndex <= 0 || presetIndex >= static_cast<int>(PAPER_PRESETS.size())) {
+            return;
+        }
+        syncingPreset = true;
+        const auto& preset = PAPER_PRESETS[static_cast<std::size_t>(presetIndex)];
+        const bool landscape = orientationCombo->currentIndex() == 1;
+        widthSpin->setValue(landscape ? preset.height : preset.width);
+        heightSpin->setValue(landscape ? preset.width : preset.height);
+        syncingPreset = false;
+    };
+
+    QObject::connect(presetCombo, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, applyPreset);
+    QObject::connect(orientationCombo, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&](int) {
+        applyPreset(presetCombo->currentIndex());
+    });
+    QObject::connect(widthSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), &dialog, [&](double) {
+        if (!syncingPreset) {
+            syncPresetFromSize();
+        }
+    });
+    QObject::connect(heightSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), &dialog, [&](double) {
+        if (!syncingPreset) {
+            syncPresetFromSize();
+        }
+    });
+
+    syncPresetFromSize();
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    if (!this->documentController.resizePage(pageIndex, widthSpin->value(), heightSpin->value())) {
+        return;
+    }
+
+    this->window.canvas()->update();
+    this->window.pageSidebar()->refresh();
+    this->window.layerPanel()->refresh();
+    updateEditCommandStates();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Page size updated"), 3000);
 }
 
 // ---------------------------------------------------------------------------
@@ -3107,11 +3542,25 @@ void QtAppShell::paperFormatDialog() {
 // ---------------------------------------------------------------------------
 
 void QtAppShell::moveSelectionLayerUp() {
-    // TODO: implement move-selection-layer-up via document controller
-    this->window.statusBar()->showMessage(QStringLiteral("Move selection layer up not yet implemented"), 3000);
+    if (!this->documentController.moveSelectionToAdjacentLayer(+1)) {
+        return;
+    }
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Moved selection up one layer"), 3000);
 }
 
 void QtAppShell::moveSelectionLayerDown() {
-    // TODO: implement move-selection-layer-down via document controller
-    this->window.statusBar()->showMessage(QStringLiteral("Move selection layer down not yet implemented"), 3000);
+    if (!this->documentController.moveSelectionToAdjacentLayer(-1)) {
+        return;
+    }
+    this->window.canvas()->update();
+    this->window.layerPanel()->refresh();
+    this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Moved selection down one layer"), 3000);
 }

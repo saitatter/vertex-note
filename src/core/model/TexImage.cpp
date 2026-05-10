@@ -1,6 +1,8 @@
 #include "TexImage.h"
 
 #include <memory>
+#include <algorithm>
+#include <cmath>
 #include <utility>  // for move
 
 #include <poppler-document.h>  // for poppler_document_ge...
@@ -8,6 +10,7 @@
 
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
+#include "util/raii/CairoWrappers.h"
 #include "util/raii/GObjectSPtr.h"                // for GObjectSPtr
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
@@ -116,6 +119,44 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
 auto TexImage::getImage() const -> cairo_surface_t* { return this->image; }
 
 auto TexImage::getPdf() const -> PopplerDocument* { return this->pdf.get(); }
+
+auto TexImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
+    if (!this->pdf) {
+        return {};
+    }
+
+    vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
+    if (!page) {
+        return {};
+    }
+
+    const int pixelWidth = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->width))));
+    const int pixelHeight = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->height))));
+
+    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixelWidth, pixelHeight),
+                                       vn::util::adopt);
+    vn::util::CairoSPtr cr(cairo_create(surface.get()), vn::util::adopt);
+
+    cairo_set_source_rgb(cr.get(), 1.0, 1.0, 1.0);
+    cairo_paint(cr.get());
+    cairo_scale(cr.get(), pixelWidth / std::max(this->width, 1.0), pixelHeight / std::max(this->height, 1.0));
+    poppler_page_render(page.get(), cr.get());
+    cairo_surface_flush(surface.get());
+
+    auto* data = cairo_image_surface_get_data(surface.get());
+    const int stride = cairo_image_surface_get_stride(surface.get());
+    if (!data || stride <= 0) {
+        return {};
+    }
+
+    xoj::util::RasterImageData raster;
+    raster.width = pixelWidth;
+    raster.height = pixelHeight;
+    raster.stride = stride;
+    raster.format = xoj::util::RasterPixelFormat::Argb32Premultiplied;
+    raster.pixels.assign(data, data + static_cast<std::size_t>(stride * pixelHeight));
+    return raster;
+}
 
 void TexImage::scale(double x0, double y0, double fx, double fy, double rotation,
                      bool) {  // line width scaling option is not used

@@ -19,6 +19,7 @@
 #include <poppler.h>  // for PopplerDocument
 
 #include "util/raii/GObjectSPtr.h"  // for GObjectSPtr
+#include "util/RasterImageData.h"
 
 #include "Element.h"  // for Element
 
@@ -55,6 +56,8 @@ public:
      * The document needs to be referenced, if it will be hold somewhere
      */
     PopplerDocument* getPdf() const;
+
+    [[nodiscard]] auto renderPreviewRaster() const -> xoj::util::RasterImageData;
 
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;
     void rotate(double x0, double y0, double th) override;

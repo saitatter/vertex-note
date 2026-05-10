@@ -112,6 +112,7 @@ Q_SIGNALS:
     void viewportStateChanged();
     void statusHintChanged(const QString& text);
     void documentEdited();
+    void selectionStateChanged();
 
 private:
     enum class InstrumentToolKind { None, Setsquare, Compass };

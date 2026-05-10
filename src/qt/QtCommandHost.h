@@ -27,6 +27,7 @@ public:
     void triggerCommand(std::string_view id) override;
     void removeCommand(std::string_view id);
     [[nodiscard]] auto actionForCommand(std::string_view id) const -> QAction*;
+    [[nodiscard]] auto menuForPath(std::string_view menuPath) -> QMenu*;
     void addMenuSeparator(std::string_view menuPath);
 
 private:

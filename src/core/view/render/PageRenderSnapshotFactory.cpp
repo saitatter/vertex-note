@@ -12,6 +12,7 @@
 #include "model/Layer.h"
 #include "model/NotePage.h"
 #include "model/Stroke.h"
+#include "model/TexImage.h"
 #include "model/Text.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "GeometryRenderModelFactory.h"
@@ -73,6 +74,13 @@ auto buildPageRenderSnapshots(Document& document) -> std::vector<PageRenderSnaps
                         const auto* image = dynamic_cast<const Image*>(element);
                         if (image && image->hasData()) {
                             drawables.emplace_back(ImageRenderModelFactory::fromImage(*image));
+                        }
+                        break;
+                    }
+                    case ELEMENT_TEXIMAGE: {
+                        const auto* image = dynamic_cast<const TexImage*>(element);
+                        if (image && image->getPdf()) {
+                            drawables.emplace_back(ImageRenderModelFactory::fromTexImage(*image));
                         }
                         break;
                     }

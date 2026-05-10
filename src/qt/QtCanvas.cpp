@@ -1016,6 +1016,7 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
             unsetCursor();
         }
         update();
+        Q_EMIT selectionStateChanged();
         event->accept();
         return;
     }
@@ -2004,6 +2005,7 @@ void QtCanvas::selectElementAtScreen(const QPointF& screenPoint, bool additive) 
         updateDebugOverlay(QStringLiteral("selection cleared"));
     }
     update();
+    Q_EMIT selectionStateChanged();
 }
 
 void QtCanvas::beginRubberBand(const QPointF& screenPoint) {
@@ -2062,6 +2064,7 @@ void QtCanvas::finalizeRubberBand() {
 
     this->rubberBanding = false;
     update();
+    Q_EMIT selectionStateChanged();
 }
 
 void QtCanvas::cancelRubberBand() {

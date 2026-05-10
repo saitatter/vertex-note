@@ -70,6 +70,8 @@ void QtCommandHost::removeCommand(std::string_view id) {
 
 auto QtCommandHost::actionForCommand(std::string_view id) const -> QAction* { return actionFor(id); }
 
+auto QtCommandHost::menuForPath(std::string_view menuPath) -> QMenu* { return ensureMenu(menuPath); }
+
 void QtCommandHost::addMenuSeparator(std::string_view menuPath) {
     auto* menu = ensureMenu(menuPath);
     menu->addSeparator();

@@ -140,9 +140,11 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   Qt-natively using the same core model objects (`Stroke`, `Layer`, `Document`).
 - Plugin system has UI bridge for menu/toolbar actions but no Qt-native
   Lua runtime; plugins requiring Lua execution need the GTK shell.
-- The following toolbar-visible features are still partial or placeholder in
-  the Qt shell and remain on the parity backlog:
-  `AUDIO_*`.
+- The remaining parity backlog is now concentrated in deeper shell/workflow
+  behavior rather than missing top-level toolbar tools. The largest remaining
+  shell-visible gaps are now concentrated in deeper workflow polish such as
+  floating toolbox behaviour, plugin/runtime parity, and final screenshot-level
+  chrome matching.
 
 ## Completed Slices
 
@@ -167,6 +169,11 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 10. ✓ Page sidebar dock with rendered thumbnails and click-to-scroll navigation.
 11. ✓ Fullscreen (F11) and presentation mode (F5) with toolbar/sidebar toggle.
 12. ✓ Toolbar palette with colour picker, pen width spinner, pressure toggle.
+13. ✓ Audio tools (`record`, `play/pause`, `seek`, `stop`) wired through a
+    dedicated Qt audio controller backed by the shared core audio pipeline.
+14. ✓ Paper format dialog with presets/orientation and shared core page resize.
+15. ✓ Move selection layer up/down with unified undo/redo through the Qt
+    document controller.
 
 ### Phase 4 — Advanced editing & plugin bridge ✓
 
@@ -223,6 +230,12 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
     linear and rectangle modes, toolbar family button, highlight overlay, clipboard copy.
 37. ✓ Setsquare and Compass tools in the Qt shell:
     visible overlay instruments, guided stroke creation, Alt+wheel resize, Shift+wheel rotation.
+38. ✓ Audio tools in the Qt shell:
+    record, play/pause, seek, and stop wired through a dedicated `QtAudioController`
+    backed by the shared core audio pipeline.
+39. ✓ Recent Documents submenu in the Qt shell:
+    dynamic `File > Recent Documents` entries, open-from-recent wiring, missing-file
+    cleanup, and clear-list action.
 
 ### Phase 7 — Clipboard & element operations ✓
 

@@ -17,6 +17,7 @@ class QDoubleSpinBox;
 class QSpinBox;
 class QCheckBox;
 class QComboBox;
+class QLineEdit;
 
 struct QtToolbarProfileOption {
     std::string id;
@@ -38,6 +39,10 @@ struct QtSettings {
     bool touchDrawingDefault = false;
     double strokeRecognizerMinSize = 40.0;
     int laserPointerFadeOutMs = 1500;
+    std::string audioFolder;
+    double audioSampleRate = 44100.0;
+    double audioGain = 1.0;
+    int defaultSeekTimeSeconds = 5;
     std::string toolbarProfileId = "All in";
 };
 
@@ -65,5 +70,9 @@ private:
     QCheckBox* touchDrawingCheck = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;
+    QLineEdit* audioFolderEdit = nullptr;
+    QDoubleSpinBox* audioSampleRateSpin = nullptr;
+    QDoubleSpinBox* audioGainSpin = nullptr;
+    QSpinBox* defaultSeekTimeSpin = nullptr;
     QComboBox* toolbarProfileCombo = nullptr;
 };

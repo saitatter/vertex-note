@@ -58,6 +58,7 @@ file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
 
 if (NOT ENABLE_QT_SHELL)
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtRecentFilesServiceTest\\.cpp$")
 endif ()
 
 # Define test-units target

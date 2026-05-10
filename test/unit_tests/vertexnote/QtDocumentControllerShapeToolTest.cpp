@@ -111,3 +111,53 @@ TEST(VertexNoteQtDocumentControllerShapeTools, shapeRecognizerStrokeFinalizesThr
     ASSERT_EQ(1U, strokeCount(controller.snapshotPages().front()));
     EXPECT_TRUE(controller.canUndo());
 }
+
+TEST(VertexNoteQtDocumentControllerShapeTools, movesSelectionBetweenLayersWithUndoRedo) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    controller.addLayer(PageIndex);
+    controller.selectLayer(PageIndex, 0U);
+    ASSERT_NE(nullptr, controller.createLine(PageIndex, 20.0, 20.0, 120.0, 20.0, Colors::black, 2.0));
+
+    controller.selectElementAt(PageIndex, 60.0, 20.0, 16.0);
+    ASSERT_TRUE(controller.canMoveSelectionToAdjacentLayer(+1));
+    ASSERT_TRUE(controller.moveSelectionToAdjacentLayer(+1));
+
+    auto infos = controller.layerInfos(PageIndex);
+    ASSERT_EQ(2U, infos.size());
+    EXPECT_EQ(0U, infos[0].elementCount);
+    EXPECT_EQ(1U, infos[1].elementCount);
+
+    ASSERT_TRUE(controller.undo());
+    infos = controller.layerInfos(PageIndex);
+    EXPECT_EQ(1U, infos[0].elementCount);
+    EXPECT_EQ(0U, infos[1].elementCount);
+
+    ASSERT_TRUE(controller.redo());
+    infos = controller.layerInfos(PageIndex);
+    EXPECT_EQ(0U, infos[0].elementCount);
+    EXPECT_EQ(1U, infos[1].elementCount);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, resizesPageWithUndoRedo) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    const auto& before = controller.snapshotPages().front();
+    EXPECT_TRUE(controller.canResizePage(PageIndex));
+    ASSERT_TRUE(controller.resizePage(PageIndex, 842.0, 595.0));
+    const auto& resized = controller.snapshotPages().front();
+    EXPECT_DOUBLE_EQ(842.0, resized.width);
+    EXPECT_DOUBLE_EQ(595.0, resized.height);
+
+    ASSERT_TRUE(controller.undo());
+    const auto& undone = controller.snapshotPages().front();
+    EXPECT_DOUBLE_EQ(before.width, undone.width);
+    EXPECT_DOUBLE_EQ(before.height, undone.height);
+
+    ASSERT_TRUE(controller.redo());
+    const auto& redone = controller.snapshotPages().front();
+    EXPECT_DOUBLE_EQ(842.0, redone.width);
+    EXPECT_DOUBLE_EQ(595.0, redone.height);
+}

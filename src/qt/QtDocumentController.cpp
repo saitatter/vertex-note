@@ -11,6 +11,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <numeric>
 
 #include "control/shaperecognizer/ShapeRecognizer.h"
 #include "control/xojfile/LoadHandler.h"
@@ -1809,6 +1810,102 @@ void QtDocumentController::setPageBackgroundColor(std::size_t pageIndex, Color c
     rebuildPageSnapshots();
 }
 
+auto QtDocumentController::canMoveSelectionToAdjacentLayer(int direction) const -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document ||
+        this->currentSelection->pageIndex >= this->document->getPageCount() || direction == 0) {
+        return false;
+    }
+
+    auto page = this->document->getPage(this->currentSelection->pageIndex);
+    if (!page) {
+        return false;
+    }
+
+    const auto& layers = page->getLayers();
+    for (std::size_t layerIndex = 0; layerIndex < layers.size(); ++layerIndex) {
+        const auto* layer = layers[layerIndex];
+        if (!layer) {
+            continue;
+        }
+        for (const auto* element: this->currentSelection->elements) {
+            if (layer->indexOf(element) == Element::InvalidIndex) {
+                continue;
+            }
+
+            if (direction > 0 && layerIndex + 1 < layers.size()) {
+                return true;
+            }
+            if (direction < 0 && layerIndex > 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+auto QtDocumentController::moveSelectionToAdjacentLayer(int direction) -> bool {
+    if (!canMoveSelectionToAdjacentLayer(direction)) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(this->currentSelection->pageIndex);
+    if (!page) {
+        this->document->unlock();
+        return false;
+    }
+
+    auto& layers = page->getLayers();
+    std::vector<QtLayerTransferRecord> records;
+    for (const auto* element: this->currentSelection->elements) {
+        for (std::size_t fromLayerIndex = 0; fromLayerIndex < layers.size(); ++fromLayerIndex) {
+            auto* sourceLayer = layers[fromLayerIndex];
+            if (!sourceLayer) {
+                continue;
+            }
+
+            const auto fromPos = sourceLayer->indexOf(element);
+            if (fromPos == Element::InvalidIndex) {
+                continue;
+            }
+
+            const auto toLayerIndex = direction > 0 ? fromLayerIndex + 1 : fromLayerIndex - 1;
+            if (toLayerIndex >= layers.size() || !layers[toLayerIndex]) {
+                break;
+            }
+
+            auto* targetLayer = layers[toLayerIndex];
+            const auto toPos = static_cast<Element::Index>(targetLayer->getElementsView().size());
+            auto removed = sourceLayer->removeElement(element);
+            if (!removed.e) {
+                break;
+            }
+            const auto* movedPtr = removed.e.get();
+            targetLayer->insertElement(std::move(removed.e), toPos);
+            records.push_back(QtLayerTransferRecord{.element = movedPtr,
+                                                    .fromLayerIndex = fromLayerIndex,
+                                                    .toLayerIndex = toLayerIndex,
+                                                    .fromPos = fromPos,
+                                                    .toPos = toPos});
+            break;
+        }
+    }
+    this->document->unlock();
+
+    if (records.empty()) {
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtLayerTransferHistoryEntry{
+            .pageIndex = this->currentSelection->pageIndex,
+            .records = std::move(records),
+            .text = direction > 0 ? "Move selection layer up" : "Move selection layer down",
+    }});
+    rebuildPageSnapshots();
+    return true;
+}
+
 void QtDocumentController::setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format) {
     if (!this->document || pageIndex >= this->document->getPageCount()) {
         return;
@@ -1822,6 +1919,46 @@ void QtDocumentController::setPageBackgroundType(std::size_t pageIndex, PageType
     }
     this->document->unlock();
     rebuildPageSnapshots();
+}
+
+auto QtDocumentController::canResizePage(std::size_t pageIndex) const -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+    auto page = this->document->getPage(pageIndex);
+    return page && !page->getBackgroundType().isPdfPage();
+}
+
+auto QtDocumentController::resizePage(std::size_t pageIndex, double width, double height) -> bool {
+    if (!canResizePage(pageIndex) || width <= 0.0 || height <= 0.0) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        this->document->unlock();
+        return false;
+    }
+
+    const double beforeWidth = page->getWidth();
+    const double beforeHeight = page->getHeight();
+    if (std::abs(beforeWidth - width) < 0.01 && std::abs(beforeHeight - height) < 0.01) {
+        this->document->unlock();
+        return false;
+    }
+
+    Document::setPageSize(page, width, height);
+    this->document->unlock();
+
+    pushHistory(QtHistoryEntry{QtPageSizeHistoryEntry{.pageIndex = pageIndex,
+                                                      .beforeWidth = beforeWidth,
+                                                      .beforeHeight = beforeHeight,
+                                                      .afterWidth = width,
+                                                      .afterHeight = height,
+                                                      .text = "Change page size"}});
+    rebuildPageSnapshots();
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -2086,6 +2223,29 @@ auto QtDocumentController::insertImage(std::size_t pageIndex, double x, double y
     return ptr;
 }
 
+auto QtDocumentController::insertElement(std::size_t pageIndex, ElementPtr element, std::string historyText)
+        -> const Element* {
+    if (!this->document || !element || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return nullptr;
+    }
+
+    const auto* ptr = element.get();
+    layer->addElement(std::move(element));
+    pushHistory(QtHistoryEntry{
+            QtStrokeHistoryEntry{.pageIndex = pageIndex, .element = ptr, .text = std::move(historyText)}});
+    this->document->unlock();
+    rebuildPageSnapshots();
+    return ptr;
+}
+
 // ---------------------------------------------------------------------------
 // Text search
 // ---------------------------------------------------------------------------
@@ -2298,6 +2458,51 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtLayerTransferHistoryEntry>) {
+                    if (e.records.empty() || !this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    auto& layers = page->getLayers();
+                    std::vector<std::size_t> order(e.records.size());
+                    std::iota(order.begin(), order.end(), 0U);
+                    std::sort(order.begin(), order.end(), [&](std::size_t lhs, std::size_t rhs) {
+                        return e.records[lhs].fromPos < e.records[rhs].fromPos;
+                    });
+                    for (auto recordIndex: order) {
+                        auto& record = e.records[recordIndex];
+                        if (record.toLayerIndex >= layers.size() || record.fromLayerIndex >= layers.size() ||
+                            !layers[record.toLayerIndex] || !layers[record.fromLayerIndex]) {
+                            continue;
+                        }
+                        auto removed = layers[record.toLayerIndex]->removeElement(record.element);
+                        if (!removed.e) {
+                            continue;
+                        }
+                        layers[record.fromLayerIndex]->insertElement(std::move(removed.e), record.fromPos);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
+                } else if constexpr (std::is_same_v<T, QtPageSizeHistoryEntry>) {
+                    if (!this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    Document::setPageSize(page, e.beforeWidth, e.beforeHeight);
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);
@@ -2449,6 +2654,51 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                         return true;
                     }
                     return false;
+                } else if constexpr (std::is_same_v<T, QtLayerTransferHistoryEntry>) {
+                    if (e.records.empty() || !this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    auto& layers = page->getLayers();
+                    std::vector<std::size_t> order(e.records.size());
+                    std::iota(order.begin(), order.end(), 0U);
+                    std::sort(order.begin(), order.end(), [&](std::size_t lhs, std::size_t rhs) {
+                        return e.records[lhs].toPos < e.records[rhs].toPos;
+                    });
+                    for (auto recordIndex: order) {
+                        auto& record = e.records[recordIndex];
+                        if (record.fromLayerIndex >= layers.size() || record.toLayerIndex >= layers.size() ||
+                            !layers[record.fromLayerIndex] || !layers[record.toLayerIndex]) {
+                            continue;
+                        }
+                        auto removed = layers[record.fromLayerIndex]->removeElement(record.element);
+                        if (!removed.e) {
+                            continue;
+                        }
+                        layers[record.toLayerIndex]->insertElement(std::move(removed.e), record.toPos);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
+                } else if constexpr (std::is_same_v<T, QtPageSizeHistoryEntry>) {
+                    if (!this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    Document::setPageSize(page, e.afterWidth, e.afterHeight);
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 }
             },
             entry.data);

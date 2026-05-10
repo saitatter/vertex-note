@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "QtAudioController.h"
 #include "QtClipboardService.h"
 #include "QtDialogService.h"
 #include "QtDocumentController.h"
@@ -48,12 +49,14 @@ private:
     void registerBootstrapCommands();
     void wireWindowState();
     void rebuildToolbar();
+    void rebuildRecentDocumentsMenu();
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();
     void updateStatusBarLabels();
     void newSession();
     void openSession();
+    auto openPath(const std::filesystem::path& path, bool fromRecentDocuments) -> bool;
     void saveSessionAs();
     void markSessionDirty();
     void updateEditCommandStates();
@@ -61,6 +64,7 @@ private:
     void setGridSnapEnabled(bool enabled);
     void selectTool(QtToolType tool);
     void updateToolCommandStates();
+    void updateAudioCommandStates();
     void showBackgroundDialog();
     void exportPdf();
     void exportPng();
@@ -73,10 +77,16 @@ private:
     void duplicatePage();
     void findText();
     void insertImage();
+    void insertMathTex();
     void showSettingsDialog();
     void applyConstraint(vn::geom::ConstraintKind kind);
     void deleteConstraints();
     void editFixedLengthConstraint();
+    void toggleAudioRecording();
+    void toggleAudioPausePlayback();
+    void stopAudioPlayback();
+    void seekAudioBackwards();
+    void seekAudioForwards();
 
     // Phase 7: Clipboard & element operations
     void deleteSelection();
@@ -153,6 +163,7 @@ private:
 
 private:
     QtMainWindow window;
+    QtAudioController audioController;
     QtClipboardService clipboard;
     QtDialogService dialogs;
     QtRecentFilesService recentFiles;
@@ -188,4 +199,5 @@ private:
     std::vector<NavPoint> navHistory;
     std::size_t navHistoryIndex = 0U;
     void recordNavPoint();
+    [[nodiscard]] auto selectedElementsForAudioPlayback() const -> std::vector<const Element*>;
 };

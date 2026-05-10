@@ -71,6 +71,7 @@ struct TextRenderModel {
 
 struct ImageRenderModel {
     std::string encodedBytes;
+    vn::util::RasterImageData rasterContent;
     double x = 0.0;
     double y = 0.0;
     double width = 0.0;

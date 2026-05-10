@@ -2,15 +2,24 @@
  * VertexNote unit tests
  */
 
+#include <config-test.h>
 #include <gtest/gtest.h>
 
+#include "control/xojfile/LoadHandler.h"
+#include "filesystem.h"
 #include "model/Document.h"
 #include "model/Font.h"
 #include "model/NotePage.h"
 #include "model/Stroke.h"
+#include "model/TexImage.h"
 #include "model/Text.h"
 #include "view/render/PageRenderSnapshotFactory.h"
 #include "vertexnote/geometry/GeometryElement.h"
+
+static auto loadTestDocument(const fs::path& filepath) -> std::unique_ptr<Document> {
+    EXPECT_NO_THROW(return LoadHandler{}.loadDocument(filepath)) << "Error while loading \"" << filepath << '\"';
+    return {};
+}
 
 TEST(VertexNotePageRenderSnapshotFactory, buildsSharedSnapshotsFromGeometryPages) {
     Document document(nullptr);
@@ -184,4 +193,19 @@ TEST(VertexNotePageRenderSnapshotFactory, capturesBackgroundFormat) {
     ASSERT_EQ(snapshots.size(), 1U);
     EXPECT_EQ(snapshots.front().background.backgroundFormat, PageTypeFormat::Graph);
     EXPECT_EQ(snapshots.front().background.backgroundColor.red, 0xdd);
+}
+
+TEST(VertexNotePageRenderSnapshotFactory, includesLatexImagesInSnapshot) {
+    auto document = loadTestDocument(GET_TESTFILE(u8"load/latex.xopp"));
+    ASSERT_TRUE(document);
+
+    const auto snapshots = vn::view::render::buildPageRenderSnapshots(*document);
+
+    ASSERT_EQ(snapshots.size(), 1U);
+    ASSERT_EQ(snapshots.front().drawables.size(), 1U);
+    const auto* image = std::get_if<vn::view::render::ImageRenderModel>(&snapshots.front().drawables.front());
+    ASSERT_NE(image, nullptr);
+    EXPECT_FALSE(image->rasterContent.empty());
+    EXPECT_GT(image->width, 0.0);
+    EXPECT_GT(image->height, 0.0);
 }

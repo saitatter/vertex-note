@@ -12,7 +12,11 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QFileDialog>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -145,6 +149,52 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     generalPage->setLayout(generalLayout);
     tabs->addTab(generalPage, QStringLiteral("General"));
 
+    // --- Audio tab ---
+    auto* audioPage = new QWidget(this);
+    auto* audioLayout = new QFormLayout(audioPage);
+
+    auto* audioFolderRow = new QWidget(audioPage);
+    auto* audioFolderRowLayout = new QHBoxLayout(audioFolderRow);
+    audioFolderRowLayout->setContentsMargins(0, 0, 0, 0);
+    this->audioFolderEdit = new QLineEdit(QString::fromStdString(current.audioFolder), audioFolderRow);
+    auto* browseAudioFolderButton = new QPushButton(QStringLiteral("Browse..."), audioFolderRow);
+    audioFolderRowLayout->addWidget(this->audioFolderEdit, 1);
+    audioFolderRowLayout->addWidget(browseAudioFolderButton, 0);
+    QObject::connect(browseAudioFolderButton, &QPushButton::clicked, this, [this]() {
+        const QString currentPath = this->audioFolderEdit->text().trimmed();
+        const QString selectedPath =
+                QFileDialog::getExistingDirectory(this, QStringLiteral("Select Audio Folder"), currentPath);
+        if (!selectedPath.isEmpty()) {
+            this->audioFolderEdit->setText(selectedPath);
+        }
+    });
+    audioLayout->addRow(QStringLiteral("Audio folder:"), audioFolderRow);
+
+    this->audioSampleRateSpin = new QDoubleSpinBox(audioPage);
+    this->audioSampleRateSpin->setRange(8000.0, 192000.0);
+    this->audioSampleRateSpin->setDecimals(0);
+    this->audioSampleRateSpin->setSingleStep(1000.0);
+    this->audioSampleRateSpin->setValue(current.audioSampleRate);
+    this->audioSampleRateSpin->setSuffix(QStringLiteral(" Hz"));
+    audioLayout->addRow(QStringLiteral("Sample rate:"), this->audioSampleRateSpin);
+
+    this->audioGainSpin = new QDoubleSpinBox(audioPage);
+    this->audioGainSpin->setRange(0.1, 8.0);
+    this->audioGainSpin->setDecimals(2);
+    this->audioGainSpin->setSingleStep(0.1);
+    this->audioGainSpin->setValue(current.audioGain);
+    audioLayout->addRow(QStringLiteral("Playback gain:"), this->audioGainSpin);
+
+    this->defaultSeekTimeSpin = new QSpinBox(audioPage);
+    this->defaultSeekTimeSpin->setRange(1, 120);
+    this->defaultSeekTimeSpin->setSingleStep(1);
+    this->defaultSeekTimeSpin->setValue(current.defaultSeekTimeSeconds);
+    this->defaultSeekTimeSpin->setSuffix(QStringLiteral(" s"));
+    audioLayout->addRow(QStringLiteral("Seek step:"), this->defaultSeekTimeSpin);
+
+    audioPage->setLayout(audioLayout);
+    tabs->addTab(audioPage, QStringLiteral("Audio"));
+
     mainLayout->addWidget(tabs);
 
     // Buttons
@@ -173,6 +223,10 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
+            .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
+            .audioSampleRate = this->audioSampleRateSpin->value(),
+            .audioGain = this->audioGainSpin->value(),
+            .defaultSeekTimeSeconds = this->defaultSeekTimeSpin->value(),
             .toolbarProfileId = this->toolbarProfileCombo->currentData().toString().toStdString(),
     };
 }
