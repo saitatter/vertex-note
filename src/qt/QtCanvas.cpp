@@ -48,9 +48,9 @@ namespace {
 constexpr double MIN_ZOOM = 0.1;
 constexpr double MAX_ZOOM = 8.0;
 constexpr double ZOOM_STEP = 1.15;
-constexpr double PAGE_STACK_X = 120.0;
-constexpr double PAGE_STACK_Y = 100.0;
-constexpr double PAGE_STACK_GAP = 56.0;
+constexpr double PAGE_STACK_X = 92.0;
+constexpr double PAGE_STACK_Y = 84.0;
+constexpr double PAGE_STACK_GAP = 48.0;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
 constexpr double CM_TO_PT = 28.3464566929;
@@ -506,7 +506,7 @@ void QtCanvas::fitWidth() {
     for (const auto& r: rects) {
         maxWidth = std::max(maxWidth, r.width());
     }
-    const double padding = 32.0;
+    const double padding = 24.0;
     const double availableWidth = std::max(1.0, width() - 2.0 * padding);
     this->zoomFactor = clampZoom(availableWidth / std::max(maxWidth, 1.0));
     const double visibleWorldWidth = width() / this->zoomFactor;

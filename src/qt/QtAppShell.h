@@ -57,6 +57,7 @@ private:
     void savePersistentUiState() const;
     void syncFloatingToolBarsVisibility(bool showToolbars);
     void applyAuxiliaryToolBarVisibility(bool showToolbars);
+    void applySidebarVisibility(bool visible);
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();

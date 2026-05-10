@@ -159,8 +159,10 @@ constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
         Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
 };
 
-constexpr int QT_SHELL_LAYOUT_VERSION = 3;
+constexpr int QT_SHELL_LAYOUT_VERSION = 4;
 constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
+
+auto isGtkParityProfileId(std::string_view profileId) -> bool { return profileId == QT_GTK_PARITY_PROFILE_ID; }
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
 
@@ -352,6 +354,7 @@ QtAppShell::QtAppShell():
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
+    this->window.setGtkParitySidebarMode(isGtkParityProfileId(this->currentSettings.toolbarProfileId));
     if (!this->persistedWindowGeometry.isEmpty()) {
         this->window.restoreGeometry(this->persistedWindowGeometry);
     }
@@ -375,8 +378,7 @@ QtAppShell::QtAppShell():
     this->window.canvas()->fitWidth();
     this->window.cascadeFloatingToolBars();
     this->window.menuBar()->setVisible(this->persistedShowMenubar);
-    this->window.pageSidebar()->setVisible(this->persistedShowSidebar);
-    this->window.layerPanel()->setVisible(this->persistedShowSidebar);
+    applySidebarVisibility(this->persistedShowSidebar);
     this->window.mainToolBar()->setVisible(this->persistedShowToolbar);
     this->window.toolsToolBar()->setVisible(this->persistedShowToolbar);
     this->window.footerToolBar()->setVisible(this->persistedShowToolbar);
@@ -1141,7 +1143,9 @@ void QtAppShell::wireWindowState() {
                      });
 
     const auto syncSidebarVisibility = [this]() {
-        const bool visible = this->window.pageSidebar()->isVisible() || this->window.layerPanel()->isVisible();
+        const bool visible = isGtkParityProfileId(this->currentSettings.toolbarProfileId)
+                                     ? this->window.pageSidebar()->isVisible()
+                                     : (this->window.pageSidebar()->isVisible() || this->window.layerPanel()->isVisible());
         this->window.commandHost()->setCommandChecked("view.show-sidebar", visible);
         savePersistentUiState();
     };
@@ -2260,26 +2264,20 @@ void QtAppShell::loadPersistentUiState() {
     }
 
     if (savedLayoutVersion < QT_SHELL_LAYOUT_VERSION) {
-        if (this->currentSettings.toolbarProfileId == "All in") {
-            // Migrate the old dense default shell to the GTK-like portrait shell.
-            // Resetting dock state lets Pages/Layers and top-only toolbars snap back into the expected arrangement.
-            this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
-            this->persistedWindowState.clear();
-            this->persistedShowToolbar = true;
-            this->persistedShowMenubar = true;
-            this->persistedShowSidebar = true;
-            this->persistedPairedPages = false;
-            this->persistedVerticalLayout = true;
-            this->persistedLayoutRtl = false;
-            this->persistedLayoutBtt = false;
-        }
-
-        if (this->currentSettings.toolbarProfileId == QT_GTK_PARITY_PROFILE_ID) {
-            // Older builds could leave floating toolbox geometry behind even after switching back
-            // to the portrait shell. Clear it once so the GTK-like startup stays clean.
-            this->persistedFloatingToolBarGeometries.clear();
-            this->persistedFloatingToolBarUserHidden.clear();
-        }
+        // Rebase every older Qt shell layout onto the GTK-like portrait profile once.
+        // This clears old left/right/floating toolbar state that made startup diverge
+        // from the target shell composition.
+        this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+        this->persistedWindowState.clear();
+        this->persistedFloatingToolBarGeometries.clear();
+        this->persistedFloatingToolBarUserHidden.clear();
+        this->persistedShowToolbar = true;
+        this->persistedShowMenubar = true;
+        this->persistedShowSidebar = true;
+        this->persistedPairedPages = false;
+        this->persistedVerticalLayout = true;
+        this->persistedLayoutRtl = false;
+        this->persistedLayoutBtt = false;
     }
 
     if (this->currentSettings.audioFolder.empty()) {
@@ -2369,6 +2367,13 @@ void QtAppShell::applyAuxiliaryToolBarVisibility(bool showToolbars) {
     this->window.rightPrimaryToolBar()->setVisible(showToolbars &&
                                                    !this->window.rightPrimaryToolBar()->actions().isEmpty());
     syncFloatingToolBarsVisibility(showToolbars);
+}
+
+void QtAppShell::applySidebarVisibility(bool visible) {
+    const bool gtkParity = isGtkParityProfileId(this->currentSettings.toolbarProfileId);
+    this->window.setGtkParitySidebarMode(gtkParity);
+    this->window.pageSidebar()->setVisible(visible);
+    this->window.layerPanel()->setVisible(!gtkParity && visible);
 }
 
 void QtAppShell::rebuildRecentDocumentsMenu() {
@@ -2705,8 +2710,7 @@ void QtAppShell::toggleFullscreen() {
         this->window.toolsToolBar()->setVisible(showToolbars);
         this->window.footerToolBar()->setVisible(showToolbars);
         applyAuxiliaryToolBarVisibility(showToolbars);
-        this->window.pageSidebar()->setVisible(showSidebars);
-        this->window.layerPanel()->setVisible(showSidebars);
+        applySidebarVisibility(showSidebars);
     }
 }
 
@@ -2727,8 +2731,7 @@ void QtAppShell::togglePresentationMode() {
         this->window.leftSecondaryToolBar()->setVisible(false);
         this->window.rightPrimaryToolBar()->setVisible(false);
         syncFloatingToolBarsVisibility(false);
-        this->window.pageSidebar()->setVisible(false);
-        this->window.layerPanel()->setVisible(false);
+        applySidebarVisibility(false);
         this->window.canvas()->fitPage(false);
         this->window.statusBar()->showMessage(QStringLiteral("Presentation mode — press F5 or Escape to exit"), 4000);
     } else {
@@ -2741,8 +2744,7 @@ void QtAppShell::togglePresentationMode() {
         this->window.toolsToolBar()->setVisible(showToolbars);
         this->window.footerToolBar()->setVisible(showToolbars);
         applyAuxiliaryToolBarVisibility(showToolbars);
-        this->window.pageSidebar()->setVisible(showSidebars);
-        this->window.layerPanel()->setVisible(showSidebars);
+        applySidebarVisibility(showSidebars);
         if (this->window.isFullScreen()) {
             this->window.showNormal();
             this->window.commandHost()->setCommandChecked("view.fullscreen", false);
@@ -3031,6 +3033,9 @@ void QtAppShell::showSettingsDialog() {
     this->window.toolPalette()->syncFromToolState(ts);
     if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
         rebuildToolbar();
+        applySidebarVisibility(this->window.commandHost()->actionForCommand("view.show-sidebar")
+                                       ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()
+                                       : this->persistedShowSidebar);
     }
     savePersistentUiState();
     updateAudioCommandStates();
@@ -3715,10 +3720,8 @@ void QtAppShell::toggleMenubarVisibility() {
 
 void QtAppShell::toggleSidebarVisibility() {
     auto* sidebar = this->window.pageSidebar();
-    auto* layers = this->window.layerPanel();
     const bool visible = !sidebar->isVisible();
-    sidebar->setVisible(visible);
-    layers->setVisible(visible);
+    applySidebarVisibility(visible);
     this->window.commandHost()->setCommandChecked("view.show-sidebar", visible);
     savePersistentUiState();
 }

@@ -142,7 +142,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     addDockWidget(Qt::LeftDockWidgetArea, this->layerPanelWidget);
     tabifyDockWidget(this->pageSidebarWidget, this->layerPanelWidget);
     this->pageSidebarWidget->raise();
-    resizeDocks({this->pageSidebarWidget}, {112}, Qt::Horizontal);
+    resizeDocks({this->pageSidebarWidget}, {90}, Qt::Horizontal);
 
     this->toolPaletteWidget = new QtToolPalette(this);
     this->toolPaletteWidget->setVisible(false);  // Hidden until a drawing tool is selected
@@ -216,6 +216,28 @@ auto QtMainWindow::pageStatusLabel() -> QLabel* { return this->pageLabel; }
 auto QtMainWindow::layerStatusLabel() -> QLabel* { return this->layerLabel; }
 
 auto QtMainWindow::zoomStatusLabel() -> QLabel* { return this->zoomLabel; }
+
+void QtMainWindow::setGtkParitySidebarMode(bool enabled) {
+    if (enabled) {
+        removeDockWidget(this->layerPanelWidget);
+        if (dockWidgetArea(this->pageSidebarWidget) == Qt::NoDockWidgetArea) {
+            addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
+        }
+        this->pageSidebarWidget->raise();
+        resizeDocks({this->pageSidebarWidget}, {88}, Qt::Horizontal);
+        return;
+    }
+
+    if (dockWidgetArea(this->pageSidebarWidget) == Qt::NoDockWidgetArea) {
+        addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
+    }
+    if (dockWidgetArea(this->layerPanelWidget) == Qt::NoDockWidgetArea) {
+        addDockWidget(Qt::LeftDockWidgetArea, this->layerPanelWidget);
+    }
+    tabifyDockWidget(this->pageSidebarWidget, this->layerPanelWidget);
+    this->pageSidebarWidget->raise();
+    resizeDocks({this->pageSidebarWidget}, {90}, Qt::Horizontal);
+}
 
 void QtMainWindow::cascadeFloatingToolBars() {
     const QPoint base = this->frameGeometry().topLeft() + QPoint(36, 92);

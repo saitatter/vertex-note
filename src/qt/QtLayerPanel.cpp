@@ -49,6 +49,7 @@ QtLayerPanel::QtLayerPanel(QWidget* parent): QDockWidget(QStringLiteral("Layers"
     setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
     setMinimumWidth(100);
     setMaximumWidth(156);
+    setTitleBarWidget(new QWidget(this));
 
     auto* container = new QWidget(this);
     auto* layout = new QVBoxLayout(container);

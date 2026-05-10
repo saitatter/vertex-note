@@ -46,6 +46,7 @@ public:
     [[nodiscard]] auto layerStatusLabel() -> QLabel*;
     [[nodiscard]] auto zoomStatusLabel() -> QLabel*;
     void cascadeFloatingToolBars();
+    void setGtkParitySidebarMode(bool enabled);
 
 private:
     QtCanvas* canvasWidget = nullptr;

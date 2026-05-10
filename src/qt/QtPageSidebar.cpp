@@ -21,22 +21,23 @@
 #include "view/render/QtPainterRenderContext.h"
 
 namespace {
-constexpr int THUMB_WIDTH = 74;
-constexpr int THUMB_HEIGHT = 104;
-constexpr int THUMB_ITEM_WIDTH = 84;
+constexpr int THUMB_WIDTH = 64;
+constexpr int THUMB_HEIGHT = 92;
+constexpr int THUMB_ITEM_WIDTH = 72;
 }  // namespace
 
 QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages"), parent) {
     setObjectName(QStringLiteral("vertexNoteQtPageSidebar"));
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
-    setMinimumWidth(96);
-    setMaximumWidth(128);
+    setMinimumWidth(76);
+    setMaximumWidth(92);
+    setTitleBarWidget(new QWidget(this));
 
     auto* container = new QWidget(this);
     auto* layout = new QVBoxLayout(container);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->setSpacing(2);
+    layout->setContentsMargins(1, 1, 1, 1);
+    layout->setSpacing(1);
 
     this->pageList = new QListWidget(container);
     this->pageList->setViewMode(QListView::IconMode);
@@ -45,13 +46,13 @@ QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages
     this->pageList->setMovement(QListView::Static);
     this->pageList->setIconSize(QSize(THUMB_WIDTH, THUMB_HEIGHT));
     this->pageList->setResizeMode(QListView::Adjust);
-    this->pageList->setSpacing(4);
+    this->pageList->setSpacing(2);
     this->pageList->setSelectionMode(QAbstractItemView::SingleSelection);
     this->pageList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->pageList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     this->pageList->setFrameShape(QFrame::NoFrame);
     this->pageList->setWordWrap(true);
-    this->pageList->setGridSize(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 26));
+    this->pageList->setGridSize(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 20));
     this->pageList->setUniformItemSizes(true);
     layout->addWidget(this->pageList);
 
@@ -98,7 +99,7 @@ void QtPageSidebar::refresh() {
         item->setForeground(QBrush(QColor(215, 64, 64)));
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<qulonglong>(i)));
         item->setIcon(QIcon(renderThumbnail(i)));
-        item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 28));
+        item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 22));
     }
     syncCurrentSelection();
 }
