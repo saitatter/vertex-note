@@ -112,12 +112,26 @@ auto checkedStatusCode(HINTERNET request) -> DWORD {
     return statusCode;
 }
 
-auto fetchWithWinHttp() -> std::string {
+auto openWinHttpSession() -> WinHttpHandle {
     WinHttpHandle session(WinHttpOpen(L"VertexNote", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
                                       WINHTTP_NO_PROXY_BYPASS, 0));
-    if (!session) {
-        throw std::runtime_error(formatWinHttpError(GetLastError()));
+    if (session) {
+        return session;
     }
+
+    const DWORD automaticProxyError = GetLastError();
+    session = WinHttpHandle(WinHttpOpen(L"VertexNote", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
+                                        WINHTTP_NO_PROXY_BYPASS, 0));
+    if (session) {
+        return session;
+    }
+
+    const DWORD defaultProxyError = GetLastError();
+    throw std::runtime_error(formatWinHttpError(defaultProxyError != ERROR_SUCCESS ? defaultProxyError : automaticProxyError));
+}
+
+auto fetchWithWinHttp() -> std::string {
+    WinHttpHandle session = openWinHttpSession();
 
     WinHttpHandle connection(WinHttpConnect(session.get(), GITHUB_API_HOST_W, INTERNET_DEFAULT_HTTPS_PORT, 0));
     if (!connection) {

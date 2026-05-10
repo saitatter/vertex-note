@@ -433,6 +433,31 @@ auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(i
 auto GeometryObject::containsEdge(EdgeId id) const -> bool { return edge(id) != nullptr; }
 
 void GeometryObject::cleanupDanglingVertices() {
+    std::unordered_set<VertexId> existingVertices;
+    existingVertices.reserve(this->vertexList.size());
+    for (const auto& vertex: this->vertexList) {
+        existingVertices.insert(vertex.id);
+    }
+
+    std::unordered_set<EdgeId> existingEdges;
+    existingEdges.reserve(this->edgeList.size());
+    for (const auto& edge: this->edgeList) {
+        existingEdges.insert(edge.id);
+    }
+
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [&existingVertices, &existingEdges](const Constraint& constraint) {
+                               return std::ranges::any_of(constraint.vertices,
+                                                          [&existingVertices](VertexId vertexId) {
+                                                              return !existingVertices.contains(vertexId);
+                                                          }) ||
+                                      std::ranges::any_of(constraint.edges, [&existingEdges](EdgeId edgeId) {
+                                          return !existingEdges.contains(edgeId);
+                                      });
+                           }),
+            this->constraintList.end());
+
     // Build a set of all vertex IDs referenced by edges and constraints (O(E + C))
     // so the vertex sweep below is O(V) instead of O(V * (E + C)).
     std::unordered_set<VertexId> referenced;
@@ -453,11 +478,22 @@ void GeometryObject::cleanupDanglingVertices() {
                                           [&referenced](const Vertex& v) { return !referenced.contains(v.id); }),
                            this->vertexList.end());
 
+    std::unordered_set<VertexId> keptVertices;
+    keptVertices.reserve(this->vertexList.size());
+    for (const auto& vertex: this->vertexList) {
+        keptVertices.insert(vertex.id);
+    }
+
     this->constraintList.erase(
             std::remove_if(this->constraintList.begin(), this->constraintList.end(),
-                           [this](const Constraint& constraint) {
-                               return std::ranges::any_of(
-                                       constraint.vertices, [this](VertexId vertexId) { return !containsVertex(vertexId); });
+                           [&keptVertices, &existingEdges](const Constraint& constraint) {
+                               return std::ranges::any_of(constraint.vertices,
+                                                          [&keptVertices](VertexId vertexId) {
+                                                              return !keptVertices.contains(vertexId);
+                                                          }) ||
+                                      std::ranges::any_of(constraint.edges, [&existingEdges](EdgeId edgeId) {
+                                          return !existingEdges.contains(edgeId);
+                                      });
                            }),
             this->constraintList.end());
 }

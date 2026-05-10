@@ -87,13 +87,13 @@ void AudioPlayer::stop() {
     this->portAudioConsumer->stopPlaying();
 
     this->audioQueue->signalEndOfStream();
+    disableAudioPlaybackButtons();
 
     // Abort libsox
     this->vorbisProducer->abort();
 
     // Reset the queue for the next playback
     this->audioQueue->reset();
-    disableAudioPlaybackButtons();
     notifyPlaybackState(false, false);
 }
 

@@ -58,6 +58,7 @@ file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
 
 if (NOT ENABLE_QT_SHELL)
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtPreviewStrokeRendererTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtRecentFilesServiceTest\\.cpp$")
 endif ()
 
@@ -69,8 +70,11 @@ target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 if (ENABLE_QT_SHELL)
   target_sources(test-units PRIVATE
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtRecentFilesService.cpp"
   )
+  target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
+  target_link_libraries(test-units Qt6::Widgets)
   target_include_directories(test-units PRIVATE "${PROJECT_SOURCE_DIR}/src")
 endif ()
 

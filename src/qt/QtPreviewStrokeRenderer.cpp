@@ -67,10 +67,31 @@ auto buildVariableWidthOutline(const std::vector<Point>& points, double fallback
 
     const auto n = points.size();
 
+    // Resolve per-point widths. The trailing/leading input samples can occasionally carry
+    // a zero pressure value even though the segment itself should keep the neighbouring width.
+    // Matching the legacy renderer more closely avoids odd pinched or blunt stroke caps in Qt.
+    std::vector<double> resolvedWidths(n, fallbackWidth);
+    for (std::size_t i = 0; i < n; ++i) {
+        if (points[i].z > 0.0) {
+            resolvedWidths[i] = points[i].z;
+            continue;
+        }
+
+        if (i > 0 && points[i - 1].z > 0.0) {
+            resolvedWidths[i] = points[i - 1].z;
+            continue;
+        }
+
+        if (i + 1 < n && points[i + 1].z > 0.0) {
+            resolvedWidths[i] = points[i + 1].z;
+            continue;
+        }
+    }
+
     // Compute per-point half-widths
     std::vector<double> halfW(n);
     for (std::size_t i = 0; i < n; ++i) {
-        halfW[i] = (points[i].z > 0.0 ? points[i].z : fallbackWidth) * 0.5;
+        halfW[i] = resolvedWidths[i] * 0.5;
     }
 
     // Compute per-segment normals
@@ -116,7 +137,24 @@ auto buildVariableWidthOutline(const std::vector<Point>& points, double fallback
         rightSide[i] = QPointF(points[i].x - normals[i].x * halfW[i], points[i].y - normals[i].y * halfW[i]);
     }
 
-    // Build closed polygon: left side forward, semicircle at end, right side backward, semicircle at start
+    const auto appendRoundCap = [](QPainterPath& path, const Point& center, double radius, Vec2 startDirection) {
+        if (radius <= 0.0) {
+            path.lineTo(center.x, center.y);
+            return;
+        }
+
+        constexpr int CAP_SEGMENTS = 12;
+        const double startAngle = std::atan2(startDirection.y, startDirection.x);
+        for (int segment = 1; segment <= CAP_SEGMENTS; ++segment) {
+            const double t = static_cast<double>(segment) / static_cast<double>(CAP_SEGMENTS);
+            const double angle = startAngle - M_PI * t;
+            path.lineTo(center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius);
+        }
+    };
+
+    // Build closed polygon: left side forward, round cap at end, right side backward, round cap at start.
+    // Avoid QPainterPath::arcTo here: if Qt inserts a line to the arc start point, the filled outline can
+    // self-intersect and look like the cap was erased instead of filled.
     outline.moveTo(leftSide[0]);
 
     // Left side
@@ -124,29 +162,14 @@ auto buildVariableWidthOutline(const std::vector<Point>& points, double fallback
         outline.lineTo(leftSide[i]);
     }
 
-    // End cap (semicircle)
-    {
-        const auto& last = points[n - 1];
-        const double r = halfW[n - 1];
-        const double angle = std::atan2(normals[n - 1].y, normals[n - 1].x);
-        const double startAngle = angle * 180.0 / M_PI;
-        // arcTo uses a bounding rect
-        outline.arcTo(QRectF(last.x - r, last.y - r, 2.0 * r, 2.0 * r), startAngle, -180.0);
-    }
+    appendRoundCap(outline, points[n - 1], halfW[n - 1], normals[n - 1]);
 
     // Right side (backward)
     for (std::size_t i = n - 1; i > 0; --i) {
         outline.lineTo(rightSide[i - 1]);
     }
 
-    // Start cap (semicircle)
-    {
-        const auto& first = points[0];
-        const double r = halfW[0];
-        const double angle = std::atan2(-normals[0].y, -normals[0].x);
-        const double startAngle = angle * 180.0 / M_PI;
-        outline.arcTo(QRectF(first.x - r, first.y - r, 2.0 * r, 2.0 * r), startAngle, -180.0);
-    }
+    appendRoundCap(outline, points[0], halfW[0], {-normals[0].x, -normals[0].y});
 
     outline.closeSubpath();
     return outline;

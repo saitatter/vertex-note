@@ -158,6 +158,8 @@ private:
     void selectHoveredGeometry(bool additive = false);
     void beginPan(const QPointF& position);
     void endPan();
+    void setCursorForTool(QtToolType tool);
+    void refreshToolCursor();
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void finalizeActiveStroke();

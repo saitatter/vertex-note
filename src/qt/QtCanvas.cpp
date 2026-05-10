@@ -688,10 +688,12 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::RightButton && !this->spaceHeld) {
         this->temporaryRightButtonEraser = true;
+        setCursor(Qt::BlankCursor);
         Q_EMIT toolStateChanged();
         beginEraseAtScreen(event->position());
         if (!this->erasing) {
             this->temporaryRightButtonEraser = false;
+            refreshToolCursor();
             Q_EMIT toolStateChanged();
         }
         event->accept();
@@ -821,6 +823,7 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         finalizeErase();
         this->temporaryRightButtonEraser = false;
         clearEraserPreview();
+        refreshToolCursor();
         Q_EMIT toolStateChanged();
         event->accept();
         return;
@@ -1035,7 +1038,7 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         this->documentController->clearInteractiveGeometryState();
         updateDebugOverlay(QStringLiteral("selection cleared"));
         if (!this->spaceHeld && !this->panning) {
-            unsetCursor();
+            refreshToolCursor();
         }
         update();
         Q_EMIT selectionStateChanged();
@@ -1050,7 +1053,7 @@ void QtCanvas::keyReleaseEvent(QKeyEvent* event) {
     if (!event->isAutoRepeat() && event->key() == Qt::Key_Space) {
         this->spaceHeld = false;
         if (!this->panning) {
-            unsetCursor();
+            refreshToolCursor();
         }
     }
     QWidget::keyReleaseEvent(event);
@@ -1254,6 +1257,14 @@ auto QtCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::op
 
 void QtCanvas::updateGeometryHover(const QPointF& screenPoint) {
     if (!this->documentController) {
+        return;
+    }
+    if (this->currentToolState.activeTool == QtToolType::Eraser || this->temporaryRightButtonEraser) {
+        this->documentController->setHoveredGeometry(std::nullopt);
+        if (!this->spaceHeld && !this->panning) {
+            setCursor(Qt::BlankCursor);
+        }
+        update();
         return;
     }
 
@@ -1466,7 +1477,7 @@ void QtCanvas::endPan() {
     if (this->spaceHeld) {
         setCursor(Qt::OpenHandCursor);
     } else {
-        unsetCursor();
+        refreshToolCursor();
     }
 }
 
@@ -1474,18 +1485,7 @@ void QtCanvas::endPan() {
 // Tool state
 // ---------------------------------------------------------------------------
 
-void QtCanvas::setActiveTool(QtToolType tool) {
-    if (this->drawing) {
-        cancelActiveStroke();
-    }
-    if (this->pdfTextSelecting) {
-        cancelPdfTextSelection();
-    }
-    if (this->activeInstrumentStroke) {
-        cancelInstrumentTool();
-    }
-    this->movingInstrumentOverlay = false;
-    this->currentToolState.activeTool = tool;
+void QtCanvas::setCursorForTool(QtToolType tool) {
     switch (tool) {
         case QtToolType::Pen:
         case QtToolType::LaserPointerPen:
@@ -1493,7 +1493,6 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::Setsquare:
         case QtToolType::Compass:
         case QtToolType::Highlighter:
-        case QtToolType::Eraser:
         case QtToolType::DrawLine:
         case QtToolType::DrawRectangle:
         case QtToolType::DrawCircle:
@@ -1509,12 +1508,13 @@ void QtCanvas::setActiveTool(QtToolType tool) {
         case QtToolType::DrawConstructionCircle:
             setCursor(Qt::CrossCursor);
             break;
+        case QtToolType::Eraser:
+            setCursor(Qt::BlankCursor);
+            break;
         case QtToolType::Hand:
             setCursor(Qt::OpenHandCursor);
             break;
         case QtToolType::Text:
-            setCursor(Qt::IBeamCursor);
-            break;
         case QtToolType::PdfTextLinear:
         case QtToolType::PdfTextRect:
             setCursor(Qt::IBeamCursor);
@@ -1528,6 +1528,33 @@ void QtCanvas::setActiveTool(QtToolType tool) {
             setCursor(Qt::ArrowCursor);
             break;
     }
+}
+
+void QtCanvas::refreshToolCursor() {
+    if (this->spaceHeld) {
+        setCursor(Qt::OpenHandCursor);
+        return;
+    }
+    if (this->temporaryRightButtonEraser) {
+        setCursor(Qt::BlankCursor);
+        return;
+    }
+    setCursorForTool(this->currentToolState.activeTool);
+}
+
+void QtCanvas::setActiveTool(QtToolType tool) {
+    if (this->drawing) {
+        cancelActiveStroke();
+    }
+    if (this->pdfTextSelecting) {
+        cancelPdfTextSelection();
+    }
+    if (this->activeInstrumentStroke) {
+        cancelInstrumentTool();
+    }
+    this->movingInstrumentOverlay = false;
+    this->currentToolState.activeTool = tool;
+    refreshToolCursor();
 
     if ((tool == QtToolType::Setsquare || tool == QtToolType::Compass) && !this->instrumentOverlay.visible) {
         const auto rects = pageRects();

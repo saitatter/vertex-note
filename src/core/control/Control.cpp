@@ -592,8 +592,18 @@ bool Control::editSelectedFixedLengthConstraint() {
 
     vn::popup::FixedLengthConstraintDialog::show(
             this->getGtkWindow(), fixedLength->value,
-            [selection](double value) {
-                const bool updated = selection->updateSelectedFixedLengthConstraint(value);
+            [this, constraintId = fixedLength->id](double value) {
+                EditSelection* currentSelection = this->win->getNoteView()->getSelection();
+                if (!currentSelection) {
+                    return;
+                }
+
+                const auto currentFixedLength = currentSelection->selectedFixedLengthConstraint();
+                if (!currentFixedLength || currentFixedLength->id != constraintId) {
+                    return;
+                }
+
+                const bool updated = currentSelection->updateSelectedFixedLengthConstraint(value);
                 (void) updated;
             });
     return true;
