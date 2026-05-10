@@ -26,7 +26,9 @@ public:
     QtMainWindow();
 
     [[nodiscard]] auto canvas() -> QtCanvas*;
+    [[nodiscard]] auto canvas() const -> const QtCanvas*;
     [[nodiscard]] auto commandHost() -> QtCommandHost*;
+    [[nodiscard]] auto commandHost() const -> const QtCommandHost*;
     [[nodiscard]] auto mainToolBar() -> QToolBar*;
     [[nodiscard]] auto toolsToolBar() -> QToolBar*;
     [[nodiscard]] auto footerToolBar() -> QToolBar*;

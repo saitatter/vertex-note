@@ -208,6 +208,13 @@ private:
     QByteArray persistedWindowState;
     std::vector<QByteArray> persistedFloatingToolBarGeometries;
     std::vector<bool> persistedFloatingToolBarUserHidden;
+    bool persistedShowToolbar = true;
+    bool persistedShowMenubar = true;
+    bool persistedShowSidebar = true;
+    bool persistedPairedPages = false;
+    bool persistedVerticalLayout = true;
+    bool persistedLayoutRtl = false;
+    bool persistedLayoutBtt = false;
     void recordNavPoint();
     [[nodiscard]] auto selectedElementsForAudioPlayback() const -> std::vector<const Element*>;
 };

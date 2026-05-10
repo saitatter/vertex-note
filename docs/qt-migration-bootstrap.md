@@ -238,6 +238,10 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 40. ✓ Floating toolbox behavior in the Qt shell:
     `toolbarFloat*` profiles now use standalone Qt tool windows with persisted
     geometry, user-hidden state, and cascaded default placement.
+41. ✓ View/layout shell state persistence in the Qt shell:
+    toolbar, menubar, sidebar, paired pages, and page-flow direction now persist
+    across launches, and manual sidebar hide/show stays synchronized with the
+    `View` menu checked state.
 
 ### Phase 7 — Clipboard & element operations ✓
 

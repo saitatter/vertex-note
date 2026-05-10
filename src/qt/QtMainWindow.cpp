@@ -166,7 +166,11 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
 
 auto QtMainWindow::canvas() -> QtCanvas* { return this->canvasWidget; }
 
+auto QtMainWindow::canvas() const -> const QtCanvas* { return this->canvasWidget; }
+
 auto QtMainWindow::commandHost() -> QtCommandHost* { return &this->commandRegistry; }
+
+auto QtMainWindow::commandHost() const -> const QtCommandHost* { return &this->commandRegistry; }
 
 auto QtMainWindow::mainToolBar() -> QToolBar* { return this->documentToolBar; }
 

@@ -316,6 +316,20 @@ QtAppShell::QtAppShell():
     this->window.layerPanel()->setCurrentPage(0U);
 
     registerBootstrapCommands();
+    this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);
+    this->window.commandHost()->setCommandChecked("view.show-menubar", this->persistedShowMenubar);
+    this->window.commandHost()->setCommandChecked("view.show-sidebar", this->persistedShowSidebar);
+    this->window.commandHost()->setCommandChecked("view.paired-pages", this->persistedPairedPages);
+    this->window.commandHost()->setCommandChecked("view.layout-horizontal", !this->persistedVerticalLayout);
+    this->window.commandHost()->setCommandChecked("view.layout-vertical", this->persistedVerticalLayout);
+    this->window.commandHost()->setCommandChecked("view.layout-ltr", !this->persistedLayoutRtl);
+    this->window.commandHost()->setCommandChecked("view.layout-rtl", this->persistedLayoutRtl);
+    this->window.commandHost()->setCommandChecked("view.layout-ttb", !this->persistedLayoutBtt);
+    this->window.commandHost()->setCommandChecked("view.layout-btt", this->persistedLayoutBtt);
+    this->window.canvas()->setPairedPagesEnabled(this->persistedPairedPages);
+    this->window.canvas()->setVerticalLayout(this->persistedVerticalLayout);
+    this->window.canvas()->setRightToLeftLayout(this->persistedLayoutRtl);
+    this->window.canvas()->setBottomToTopLayout(this->persistedLayoutBtt);
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
@@ -341,6 +355,17 @@ QtAppShell::QtAppShell():
     this->window.canvas()->newBlankDocument();
     this->window.canvas()->fitWidth();
     this->window.cascadeFloatingToolBars();
+    this->window.menuBar()->setVisible(this->persistedShowMenubar);
+    this->window.pageSidebar()->setVisible(this->persistedShowSidebar);
+    this->window.layerPanel()->setVisible(this->persistedShowSidebar);
+    this->window.mainToolBar()->setVisible(this->persistedShowToolbar);
+    this->window.toolsToolBar()->setVisible(this->persistedShowToolbar);
+    this->window.footerToolBar()->setVisible(this->persistedShowToolbar);
+    this->window.leftPrimaryToolBar()->setVisible(this->persistedShowToolbar);
+    this->window.leftSecondaryToolBar()->setVisible(this->persistedShowToolbar);
+    this->window.rightPrimaryToolBar()->setVisible(this->persistedShowToolbar &&
+                                                   this->window.rightPrimaryToolBar()->actions().size() > 0);
+    syncFloatingToolBarsVisibility(this->persistedShowToolbar);
     sidebar->refresh();
     updateWindowTitle();
     updateEditCommandStates();
@@ -1093,6 +1118,16 @@ void QtAppShell::wireWindowState() {
                          }
                          syncFooterWidgets();
                      });
+
+    const auto syncSidebarVisibility = [this]() {
+        const bool visible = this->window.pageSidebar()->isVisible() || this->window.layerPanel()->isVisible();
+        this->window.commandHost()->setCommandChecked("view.show-sidebar", visible);
+        savePersistentUiState();
+    };
+    QObject::connect(this->window.pageSidebar(), &QDockWidget::visibilityChanged, &this->window,
+                     [syncSidebarVisibility](bool) { syncSidebarVisibility(); });
+    QObject::connect(this->window.layerPanel(), &QDockWidget::visibilityChanged, &this->window,
+                     [syncSidebarVisibility](bool) { syncSidebarVisibility(); });
 
     for (auto* floatingToolBar: this->window.floatingToolBars()) {
         QObject::connect(floatingToolBar, &QToolBar::visibilityChanged, &this->window, [this, floatingToolBar](bool visible) {
@@ -2112,6 +2147,13 @@ void QtAppShell::loadPersistentUiState() {
                                                      QString::fromStdString(this->currentSettings.toolbarProfileId))
                                                      .toString()
                                                      .toStdString();
+    this->persistedShowToolbar = settings.value(QStringLiteral("view/showToolbar"), true).toBool();
+    this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
+    this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
+    this->persistedPairedPages = settings.value(QStringLiteral("view/pairedPages"), false).toBool();
+    this->persistedVerticalLayout = settings.value(QStringLiteral("view/verticalLayout"), true).toBool();
+    this->persistedLayoutRtl = settings.value(QStringLiteral("view/layoutRtl"), false).toBool();
+    this->persistedLayoutBtt = settings.value(QStringLiteral("view/layoutBtt"), false).toBool();
 
     std::vector<std::filesystem::path> recentPaths;
     const auto recentEntries = settings.value(QStringLiteral("recentDocuments/files")).toStringList();
@@ -2140,6 +2182,20 @@ void QtAppShell::loadPersistentUiState() {
 
 void QtAppShell::savePersistentUiState() const {
     QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    const auto* commandHost = this->window.commandHost();
+    const auto* canvas = this->window.canvas();
+    const bool showToolbar =
+            commandHost->actionForCommand("view.show-toolbar")
+                    ? commandHost->actionForCommand("view.show-toolbar")->isChecked()
+                    : this->persistedShowToolbar;
+    const bool showMenubar =
+            commandHost->actionForCommand("view.show-menubar")
+                    ? commandHost->actionForCommand("view.show-menubar")->isChecked()
+                    : this->persistedShowMenubar;
+    const bool showSidebar =
+            commandHost->actionForCommand("view.show-sidebar")
+                    ? commandHost->actionForCommand("view.show-sidebar")->isChecked()
+                    : this->persistedShowSidebar;
 
     settings.setValue(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth);
     settings.setValue(QStringLiteral("tools/defaultHighlighterWidth"), this->currentSettings.defaultHighlighterWidth);
@@ -2156,6 +2212,13 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
+    settings.setValue(QStringLiteral("view/showToolbar"), showToolbar);
+    settings.setValue(QStringLiteral("view/showMenubar"), showMenubar);
+    settings.setValue(QStringLiteral("view/showSidebar"), showSidebar);
+    settings.setValue(QStringLiteral("view/pairedPages"), canvas->isPairedPagesEnabled());
+    settings.setValue(QStringLiteral("view/verticalLayout"), canvas->isVerticalLayout());
+    settings.setValue(QStringLiteral("view/layoutRtl"), canvas->isRightToLeftLayout());
+    settings.setValue(QStringLiteral("view/layoutBtt"), canvas->isBottomToTopLayout());
     settings.setValue(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder));
     settings.setValue(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate);
     settings.setValue(QStringLiteral("audio/gain"), this->currentSettings.audioGain);
@@ -3514,6 +3577,7 @@ void QtAppShell::togglePairedPages() {
     const bool enabled = !this->window.canvas()->isPairedPagesEnabled();
     this->window.canvas()->setPairedPagesEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.paired-pages", enabled);
+    savePersistentUiState();
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Paired pages enabled") : QStringLiteral("Paired pages disabled"), 3000);
     syncFooterWidgets();
@@ -3529,6 +3593,7 @@ void QtAppShell::toggleToolbarVisibility() {
     this->window.rightPrimaryToolBar()->setVisible(visible && this->window.rightPrimaryToolBar()->actions().size() > 0);
     syncFloatingToolBarsVisibility(visible);
     this->window.commandHost()->setCommandChecked("view.show-toolbar", visible);
+    savePersistentUiState();
 }
 
 void QtAppShell::toggleMenubarVisibility() {
@@ -3536,6 +3601,7 @@ void QtAppShell::toggleMenubarVisibility() {
     const bool visible = !menubar->isVisible();
     menubar->setVisible(visible);
     this->window.commandHost()->setCommandChecked("view.show-menubar", visible);
+    savePersistentUiState();
 }
 
 void QtAppShell::toggleSidebarVisibility() {
@@ -3545,12 +3611,14 @@ void QtAppShell::toggleSidebarVisibility() {
     sidebar->setVisible(visible);
     layers->setVisible(visible);
     this->window.commandHost()->setCommandChecked("view.show-sidebar", visible);
+    savePersistentUiState();
 }
 
 void QtAppShell::setLayoutVertical(bool vertical) {
     this->window.canvas()->setVerticalLayout(vertical);
     this->window.commandHost()->setCommandChecked("view.layout-horizontal", !vertical);
     this->window.commandHost()->setCommandChecked("view.layout-vertical", vertical);
+    savePersistentUiState();
     this->window.statusBar()->showMessage(
             vertical ? QStringLiteral("Vertical layout") : QStringLiteral("Horizontal layout"), 3000);
     syncFooterWidgets();
@@ -3560,6 +3628,7 @@ void QtAppShell::setLayoutRtl(bool rtl) {
     this->window.canvas()->setRightToLeftLayout(rtl);
     this->window.commandHost()->setCommandChecked("view.layout-ltr", !rtl);
     this->window.commandHost()->setCommandChecked("view.layout-rtl", rtl);
+    savePersistentUiState();
     this->window.statusBar()->showMessage(
             rtl ? QStringLiteral("Right to left") : QStringLiteral("Left to right"), 3000);
     syncFooterWidgets();
@@ -3569,6 +3638,7 @@ void QtAppShell::setLayoutBtt(bool btt) {
     this->window.canvas()->setBottomToTopLayout(btt);
     this->window.commandHost()->setCommandChecked("view.layout-ttb", !btt);
     this->window.commandHost()->setCommandChecked("view.layout-btt", btt);
+    savePersistentUiState();
     this->window.statusBar()->showMessage(
             btt ? QStringLiteral("Bottom to top") : QStringLiteral("Top to bottom"), 3000);
     syncFooterWidgets();
