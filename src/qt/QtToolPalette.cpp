@@ -114,9 +114,9 @@ void QtToolPalette::setCompactToolbarMode(bool compact) {
 void QtToolPalette::syncFromToolState(const QtToolState& state) {
     this->currentTool = state.activeTool;
 
-    const bool visible = this->compactToolbarMode ||
-                         state.activeTool == QtToolType::Pen || state.activeTool == QtToolType::Highlighter ||
-                         state.activeTool == QtToolType::Eraser;
+    const bool visible = !this->compactToolbarMode &&
+                         (state.activeTool == QtToolType::Pen || state.activeTool == QtToolType::Highlighter ||
+                          state.activeTool == QtToolType::Eraser);
     setVisible(visible);
 
     if (!visible) {
