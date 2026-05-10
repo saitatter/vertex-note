@@ -159,7 +159,7 @@ constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
         Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
 };
 
-constexpr int QT_SHELL_LAYOUT_VERSION = 2;
+constexpr int QT_SHELL_LAYOUT_VERSION = 3;
 constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
@@ -288,6 +288,21 @@ auto renderMathTex(const std::string& formula, const LatexSettings& settings, Co
     image->setY(y);
     image->setText(formula);
     return image;
+}
+
+auto profileUsesFloatingToolBars(const std::optional<QtToolbarProfile>& profile) -> bool {
+    if (!profile) {
+        return false;
+    }
+
+    for (int index = 1; index <= 4; ++index) {
+        const auto key = "toolbarfloat" + std::to_string(index);
+        if (const auto* items = profile->itemsFor(key); items && !items->empty()) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }  // namespace
@@ -2238,20 +2253,27 @@ void QtAppShell::loadPersistentUiState() {
                 settings.value(QStringLiteral("window/floatingToolbar%1UserHidden").arg(index), false).toBool());
     }
 
-    if (savedLayoutVersion < QT_SHELL_LAYOUT_VERSION && this->currentSettings.toolbarProfileId == "All in") {
-        // Migrate the old dense default shell to the GTK-like portrait shell.
-        // Resetting dock state lets Pages/Layers and top-only toolbars snap back into the expected arrangement.
-        this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
-        this->persistedWindowState.clear();
-        this->persistedFloatingToolBarGeometries.clear();
-        this->persistedFloatingToolBarUserHidden.clear();
-        this->persistedShowToolbar = true;
-        this->persistedShowMenubar = true;
-        this->persistedShowSidebar = true;
-        this->persistedPairedPages = false;
-        this->persistedVerticalLayout = true;
-        this->persistedLayoutRtl = false;
-        this->persistedLayoutBtt = false;
+    if (savedLayoutVersion < QT_SHELL_LAYOUT_VERSION) {
+        if (this->currentSettings.toolbarProfileId == "All in") {
+            // Migrate the old dense default shell to the GTK-like portrait shell.
+            // Resetting dock state lets Pages/Layers and top-only toolbars snap back into the expected arrangement.
+            this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+            this->persistedWindowState.clear();
+            this->persistedShowToolbar = true;
+            this->persistedShowMenubar = true;
+            this->persistedShowSidebar = true;
+            this->persistedPairedPages = false;
+            this->persistedVerticalLayout = true;
+            this->persistedLayoutRtl = false;
+            this->persistedLayoutBtt = false;
+        }
+
+        if (this->currentSettings.toolbarProfileId == QT_GTK_PARITY_PROFILE_ID) {
+            // Older builds could leave floating toolbox geometry behind even after switching back
+            // to the portrait shell. Clear it once so the GTK-like startup stays clean.
+            this->persistedFloatingToolBarGeometries.clear();
+            this->persistedFloatingToolBarUserHidden.clear();
+        }
     }
 
     if (this->currentSettings.audioFolder.empty()) {
@@ -2321,6 +2343,7 @@ void QtAppShell::savePersistentUiState() const {
 }
 
 void QtAppShell::syncFloatingToolBarsVisibility(bool showToolbars) {
+    const bool allowFloatingToolBars = profileUsesFloatingToolBars(this->activeToolbarProfile);
     for (auto* floatingToolBar: this->window.floatingToolBars()) {
         const bool hasActions = !floatingToolBar->actions().isEmpty();
         if (!hasActions) {
@@ -2328,7 +2351,7 @@ void QtAppShell::syncFloatingToolBarsVisibility(bool showToolbars) {
         }
         const bool userHidden = floatingToolBar->property("vertexUserHidden").toBool();
         floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", true);
-        floatingToolBar->setVisible(showToolbars && hasActions && !userHidden);
+        floatingToolBar->setVisible(showToolbars && allowFloatingToolBars && hasActions && !userHidden);
         floatingToolBar->setProperty("vertexProgrammaticVisibilityChange", false);
     }
 }

@@ -45,7 +45,7 @@ enum class QtToolType {
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 
 struct QtToolState {
-    QtToolType activeTool = QtToolType::Hand;
+    QtToolType activeTool = QtToolType::Pen;
     Color penColor{0x3333ccffU};
     Color highlighterColor{0xffff0080U};
     double penWidth = 1.41;

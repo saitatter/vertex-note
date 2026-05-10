@@ -362,14 +362,14 @@ void QtCanvas::handleTouchEvent(const vn::ui::input::TouchEvent& event) {
 
 void QtCanvas::setDocumentController(QtDocumentController* documentController) {
     this->documentController = documentController;
-    fitPage(false);
+    fitWidth();
 }
 
 void QtCanvas::newBlankDocument() {
     this->zoomFactor = 1.0;
     this->scrollX = 0.0;
     this->scrollY = 0.0;
-    fitPage(false);
+    fitWidth();
     updateDebugOverlay(QStringLiteral("new document"));
 }
 
@@ -676,6 +676,10 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && this->spaceHeld)) {
         beginPan(event->position());
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::RightButton && this->currentToolState.activeTool == QtToolType::Eraser) {
         event->accept();
         return;
     }
