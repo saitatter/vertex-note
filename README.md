@@ -99,10 +99,10 @@ The current recommended Windows path is **MSYS2 MinGW64**.
 
 ### Legacy GTK shell
 
-- `.\scripts\mingw64-dev.ps1 configure`
-- `.\scripts\mingw64-dev.ps1 build`
-- `.\scripts\mingw64-dev.ps1 vertex-tests`
-- `.\scripts\mingw64-dev.ps1 run`
+- `.\scripts\mingw64-dev.ps1 configure-gtk`
+- `.\scripts\mingw64-dev.ps1 build-gtk`
+- `.\scripts\mingw64-dev.ps1 all-gtk`
+- `.\scripts\mingw64-dev.ps1 run-gtk`
 
 The GTK3 shell is deprecated and kept only as a fallback while Cairo/GTK-specific paths are being isolated.
 
@@ -110,8 +110,10 @@ The GTK3 shell is deprecated and kept only as a fallback while Cairo/GTK-specifi
 
 Requires `mingw-w64-x86_64-qt6-base` and `mingw-w64-x86_64-qt6-printsupport`.
 
-- `.\scripts\mingw64-dev.ps1 build-qt`
-- `.\scripts\mingw64-dev.ps1 run-qt`
+- `.\scripts\mingw64-dev.ps1 configure`
+- `.\scripts\mingw64-dev.ps1 build`
+- `.\scripts\mingw64-dev.ps1 test`
+- `.\scripts\mingw64-dev.ps1 run`
 
 For active shell work, prefer the Qt path.
 

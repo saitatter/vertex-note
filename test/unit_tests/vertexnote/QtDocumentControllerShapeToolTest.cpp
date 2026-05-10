@@ -74,7 +74,8 @@ TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyInstrumentStrokesFor
     constexpr std::size_t PageIndex = 0U;
 
     ASSERT_NE(nullptr,
-              controller.createSetsquareStroke(PageIndex, {{32.0, 28.0}, {128.0, 28.0}}, Colors::blue, 2.0, "plain"));
+              controller.createSetsquareStroke(PageIndex, {{32.0, 28.0}, {128.0, 28.0}}, Colors::xopp_royalblue, 2.0,
+                                               "plain"));
     ASSERT_NE(nullptr, controller.createCompassStroke(PageIndex,
                                                       {{160.0, 120.0}, {170.0, 110.0}, {180.0, 104.0},
                                                        {192.0, 102.0}, {205.0, 104.0}, {216.0, 110.0}},

@@ -114,11 +114,11 @@ This document tracks the executable slices of the Qt migration.
 
 ## Build
 
-The Qt shell is intentionally opt-in.
+The Qt shell is now the default local development shell.
 
 ```powershell
 pacman -S mingw-w64-x86_64-qt6-base mingw-w64-x86_64-qt6-printsupport
-powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 build-qt
+powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 build
 ```
 
 Current binary name:
@@ -128,8 +128,12 @@ Current binary name:
 Run it with:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
+powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run
 ```
+
+For local development, the default `configure/build/test/run/all` tasks in
+`scripts/mingw64-dev.ps1` now point at the Qt shell path. The GTK shell remains
+available through the explicit `*-gtk` tasks.
 
 ## Intentional Limits
 

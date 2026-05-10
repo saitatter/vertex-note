@@ -34,7 +34,7 @@
 - Tool state lives in `QtToolState` struct on `QtCanvas`.
 - All editing operations must support undo/redo via `QtHistoryEntry` variants.
 - Prefer `this->window.commandHost()->` over local `host` variables in `registerBootstrapCommands()`.
-- Build: `scripts/mingw64-dev.ps1 build-qt`; run: `scripts/mingw64-dev.ps1 run-qt`.
+- Build: `scripts/mingw64-dev.ps1 build`; run: `scripts/mingw64-dev.ps1 run`.
 
 ## Git and Releases
 

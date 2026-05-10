@@ -37,20 +37,23 @@ From PowerShell at the repository root:
 ```powershell
 .\scripts\mingw64-dev.ps1 configure
 .\scripts\mingw64-dev.ps1 build
-.\scripts\mingw64-dev.ps1 vertex-tests
 .\scripts\mingw64-dev.ps1 test
 .\scripts\mingw64-dev.ps1 run
 ```
 
-For the Qt shell specifically:
+Those default commands now target the Qt shell and the Qt-backed build tree.
+
+For the legacy GTK shell explicitly:
 
 ```powershell
-.\scripts\mingw64-dev.ps1 build-qt
-.\scripts\mingw64-dev.ps1 run-qt
+.\scripts\mingw64-dev.ps1 configure-gtk
+.\scripts\mingw64-dev.ps1 build-gtk
+.\scripts\mingw64-dev.ps1 all-gtk
+.\scripts\mingw64-dev.ps1 run-gtk
 ```
 
 The default task is `all`, which configures, builds, builds unit tests, and runs the
-full unit suite:
+full unit suite on the Qt shell path:
 
 ```powershell
 .\scripts\mingw64-dev.ps1
