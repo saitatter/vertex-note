@@ -45,6 +45,14 @@ public:
     void resetViewport();
     void fitPage(bool edited = true);
     void panBy(double dx, double dy);
+    void setPairedPagesEnabled(bool enabled);
+    [[nodiscard]] auto isPairedPagesEnabled() const -> bool;
+    void setVerticalLayout(bool enabled);
+    [[nodiscard]] auto isVerticalLayout() const -> bool;
+    void setRightToLeftLayout(bool enabled);
+    [[nodiscard]] auto isRightToLeftLayout() const -> bool;
+    void setBottomToTopLayout(bool enabled);
+    [[nodiscard]] auto isBottomToTopLayout() const -> bool;
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
@@ -175,6 +183,10 @@ private:
     bool gridSnapEnabled = false;
     bool rotationSnapEnabled = false;
     bool touchDrawingEnabled = false;
+    bool pairedPagesEnabled = false;
+    bool verticalLayoutEnabled = true;
+    bool rightToLeftLayoutEnabled = false;
+    bool bottomToTopLayoutEnabled = false;
     bool spaceHeld = false;
     bool panning = false;
     bool drawing = false;

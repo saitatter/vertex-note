@@ -54,8 +54,9 @@ This document tracks the executable slices of the Qt migration.
     Radius, Parallel, Perpendicular) with validation and value editing.
 - **Tool system** (`QtToolState`):
   - Tool types: Hand, Pen, Eraser, Highlighter, Text, SelectRect,
-    DrawLine, DrawRectangle, DrawCircle, DrawArc, DrawPolyline,
-    DrawConstructionLine, DrawConstructionCircle.
+    DrawLine, DrawRectangle, DrawCircle, DrawEllipse, DrawArrow,
+    DrawDoubleArrow, DrawCoordinateSystem, DrawSpline, DrawArc,
+    DrawPolyline, DrawConstructionLine, DrawConstructionCircle.
   - Tool commands with keyboard shortcuts and toolbar buttons.
   - Per-tool state: color, width, pressure sensitivity, line style, fill, font.
 - **Stroke drawing**:
@@ -75,9 +76,17 @@ This document tracks the executable slices of the Qt migration.
   - Copy/cut/paste with in-memory clipboard.
   - Delete selection, select all, z-order (bring to front/back/forward/backward).
 - **Shape drawing**:
-  - 7 click-based shape tools with live dashed-line preview.
+  - 12 click-based shape tools with live dashed-line preview.
   - 2-click tools (line, rectangle, circle, construction geometry).
-  - 3-click arc tool, multi-click polyline (double-click to finalize).
+  - 2-click legacy stroke tools (ellipse, arrow, double arrow,
+    coordinate system).
+  - 3-click arc tool, multi-click polyline and spline
+    (double-click to finalize).
+- **Toolbar parity infrastructure**:
+  - `QtToolbarLayoutEngine` parses `toolbar.ini.in` profiles.
+  - Top, bottom, left, right, and auxiliary floating Qt toolbars are now
+    built from toolbar tokens instead of fixed hardcoded rows.
+  - Toolbar profile selection is available in Qt Preferences.
 - **Page & layer management**:
   - Add, duplicate, delete, reorder pages.
   - Layer panel with visibility toggles, add/remove/reorder/rename/copy/merge.
@@ -130,6 +139,10 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   Qt-natively using the same core model objects (`Stroke`, `Layer`, `Document`).
 - Plugin system has UI bridge for menu/toolbar actions but no Qt-native
   Lua runtime; plugins requiring Lua execution need the GTK shell.
+- The following toolbar-visible features are still partial or placeholder in
+  the Qt shell and remain on the parity backlog:
+  `LASER_POINTER`, `PDF_TOOL`, `SELECT_PDF_TEXT_*`, `SETSQUARE`,
+  `COMPASS`, `RULER`, `SHAPE_RECOGNIZER`, `AUDIO_*`.
 
 ## Completed Slices
 
@@ -188,6 +201,20 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
     (`constraint.*`) wired in menus. `updateToolCommandStates` extended for all new tools.
 28. ✓ Constraint value editing — `editFixedLengthConstraint()` with `QInputDialog` for setting
     FixedLength/Radius constraint values.
+
+### Phase 6.5 — Qt toolbar parity & legacy drawing tools ✓
+
+29. ✓ Toolbar profile engine — `QtToolbarLayoutEngine` loads toolbar
+    profiles from `toolbar.ini.in`, and `QtAppShell` rebuilds top/bottom/left/
+    right/floating Qt toolbars from toolbar tokens.
+30. ✓ Toolbar profile selection — Qt Preferences exposes toolbar profile
+    switching and rebuilds the shell immediately.
+31. ✓ Real Qt actions for previously inert toolbars:
+    rotation snap, touch drawing, default preset, fill opacity.
+32. ✓ Legacy stroke-based drawing tools in the Qt shell:
+    ellipse, arrow, double arrow, coordinate system, spline.
+33. ✓ View layout controls now affect the Qt canvas:
+    paired pages, vertical/horizontal flow, RTL/LTR, BTT/TTB.
 
 ### Phase 7 — Clipboard & element operations ✓
 

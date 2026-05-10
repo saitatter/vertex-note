@@ -56,11 +56,18 @@ file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
   main.cpp
 )
 
+if (NOT ENABLE_QT_SHELL)
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
+endif ()
+
 # Define test-units target
 add_executable (test-units EXCLUDE_FROM_ALL ${test-units-sources})
 target_link_libraries (test-units vertexnote::core vertexnote::util gtest)
 target_compile_features(test-units PRIVATE cxx_std_20)
 target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
+if (ENABLE_QT_SHELL)
+  target_include_directories(test-units PRIVATE "${PROJECT_SOURCE_DIR}/src")
+endif ()
 
 ###############################################################################
 # Define test-gtk-integration

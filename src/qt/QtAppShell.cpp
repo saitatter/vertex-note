@@ -2892,8 +2892,12 @@ void QtAppShell::setHighlighterSize(int sizeIndex) {
 // ---------------------------------------------------------------------------
 
 void QtAppShell::togglePairedPages() {
-    // TODO: implement paired pages layout
-    this->window.statusBar()->showMessage(QStringLiteral("Paired pages not yet implemented"), 3000);
+    const bool enabled = !this->window.canvas()->isPairedPagesEnabled();
+    this->window.canvas()->setPairedPagesEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.paired-pages", enabled);
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Paired pages enabled") : QStringLiteral("Paired pages disabled"), 3000);
+    syncFooterWidgets();
 }
 
 void QtAppShell::toggleToolbarVisibility() {
@@ -2927,25 +2931,30 @@ void QtAppShell::toggleSidebarVisibility() {
 }
 
 void QtAppShell::setLayoutVertical(bool vertical) {
-    // TODO: implement layout direction switching in canvas
+    this->window.canvas()->setVerticalLayout(vertical);
     this->window.commandHost()->setCommandChecked("view.layout-horizontal", !vertical);
     this->window.commandHost()->setCommandChecked("view.layout-vertical", vertical);
     this->window.statusBar()->showMessage(
             vertical ? QStringLiteral("Vertical layout") : QStringLiteral("Horizontal layout"), 3000);
+    syncFooterWidgets();
 }
 
 void QtAppShell::setLayoutRtl(bool rtl) {
+    this->window.canvas()->setRightToLeftLayout(rtl);
     this->window.commandHost()->setCommandChecked("view.layout-ltr", !rtl);
     this->window.commandHost()->setCommandChecked("view.layout-rtl", rtl);
     this->window.statusBar()->showMessage(
             rtl ? QStringLiteral("Right to left") : QStringLiteral("Left to right"), 3000);
+    syncFooterWidgets();
 }
 
 void QtAppShell::setLayoutBtt(bool btt) {
+    this->window.canvas()->setBottomToTopLayout(btt);
     this->window.commandHost()->setCommandChecked("view.layout-ttb", !btt);
     this->window.commandHost()->setCommandChecked("view.layout-btt", btt);
     this->window.statusBar()->showMessage(
             btt ? QStringLiteral("Bottom to top") : QStringLiteral("Top to bottom"), 3000);
+    syncFooterWidgets();
 }
 
 // ---------------------------------------------------------------------------

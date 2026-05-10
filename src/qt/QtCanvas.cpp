@@ -318,6 +318,46 @@ void QtCanvas::panBy(double dx, double dy) {
     emitViewportUpdate();
 }
 
+void QtCanvas::setPairedPagesEnabled(bool enabled) {
+    if (this->pairedPagesEnabled == enabled) {
+        return;
+    }
+    this->pairedPagesEnabled = enabled;
+    fitPage();
+}
+
+auto QtCanvas::isPairedPagesEnabled() const -> bool { return this->pairedPagesEnabled; }
+
+void QtCanvas::setVerticalLayout(bool enabled) {
+    if (this->verticalLayoutEnabled == enabled) {
+        return;
+    }
+    this->verticalLayoutEnabled = enabled;
+    fitPage();
+}
+
+auto QtCanvas::isVerticalLayout() const -> bool { return this->verticalLayoutEnabled; }
+
+void QtCanvas::setRightToLeftLayout(bool enabled) {
+    if (this->rightToLeftLayoutEnabled == enabled) {
+        return;
+    }
+    this->rightToLeftLayoutEnabled = enabled;
+    fitPage();
+}
+
+auto QtCanvas::isRightToLeftLayout() const -> bool { return this->rightToLeftLayoutEnabled; }
+
+void QtCanvas::setBottomToTopLayout(bool enabled) {
+    if (this->bottomToTopLayoutEnabled == enabled) {
+        return;
+    }
+    this->bottomToTopLayoutEnabled = enabled;
+    fitPage();
+}
+
+auto QtCanvas::isBottomToTopLayout() const -> bool { return this->bottomToTopLayoutEnabled; }
+
 auto QtCanvas::currentPageIndex() const -> std::size_t {
     // Determine which page is most visible in the viewport center
     const QPointF center(width() / 2.0, height() / 2.0);
@@ -874,10 +914,56 @@ auto QtCanvas::pageRects() const -> std::vector<QRectF> {
     }
 
     rects.reserve(pages.size());
-    double currentY = PAGE_STACK_Y;
-    for (const auto& page: pages) {
-        rects.emplace_back(PAGE_STACK_X, currentY, std::max(page.width, 1.0), std::max(page.height, 1.0));
-        currentY += std::max(page.height, 1.0) + PAGE_STACK_GAP;
+
+    const std::size_t columnCount = this->pairedPagesEnabled ? 2U : 1U;
+    double primary = PAGE_STACK_Y;
+    double secondaryBase = PAGE_STACK_X;
+    double maxRowExtent = 0.0;
+
+    if (!this->verticalLayoutEnabled) {
+        primary = PAGE_STACK_X;
+        secondaryBase = PAGE_STACK_Y;
+    }
+
+    for (std::size_t index = 0; index < pages.size(); ++index) {
+        const auto& page = pages[index];
+        const double pageWidth = std::max(page.width, 1.0);
+        const double pageHeight = std::max(page.height, 1.0);
+        const std::size_t column = index % columnCount;
+
+        double x = PAGE_STACK_X;
+        double y = PAGE_STACK_Y;
+        if (this->verticalLayoutEnabled) {
+            x = secondaryBase + static_cast<double>(column) * (pageWidth + PAGE_STACK_GAP);
+            y = primary;
+        } else {
+            x = primary;
+            y = secondaryBase + static_cast<double>(column) * (pageHeight + PAGE_STACK_GAP);
+        }
+
+        rects.emplace_back(x, y, pageWidth, pageHeight);
+        maxRowExtent = std::max(maxRowExtent, this->verticalLayoutEnabled ? pageHeight : pageWidth);
+
+        const bool rowFinished = (column + 1U) == columnCount || index + 1U == pages.size();
+        if (rowFinished) {
+            primary += maxRowExtent + PAGE_STACK_GAP;
+            maxRowExtent = 0.0;
+        }
+    }
+
+    if (this->rightToLeftLayoutEnabled || this->bottomToTopLayoutEnabled) {
+        QRectF bounds = rects.front();
+        for (std::size_t index = 1; index < rects.size(); ++index) {
+            bounds = bounds.united(rects[index]);
+        }
+        for (auto& rect: rects) {
+            if (this->rightToLeftLayoutEnabled) {
+                rect.moveLeft(bounds.right() - (rect.left() - bounds.left()) - rect.width());
+            }
+            if (this->bottomToTopLayoutEnabled) {
+                rect.moveTop(bounds.bottom() - (rect.top() - bounds.top()) - rect.height());
+            }
+        }
     }
     return rects;
 }
