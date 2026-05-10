@@ -650,6 +650,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawRubberBand(painter);
     drawShapePreview(painter);
     drawInstrumentOverlay(painter);
+    drawEraserPreview(painter);
 
     painter.resetTransform();
 
@@ -679,13 +680,18 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
-    if (event->button() == Qt::RightButton && this->currentToolState.activeTool == QtToolType::Eraser) {
-        event->accept();
-        return;
-    }
     if (this->currentToolState.activeTool == QtToolType::Setsquare ||
         this->currentToolState.activeTool == QtToolType::Compass) {
         beginInstrumentToolAtScreen(event->position(), event->button());
+        event->accept();
+        return;
+    }
+    if (event->button() == Qt::RightButton && !this->spaceHeld) {
+        this->temporaryRightButtonEraser = true;
+        beginEraseAtScreen(event->position());
+        if (!this->erasing) {
+            this->temporaryRightButtonEraser = false;
+        }
         event->accept();
         return;
     }
@@ -809,6 +815,13 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::RightButton && this->erasing && this->temporaryRightButtonEraser) {
+        finalizeErase();
+        this->temporaryRightButtonEraser = false;
+        clearEraserPreview();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->movingSelection) {
         finalizeMoveSelection();
         event->accept();
@@ -846,6 +859,7 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
 
 void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseMove(*event);
+    updateEraserPreviewAtScreen(event->position());
     if (this->panning) {
         const QPointF delta = event->position() - this->lastPanScreenPosition;
         this->lastPanScreenPosition = event->position();
@@ -1045,6 +1059,7 @@ bool QtCanvas::event(QEvent* event) {
         this->inputAdapter->handleTouch(*static_cast<QTouchEvent*>(event));
     } else if (event && event->type() == QEvent::Leave) {
         clearGeometryHover();
+        clearEraserPreview();
     }
     return QWidget::event(event);
 }
@@ -1769,6 +1784,7 @@ void QtCanvas::beginEraseAtScreen(const QPointF& screenPoint) {
 
     this->documentController->beginErase(*pageIdx);
     this->erasing = true;
+    updateEraserPreviewAtScreen(screenPoint);
 
     // Immediately erase at the press point
     const QRectF& pageRect = rects[*pageIdx];
@@ -1776,9 +1792,8 @@ void QtCanvas::beginEraseAtScreen(const QPointF& screenPoint) {
     const double pageY = scenePoint.y() - pageRect.y();
     const double halfSize = this->currentToolState.eraserWidth / 2.0;
 
-    const bool segment = this->currentToolState.eraserMode == QtEraserMode::Segment;
-    const int erased = segment ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
-                               : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
+    const int erased = usesMaskEraser() ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
+                                        : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
     if (erased > 0) {
         update();
         Q_EMIT documentEdited();
@@ -1806,9 +1821,10 @@ void QtCanvas::eraseAtScreen(const QPointF& screenPoint) {
     const double pageY = scenePoint.y() - pageRect.y();
     const double halfSize = this->currentToolState.eraserWidth / 2.0;
 
-    const bool segment = this->currentToolState.eraserMode == QtEraserMode::Segment;
-    const int erased = segment ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
-                               : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
+    updateEraserPreviewAtScreen(screenPoint);
+
+    const int erased = usesMaskEraser() ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
+                                        : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
     if (erased > 0) {
         update();
         Q_EMIT documentEdited();
@@ -1822,6 +1838,9 @@ void QtCanvas::finalizeErase() {
     }
     this->documentController->finalizeErase();
     this->erasing = false;
+    if (!this->temporaryRightButtonEraser && this->currentToolState.activeTool != QtToolType::Eraser) {
+        clearEraserPreview();
+    }
     Q_EMIT documentEdited();
 }
 
@@ -1830,6 +1849,72 @@ void QtCanvas::cancelErase() {
         this->documentController->cancelErase();
     }
     this->erasing = false;
+    this->temporaryRightButtonEraser = false;
+    clearEraserPreview();
+}
+
+auto QtCanvas::usesMaskEraser() const -> bool {
+    return this->currentToolState.eraserMode != QtEraserMode::DeleteStroke;
+}
+
+void QtCanvas::updateEraserPreviewAtScreen(const QPointF& screenPoint) {
+    const bool shouldShow = !this->spaceHeld &&
+                            (this->currentToolState.activeTool == QtToolType::Eraser || this->temporaryRightButtonEraser);
+    if (!shouldShow) {
+        clearEraserPreview();
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    if (!pageIdx) {
+        clearEraserPreview();
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*pageIdx >= rects.size()) {
+        clearEraserPreview();
+        return;
+    }
+
+    const QRectF& pageRect = rects[*pageIdx];
+    this->eraserPreviewPageIndex = *pageIdx;
+    this->eraserPreviewPagePoint = QPointF(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y());
+    update();
+}
+
+void QtCanvas::clearEraserPreview() {
+    if (!this->eraserPreviewPageIndex) {
+        return;
+    }
+    this->eraserPreviewPageIndex.reset();
+    update();
+}
+
+void QtCanvas::drawEraserPreview(QPainter& painter) const {
+    if (!this->eraserPreviewPageIndex) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (*this->eraserPreviewPageIndex >= rects.size()) {
+        return;
+    }
+
+    const QRectF& pageRect = rects[*this->eraserPreviewPageIndex];
+    const double halfSize = this->currentToolState.eraserWidth / 2.0;
+    const QRectF eraserRect(pageRect.x() + this->eraserPreviewPagePoint.x() - halfSize,
+                            pageRect.y() + this->eraserPreviewPagePoint.y() - halfSize, halfSize * 2.0,
+                            halfSize * 2.0);
+
+    QPen border(QColor(60, 60, 60, 210));
+    border.setWidthF(1.0 / std::max(this->zoomFactor, 0.0001));
+    painter.save();
+    painter.setPen(border);
+    painter.setBrush(QColor(255, 255, 255, 24));
+    painter.drawRect(eraserRect);
+    painter.restore();
 }
 
 // ---------------------------------------------------------------------------

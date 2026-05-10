@@ -164,10 +164,14 @@ private:
     void drawActiveStroke(QPainter& painter) const;
     void drawLaserPointerStrokes(QPainter& painter) const;
     void pruneLaserPointerStrokes();
+    void drawEraserPreview(QPainter& painter) const;
     void beginEraseAtScreen(const QPointF& screenPoint);
     void eraseAtScreen(const QPointF& screenPoint);
     void finalizeErase();
     void cancelErase();
+    void updateEraserPreviewAtScreen(const QPointF& screenPoint);
+    void clearEraserPreview();
+    [[nodiscard]] auto usesMaskEraser() const -> bool;
 
     // Text editing helpers
     void beginTextEditAtScreen(const QPointF& screenPoint);
@@ -235,6 +239,7 @@ private:
     bool panning = false;
     bool drawing = false;
     bool erasing = false;
+    bool temporaryRightButtonEraser = false;
     bool rubberBanding = false;
     bool movingSelection = false;
     bool shapeDrawing = false;
@@ -242,6 +247,8 @@ private:
     bool movingInstrumentOverlay = false;
     bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
+    std::optional<std::size_t> eraserPreviewPageIndex;
+    QPointF eraserPreviewPagePoint;
     int activeTouchPointId = -1;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
