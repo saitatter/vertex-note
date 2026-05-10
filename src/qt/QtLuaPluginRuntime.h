@@ -45,6 +45,8 @@ public:
     void configureDocumentAccess(QtDocumentController* controller, std::function<std::size_t()> currentPageProvider,
                                  std::function<void(std::size_t)> pageNavigator,
                                  std::function<void()> refreshUi, std::function<void()> markDirty);
+    void configureExportAccess(std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
+                               std::function<bool(const std::filesystem::path&, std::string*)> pngExporter);
     void saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states);
     [[nodiscard]] auto statuses() const -> std::vector<PluginStatus>;
     [[nodiscard]] auto parentWidget() const -> QWidget*;
@@ -53,6 +55,8 @@ public:
     void navigateToDocumentPage(std::size_t pageIndex) const;
     void refreshDocumentUi() const;
     void markDocumentDirty() const;
+    [[nodiscard]] auto exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
+    [[nodiscard]] auto exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
 
 public:
     struct Plugin;
@@ -66,5 +70,7 @@ private:
     std::function<void(std::size_t)> pageNavigator;
     std::function<void()> refreshUi;
     std::function<void()> markDirty;
+    std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter;
+    std::function<bool(const std::filesystem::path&, std::string*)> pngExporter;
     std::vector<std::unique_ptr<Plugin>> plugins;
 };

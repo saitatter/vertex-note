@@ -1169,6 +1169,107 @@ auto QtDocumentController::isElementSelected(const Element* e) const -> bool {
     return std::find(elems.begin(), elems.end(), e) != elems.end();
 }
 
+auto QtDocumentController::elementsForPluginScope(std::string_view scope, ElementType type,
+                                                  std::size_t currentPageIndex) const
+        -> std::vector<QtPluginElementRef> {
+    std::vector<QtPluginElementRef> result;
+    if (!this->document) {
+        return result;
+    }
+
+    const auto appendLayer = [&](std::size_t pageIndex, std::size_t layerIndex, const Layer* layer) {
+        if (!layer) {
+            return;
+        }
+        for (const auto* element: layer->getElementsView()) {
+            if (element && element->getType() == type) {
+                result.push_back(QtPluginElementRef{.element = element, .pageIndex = pageIndex, .layerIndex = layerIndex});
+            }
+        }
+    };
+
+    if (scope == "selection") {
+        if (!this->currentSelection) {
+            return result;
+        }
+        for (const auto* element: this->currentSelection->elements) {
+            if (element && element->getType() == type) {
+                result.push_back(QtPluginElementRef{
+                        .element = element,
+                        .pageIndex = this->currentSelection->pageIndex,
+                        .layerIndex = 0U,
+                });
+            }
+        }
+        return result;
+    }
+
+    if (scope == "layer") {
+        if (currentPageIndex >= this->document->getPageCount()) {
+            return result;
+        }
+        auto page = this->document->getPage(currentPageIndex);
+        const auto layerIndex = page ? static_cast<std::size_t>(page->getSelectedLayerId()) : 0U;
+        auto layer = page ? page->getSelectedLayer() : nullptr;
+        appendLayer(currentPageIndex, layerIndex, layer);
+        return result;
+    }
+
+    const auto appendPage = [&](std::size_t pageIndex) {
+        auto page = this->document->getPage(pageIndex);
+        if (!page) {
+            return;
+        }
+        const auto& layers = page->getLayers();
+        for (std::size_t layerIndex = 0; layerIndex < layers.size(); ++layerIndex) {
+            appendLayer(pageIndex, layerIndex, layers[layerIndex]);
+        }
+    };
+
+    if (scope == "page") {
+        if (currentPageIndex < this->document->getPageCount()) {
+            appendPage(currentPageIndex);
+        }
+        return result;
+    }
+
+    if (scope == "all") {
+        for (std::size_t pageIndex = 0; pageIndex < this->document->getPageCount(); ++pageIndex) {
+            appendPage(pageIndex);
+        }
+    }
+    return result;
+}
+
+auto QtDocumentController::selectElementsByPluginRefs(std::size_t pageIndex,
+                                                      const std::vector<const Element*>& refs) -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        return false;
+    }
+
+    std::vector<const Element*> selected;
+    selected.reserve(refs.size());
+    for (const auto* candidate: refs) {
+        if (candidate && layer->indexOf(candidate) != Element::InvalidIndex &&
+            std::find(selected.begin(), selected.end(), candidate) == selected.end()) {
+            selected.push_back(candidate);
+        }
+    }
+
+    if (selected.empty()) {
+        this->currentSelection.reset();
+        return false;
+    }
+    this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(selected)};
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Element operations (delete, select all, clipboard)
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -189,6 +190,12 @@ struct QtLayerInfo {
     std::size_t elementCount = 0U;
 };
 
+struct QtPluginElementRef {
+    const Element* element = nullptr;
+    std::size_t pageIndex = 0U;
+    std::size_t layerIndex = 0U;
+};
+
 class QtDocumentController {
 public:
     QtDocumentController();
@@ -294,6 +301,11 @@ public:
     void clearElementSelection();
     [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
     [[nodiscard]] auto isElementSelected(const Element* e) const -> bool;
+    [[nodiscard]] auto elementsForPluginScope(std::string_view scope, ElementType type,
+                                              std::size_t currentPageIndex) const
+            -> std::vector<QtPluginElementRef>;
+    [[nodiscard]] auto selectElementsByPluginRefs(std::size_t pageIndex,
+                                                  const std::vector<const Element*>& refs) -> bool;
 
     // Element operations
     [[nodiscard]] auto deleteSelectedElements() -> bool;

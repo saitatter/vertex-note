@@ -10,6 +10,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstdint>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <sstream>
 #include <string_view>
@@ -30,6 +33,10 @@
 #include "control/pagetype/PageTypeHandler.h"
 #include "filesystem.h"
 #include "model/Document.h"
+#include "model/Image.h"
+#include "model/NotePage.h"
+#include "model/Stroke.h"
+#include "model/StrokeStyle.h"
 #include "QtDocumentController.h"
 #include "ui/common/ICommandHost.h"
 #include "util/PathUtil.h"
@@ -428,6 +435,113 @@ auto clampLuaPageIndex(QtLuaPluginRuntime::Plugin* plugin, ptrdiff_t pageNumber)
     return std::min<std::size_t>(static_cast<std::size_t>(zeroBased), controller->pageCount() - 1U);
 }
 
+auto checkedPluginScope(lua_State* lua, int index) -> std::string {
+    const auto scope = luaOptionalString(lua, index);
+    if (scope != "selection" && scope != "layer" && scope != "page" && scope != "all") {
+        luaL_error(lua, "Unsupported element scope: %s", scope.c_str());
+    }
+    return scope;
+}
+
+void luaPushRefs(lua_State* lua, const std::vector<const Element*>& elements) {
+    lua_newtable(lua);
+    int index = 1;
+    for (const auto* element: elements) {
+        lua_pushinteger(lua, index++);
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(element)));
+        lua_settable(lua, -3);
+    }
+}
+
+auto luaReadElementRefs(lua_State* lua, int index) -> std::vector<const Element*> {
+    std::vector<const Element*> refs;
+    luaL_checktype(lua, index, LUA_TTABLE);
+    lua_pushnil(lua);
+    while (lua_next(lua, index) != 0) {
+        if (lua_islightuserdata(lua, -1) == 1) {
+            refs.push_back(static_cast<const Element*>(lua_touserdata(lua, -1)));
+        }
+        lua_pop(lua, 1);
+    }
+    return refs;
+}
+
+auto luaReadDoubleArray(lua_State* lua, int index) -> std::vector<double> {
+    std::vector<double> result;
+    luaL_checktype(lua, index, LUA_TTABLE);
+    const auto count = lua_rawlen(lua, index);
+    result.reserve(count);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, index, static_cast<lua_Integer>(i));
+        result.push_back(lua_tonumber(lua, -1));
+        lua_pop(lua, 1);
+    }
+    return result;
+}
+
+auto strokeToolFromLua(std::string_view tool) -> StrokeTool::Value {
+    if (tool == "highlighter") {
+        return StrokeTool::HIGHLIGHTER;
+    }
+    if (tool == "eraser") {
+        return StrokeTool::ERASER;
+    }
+    return StrokeTool::PEN;
+}
+
+auto strokeToolToLua(StrokeTool tool) -> const char* {
+    switch (static_cast<StrokeTool::Value>(tool)) {
+        case StrokeTool::PEN:
+            return "pen";
+        case StrokeTool::ERASER:
+            return "eraser";
+        case StrokeTool::HIGHLIGHTER:
+            return "highlighter";
+    }
+    return "pen";
+}
+
+auto luaOptionalRgbColor(lua_State* lua, int index, Color fallback = Colors::black) -> Color {
+    if (lua_isinteger(lua, index) != 1) {
+        return fallback;
+    }
+    const auto rgb = static_cast<uint32_t>(lua_tointeger(lua, index)) & 0x00ffffffU;
+    return Color(rgb | 0xff000000U);
+}
+
+auto createPluginImageFromFile(const std::filesystem::path& path, std::string* errorMessage)
+        -> std::unique_ptr<Image> {
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) {
+        if (errorMessage) {
+            *errorMessage = "Error: file '" + path.string() + "' does not exist.";
+        }
+        return nullptr;
+    }
+
+    std::string data((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    auto image = std::make_unique<Image>();
+    image->setImage(std::move(data));
+    if (auto err = image->renderBuffer(); err.has_value()) {
+        if (errorMessage) {
+            *errorMessage = *err;
+        }
+        return nullptr;
+    }
+    return image;
+}
+
+void scalePluginImageToPage(Image& image, NotePage* page, int width, int height) {
+    double zoom = 1.0;
+    if (page && (image.getX() + width > page->getWidth() || image.getY() + height > page->getHeight())) {
+        const double maxZoomX = (page->getWidth() - image.getX()) / width;
+        const double maxZoomY = (page->getHeight() - image.getY()) / height;
+        zoom = std::min(maxZoomX, maxZoomY);
+    }
+    image.setWidth(width * zoom);
+    image.setHeight(height * zoom);
+}
+
 auto luaRegisterUi(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     if (!plugin || !plugin->inInitUi) {
@@ -701,6 +815,404 @@ auto luaGetPageLabel(lua_State* lua) -> int {
     return 1;
 }
 
+auto luaSetPageSize(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto width = luaL_checknumber(lua, 1);
+    const auto height = luaL_checknumber(lua, 2);
+    if (!controller->resizePage(plugin->runtime->currentDocumentPageIndex(), width, height)) {
+        return luaL_error(lua, "Could not resize current page");
+    }
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetStrokes(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_STROKE,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int strokeIndex = 1;
+    for (const auto& ref: refs) {
+        auto* stroke = dynamic_cast<const Stroke*>(ref.element);
+        if (!stroke) {
+            continue;
+        }
+
+        lua_pushinteger(lua, strokeIndex++);
+        lua_newtable(lua);
+
+        lua_newtable(lua);
+        int pointIndex = 1;
+        for (const auto& point: stroke->getPointVector()) {
+            lua_pushinteger(lua, pointIndex++);
+            lua_pushnumber(lua, point.x);
+            lua_settable(lua, -3);
+        }
+        lua_setfield(lua, -2, "x");
+
+        lua_newtable(lua);
+        pointIndex = 1;
+        for (const auto& point: stroke->getPointVector()) {
+            lua_pushinteger(lua, pointIndex++);
+            lua_pushnumber(lua, point.y);
+            lua_settable(lua, -3);
+        }
+        lua_setfield(lua, -2, "y");
+
+        if (stroke->hasPressure()) {
+            lua_newtable(lua);
+            pointIndex = 1;
+            for (const auto& point: stroke->getPointVector()) {
+                lua_pushinteger(lua, pointIndex++);
+                lua_pushnumber(lua, point.z);
+                lua_settable(lua, -3);
+            }
+            lua_setfield(lua, -2, "pressure");
+        }
+
+        luaSetStringField(lua, "tool", strokeToolToLua(stroke->getToolType()));
+        luaSetNumberField(lua, "width", stroke->getWidth());
+        luaSetIntegerField(lua, "color", static_cast<lua_Integer>(static_cast<uint32_t>(stroke->getColor()) & 0x00ffffffU));
+        luaSetIntegerField(lua, "fill", stroke->getFill());
+        luaSetStringField(lua, "lineStyle", StrokeStyle::formatStyle(stroke->getLineStyle()));
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(stroke)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddStrokes(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "strokes");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing stroke table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto strokeCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= strokeCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "x");
+        const auto xs = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "y");
+        const auto ys = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        if (xs.size() != ys.size()) {
+            return luaL_error(lua, "X and Y vectors are not equal length");
+        }
+
+        std::vector<double> pressure;
+        lua_getfield(lua, -1, "pressure");
+        if (lua_istable(lua, -1) == 1) {
+            pressure = luaReadDoubleArray(lua, -1);
+            if (pressure.size() != xs.size()) {
+                return luaL_error(lua, "Pressure vector is not equal length");
+            }
+        }
+        lua_pop(lua, 1);
+
+        if (xs.size() < 2U) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto stroke = std::make_unique<Stroke>();
+        for (std::size_t p = 0; p < xs.size(); ++p) {
+            stroke->addPoint(Point(xs[p], ys[p], pressure.empty() ? Point::NO_PRESSURE : pressure[p]));
+        }
+
+        lua_getfield(lua, -1, "tool");
+        stroke->setToolType(strokeToolFromLua(luaOptionalString(lua, -1, "pen")));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        stroke->setWidth(luaL_optnumber(lua, -1, 1.0));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "color");
+        stroke->setColor(luaOptionalRgbColor(lua, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "fill");
+        stroke->setFill(static_cast<int>(luaL_optinteger(lua, -1, -1)));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "lineStyle");
+        stroke->setLineStyle(StrokeStyle::parseStyle(luaOptionalString(lua, -1, "plain")));
+        lua_pop(lua, 1);
+
+        const auto* ptr = controller->insertElement(plugin->runtime->currentDocumentPageIndex(), std::move(stroke),
+                                                    "Plugin insert stroke");
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
+auto luaGetImages(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_IMAGE,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int imageIndex = 1;
+    for (const auto& ref: refs) {
+        auto* image = dynamic_cast<const Image*>(ref.element);
+        if (!image) {
+            continue;
+        }
+        if (auto err = image->renderBuffer(); err.has_value()) {
+            continue;
+        }
+
+        lua_pushinteger(lua, imageIndex++);
+        lua_newtable(lua);
+        luaSetNumberField(lua, "x", image->getX());
+        luaSetNumberField(lua, "y", image->getY());
+        luaSetNumberField(lua, "width", image->getElementWidth());
+        luaSetNumberField(lua, "height", image->getElementHeight());
+        lua_pushlstring(lua, reinterpret_cast<const char*>(image->getRawData()), image->getRawDataLength());
+        lua_setfield(lua, -2, "data");
+        auto* format = image->getImageFormat();
+        luaSetStringField(lua, "format", format ? gdk_pixbuf_format_get_name(format) : "");
+        const auto [imageWidth, imageHeight] = image->getImageSize();
+        luaSetIntegerField(lua, "imageWidth", imageWidth);
+        luaSetIntegerField(lua, "imageHeight", imageHeight);
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(image)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddImages(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_newtable(lua);
+    const int returnTable = 2;
+    lua_getfield(lua, 1, "images");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing image table");
+    }
+
+    const auto currentPageIndex = plugin->runtime->currentDocumentPageIndex();
+    auto page = controller->documentPtr() ? controller->documentPtr()->getPage(currentPageIndex) : nullptr;
+    const auto count = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "path");
+        const auto path = luaOptionalString(lua, -1);
+        const bool hasPath = lua_isnil(lua, -1) != 1 && !path.empty();
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "data");
+        size_t dataLength = 0;
+        const char* data = lua_isnil(lua, -1) == 1 ? nullptr : luaL_checklstring(lua, -1, &dataLength);
+        lua_pop(lua, 1);
+        if (hasPath == (data != nullptr)) {
+            return luaL_error(lua, "Specify exactly one of image path or data");
+        }
+
+        lua_getfield(lua, -1, "x");
+        const double x = luaL_optnumber(lua, -1, 0.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "y");
+        const double y = luaL_optnumber(lua, -1, 0.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "maxWidth");
+        int maxWidth = static_cast<int>(luaL_optinteger(lua, -1, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "maxHeight");
+        int maxHeight = static_cast<int>(luaL_optinteger(lua, -1, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "scale");
+        const double scale = luaL_optnumber(lua, -1, 1.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "aspectRatio");
+        const bool aspectRatio = lua_isnil(lua, -1) == 1 || lua_toboolean(lua, -1) != 0;
+        lua_pop(lua, 1);
+
+        std::unique_ptr<Image> image;
+        if (hasPath) {
+            std::string error;
+            image = createPluginImageFromFile(std::filesystem::path(path), &error);
+            if (!image) {
+                lua_pushinteger(lua, static_cast<lua_Integer>(i));
+                lua_pushstring(lua, error.c_str());
+                lua_settable(lua, returnTable);
+                lua_pop(lua, 1);
+                continue;
+            }
+        } else {
+            image = std::make_unique<Image>();
+            image->setImage(std::string(data, dataLength));
+            if (auto err = image->renderBuffer(); err.has_value()) {
+                lua_pushinteger(lua, static_cast<lua_Integer>(i));
+                lua_pushstring(lua, err->c_str());
+                lua_settable(lua, returnTable);
+                lua_pop(lua, 1);
+                continue;
+            }
+        }
+
+        lua_pushinteger(lua, static_cast<lua_Integer>(i));
+        if (!image) {
+            lua_pushstring(lua, "Error: creating the image failed");
+            lua_settable(lua, returnTable);
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto [width, height] = image->getImageSize();
+        if (maxWidth > 0 && maxHeight > 0) {
+            if (aspectRatio) {
+                const double fitScale =
+                        std::min(static_cast<double>(maxWidth) / width, static_cast<double>(maxHeight) / height);
+                width = static_cast<int>(std::round(width * fitScale));
+                height = static_cast<int>(std::round(height * fitScale));
+            } else {
+                width = maxWidth;
+                height = maxHeight;
+            }
+        } else if (maxWidth > 0) {
+            if (aspectRatio) {
+                height = static_cast<int>(std::round(static_cast<double>(height) / width * maxWidth));
+            }
+            width = maxWidth;
+        } else if (maxHeight > 0) {
+            if (aspectRatio) {
+                width = static_cast<int>(std::round(static_cast<double>(width) / height * maxHeight));
+            }
+            height = maxHeight;
+        }
+        width = static_cast<int>(std::round(width * scale));
+        height = static_cast<int>(std::round(height * scale));
+
+        image->setX(x);
+        image->setY(y);
+        scalePluginImageToPage(*image, page.get(), width, height);
+
+        const auto* ptr = controller->insertElement(currentPageIndex, std::move(image), "Plugin insert image");
+        if (ptr) {
+            lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(ptr)));
+        } else {
+            lua_pushstring(lua, "Error: inserting the image failed");
+        }
+        lua_settable(lua, returnTable);
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 1;
+}
+
+auto luaClearSelection(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    controller->clearElementSelection();
+    plugin->runtime->refreshDocumentUi();
+    return 0;
+}
+
+auto luaAddToSelection(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    const auto refs = luaReadElementRefs(lua, 1);
+    (void)controller->selectElementsByPluginRefs(plugin->runtime->currentDocumentPageIndex(), refs);
+    plugin->runtime->refreshDocumentUi();
+    return 0;
+}
+
+auto luaExport(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "outputFile");
+    const auto outputFile = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    if (outputFile.empty()) {
+        return luaL_error(lua, "Missing output file");
+    }
+
+    auto path = std::filesystem::path(outputFile);
+    auto extension = path.extension().string();
+    std::ranges::transform(extension, extension.begin(),
+                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    std::string error;
+    bool ok = false;
+    if (extension == ".pdf") {
+        ok = plugin->runtime->exportPdf(path, &error);
+    } else if (extension == ".png") {
+        ok = plugin->runtime->exportPng(path, &error);
+    } else {
+        return luaL_error(lua, "Qt shell plugin export supports PDF and PNG files for now");
+    }
+    if (!ok) {
+        return luaL_error(lua, "Error exporting document: %s", error.c_str());
+    }
+    return 0;
+}
+
 auto luaRefreshPage(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     if (!plugin || !plugin->runtime) {
@@ -800,6 +1312,14 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"changeCurrentPageBackground", luaChangeCurrentPageBackground},
         {"changeBackgroundPdfPageNr", luaChangeBackgroundPdfPageNr},
         {"getPageLabel", luaGetPageLabel},
+        {"setPageSize", luaSetPageSize},
+        {"getStrokes", luaGetStrokes},
+        {"addStrokes", luaAddStrokes},
+        {"getImages", luaGetImages},
+        {"addImages", luaAddImages},
+        {"clearSelection", luaClearSelection},
+        {"addToSelection", luaAddToSelection},
+        {"export", luaExport},
         {"refreshPage", luaRefreshPage},
         {"changeActionState", luaChangeActionState},
         {"activateAction", luaActivateAction},
@@ -950,6 +1470,13 @@ void QtLuaPluginRuntime::configureDocumentAccess(QtDocumentController* controlle
     this->markDirty = std::move(markDirty);
 }
 
+void QtLuaPluginRuntime::configureExportAccess(
+        std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
+        std::function<bool(const std::filesystem::path&, std::string*)> pngExporter) {
+    this->pdfExporter = std::move(pdfExporter);
+    this->pngExporter = std::move(pngExporter);
+}
+
 void QtLuaPluginRuntime::loadEnabledPlugins() {
     for (const auto& plugin: this->plugins) {
         for (const auto& actionId: plugin->actionIds) {
@@ -1026,6 +1553,26 @@ void QtLuaPluginRuntime::markDocumentDirty() const {
     if (this->markDirty) {
         this->markDirty();
     }
+}
+
+auto QtLuaPluginRuntime::exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool {
+    if (!this->pdfExporter) {
+        if (errorMessage) {
+            *errorMessage = "Qt PDF export is not available";
+        }
+        return false;
+    }
+    return this->pdfExporter(path, errorMessage);
+}
+
+auto QtLuaPluginRuntime::exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool {
+    if (!this->pngExporter) {
+        if (errorMessage) {
+            *errorMessage = "Qt PNG export is not available";
+        }
+        return false;
+    }
+    return this->pngExporter(path, errorMessage);
 }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {

@@ -422,6 +422,41 @@ QtAppShell::QtAppShell():
                 updateStatusBarLabels();
             },
             [this]() { markSessionDirty(); });
+    this->luaPlugins.configureExportAccess(
+            [this](const std::filesystem::path& path, std::string* errorMessage) {
+                auto* renderer = this->window.canvas()->contentRenderer();
+                if (!renderer) {
+                    if (errorMessage) {
+                        *errorMessage = "No renderer available.";
+                    }
+                    return false;
+                }
+                QtDocumentExporter exporter(renderer);
+                return exporter.exportPdf(path, this->documentController.snapshotPages(), errorMessage);
+            },
+            [this](const std::filesystem::path& path, std::string* errorMessage) {
+                auto* renderer = this->window.canvas()->contentRenderer();
+                if (!renderer) {
+                    if (errorMessage) {
+                        *errorMessage = "No renderer available.";
+                    }
+                    return false;
+                }
+                const auto& pages = this->documentController.snapshotPages();
+                if (pages.empty()) {
+                    if (errorMessage) {
+                        *errorMessage = "No pages to export.";
+                    }
+                    return false;
+                }
+                QtDocumentExporter exporter(renderer);
+                if (pages.size() == 1U) {
+                    return exporter.exportPng(path, pages.front(), 2.0, errorMessage);
+                }
+                const auto directory = path.parent_path() / path.stem();
+                std::filesystem::create_directories(directory);
+                return exporter.exportAllPagesPng(directory, pages, 2.0, errorMessage);
+            });
     this->luaPlugins.loadEnabledPlugins();
     this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);
     this->window.commandHost()->setCommandChecked("view.show-menubar", this->persistedShowMenubar);
