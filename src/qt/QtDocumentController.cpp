@@ -12,6 +12,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <utility>
 
 #include "control/shaperecognizer/ShapeRecognizer.h"
 #include "control/xojfile/LoadHandler.h"
@@ -1932,6 +1933,62 @@ void QtDocumentController::setPageBackgroundType(std::size_t pageIndex, PageType
     }
     this->document->unlock();
     rebuildPageSnapshots();
+}
+
+auto QtDocumentController::changePagePdfBackground(std::size_t pageIndex, ptrdiff_t pageNumber, bool relative,
+                                                   std::string* errorMessage) -> bool {
+    const auto setError = [errorMessage](std::string message) {
+        if (errorMessage) {
+            *errorMessage = std::move(message);
+        }
+    };
+
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        setError("No active page");
+        return false;
+    }
+    if (this->document->getPdfPageCount() == 0U) {
+        setError("The current document has no PDF background");
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        this->document->unlock();
+        setError("No active page");
+        return false;
+    }
+
+    ptrdiff_t selected = pageNumber - 1;
+    if (relative) {
+        if (!page->getBackgroundType().isPdfPage()) {
+            this->document->unlock();
+            setError("Current page has no PDF background");
+            return false;
+        }
+        selected = static_cast<ptrdiff_t>(page->getPdfPageNr()) + pageNumber;
+    }
+
+    if (selected < 0 || static_cast<std::size_t>(selected) >= this->document->getPdfPageCount()) {
+        this->document->unlock();
+        setError("PDF page number does not exist");
+        return false;
+    }
+
+    const auto pdfPageIndex = static_cast<std::size_t>(selected);
+    auto pdfPage = this->document->getPdfPage(pdfPageIndex);
+    if (!pdfPage) {
+        this->document->unlock();
+        setError("PDF page could not be loaded");
+        return false;
+    }
+
+    page->setBackgroundPdfPageNr(pdfPageIndex);
+    Document::setPageSize(page, pdfPage->getWidth(), pdfPage->getHeight());
+    this->document->unlock();
+    rebuildPageSnapshots();
+    return true;
 }
 
 auto QtDocumentController::canResizePage(std::size_t pageIndex) const -> bool {

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
 #include <deque>
 #include <memory>
@@ -339,6 +340,8 @@ public:
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);
     void setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format);
+    [[nodiscard]] auto changePagePdfBackground(std::size_t pageIndex, ptrdiff_t pageNumber, bool relative,
+                                               std::string* errorMessage = nullptr) -> bool;
     [[nodiscard]] auto canResizePage(std::size_t pageIndex) const -> bool;
     [[nodiscard]] auto resizePage(std::size_t pageIndex, double width, double height) -> bool;
 

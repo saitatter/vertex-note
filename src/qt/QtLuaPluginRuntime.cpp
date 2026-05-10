@@ -658,6 +658,49 @@ auto luaChangeCurrentPageBackground(lua_State* lua) -> int {
     return 0;
 }
 
+auto luaChangeBackgroundPdfPageNr(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    std::string error;
+    if (!controller->changePagePdfBackground(plugin->runtime->currentDocumentPageIndex(),
+                                             static_cast<ptrdiff_t>(luaL_checkinteger(lua, 1)),
+                                             luaOptionalBool(lua, 2, true), &error)) {
+        return luaL_error(lua, "%s", error.c_str());
+    }
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetPageLabel(lua_State* lua) -> int {
+    auto* controller = documentControllerFromLua(lua);
+    if (!controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageNumber = static_cast<ptrdiff_t>(luaL_checkinteger(lua, 1));
+    const auto* document = controller->documentPtr();
+    if (!document || pageNumber <= 0 || static_cast<std::size_t>(pageNumber - 1) >= document->getPdfPageCount()) {
+        lua_pushnil(lua);
+        lua_pushfstring(lua, "page nr %d is out of range", static_cast<int>(pageNumber - 1));
+        return 2;
+    }
+
+    auto pdfPage = document->getPdfPage(static_cast<std::size_t>(pageNumber - 1));
+    if (!pdfPage) {
+        lua_pushnil(lua);
+        lua_pushstring(lua, "PDF page could not be loaded");
+        return 2;
+    }
+    const auto label = pdfPage->getPageLabel();
+    lua_pushlstring(lua, label.c_str(), label.length());
+    return 1;
+}
+
 auto luaRefreshPage(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     if (!plugin || !plugin->runtime) {
@@ -755,6 +798,8 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"setLayerVisibility", luaSetLayerVisibility},
         {"setCurrentLayerName", luaSetCurrentLayerName},
         {"changeCurrentPageBackground", luaChangeCurrentPageBackground},
+        {"changeBackgroundPdfPageNr", luaChangeBackgroundPdfPageNr},
+        {"getPageLabel", luaGetPageLabel},
         {"refreshPage", luaRefreshPage},
         {"changeActionState", luaChangeActionState},
         {"activateAction", luaActivateAction},
