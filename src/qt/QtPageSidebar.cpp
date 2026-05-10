@@ -19,24 +19,36 @@
 #include "view/render/QtPainterRenderContext.h"
 
 namespace {
-constexpr int THUMB_WIDTH = 160;
-constexpr int THUMB_HEIGHT = 220;
+constexpr int THUMB_WIDTH = 74;
+constexpr int THUMB_HEIGHT = 104;
+constexpr int THUMB_ITEM_WIDTH = 84;
 }  // namespace
 
 QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages"), parent) {
     setObjectName(QStringLiteral("vertexNoteQtPageSidebar"));
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
+    setMinimumWidth(96);
+    setMaximumWidth(128);
 
     auto* container = new QWidget(this);
     auto* layout = new QVBoxLayout(container);
-    layout->setContentsMargins(4, 4, 4, 4);
-    layout->setSpacing(4);
+    layout->setContentsMargins(2, 2, 2, 2);
+    layout->setSpacing(2);
 
     this->pageList = new QListWidget(container);
-    this->pageList->setViewMode(QListView::ListMode);
+    this->pageList->setViewMode(QListView::IconMode);
+    this->pageList->setFlow(QListView::TopToBottom);
+    this->pageList->setWrapping(false);
+    this->pageList->setMovement(QListView::Static);
     this->pageList->setIconSize(QSize(THUMB_WIDTH, THUMB_HEIGHT));
-    this->pageList->setSpacing(4);
+    this->pageList->setResizeMode(QListView::Adjust);
+    this->pageList->setSpacing(8);
     this->pageList->setSelectionMode(QAbstractItemView::SingleSelection);
+    this->pageList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->pageList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    this->pageList->setFrameShape(QFrame::NoFrame);
+    this->pageList->setWordWrap(true);
     layout->addWidget(this->pageList);
 
     container->setLayout(layout);
@@ -54,6 +66,11 @@ void QtPageSidebar::setContentRenderer(vn::view::render::PageContentRenderer* re
     this->contentRenderer = renderer;
 }
 
+void QtPageSidebar::setCurrentPage(std::size_t pageIndex) {
+    this->currentPageIndex = pageIndex;
+    refresh();
+}
+
 void QtPageSidebar::refresh() {
     this->pageList->clear();
 
@@ -64,10 +81,16 @@ void QtPageSidebar::refresh() {
     const auto& pages = this->controller->snapshotPages();
     for (std::size_t i = 0; i < pages.size(); ++i) {
         auto* item = new QListWidgetItem(this->pageList);
-        item->setText(QStringLiteral("Page %1").arg(static_cast<int>(i + 1)));
+        item->setText(QStringLiteral("%1").arg(static_cast<int>(i + 1)));
+        item->setTextAlignment(Qt::AlignHCenter);
+        item->setForeground(QBrush(QColor(215, 64, 64)));
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<qulonglong>(i)));
         item->setIcon(QIcon(renderThumbnail(i)));
-        item->setSizeHint(QSize(THUMB_WIDTH + 16, THUMB_HEIGHT + 28));
+        item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 28));
+        if (i == this->currentPageIndex) {
+            item->setSelected(true);
+            this->pageList->setCurrentItem(item);
+        }
     }
 }
 

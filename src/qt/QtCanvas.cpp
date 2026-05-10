@@ -24,6 +24,8 @@
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QTransform>
+#include <QResizeEvent>
+#include <QShowEvent>
 #include <QStringList>
 #include <QWheelEvent>
 
@@ -127,7 +129,7 @@ QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_AcceptTouchEvents, true);
     auto palette = this->palette();
-    palette.setColor(QPalette::Window, QColor(236, 241, 247));
+    palette.setColor(QPalette::Window, QColor(214, 210, 201));
     setPalette(palette);
     this->inputAdapter = std::make_unique<QtInputAdapter>(this);
     this->backgroundRenderer = std::make_unique<vn::view::render::QtPreviewBackgroundRenderer>();
@@ -272,16 +274,21 @@ void QtCanvas::fitWidth() {
     if (rects.empty()) {
         return;
     }
+    if (!isVisible()) {
+        this->deferredFitWidthPending = true;
+    }
     // Find the widest page
     double maxWidth = 0.0;
     for (const auto& r: rects) {
         maxWidth = std::max(maxWidth, r.width());
     }
-    const double padding = 40.0;
+    const double padding = 32.0;
     const double availableWidth = std::max(1.0, width() - 2.0 * padding);
     this->zoomFactor = clampZoom(availableWidth / std::max(maxWidth, 1.0));
     const double visibleWorldWidth = width() / this->zoomFactor;
     this->scrollX = rects[0].left() - (visibleWorldWidth - maxWidth) / 2.0;
+    this->scrollY = std::max(0.0, rects[0].top() - 12.0 / this->zoomFactor);
+    this->deferredFitWidthPending = false;
     emitViewportUpdate();
 }
 
@@ -401,6 +408,20 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
 
     if (event) {
         event->accept();
+    }
+}
+
+void QtCanvas::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    if (this->deferredFitWidthPending && width() > 0 && height() > 0) {
+        fitWidth();
+    }
+}
+
+void QtCanvas::showEvent(QShowEvent* event) {
+    QWidget::showEvent(event);
+    if (this->deferredFitWidthPending && width() > 0 && height() > 0) {
+        fitWidth();
     }
 }
 
@@ -982,16 +1003,18 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
                                    hovered->hit.type == vn::view::render::GeometryHitType::Vertex &&
                                    hovered->hit.objectId == geometry->objectId && hovered->hit.vertexId == vertex.id;
 
-            const double size = isHovered ? 9.0 : isSelected ? 8.0 : 6.5;
+            const double zoomScale = std::max(this->zoomFactor, 0.001);
+            const double size = (isHovered ? 9.0 : isSelected ? 8.0 : 6.5) / zoomScale;
             const QRectF handle(rect.x() + vertex.position.x - size / 2.0, rect.y() + vertex.position.y - size / 2.0,
                                 size, size);
-            painter.setPen(QPen(QColor(0, 102, 255), isHovered ? 2.1 : isSelected ? 1.9 : 1.4));
+            painter.setPen(QPen(QColor(0, 102, 255), (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
             painter.setBrush(isSelected ? QBrush(QColor(0, 102, 255)) : QBrush(QColor(255, 255, 255, 240)));
             painter.drawRect(handle);
             if (isSelected || isHovered) {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : QColor(0, 102, 255));
-                painter.drawEllipse(QPointF(rect.x() + vertex.position.x, rect.y() + vertex.position.y), 1.8, 1.8);
+                painter.drawEllipse(QPointF(rect.x() + vertex.position.x, rect.y() + vertex.position.y),
+                                    1.8 / zoomScale, 1.8 / zoomScale);
             }
         }
         break;

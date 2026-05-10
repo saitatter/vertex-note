@@ -79,6 +79,14 @@ static auto computeBoxes(const InsertionOrder& elts) -> std::pair<Range, Range> 
             [](auto&& e) { return std::make_pair(Range(e.e->boundingRect()), Range(e.e->getSnappedBounds())); });
 }
 
+static void removeElementFromSelectionContents(EditSelectionContents& contents, const Element* element) {
+    auto insertionOrder = contents.stealInsertionOrder();
+    insertionOrder.erase(std::remove_if(insertionOrder.begin(), insertionOrder.end(),
+                                        [element](const auto& entry) { return entry.e.get() == element; }),
+                         insertionOrder.end());
+    contents.replaceInsertionOrder(std::move(insertionOrder));
+}
+
 static auto distanceToSegment(double px, double py, double ax, double ay, double bx, double by)
         -> std::pair<double, double> {
     const double dx = bx - ax;
@@ -1180,11 +1188,12 @@ void EditSelection::moveSelection(double dx, double dy, bool addMoveUndo) {
 }
 
 auto EditSelection::deleteActiveGeometryVertex() -> bool {
-    if (!this->activeGeometryElement || this->activeGeometryVertices.empty()) {
+    if (!this->sourceLayer || !this->activeGeometryElement || this->activeGeometryVertices.empty()) {
         return false;
     }
 
-    const auto before = this->activeGeometryElement->geometry();
+    auto* geometryElement = this->activeGeometryElement;
+    const auto before = geometryElement->geometry();
     auto after = before;
     bool changed = false;
     for (const auto vertex: this->activeGeometryVertices) {
@@ -1198,32 +1207,46 @@ auto EditSelection::deleteActiveGeometryVertex() -> bool {
 
     if (after.vertices().empty() && after.edges().empty()) {
         // Geometry became empty — remove the element from the layer entirely
-        auto pos = this->sourceLayer->removeElement(this->activeGeometryElement);
+        auto pos = this->sourceLayer->removeElement(geometryElement);
+        SelectionFactory::removeElementFromSelectionContents(*this->contents, geometryElement);
+        this->contents->invalidateViewBuffer();
         auto deleteAction = std::make_unique<DeleteUndoAction>(this->sourcePage, false);
         deleteAction->addElement(this->sourceLayer, std::move(pos.e), pos.pos);
         this->undo->addUndoAction(std::move(deleteAction));
     } else {
-        this->activeGeometryElement->replaceGeometry(after);
+        geometryElement->replaceGeometry(after);
         this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
-                this->sourcePage, this->activeGeometryElement, before, after,
+                this->sourcePage, geometryElement, before, after,
                 this->activeGeometryVertices.size() > 1U ? _("Delete geometry vertices")
                                                          : _("Delete geometry vertex")));
     }
     clearGeometryVertexSelection();
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
-    rebaseSelectionBounds();
-    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    if (getInsertionOrder().empty()) {
+        this->x = 0.0;
+        this->y = 0.0;
+        this->width = 0.0;
+        this->height = 0.0;
+        this->snappedBounds = Rectangle<double>();
+        updateMatrix();
+    } else {
+        rebaseSelectionBounds();
+    }
+    if (!after.vertices().empty() || !after.edges().empty()) {
+        this->view->getPage()->fireElementChanged(geometryElement);
+    }
     this->view->getNoteView()->repaintSelection();
     return true;
 }
 
 auto EditSelection::deleteActiveGeometryEdge() -> bool {
-    if (!this->activeGeometryElement || this->activeGeometryEdges.empty()) {
+    if (!this->sourceLayer || !this->activeGeometryElement || this->activeGeometryEdges.empty()) {
         return false;
     }
 
-    const auto before = this->activeGeometryElement->geometry();
+    auto* geometryElement = this->activeGeometryElement;
+    const auto before = geometryElement->geometry();
     auto after = before;
     bool changed = false;
     for (const auto edgeId: this->activeGeometryEdges) {
@@ -1237,21 +1260,34 @@ auto EditSelection::deleteActiveGeometryEdge() -> bool {
 
     if (after.vertices().empty() && after.edges().empty()) {
         // Geometry became empty — remove the element from the layer entirely
-        auto pos = this->sourceLayer->removeElement(this->activeGeometryElement);
+        auto pos = this->sourceLayer->removeElement(geometryElement);
+        SelectionFactory::removeElementFromSelectionContents(*this->contents, geometryElement);
+        this->contents->invalidateViewBuffer();
         auto deleteAction = std::make_unique<DeleteUndoAction>(this->sourcePage, false);
         deleteAction->addElement(this->sourceLayer, std::move(pos.e), pos.pos);
         this->undo->addUndoAction(std::move(deleteAction));
     } else {
-        this->activeGeometryElement->replaceGeometry(after);
+        geometryElement->replaceGeometry(after);
         this->undo->addUndoAction(std::make_unique<GeometryTopologyUndoAction>(
-                this->sourcePage, this->activeGeometryElement, before, after,
+                this->sourcePage, geometryElement, before, after,
                 this->activeGeometryEdges.size() > 1U ? _("Delete geometry edges") : _("Delete geometry edge")));
     }
     clearGeometryVertexSelection();
     this->hoveredGeometryElement = nullptr;
     this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
-    rebaseSelectionBounds();
-    this->view->getPage()->fireElementChanged(this->activeGeometryElement);
+    if (getInsertionOrder().empty()) {
+        this->x = 0.0;
+        this->y = 0.0;
+        this->width = 0.0;
+        this->height = 0.0;
+        this->snappedBounds = Rectangle<double>();
+        updateMatrix();
+    } else {
+        rebaseSelectionBounds();
+    }
+    if (!after.vertices().empty() || !after.edges().empty()) {
+        this->view->getPage()->fireElementChanged(geometryElement);
+    }
     this->view->getNoteView()->repaintSelection();
     return true;
 }
@@ -1623,16 +1659,18 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
     double ymin = std::min(y1, y2);
     double ymax = std::max(y1, y2);
 
-    cairo_matrix_transform_point(&this->cmatrix, &x, &y);
+    double selectionX = x;
+    double selectionY = y;
+    cairo_matrix_transform_point(&this->cmatrix, &selectionX, &selectionY);
 
-    if (selectGeometryVertexHandleAt(x, y, zoom)) {
+    if (selectGeometryVertexHandleAt(selectionX, selectionY, zoom)) {
         this->hoveredGeometryElement = nullptr;
         this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
         return CURSOR_SELECTION_GEOMETRY_VERTEX;
     }
     this->hoveredGeometryVertexElement = nullptr;
     this->hoveredGeometryVertex = vn::geom::InvalidVertexId;
-    if (selectGeometryEdgeAt(x, y, zoom)) {
+    if (selectGeometryEdgeAt(selectionX, selectionY, zoom)) {
         return CURSOR_SELECTION_GEOMETRY_EDGE;
     }
     this->hoveredGeometryVertexElement = nullptr;
@@ -1643,58 +1681,63 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
     const int EDGE_PADDING = (this->btnWidth / 2) + 2;
     const int BORDER_PADDING = (this->btnWidth / 2);
 
-    if (x1 - EDGE_PADDING <= x && x <= x1 + EDGE_PADDING && y1 - EDGE_PADDING <= y && y <= y1 + EDGE_PADDING) {
+    if (x1 - EDGE_PADDING <= selectionX && selectionX <= x1 + EDGE_PADDING && y1 - EDGE_PADDING <= selectionY &&
+        selectionY <= y1 + EDGE_PADDING) {
         return CURSOR_SELECTION_TOP_LEFT;
     }
 
-    if (x2 - EDGE_PADDING <= x && x <= x2 + EDGE_PADDING && y1 - EDGE_PADDING <= y && y <= y1 + EDGE_PADDING) {
+    if (x2 - EDGE_PADDING <= selectionX && selectionX <= x2 + EDGE_PADDING && y1 - EDGE_PADDING <= selectionY &&
+        selectionY <= y1 + EDGE_PADDING) {
         return CURSOR_SELECTION_TOP_RIGHT;
     }
 
-    if (x1 - EDGE_PADDING <= x && x <= x1 + EDGE_PADDING && y2 - EDGE_PADDING <= y && y <= y2 + EDGE_PADDING) {
+    if (x1 - EDGE_PADDING <= selectionX && selectionX <= x1 + EDGE_PADDING && y2 - EDGE_PADDING <= selectionY &&
+        selectionY <= y2 + EDGE_PADDING) {
         return CURSOR_SELECTION_BOTTOM_LEFT;
     }
 
-    if (x2 - EDGE_PADDING <= x && x <= x2 + EDGE_PADDING && y2 - EDGE_PADDING <= y && y <= y2 + EDGE_PADDING) {
+    if (x2 - EDGE_PADDING <= selectionX && selectionX <= x2 + EDGE_PADDING && y2 - EDGE_PADDING <= selectionY &&
+        selectionY <= y2 + EDGE_PADDING) {
         return CURSOR_SELECTION_BOTTOM_RIGHT;
     }
 
-    if (xmin - (DELETE_PADDING + this->btnWidth) - BORDER_PADDING <= x &&
-        x <= xmin - (DELETE_PADDING + this->btnWidth) + BORDER_PADDING && y1 - BORDER_PADDING <= y &&
-        y <= y1 + BORDER_PADDING) {
+    if (xmin - (DELETE_PADDING + this->btnWidth) - BORDER_PADDING <= selectionX &&
+        selectionX <= xmin - (DELETE_PADDING + this->btnWidth) + BORDER_PADDING &&
+        y1 - BORDER_PADDING <= selectionY && selectionY <= y1 + BORDER_PADDING) {
         return CURSOR_SELECTION_DELETE;
     }
 
 
-    if (supportRotation && xmax - BORDER_PADDING + ROTATE_PADDING + this->btnWidth <= x &&
-        x <= xmax + BORDER_PADDING + ROTATE_PADDING + this->btnWidth && (y2 + y1) / 2 - 4 - BORDER_PADDING <= y &&
-        (y2 + y1) / 2 + 4 + BORDER_PADDING >= y) {
+    if (supportRotation && xmax - BORDER_PADDING + ROTATE_PADDING + this->btnWidth <= selectionX &&
+        selectionX <= xmax + BORDER_PADDING + ROTATE_PADDING + this->btnWidth &&
+        (y2 + y1) / 2 - 4 - BORDER_PADDING <= selectionY &&
+        (y2 + y1) / 2 + 4 + BORDER_PADDING >= selectionY) {
         return CURSOR_SELECTION_ROTATE;
     }
 
     if (!this->preserveAspectRatio) {
-        if (xmin <= x && x <= xmax) {
-            if (y1 - BORDER_PADDING <= y && y <= y1 + BORDER_PADDING) {
+        if (xmin <= selectionX && selectionX <= xmax) {
+            if (y1 - BORDER_PADDING <= selectionY && selectionY <= y1 + BORDER_PADDING) {
                 return CURSOR_SELECTION_TOP;
             }
 
-            if (y2 - BORDER_PADDING <= y && y <= y2 + BORDER_PADDING) {
+            if (y2 - BORDER_PADDING <= selectionY && selectionY <= y2 + BORDER_PADDING) {
                 return CURSOR_SELECTION_BOTTOM;
             }
         }
 
-        if (ymin <= y && y <= ymax) {
-            if (x1 - BORDER_PADDING <= x && x <= x1 + BORDER_PADDING) {
+        if (ymin <= selectionY && selectionY <= ymax) {
+            if (x1 - BORDER_PADDING <= selectionX && selectionX <= x1 + BORDER_PADDING) {
                 return CURSOR_SELECTION_LEFT;
             }
 
-            if (x2 - BORDER_PADDING <= x && x <= x2 + BORDER_PADDING) {
+            if (x2 - BORDER_PADDING <= selectionX && selectionX <= x2 + BORDER_PADDING) {
                 return CURSOR_SELECTION_RIGHT;
             }
         }
     }
 
-    if (xmin <= x && x <= xmax && ymin <= y && y <= ymax) {
+    if (xmin <= selectionX && selectionX <= xmax && ymin <= selectionY && selectionY <= ymax) {
         return CURSOR_SELECTION_MOVE;
     }
 

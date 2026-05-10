@@ -8,11 +8,14 @@
 
 #include <QWidget>
 
+#include <vector>
+
 #include "QtToolState.h"
 
 class QDoubleSpinBox;
 class QToolButton;
 class QCheckBox;
+class QLabel;
 
 class QtToolPalette: public QWidget {
     Q_OBJECT
@@ -20,6 +23,7 @@ class QtToolPalette: public QWidget {
 public:
     explicit QtToolPalette(QWidget* parent = nullptr);
 
+    void setCompactToolbarMode(bool compact);
     void syncFromToolState(const QtToolState& state);
 
 Q_SIGNALS:
@@ -31,12 +35,17 @@ Q_SIGNALS:
 private:
     void pickColor();
     void updateSwatchColor();
+    void selectPresetColor(Color color);
+    void updatePresetButtons();
 
 private:
     QToolButton* colorSwatch = nullptr;
+    QLabel* widthLabel = nullptr;
     QDoubleSpinBox* widthSpinner = nullptr;
     QCheckBox* pressureCheck = nullptr;
     QCheckBox* segmentCheck = nullptr;
+    std::vector<QToolButton*> presetButtons;
     Color currentColor{0x33, 0x33, 0xcc, 0xff};
     QtToolType currentTool = QtToolType::Hand;
+    bool compactToolbarMode = false;
 };

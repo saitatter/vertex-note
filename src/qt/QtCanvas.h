@@ -79,6 +79,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void showEvent(QShowEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -172,6 +174,7 @@ private:
     bool rubberBanding = false;
     bool movingSelection = false;
     bool shapeDrawing = false;
+    bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;

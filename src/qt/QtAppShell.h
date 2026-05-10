@@ -19,6 +19,10 @@
 #include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
 
+class QDoubleSpinBox;
+class QFontComboBox;
+class QToolButton;
+
 class QtAppShell: public vn::ui::common::IAppShell {
 public:
     QtAppShell();
@@ -41,6 +45,8 @@ private:
     void registerBootstrapCommands();
     void wireWindowState();
     void rebuildToolbar();
+    void syncToolbarWidgets();
+    void syncFooterWidgets();
     void updateWindowTitle();
     void updateStatusBarLabels();
     void newSession();
@@ -156,6 +162,10 @@ private:
     bool presentationMode = false;
     QtSettings currentSettings;
     std::vector<ElementPtr> elementClipboard;
+    QToolButton* selectionToolButton = nullptr;
+    QToolButton* drawingToolButton = nullptr;
+    QFontComboBox* fontFamilyCombo = nullptr;
+    QDoubleSpinBox* fontSizeSpinner = nullptr;
 
     // Navigation history
     struct NavPoint {

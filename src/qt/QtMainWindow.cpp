@@ -6,6 +6,10 @@
 
 #include "QtMainWindow.h"
 
+#include <QComboBox>
+#include <QMenuBar>
+#include <QSlider>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QStyle>
 #include <QToolBar>
@@ -14,29 +18,92 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     setObjectName("vertexNoteQtMainWindow");
     setWindowTitle("VertexNote");
     resize(1440, 900);
+    setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks | QMainWindow::GroupedDragging);
+    menuBar()->setNativeMenuBar(false);
+    setStyleSheet(QStringLiteral(
+            "#vertexNoteQtMainWindow { background: #d6d2c9; }"
+            "QMenuBar { background: #f7f7f7; border-bottom: 1px solid #d8d8d8; }"
+            "QMenuBar::item { padding: 3px 8px; }"
+            "QToolBar#vertexNoteQtDocumentToolBar, QToolBar#vertexNoteQtToolsToolBar, QToolBar#vertexNoteQtFooterToolBar {"
+            " background: #f7f7f7; border: none; border-bottom: 1px solid #d8d8d8; spacing: 0px; padding: 1px 3px; }"
+            "QToolBar#vertexNoteQtFooterToolBar { border-top: 1px solid #d8d8d8; border-bottom: none; }"
+            "QToolBar QToolButton { margin: 0px; padding: 1px; min-width: 24px; min-height: 24px; border: 1px solid transparent; border-radius: 2px; }"
+            "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
+            "#vertexNoteQtFamilyToolButton { padding-right: 10px; min-width: 26px; }"
+            "#vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner { min-height: 22px; margin: 0 2px; }"
+            "#vertexNoteQtFooterPageSpin, #vertexNoteQtFooterLayerCombo { min-height: 22px; margin: 0 2px; }"
+            "#vertexNoteQtFooterZoomSlider { margin: 0 4px; }"
+            "QDockWidget { titlebar-close-icon: none; titlebar-normal-icon: none; }"
+            "QDockWidget::title { background: #f5f5f5; border-bottom: 1px solid #d8d8d8; padding: 4px 6px; text-align: left; }"
+            "QMainWindow::separator { width: 1px; height: 1px; background: #d8d8d8; }"
+            "QTabBar::tab { background: #f0efed; border: 1px solid #d7d3cb; padding: 4px 8px; margin-right: 1px; }"
+            "QTabBar::tab:selected { background: #f7f7f7; }"
+            "#vertexNoteQtPageSidebar QListWidget, #vertexNoteQtLayerPanel QListWidget {"
+            " background: #fbfbfb; border: none; outline: none; }"
+            "#vertexNoteQtLayerPanel QListWidget::item:selected {"
+            " background: #e5efff; border: 1px solid #96b6ff; }"
+            "#vertexNoteQtPageSidebar QListWidget::item:selected { background: #fff4f4; border: 1px solid #d85c5c; }"
+            "QStatusBar { background: #f7f7f7; border-top: 1px solid #d8d8d8; }"));
 
-    this->toolBar = addToolBar(QStringLiteral("Main"));
-    this->toolBar->setObjectName(QStringLiteral("vertexNoteQtMainToolBar"));
-    this->toolBar->setMovable(false);
-    this->toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    this->toolBar->setIconSize(QSize(22, 22));
+    this->documentToolBar = addToolBar(QStringLiteral("Document"));
+    this->documentToolBar->setObjectName(QStringLiteral("vertexNoteQtDocumentToolBar"));
+    this->documentToolBar->setMovable(false);
+    this->documentToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->documentToolBar->setIconSize(QSize(20, 20));
+
+    addToolBarBreak();
+    this->toolsToolBarWidget = addToolBar(QStringLiteral("Tools"));
+    this->toolsToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtToolsToolBar"));
+    this->toolsToolBarWidget->setMovable(false);
+    this->toolsToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->toolsToolBarWidget->setIconSize(QSize(20, 20));
+
+    this->footerToolBarWidget = new QToolBar(QStringLiteral("Footer"), this);
+    this->footerToolBarWidget->setObjectName(QStringLiteral("vertexNoteQtFooterToolBar"));
+    this->footerToolBarWidget->setMovable(false);
+    this->footerToolBarWidget->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->footerToolBarWidget->setIconSize(QSize(18, 18));
+    addToolBar(Qt::BottomToolBarArea, this->footerToolBarWidget);
 
     this->canvasWidget = new QtCanvas(this);
     setCentralWidget(this->canvasWidget);
 
-    this->layerPanelWidget = new QtLayerPanel(this);
-    addDockWidget(Qt::RightDockWidgetArea, this->layerPanelWidget);
-
     this->pageSidebarWidget = new QtPageSidebar(this);
     addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
 
+    this->layerPanelWidget = new QtLayerPanel(this);
+    addDockWidget(Qt::LeftDockWidgetArea, this->layerPanelWidget);
+    tabifyDockWidget(this->pageSidebarWidget, this->layerPanelWidget);
+    this->pageSidebarWidget->raise();
+    resizeDocks({this->pageSidebarWidget}, {112}, Qt::Horizontal);
+
     this->toolPaletteWidget = new QtToolPalette(this);
     this->toolPaletteWidget->setVisible(false);  // Hidden until a drawing tool is selected
+
+    this->footerPageSpinWidget = new QSpinBox(this);
+    this->footerPageSpinWidget->setObjectName(QStringLiteral("vertexNoteQtFooterPageSpin"));
+    this->footerPageSpinWidget->setMinimum(1);
+    this->footerPageSpinWidget->setMaximum(1);
+    this->footerPageSpinWidget->setFixedWidth(64);
+
+    this->footerLayerComboWidget = new QComboBox(this);
+    this->footerLayerComboWidget->setObjectName(QStringLiteral("vertexNoteQtFooterLayerCombo"));
+    this->footerLayerComboWidget->setMinimumContentsLength(10);
+    this->footerLayerComboWidget->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+
+    this->footerZoomSliderWidget = new QSlider(Qt::Horizontal, this);
+    this->footerZoomSliderWidget->setObjectName(QStringLiteral("vertexNoteQtFooterZoomSlider"));
+    this->footerZoomSliderWidget->setRange(10, 800);
+    this->footerZoomSliderWidget->setFixedWidth(140);
 
     // Persistent status bar widgets
     this->pageLabel = new QLabel(QStringLiteral("Page 1 of 1"), this);
     this->layerLabel = new QLabel(QStringLiteral("Layer: Layer 1"), this);
     this->zoomLabel = new QLabel(QStringLiteral("100%"), this);
+    this->pageLabel->hide();
+    this->layerLabel->hide();
+    this->zoomLabel->hide();
     statusBar()->addPermanentWidget(this->pageLabel);
     statusBar()->addPermanentWidget(this->layerLabel);
     statusBar()->addPermanentWidget(this->zoomLabel);
@@ -48,13 +115,23 @@ auto QtMainWindow::canvas() -> QtCanvas* { return this->canvasWidget; }
 
 auto QtMainWindow::commandHost() -> QtCommandHost* { return &this->commandRegistry; }
 
-auto QtMainWindow::mainToolBar() -> QToolBar* { return this->toolBar; }
+auto QtMainWindow::mainToolBar() -> QToolBar* { return this->documentToolBar; }
+
+auto QtMainWindow::toolsToolBar() -> QToolBar* { return this->toolsToolBarWidget; }
+
+auto QtMainWindow::footerToolBar() -> QToolBar* { return this->footerToolBarWidget; }
 
 auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget; }
 
 auto QtMainWindow::pageSidebar() -> QtPageSidebar* { return this->pageSidebarWidget; }
 
 auto QtMainWindow::toolPalette() -> QtToolPalette* { return this->toolPaletteWidget; }
+
+auto QtMainWindow::footerPageSpin() -> QSpinBox* { return this->footerPageSpinWidget; }
+
+auto QtMainWindow::footerLayerCombo() -> QComboBox* { return this->footerLayerComboWidget; }
+
+auto QtMainWindow::footerZoomSlider() -> QSlider* { return this->footerZoomSliderWidget; }
 
 auto QtMainWindow::pageStatusLabel() -> QLabel* { return this->pageLabel; }
 

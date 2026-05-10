@@ -17,6 +17,9 @@
 QtLayerPanel::QtLayerPanel(QWidget* parent): QDockWidget(QStringLiteral("Layers"), parent) {
     setObjectName(QStringLiteral("vertexNoteQtLayerPanel"));
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
+    setMinimumWidth(96);
+    setMaximumWidth(170);
 
     auto* container = new QWidget(this);
     auto* layout = new QVBoxLayout(container);

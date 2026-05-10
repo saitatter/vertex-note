@@ -24,6 +24,7 @@ public:
 
     void setDocumentController(QtDocumentController* controller);
     void setContentRenderer(vn::view::render::PageContentRenderer* renderer);
+    void setCurrentPage(std::size_t pageIndex);
     void refresh();
 
 Q_SIGNALS:
@@ -37,4 +38,5 @@ private:
     QListWidget* pageList = nullptr;
     QtDocumentController* controller = nullptr;
     vn::view::render::PageContentRenderer* contentRenderer = nullptr;
+    std::size_t currentPageIndex = 0U;
 };
