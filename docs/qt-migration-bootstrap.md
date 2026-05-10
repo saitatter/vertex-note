@@ -152,7 +152,8 @@ The shell migration now follows this order:
 
 1. Officially deprecate the GTK shell and stop treating it as the primary UI.
 2. Isolate the remaining Cairo/GTK paths into explicit legacy boundaries
-   (`legacy/gtk`, `legacy/render`).
+   (`legacy/gtk`, `legacy/render`). The build now tracks these surfaces through
+   `src/legacy/LegacyBoundaries.cmake` and reports their size during configure.
 3. Make the Qt shell the only active application shell.
 4. Remove Cairo once no active runtime, preview, export, or print path still
    depends on it.
