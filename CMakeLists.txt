@@ -222,7 +222,19 @@ else ()
     message(STATUS "Disable GtkSourceView TeX syntax highlighting")
 endif ()
 
+option(ENABLE_LEGACY_GTK_SHELL
+        "Build the legacy GTK3 shell entry points (deprecated; kept only as fallback while Qt migration completes)"
+        ON)
 option(ENABLE_QT_SHELL "Build the Qt Widgets shell" OFF)
+if (ENABLE_LEGACY_GTK_SHELL)
+    message(DEPRECATION
+            "ENABLE_LEGACY_GTK_SHELL is deprecated. The Qt shell is the forward development path; "
+            "the GTK3 shell remains a fallback only during migration.")
+elseif (NOT ENABLE_QT_SHELL)
+    message(FATAL_ERROR
+            "At least one application shell must be enabled. Turn on ENABLE_QT_SHELL or ENABLE_LEGACY_GTK_SHELL.")
+endif ()
+
 if (ENABLE_QT_SHELL)
     find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport)
     message(STATUS "Enable Qt Widgets shell")

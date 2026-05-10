@@ -4,8 +4,9 @@
 ![GitHub Release](https://img.shields.io/github/v/release/saitatter/vertex-note)
 [![Issues](https://img.shields.io/github/issues/saitatter/vertex-note)](https://github.com/saitatter/vertex-note/issues)
 ![Made with C++](https://img.shields.io/badge/Made%20with-C%2B%2B-00599C?logo=cplusplus&logoColor=white)
-![GTK3](https://img.shields.io/badge/GTK-3-4A90D9?logo=gtk&logoColor=white)
-![Cairo](https://img.shields.io/badge/Rendering-Cairo-8A2BE2)
+![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)
+![GTK3 Legacy](https://img.shields.io/badge/GTK-3%20Legacy-4A90D9?logo=gtk&logoColor=white)
+![Cairo Legacy](https://img.shields.io/badge/Rendering-Cairo%20Legacy-8A2BE2)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
 > CAD-inspired technical note-taking based on Xournal++, with precision geometry, vertex editing, snapping, and future lightweight 3D wireframe tools.
@@ -28,7 +29,7 @@ VertexNote is a long-term fork of **Xournal++**. The goal is not to replace Xour
 
 ## 🧭 Current Status
 
-VertexNote has a working geometry system and an alternative Qt Widgets shell alongside the original GTK3 UI.
+VertexNote has a working geometry system and a Qt Widgets shell that is now the forward development path. The inherited GTK3 shell remains available as a legacy fallback while the migration is completed.
 
 | Area | Status |
 |------|--------|
@@ -41,7 +42,8 @@ VertexNote has a working geometry system and an alternative Qt Widgets shell alo
 | Click-based shape tools | ✅ Done |
 | Geometry constraints | ✅ Done (6 kinds) |
 | Object-based rendering | ✅ Done |
-| Qt Widgets shell | ✅ Done (14 phases) |
+| Qt Widgets shell | ✅ Done (forward path) |
+| Legacy GTK3 shell | ⚠️ Deprecated fallback |
 | `.xopp` extension metadata | 🚧 Planned |
 | 3D wireframe layer | 🧪 Future |
 
@@ -72,8 +74,7 @@ VertexNote keeps Xournal++'s existing stroke model for handwritten content and a
 
 ### Qt Widgets shell
 
-An alternative Qt6-based shell (`ENABLE_QT_SHELL`) provides the same document editing workflow
-without the GTK3 dependency. It includes:
+The Qt6-based shell (`ENABLE_QT_SHELL`) is the active product shell and the recommended path for new feature work. It includes:
 
 - Full document open/save/export (`.xopp`, `.xoj`, `.xopt`, `.pdf`)
 - Pressure-sensitive pen, highlighter, eraser (whole-stroke & segment)
@@ -96,12 +97,14 @@ The current recommended Windows path is **MSYS2 MinGW64**.
 .\scripts\mingw64-dev.ps1
 ```
 
-### GTK shell (default)
+### Legacy GTK shell
 
 - `.\scripts\mingw64-dev.ps1 configure`
 - `.\scripts\mingw64-dev.ps1 build`
 - `.\scripts\mingw64-dev.ps1 vertex-tests`
 - `.\scripts\mingw64-dev.ps1 run`
+
+The GTK3 shell is deprecated and kept only as a fallback while Cairo/GTK-specific paths are being isolated.
 
 ### Qt shell
 
@@ -109,6 +112,8 @@ Requires `mingw-w64-x86_64-qt6-base` and `mingw-w64-x86_64-qt6-printsupport`.
 
 - `.\scripts\mingw64-dev.ps1 build-qt`
 - `.\scripts\mingw64-dev.ps1 run-qt`
+
+For active shell work, prefer the Qt path.
 
 See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and manual commands.
 
@@ -162,7 +167,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are required. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
+GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are still required for the legacy shell and several migration-era rendering/export paths. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
 
 - Linux setup: `linux-setup/`
 - macOS setup: `mac-setup/`

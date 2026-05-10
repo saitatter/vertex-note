@@ -41,64 +41,66 @@ add_subdirectory(core)
 # vertex-note-wrapper: catches crashes
 ##############################
 
-# The crash dialog's ui file is stored as gresource to make sure the wrapper is standalone
-find_program(GLIB_COMPILE_RESOURCES NAMES glib-compile-resources REQUIRED)
+if (ENABLE_LEGACY_GTK_SHELL)
+  # The crash dialog's ui file is stored as gresource to make sure the wrapper is standalone
+  find_program(GLIB_COMPILE_RESOURCES NAMES glib-compile-resources REQUIRED)
 
-set(XOURNAL_WRAPPER_GRESOURCE_C   vertex-note-wrapper.gresource.c)
-set(XOURNAL_WRAPPER_GRESOURCE_XML exe/vertex-note-wrapper.gresource.xml)
+  set(XOURNAL_WRAPPER_GRESOURCE_C   vertex-note-wrapper.gresource.c)
+  set(XOURNAL_WRAPPER_GRESOURCE_XML exe/vertex-note-wrapper.gresource.xml)
 
-add_custom_command(
-    OUTPUT ${XOURNAL_WRAPPER_GRESOURCE_C}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${GLIB_COMPILE_RESOURCES}
-    ARGS
-        --generate-source
-        --sourcedir=${CMAKE_SOURCE_DIR}
-        --target=${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
-        ${XOURNAL_WRAPPER_GRESOURCE_XML}
-    VERBATIM
-    MAIN_DEPENDENCY ${XOURNAL_WRAPPER_GRESOURCE_XML}
-    DEPENDS
-        ${CMAKE_SOURCE_DIR}/ui/crashDialog.glade
-)
+  add_custom_command(
+      OUTPUT ${XOURNAL_WRAPPER_GRESOURCE_C}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND ${GLIB_COMPILE_RESOURCES}
+      ARGS
+          --generate-source
+          --sourcedir=${CMAKE_SOURCE_DIR}
+          --target=${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
+          ${XOURNAL_WRAPPER_GRESOURCE_XML}
+      VERBATIM
+      MAIN_DEPENDENCY ${XOURNAL_WRAPPER_GRESOURCE_XML}
+      DEPENDS
+          ${CMAKE_SOURCE_DIR}/ui/crashDialog.glade
+  )
 
-add_custom_target(
-    vertexnote-wrapper-resource
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
-)
+  add_custom_target(
+      vertexnote-wrapper-resource
+      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
+  )
 
-add_executable(vertexnote-wrapper exe/VertexNote-wrapper.cpp ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C})
-set_source_files_properties(
-    ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
-    PROPERTIES GENERATED TRUE
-)
+  add_executable(vertexnote-wrapper exe/VertexNote-wrapper.cpp ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C})
+  set_source_files_properties(
+      ${CMAKE_CURRENT_BINARY_DIR}/${XOURNAL_WRAPPER_GRESOURCE_C}
+      PROPERTIES GENERATED TRUE
+  )
 
-add_dependencies(vertexnote-wrapper vertexnote-wrapper-resource)
-target_link_libraries(vertexnote-wrapper
-        PUBLIC vertexnote::defaults vertexnote::util vertexnote::external_modules)
-set_target_properties(vertexnote-wrapper PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-        OUTPUT_NAME "${VERTEX_NOTE_WRAPPER_BINARY_NAME}"
-        MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
-        WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
-        )
-target_include_directories(vertexnote-wrapper PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+  add_dependencies(vertexnote-wrapper vertexnote-wrapper-resource)
+  target_link_libraries(vertexnote-wrapper
+          PUBLIC vertexnote::defaults vertexnote::util vertexnote::external_modules)
+  set_target_properties(vertexnote-wrapper PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+          OUTPUT_NAME "${VERTEX_NOTE_WRAPPER_BINARY_NAME}"
+          MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
+          WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
+          )
+  target_include_directories(vertexnote-wrapper PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 
-##############################
-# vertexnote main program
-##############################
+  ##############################
+  # vertexnote main program
+  ##############################
 
-add_executable(vertexnote exe/VertexNote.cpp)
-target_link_libraries(vertexnote PRIVATE vertexnote::core vertexnote::util)
-set_target_properties(vertexnote PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-        OUTPUT_NAME "${VERTEX_NOTE_BINARY_NAME}"
-        MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
-        WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
-        )
-if (WIN32)
-  # Make sure Windows executable has all symbols
-  target_link_options(vertexnote PRIVATE "-Wl,--export-all-symbols")
-endif()
+  add_executable(vertexnote exe/VertexNote.cpp)
+  target_link_libraries(vertexnote PRIVATE vertexnote::core vertexnote::util)
+  set_target_properties(vertexnote PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+          OUTPUT_NAME "${VERTEX_NOTE_BINARY_NAME}"
+          MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>
+          WIN32_EXECUTABLE $<IF:$<PLATFORM_ID:Windows>,TRUE,${CMAKE_WIN32_EXECUTABLE}>
+          )
+  if (WIN32)
+    # Make sure Windows executable has all symbols
+    target_link_options(vertexnote PRIVATE "-Wl,--export-all-symbols")
+  endif()
+endif ()
 
 ###############################
 # Generate icons
@@ -112,14 +114,14 @@ endif()
 # e.g. exe/macos/CMakeLists.txt
 ##############################
 
-if (APPLE)
+if (ENABLE_LEGACY_GTK_SHELL AND APPLE)
   # MacOS specific source files
   file (GLOB vertexnote-sources-osx exe/osx/*.cpp exe/osx/*.h)
   target_sources(vertexnote PRIVATE ${vertexnote-sources-osx})
   target_include_directories(vertexnote PRIVATE exe)
 endif()
 
-if (WIN32)
+if (ENABLE_LEGACY_GTK_SHELL AND WIN32)
   # generate .ico from .png
   find_package(ImageMagick REQUIRED COMPONENTS magick)
   set (ICON_SIZES 16 32 48 256)
@@ -165,14 +167,16 @@ endif ()
 # Until here
 ################################
 
-install(TARGETS vertexnote-wrapper
-        RUNTIME DESTINATION bin
-        COMPONENT vertex-note-wrapper
-        )
-install(TARGETS vertexnote
-        RUNTIME DESTINATION bin
-        COMPONENT vertex-note
-        )
+if (ENABLE_LEGACY_GTK_SHELL)
+  install(TARGETS vertexnote-wrapper
+          RUNTIME DESTINATION bin
+          COMPONENT vertex-note-wrapper
+          )
+  install(TARGETS vertexnote
+          RUNTIME DESTINATION bin
+          COMPONENT vertex-note
+          )
+endif ()
 
 if (ENABLE_QT_SHELL)
   add_subdirectory(qt)

@@ -26,7 +26,7 @@ This document tracks the executable slices of the Qt migration.
 
 ### Qt shell (`src/qt/`)
 
-`ENABLE_QT_SHELL` adds an optional Qt Widgets bootstrap target.
+`ENABLE_QT_SHELL` adds the forward-path Qt Widgets shell target.
 
 - **App bootstrap**: `QApplication`, `QMainWindow`, full `IAppShell`
   implementation (`QtAppShell`).
@@ -133,7 +133,8 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
 
 ## Intentional Limits
 
-- The GTK shell remains the primary shell for plugin execution (Lua runtime).
+- The GTK shell is now a deprecated fallback shell. It remains available while
+  plugin/runtime parity and the remaining Cairo-bound workflows are isolated.
 - The Qt shell opens real core documents and supports the full drawing, editing,
   and document management workflow, but does not host the GTK `Control` class.
   Tool management, undo/redo, and all editing operations are implemented
@@ -144,6 +145,17 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run-qt
   behavior rather than missing top-level toolbar tools. The largest remaining
   shell-visible gaps are now concentrated in plugin/runtime parity and final
   screenshot-level chrome matching.
+
+## GTK/Cairo Deprecation Order
+
+The shell migration now follows this order:
+
+1. Officially deprecate the GTK shell and stop treating it as the primary UI.
+2. Isolate the remaining Cairo/GTK paths into explicit legacy boundaries
+   (`legacy/gtk`, `legacy/render`).
+3. Make the Qt shell the only active application shell.
+4. Remove Cairo once no active runtime, preview, export, or print path still
+   depends on it.
 
 ## Completed Slices
 
