@@ -1260,10 +1260,11 @@ void QtAppShell::rebuildToolbar() {
     this->toolbarColorSelectButton = nullptr;
     this->toolbarColorButtons.clear();
     const auto wantedToolbarProfile =
-            this->currentSettings.toolbarProfileId.empty() ? std::string("All in") : this->currentSettings.toolbarProfileId;
+            this->currentSettings.toolbarProfileId.empty() ? std::string(QT_GTK_PARITY_PROFILE_ID)
+                                                           : this->currentSettings.toolbarProfileId;
     this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), wantedToolbarProfile);
     if (!this->activeToolbarProfile) {
-        this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), "All in");
+        this->activeToolbarProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), QT_GTK_PARITY_PROFILE_ID);
     }
 
     const auto setStandardIcon = [&](std::string_view id, QStyle::StandardPixmap sp) {
@@ -1839,6 +1840,8 @@ void QtAppShell::rebuildToolbar() {
             if (const auto* items = this->activeToolbarProfile->itemsFor(key)) {
                 return *items;
             }
+
+            return {};
         }
 
         std::vector<std::string> items;
