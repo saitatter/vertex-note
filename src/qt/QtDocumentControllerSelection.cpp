@@ -1,0 +1,888 @@
+/*
+ * VertexNote
+ *
+ * Qt document controller element selection helpers.
+ */
+
+#include "QtDocumentController.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <limits>
+#include <optional>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "model/Element.h"
+#include "model/Layer.h"
+#include "model/NotePage.h"
+
+auto QtDocumentController::hitTestElement(std::size_t pageIndex, double pageX, double pageY,
+                                          double maxDistance) const -> const Element* {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+
+    const Element* best = nullptr;
+    double bestDist = maxDistance;
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return nullptr;
+    }
+
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (!element) {
+                continue;
+            }
+            const double dist = element->distanceTo(pageX, pageY);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = element;
+            }
+        }
+    }
+    return best;
+}
+
+void QtDocumentController::selectElementAt(std::size_t pageIndex, double pageX, double pageY, double maxDistance,
+                                           bool additive) {
+    const Element* hit = hitTestElement(pageIndex, pageX, pageY, maxDistance);
+    if (!hit) {
+        if (!additive) {
+            clearElementSelection();
+        }
+        return;
+    }
+
+    if (additive && this->currentSelection && this->currentSelection->pageIndex == pageIndex) {
+        auto& elems = this->currentSelection->elements;
+        auto it = std::find(elems.begin(), elems.end(), hit);
+        if (it != elems.end()) {
+            elems.erase(it);
+            if (elems.empty()) {
+                this->currentSelection.reset();
+            }
+        } else {
+            elems.push_back(hit);
+        }
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = {hit}};
+    }
+}
+
+void QtDocumentController::selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return;
+    }
+
+    std::vector<const Element*> hits;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (!element) {
+                continue;
+            }
+            if (element->intersectsArea(x, y, w, h)) {
+                hits.push_back(element);
+            }
+        }
+    }
+
+    if (hits.empty()) {
+        this->currentSelection.reset();
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(hits)};
+    }
+}
+
+void QtDocumentController::clearElementSelection() { this->currentSelection.reset(); }
+
+auto QtDocumentController::elementSelection() const -> const std::optional<QtElementSelection>& {
+    return this->currentSelection;
+}
+
+auto QtDocumentController::selectionBounds() const -> std::optional<QtSelectionBounds> {
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return std::nullopt;
+    }
+
+    double minX = std::numeric_limits<double>::max();
+    double minY = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double maxY = std::numeric_limits<double>::lowest();
+    bool hasElement = false;
+
+    for (const auto* element: this->currentSelection->elements) {
+        if (!element) {
+            continue;
+        }
+        const auto bounds = element->boundingRect();
+        minX = std::min(minX, bounds.x);
+        minY = std::min(minY, bounds.y);
+        maxX = std::max(maxX, bounds.x + bounds.width);
+        maxY = std::max(maxY, bounds.y + bounds.height);
+        hasElement = true;
+    }
+
+    if (!hasElement) {
+        return std::nullopt;
+    }
+    return QtSelectionBounds{.x = minX, .y = minY, .width = maxX - minX, .height = maxY - minY};
+}
+
+auto QtDocumentController::isElementSelected(const Element* e) const -> bool {
+    if (!this->currentSelection || !e) {
+        return false;
+    }
+    const auto& elems = this->currentSelection->elements;
+    return std::find(elems.begin(), elems.end(), e) != elems.end();
+}
+
+auto QtDocumentController::elementsForPluginScope(std::string_view scope, ElementType type,
+                                                  std::size_t currentPageIndex) const
+        -> std::vector<QtPluginElementRef> {
+    std::vector<QtPluginElementRef> result;
+    if (!this->document) {
+        return result;
+    }
+
+    const auto appendLayer = [&](std::size_t pageIndex, std::size_t layerIndex, const Layer* layer) {
+        if (!layer) {
+            return;
+        }
+        for (const auto* element: layer->getElementsView()) {
+            if (element && element->getType() == type) {
+                result.push_back(QtPluginElementRef{.element = element, .pageIndex = pageIndex, .layerIndex = layerIndex});
+            }
+        }
+    };
+
+    if (scope == "selection") {
+        if (!this->currentSelection) {
+            return result;
+        }
+        for (const auto* element: this->currentSelection->elements) {
+            if (element && element->getType() == type) {
+                result.push_back(QtPluginElementRef{
+                        .element = element,
+                        .pageIndex = this->currentSelection->pageIndex,
+                        .layerIndex = 0U,
+                });
+            }
+        }
+        return result;
+    }
+
+    if (scope == "layer") {
+        if (currentPageIndex >= this->document->getPageCount()) {
+            return result;
+        }
+        auto page = this->document->getPage(currentPageIndex);
+        const auto layerIndex = page ? static_cast<std::size_t>(page->getSelectedLayerId()) : 0U;
+        auto layer = page ? page->getSelectedLayer() : nullptr;
+        appendLayer(currentPageIndex, layerIndex, layer);
+        return result;
+    }
+
+    const auto appendPage = [&](std::size_t pageIndex) {
+        auto page = this->document->getPage(pageIndex);
+        if (!page) {
+            return;
+        }
+        const auto& layers = page->getLayers();
+        for (std::size_t layerIndex = 0; layerIndex < layers.size(); ++layerIndex) {
+            appendLayer(pageIndex, layerIndex, layers[layerIndex]);
+        }
+    };
+
+    if (scope == "page") {
+        if (currentPageIndex < this->document->getPageCount()) {
+            appendPage(currentPageIndex);
+        }
+        return result;
+    }
+
+    if (scope == "all") {
+        for (std::size_t pageIndex = 0; pageIndex < this->document->getPageCount(); ++pageIndex) {
+            appendPage(pageIndex);
+        }
+    }
+    return result;
+}
+
+auto QtDocumentController::selectElementsByPluginRefs(std::size_t pageIndex,
+                                                      const std::vector<const Element*>& refs) -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        return false;
+    }
+
+    std::vector<const Element*> selected;
+    selected.reserve(refs.size());
+    for (const auto* candidate: refs) {
+        if (candidate && layer->indexOf(candidate) != Element::InvalidIndex &&
+            std::find(selected.begin(), selected.end(), candidate) == selected.end()) {
+            selected.push_back(candidate);
+        }
+    }
+
+    if (selected.empty()) {
+        this->currentSelection.reset();
+        return false;
+    }
+    this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(selected)};
+    return true;
+}
+
+auto QtDocumentController::colorSelectedElements(Color color) -> bool {
+    if (!this->document || !this->currentSelection || this->currentSelection->elements.empty() ||
+        this->currentSelection->pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    bool changed = false;
+    this->document->lock();
+    auto page = this->document->getPage(this->currentSelection->pageIndex);
+    if (page) {
+        for (auto* layer: page->getLayers()) {
+            if (!layer) {
+                continue;
+            }
+            for (auto& element: layer->getElements()) {
+                const auto* ptr = element.get();
+                if (ptr && std::find(this->currentSelection->elements.begin(), this->currentSelection->elements.end(),
+                                     ptr) != this->currentSelection->elements.end()) {
+                    element->setColor(color);
+                    changed = true;
+                }
+            }
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
+auto QtDocumentController::deleteSelectedElements() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        this->document->unlock();
+        return false;
+    }
+
+    InsertionOrder removedElements;
+    for (const auto* elem: this->currentSelection->elements) {
+        for (auto* layer: page->getLayers()) {
+            if (!layer) {
+                continue;
+            }
+            auto removed = layer->removeElement(elem);
+            if (removed.e) {
+                removedElements.push_back(std::move(removed));
+                break;
+            }
+        }
+    }
+    this->document->unlock();
+
+    if (removedElements.empty()) {
+        return false;
+    }
+
+    std::vector<const Element*> ptrs;
+    ptrs.reserve(removedElements.size());
+    for (const auto& ip: removedElements) {
+        ptrs.push_back(ip.e.get());
+    }
+
+    pushHistory(QtHistoryEntry{
+            .data = QtDeleteHistoryEntry{.pageIndex = pageIndex,
+                                         .removedElements = std::move(removedElements),
+                                         .elementPtrs = std::move(ptrs),
+                                         .text = "Delete selection"}});
+    clearElementSelection();
+    rebuildPageSnapshots();
+    return true;
+}
+
+void QtDocumentController::selectAllElements(std::size_t pageIndex) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return;
+    }
+
+    std::vector<const Element*> allElements;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            if (element) {
+                allElements.push_back(element);
+            }
+        }
+    }
+
+    if (allElements.empty()) {
+        this->currentSelection.reset();
+    } else {
+        this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(allElements)};
+    }
+}
+
+auto QtDocumentController::copySelectedElements() -> std::vector<ElementPtr> {
+    std::vector<ElementPtr> clones;
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return clones;
+    }
+
+    clones.reserve(this->currentSelection->elements.size());
+    for (const auto* elem: this->currentSelection->elements) {
+        if (elem) {
+            clones.push_back(elem->clone());
+        }
+    }
+    return clones;
+}
+
+auto QtDocumentController::cutSelectedElements() -> std::vector<ElementPtr> {
+    auto clones = copySelectedElements();
+    if (!clones.empty()) {
+        (void)deleteSelectedElements();
+    }
+    return clones;
+}
+
+auto QtDocumentController::pasteElements(std::size_t pageIndex, std::vector<ElementPtr> elements, double offsetX,
+                                         double offsetY) -> bool {
+    if (elements.empty() || !this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return false;
+    }
+
+    std::vector<const Element*> pastedPtrs;
+    pastedPtrs.reserve(elements.size());
+    for (auto& elem: elements) {
+        elem->move(offsetX, offsetY);
+        pastedPtrs.push_back(elem.get());
+        layer->addElement(std::move(elem));
+    }
+    this->document->unlock();
+
+    this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(pastedPtrs)};
+    rebuildPageSnapshots();
+    return true;
+}
+
+namespace {
+auto findElementLayer(NotePage* page, const Element* elem) -> Layer* {
+    if (!page || !elem) {
+        return nullptr;
+    }
+    for (auto* layer: page->getLayers()) {
+        if (!layer) {
+            continue;
+        }
+        for (const auto& e: layer->getElements()) {
+            if (e.get() == elem) {
+                return layer;
+            }
+        }
+    }
+    return nullptr;
+}
+}  // namespace
+
+auto QtDocumentController::bringSelectionToFront() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    bool changed = false;
+    for (const auto* elem: this->currentSelection->elements) {
+        auto* layer = findElementLayer(page.get(), elem);
+        if (!layer) {
+            continue;
+        }
+        auto removed = layer->removeElement(elem);
+        if (removed.e) {
+            layer->addElement(std::move(removed.e));
+            changed = true;
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
+auto QtDocumentController::sendSelectionToBack() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    bool changed = false;
+    Element::Index insertIdx = 0;
+    for (const auto* elem: this->currentSelection->elements) {
+        auto* layer = findElementLayer(page.get(), elem);
+        if (!layer) {
+            continue;
+        }
+        auto removed = layer->removeElement(elem);
+        if (removed.e) {
+            layer->insertElement(std::move(removed.e), insertIdx);
+            ++insertIdx;
+            changed = true;
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
+auto QtDocumentController::bringSelectionForward() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    bool changed = false;
+    for (const auto* elem: this->currentSelection->elements) {
+        auto* layer = findElementLayer(page.get(), elem);
+        if (!layer) {
+            continue;
+        }
+        const auto idx = layer->indexOf(elem);
+        if (idx == Element::InvalidIndex) {
+            continue;
+        }
+        const auto maxIdx = static_cast<Element::Index>(layer->getElements().size()) - 1;
+        if (idx < maxIdx) {
+            auto removed = layer->removeElement(elem);
+            if (removed.e) {
+                layer->insertElement(std::move(removed.e), idx + 1);
+                changed = true;
+            }
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
+auto QtDocumentController::sendSelectionBackward() -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || !this->document) {
+        return false;
+    }
+    const auto pageIndex = this->currentSelection->pageIndex;
+    if (pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    bool changed = false;
+    for (const auto* elem: this->currentSelection->elements) {
+        auto* layer = findElementLayer(page.get(), elem);
+        if (!layer) {
+            continue;
+        }
+        const auto idx = layer->indexOf(elem);
+        if (idx == Element::InvalidIndex) {
+            continue;
+        }
+        if (idx > 0) {
+            auto removed = layer->removeElement(elem);
+            if (removed.e) {
+                layer->insertElement(std::move(removed.e), idx - 1);
+                changed = true;
+            }
+        }
+    }
+    this->document->unlock();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
+    return changed;
+}
+
+auto QtDocumentController::beginMoveSelection(double pageX, double pageY) -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return false;
+    }
+
+    this->moveState = QtMoveState{.startX = pageX,
+                                  .startY = pageY,
+                                  .currentDx = 0.0,
+                                  .currentDy = 0.0,
+                                  .elements = this->currentSelection->elements,
+                                  .pageIndex = this->currentSelection->pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateMoveSelection(double pageX, double pageY) -> bool {
+    if (!this->moveState || !this->document) {
+        return false;
+    }
+
+    const double newDx = pageX - this->moveState->startX;
+    const double newDy = pageY - this->moveState->startY;
+    const double deltaDx = newDx - this->moveState->currentDx;
+    const double deltaDy = newDy - this->moveState->currentDy;
+
+    if (std::abs(deltaDx) < 1e-6 && std::abs(deltaDy) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->moveState->elements) {
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->move(deltaDx, deltaDy);
+    }
+    this->document->unlock();
+
+    this->moveState->currentDx = newDx;
+    this->moveState->currentDy = newDy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endMoveSelection() -> bool {
+    if (!this->moveState) {
+        return false;
+    }
+
+    const double dx = this->moveState->currentDx;
+    const double dy = this->moveState->currentDy;
+
+    if (std::abs(dx) < 1e-6 && std::abs(dy) < 1e-6) {
+        this->moveState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtMoveHistoryEntry{.pageIndex = this->moveState->pageIndex,
+                                                   .elements = this->moveState->elements,
+                                                   .dx = dx,
+                                                   .dy = dy,
+                                                   .text = "Move elements"}});
+    this->moveState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelMoveSelection() -> void {
+    if (!this->moveState || !this->document) {
+        this->moveState.reset();
+        return;
+    }
+
+    const double dx = this->moveState->currentDx;
+    const double dy = this->moveState->currentDy;
+    if (std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->moveState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->move(-dx, -dy);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+    this->moveState.reset();
+}
+
+auto QtDocumentController::isMovingSelection() const -> bool { return this->moveState.has_value(); }
+
+auto QtDocumentController::beginScaleSelection(double originX, double originY, double startX, double startY,
+                                               bool scaleX, bool scaleY, bool restoreLineWidth) -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || (!scaleX && !scaleY)) {
+        return false;
+    }
+
+    if (scaleX && std::abs(startX - originX) < 1e-6) {
+        return false;
+    }
+    if (scaleY && std::abs(startY - originY) < 1e-6) {
+        return false;
+    }
+
+    bool preserveAspectRatio = false;
+    bool supportMirroring = true;
+    for (const auto* element: this->currentSelection->elements) {
+        if (!element) {
+            continue;
+        }
+        preserveAspectRatio = preserveAspectRatio || element->rescaleOnlyAspectRatio();
+        supportMirroring = supportMirroring && element->rescaleWithMirror();
+    }
+
+    this->scaleState = QtScaleState{.originX = originX,
+                                    .originY = originY,
+                                    .startX = startX,
+                                    .startY = startY,
+                                    .currentFx = 1.0,
+                                    .currentFy = 1.0,
+                                    .scaleX = scaleX,
+                                    .scaleY = scaleY,
+                                    .preserveAspectRatio = preserveAspectRatio,
+                                    .supportMirroring = supportMirroring,
+                                    .restoreLineWidth = restoreLineWidth,
+                                    .elements = this->currentSelection->elements,
+                                    .pageIndex = this->currentSelection->pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateScaleSelection(double pageX, double pageY) -> bool {
+    if (!this->scaleState || !this->document) {
+        return false;
+    }
+
+    constexpr double minScale = 0.02;
+    auto scaleForAxis = [&](bool enabled, double current, double start, double origin) {
+        if (!enabled) {
+            return 1.0;
+        }
+        double factor = (current - origin) / (start - origin);
+        if (!this->scaleState->supportMirroring) {
+            factor = std::max(minScale, factor);
+        } else if (std::abs(factor) < minScale) {
+            factor = std::copysign(minScale, factor == 0.0 ? 1.0 : factor);
+        }
+        return factor;
+    };
+
+    double newFx = scaleForAxis(this->scaleState->scaleX, pageX, this->scaleState->startX, this->scaleState->originX);
+    double newFy = scaleForAxis(this->scaleState->scaleY, pageY, this->scaleState->startY, this->scaleState->originY);
+
+    if (this->scaleState->preserveAspectRatio) {
+        if (this->scaleState->scaleX && this->scaleState->scaleY) {
+            const double chosen = std::abs(newFx) >= std::abs(newFy) ? newFx : newFy;
+            newFx = chosen;
+            newFy = chosen;
+        } else if (this->scaleState->scaleX) {
+            newFy = newFx;
+        } else if (this->scaleState->scaleY) {
+            newFx = newFy;
+        }
+    }
+
+    const double deltaFx = newFx / this->scaleState->currentFx;
+    const double deltaFy = newFy / this->scaleState->currentFy;
+    if (std::abs(deltaFx - 1.0) < 1e-6 && std::abs(deltaFy - 1.0) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->scaleState->elements) {
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->scale(this->scaleState->originX, this->scaleState->originY, deltaFx, deltaFy, 0.0,
+                           this->scaleState->restoreLineWidth);
+    }
+    this->document->unlock();
+
+    this->scaleState->currentFx = newFx;
+    this->scaleState->currentFy = newFy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endScaleSelection() -> bool {
+    if (!this->scaleState) {
+        return false;
+    }
+
+    const double fx = this->scaleState->currentFx;
+    const double fy = this->scaleState->currentFy;
+    if (std::abs(fx - 1.0) < 1e-6 && std::abs(fy - 1.0) < 1e-6) {
+        this->scaleState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtScaleHistoryEntry{.pageIndex = this->scaleState->pageIndex,
+                                                   .elements = this->scaleState->elements,
+                                                   .originX = this->scaleState->originX,
+                                                   .originY = this->scaleState->originY,
+                                                   .fx = fx,
+                                                   .fy = fy,
+                                                   .restoreLineWidth = this->scaleState->restoreLineWidth,
+                                                   .text = "Scale elements"}});
+    this->scaleState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelScaleSelection() -> void {
+    if (!this->scaleState || !this->document) {
+        this->scaleState.reset();
+        return;
+    }
+
+    const double fx = this->scaleState->currentFx;
+    const double fy = this->scaleState->currentFy;
+    if (std::abs(fx - 1.0) > 1e-6 || std::abs(fy - 1.0) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->scaleState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->scale(this->scaleState->originX, this->scaleState->originY, 1.0 / fx, 1.0 / fy, 0.0,
+                               this->scaleState->restoreLineWidth);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+    this->scaleState.reset();
+}
+
+auto QtDocumentController::isScalingSelection() const -> bool { return this->scaleState.has_value(); }
+
+auto QtDocumentController::beginVerticalSpace(std::size_t pageIndex, double pageY, bool moveAbove) -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        return false;
+    }
+
+    std::vector<const Element*> elements;
+    for (const auto* element: layer->getElementsView().clone()) {
+        if (!element) {
+            continue;
+        }
+        const bool selected = moveAbove ? element->getY() + element->getElementHeight() <= pageY : element->getY() >= pageY;
+        if (selected) {
+            elements.push_back(element);
+        }
+    }
+
+    if (elements.empty()) {
+        return false;
+    }
+
+    this->verticalSpaceState = QtVerticalSpaceState{
+            .startY = pageY, .currentDy = 0.0, .elements = std::move(elements), .pageIndex = pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateVerticalSpace(double pageY) -> bool {
+    if (!this->verticalSpaceState || !this->document) {
+        return false;
+    }
+
+    const double newDy = pageY - this->verticalSpaceState->startY;
+    const double deltaDy = newDy - this->verticalSpaceState->currentDy;
+    if (std::abs(deltaDy) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->verticalSpaceState->elements) {
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->move(0.0, deltaDy);
+    }
+    this->document->unlock();
+
+    this->verticalSpaceState->currentDy = newDy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endVerticalSpace() -> bool {
+    if (!this->verticalSpaceState) {
+        return false;
+    }
+
+    const double dy = this->verticalSpaceState->currentDy;
+    if (std::abs(dy) < 1e-6) {
+        this->verticalSpaceState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtMoveHistoryEntry{.pageIndex = this->verticalSpaceState->pageIndex,
+                                                   .elements = this->verticalSpaceState->elements,
+                                                   .dx = 0.0,
+                                                   .dy = dy,
+                                                   .text = "Insert vertical space"}});
+    this->verticalSpaceState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelVerticalSpace() -> void {
+    if (!this->verticalSpaceState || !this->document) {
+        this->verticalSpaceState.reset();
+        return;
+    }
+
+    const double dy = this->verticalSpaceState->currentDy;
+    if (std::abs(dy) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->verticalSpaceState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->move(0.0, -dy);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+
+    this->verticalSpaceState.reset();
+}
+
+auto QtDocumentController::isVerticalSpacing() const -> bool { return this->verticalSpaceState.has_value(); }

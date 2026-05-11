@@ -81,6 +81,7 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPageBackground.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPages.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPdfText.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerSelection.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtLuaPluginRuntime.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
