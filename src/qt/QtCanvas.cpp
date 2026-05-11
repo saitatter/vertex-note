@@ -628,6 +628,11 @@ void QtCanvas::setSelectionColor(Color color) {
     update();
 }
 
+void QtCanvas::setCanvasBackgroundColor(Color color) {
+    this->canvasBackgroundColor = color;
+    update();
+}
+
 void QtCanvas::setRecolorOptions(bool recolorMainView, Color light, Color dark) {
     this->recolorMainView = recolorMainView;
     this->recolorLight = light;
@@ -664,7 +669,17 @@ void QtCanvas::setTouchDrawingEnabled(bool enabled) {
 
 void QtCanvas::setShapeRecognizerMinSize(double value) { this->shapeRecognizerMinSize = std::max(5.0, value); }
 
+void QtCanvas::setSnapRecognizedShapesEnabled(bool enabled) { this->snapRecognizedShapesEnabled = enabled; }
+
 void QtCanvas::setLaserPointerFadeOutMs(int value) { this->laserPointerFadeOutMs = std::max(100, value); }
+
+void QtCanvas::setTextEditorTabOptions(bool useSpaces, int numberOfSpaces) {
+    this->useSpacesForTab = useSpaces;
+    this->numberOfSpacesForTab = std::clamp(numberOfSpaces, 1, 32);
+    if (this->textEditor) {
+        this->textEditor->setTabOptions(this->useSpacesForTab, this->numberOfSpacesForTab);
+    }
+}
 
 auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
 
@@ -739,7 +754,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
 
     QPainter painter(this);
     vn::view::render::QtPainterRenderContext renderContext(&painter, devicePixelRatioF());
-    painter.fillRect(rect(), QColor(0xdc, 0xda, 0xd5));
+    painter.fillRect(rect(), qColorFromColor(this->canvasBackgroundColor));
 
     QTransform viewTransform;
     viewTransform.translate(-this->scrollX * this->zoomFactor, -this->scrollY * this->zoomFactor);
@@ -2016,7 +2031,8 @@ void QtCanvas::finalizeActiveStroke() {
     } else {
         maybeFinalizeStabilizedStroke();
         added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
-                                                         this->shapeRecognizerMinSize, this->gridSnapEnabled);
+                                                         this->shapeRecognizerMinSize,
+                                                         this->snapRecognizedShapesEnabled);
     }
     this->drawing = false;
     this->activeTouchPointId = -1;
@@ -2301,6 +2317,7 @@ void QtCanvas::beginTextEditAtScreen(const QPointF& screenPoint) {
     // Create text editor if needed
     if (!this->textEditor) {
         this->textEditor = new QtTextEditor(this);
+        this->textEditor->setTabOptions(this->useSpacesForTab, this->numberOfSpacesForTab);
         connect(this->textEditor, &QtTextEditor::editingFinished, this, [this](bool committed) {
             if (committed && this->textEditor->isNewText()) {
                 auto textElem = this->textEditor->newTextElement();

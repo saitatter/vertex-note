@@ -22,6 +22,7 @@ public:
     void beginEditing(Text* textElement, const QRectF& pageRect, double zoom);
     void beginNewText(std::size_t pageIndex, double pageX, double pageY, const QRectF& pageRect, double zoom,
                       Color color, const std::string& fontName, double fontSize);
+    void setTabOptions(bool useSpaces, int numberOfSpaces);
 
     auto commit() -> bool;
     void cancel();
@@ -48,6 +49,8 @@ private:
     std::size_t pageIdx = 0U;
     double textPageX = 0.0;
     double textPageY = 0.0;
+    bool useSpacesForTab = false;
+    int numberOfSpacesForTab = 4;
     bool editing = false;
     bool isNew = false;
 };

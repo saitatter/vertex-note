@@ -2716,8 +2716,17 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.strokeRecognizerMinSize =
             settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
                     .toDouble();
+    this->currentSettings.snapRecognizedShapesEnabled =
+            settings.value(QStringLiteral("tools/snapRecognizedShapesEnabled"),
+                           this->currentSettings.snapRecognizedShapesEnabled)
+                    .toBool();
     this->currentSettings.laserPointerFadeOutMs =
             settings.value(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs)
+                    .toInt();
+    this->currentSettings.useSpacesForTab =
+            settings.value(QStringLiteral("tools/useSpacesForTab"), this->currentSettings.useSpacesForTab).toBool();
+    this->currentSettings.numberOfSpacesForTab =
+            settings.value(QStringLiteral("tools/numberOfSpacesForTab"), this->currentSettings.numberOfSpacesForTab)
                     .toInt();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
@@ -2830,6 +2839,10 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.selectionColor =
             Color(settings.value(QStringLiteral("appearance/selectionColor"),
                                  static_cast<uint>(static_cast<uint32_t>(this->currentSettings.selectionColor)))
+                          .toUInt());
+    this->currentSettings.backgroundColor =
+            Color(settings.value(QStringLiteral("appearance/backgroundColor"),
+                                 static_cast<uint>(static_cast<uint32_t>(this->currentSettings.backgroundColor)))
                           .toUInt());
     this->currentSettings.recolorMainView =
             settings.value(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView).toBool();
@@ -3026,7 +3039,11 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent);
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
+    settings.setValue(QStringLiteral("tools/snapRecognizedShapesEnabled"),
+                      this->currentSettings.snapRecognizedShapesEnabled);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
+    settings.setValue(QStringLiteral("tools/useSpacesForTab"), this->currentSettings.useSpacesForTab);
+    settings.setValue(QStringLiteral("tools/numberOfSpacesForTab"), this->currentSettings.numberOfSpacesForTab);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
     settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
                       static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
@@ -3075,6 +3092,8 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("appearance/iconTheme"), QString::fromStdString(this->currentSettings.iconTheme));
     settings.setValue(QStringLiteral("appearance/selectionColor"),
                       static_cast<uint>(static_cast<uint32_t>(this->currentSettings.selectionColor)));
+    settings.setValue(QStringLiteral("appearance/backgroundColor"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.backgroundColor)));
     settings.setValue(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView);
     settings.setValue(QStringLiteral("appearance/recolorSidebarMiniatures"),
                       this->currentSettings.recolorSidebarMiniatures);
@@ -3466,6 +3485,7 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setInputDeviceButtonProfiles(this->currentSettings.inputDeviceButtonProfiles);
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
     canvas->setSelectionColor(this->currentSettings.selectionColor);
+    canvas->setCanvasBackgroundColor(this->currentSettings.backgroundColor);
     canvas->setRecolorOptions(this->currentSettings.recolorMainView, this->currentSettings.recolorLight,
                               this->currentSettings.recolorDark);
     this->window.pageSidebar()->setRecolorOptions(this->currentSettings.recolorSidebarMiniatures,
@@ -3475,7 +3495,10 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
     canvas->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
     canvas->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
+    canvas->setSnapRecognizedShapesEnabled(this->currentSettings.snapRecognizedShapesEnabled);
     canvas->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    canvas->setTextEditorTabOptions(this->currentSettings.useSpacesForTab,
+                                    this->currentSettings.numberOfSpacesForTab);
     this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
                                                 this->currentSettings.pdfPreloadPagesBefore,
                                                 this->currentSettings.pdfPreloadPagesAfter,

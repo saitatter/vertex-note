@@ -52,8 +52,11 @@ This audit compares GTK `Settings` keys from
 | `presentationMode` | Implemented | `view/presentationModeDefault`; Qt can start directly in presentation mode. |
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
+| `snapRecognizedShapesEnabled` | Implemented | `tools/snapRecognizedShapesEnabled`; applied to Qt shape recognizer finalization. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
 | `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Implemented | `appearance/recolorMainView`, `appearance/recolorSidebarMiniatures`, `appearance/recolorLight`, `appearance/recolorDark`; applied to Qt canvas and page sidebar previews. |
+| `backgroundColor` | Implemented | `appearance/backgroundColor`; applied to the Qt canvas/document background outside page bounds. |
+| `useSpacesForTab`, `numberOfSpacesForTab` | Implemented | `tools/useSpacesForTab`, `tools/numberOfSpacesForTab`; applied to the Qt text editor overlay. |
 | `selectionBorderColor`, `selectionMarkerColor`, `activeSelectionColor` | Partial / Qt-only equivalent | `appearance/selectionColor`; Qt uses one selection accent color for selection, hover, handles, and geometry overlays. |
 | `defaultViewModeAttributes`, `fullscreenViewModeAttributes`, `presentationViewModeAttributes` | Partial | Qt persists the active chrome/layout pieces individually rather than serializing GTK view-mode strings. |
 
@@ -75,14 +78,12 @@ This audit compares GTK `Settings` keys from
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
-| `backgroundColor` | Unsupported | Qt still uses the canvas palette/background rather than a dedicated user setting. |
 | `pageRerenderThreshold` | Unsupported | Qt rendering cache policy is not fully settings-backed yet. |
 | `sizeUnit` | Unsupported | Qt numeric settings currently use fixed point/second units in labels. |
 | `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled`, `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | No Qt stroke filtering settings path yet. |
-| `snapRecognizedShapesEnabled`, `restoreLineWidthEnabled` | Unsupported | Shape recognizer exists, but these GTK recognizer settings are not migrated. |
+| `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `preferredLocale` | Unsupported | Qt shell does not expose localization selection yet. |
-| `useSpacesForTab`, `numberOfSpacesForTab` | Unsupported | Text editor tab behavior is not user-configurable in Qt. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work

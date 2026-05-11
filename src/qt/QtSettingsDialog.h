@@ -68,7 +68,10 @@ struct QtSettings {
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     double strokeRecognizerMinSize = 40.0;
+    bool snapRecognizedShapesEnabled = false;
     int laserPointerFadeOutMs = 1500;
+    bool useSpacesForTab = false;
+    int numberOfSpacesForTab = 4;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix{};
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
@@ -78,6 +81,7 @@ struct QtSettings {
     std::string themeVariant = "system";
     std::string iconTheme = "color";
     Color selectionColor{0, 120, 255, 255};
+    Color backgroundColor = Colors::xopp_gainsboro02;
     bool recolorMainView = false;
     bool recolorSidebarMiniatures = false;
     Color recolorLight{198, 208, 245, 255};
@@ -150,7 +154,10 @@ private:
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;
     QDoubleSpinBox* snapGridSizeSpin = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
+    QCheckBox* snapRecognizedShapesCheck = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;
+    QCheckBox* useSpacesForTabCheck = nullptr;
+    QSpinBox* numberOfSpacesForTabSpin = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
     QComboBox* eraserTipActionCombo = nullptr;
     QComboBox* stylusButton1ActionCombo = nullptr;
@@ -169,6 +176,7 @@ private:
     QComboBox* themeVariantCombo = nullptr;
     QComboBox* iconThemeCombo = nullptr;
     QPushButton* selectionColorButton = nullptr;
+    QPushButton* backgroundColorButton = nullptr;
     QCheckBox* recolorMainViewCheck = nullptr;
     QCheckBox* recolorSidebarCheck = nullptr;
     QPushButton* recolorLightButton = nullptr;
@@ -187,6 +195,7 @@ private:
     QSpinBox* defaultSeekTimeSpin = nullptr;
     QComboBox* toolbarProfileCombo = nullptr;
     QColor selectionColor;
+    QColor backgroundColor;
     QColor recolorLightColor;
     QColor recolorDarkColor;
     std::string lastOpenPath;

@@ -6,6 +6,8 @@
 
 #include "QtTextEditor.h"
 
+#include <algorithm>
+
 #include <QFont>
 #include <QFontMetrics>
 #include <QKeyEvent>
@@ -85,6 +87,11 @@ void QtTextEditor::beginNewText(std::size_t pageIndex, double pageX, double page
     setFocus();
 }
 
+void QtTextEditor::setTabOptions(bool useSpaces, int numberOfSpaces) {
+    this->useSpacesForTab = useSpaces;
+    this->numberOfSpacesForTab = std::clamp(numberOfSpaces, 1, 32);
+}
+
 auto QtTextEditor::commit() -> bool {
     if (!this->editing || !this->currentText) {
         return false;
@@ -146,6 +153,11 @@ void QtTextEditor::focusOutEvent(QFocusEvent* event) {
 void QtTextEditor::keyPressEvent(QKeyEvent* event) {
     if (event->key() == Qt::Key_Escape) {
         cancel();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_Tab && this->useSpacesForTab) {
+        insertPlainText(QString(this->numberOfSpacesForTab, QLatin1Char(' ')));
         event->accept();
         return;
     }

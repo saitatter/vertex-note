@@ -371,6 +371,19 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->strokeRecognizerMinSizeSpin->setSuffix(QStringLiteral(" pt"));
     generalLayout->addRow(QStringLiteral("Shape recognizer min size:"), this->strokeRecognizerMinSizeSpin);
 
+    this->snapRecognizedShapesCheck = new QCheckBox(generalPage);
+    this->snapRecognizedShapesCheck->setChecked(current.snapRecognizedShapesEnabled);
+    generalLayout->addRow(QStringLiteral("Snap recognized shapes:"), this->snapRecognizedShapesCheck);
+
+    this->useSpacesForTabCheck = new QCheckBox(generalPage);
+    this->useSpacesForTabCheck->setChecked(current.useSpacesForTab);
+    generalLayout->addRow(QStringLiteral("Use spaces for text tabs:"), this->useSpacesForTabCheck);
+
+    this->numberOfSpacesForTabSpin = new QSpinBox(generalPage);
+    this->numberOfSpacesForTabSpin->setRange(1, 32);
+    this->numberOfSpacesForTabSpin->setValue(current.numberOfSpacesForTab);
+    generalLayout->addRow(QStringLiteral("Spaces per tab:"), this->numberOfSpacesForTabSpin);
+
     this->laserPointerFadeOutSpin = new QSpinBox(generalPage);
     this->laserPointerFadeOutSpin->setRange(100, 10000);
     this->laserPointerFadeOutSpin->setSingleStep(100);
@@ -422,6 +435,18 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
         }
     });
     appearanceLayout->addRow(QStringLiteral("Selection colour:"), this->selectionColorButton);
+
+    this->backgroundColor = colorToQColor(current.backgroundColor);
+    this->backgroundColorButton = makeColorButton(appearancePage, this->backgroundColor);
+    QObject::connect(this->backgroundColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->backgroundColor, this, QStringLiteral("Background Colour"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->backgroundColor = chosen;
+            updateColorButton(this->backgroundColorButton, this->backgroundColor);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Canvas background colour:"), this->backgroundColorButton);
 
     this->recolorMainViewCheck = new QCheckBox(appearancePage);
     this->recolorMainViewCheck->setChecked(current.recolorMainView);
@@ -761,7 +786,10 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .snapGridTolerance = this->snapGridToleranceSpin->value(),
             .snapGridSize = this->snapGridSizeSpin->value(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
+            .snapRecognizedShapesEnabled = this->snapRecognizedShapesCheck->isChecked(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
+            .useSpacesForTab = this->useSpacesForTabCheck->isChecked(),
+            .numberOfSpacesForTab = this->numberOfSpacesForTabSpin->value(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
             .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
                              .stylusButton1Action =
@@ -786,6 +814,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .themeVariant = this->themeVariantCombo->currentData().toString().toStdString(),
             .iconTheme = this->iconThemeCombo->currentData().toString().toStdString(),
             .selectionColor = qColorToColor(this->selectionColor),
+            .backgroundColor = qColorToColor(this->backgroundColor),
             .recolorMainView = this->recolorMainViewCheck->isChecked(),
             .recolorSidebarMiniatures = this->recolorSidebarCheck->isChecked(),
             .recolorLight = qColorToColor(this->recolorLightColor),

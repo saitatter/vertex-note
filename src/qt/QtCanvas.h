@@ -75,9 +75,12 @@ public:
     void setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles);
     void setPageShadowEnabled(bool enabled);
     void setSelectionColor(Color color);
+    void setCanvasBackgroundColor(Color color);
     void setRecolorOptions(bool recolorMainView, Color light, Color dark);
     void setShapeRecognizerMinSize(double value);
+    void setSnapRecognizedShapesEnabled(bool enabled);
     void setLaserPointerFadeOutMs(int value);
+    void setTextEditorTabOptions(bool useSpaces, int numberOfSpaces);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
@@ -289,6 +292,7 @@ private:
     QtPointerButtonMatrix buttonMatrix;
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     Color selectionColor{0, 120, 255, 255};
+    Color canvasBackgroundColor = Colors::xopp_gainsboro02;
     bool recolorMainView = false;
     Color recolorLight{198, 208, 245, 255};
     Color recolorDark{48, 52, 70, 255};
@@ -336,7 +340,10 @@ private:
     InstrumentOverlayState instrumentOverlay;
     std::optional<InstrumentStrokeState> activeInstrumentStroke;
     double shapeRecognizerMinSize = 40.0;
+    bool snapRecognizedShapesEnabled = false;
     int laserPointerFadeOutMs = 1500;
+    bool useSpacesForTab = false;
+    int numberOfSpacesForTab = 4;
     struct QtLaserOverlayStroke {
         std::size_t pageIndex = 0U;
         vn::view::render::StrokeRenderModel model;
