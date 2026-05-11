@@ -21,21 +21,15 @@
 #include <vector>         // for vector
 
 #include <cairo.h>    // for cairo_surface_t
-#include <glib.h>     // for gpointer, gsize
 
 #include "pdf/base/PdfDocument.h"  // for PdfDocument
 #include "pdf/base/PdfPage.h"      // for PdfPagePtr
 #include "util/PathUtil.h"            // for PathStorageMode
-#include "util/raii/GObjectSPtr.h"    // for GObjectSptr
 
 #include "PageRef.h"     // for PageRef
 #include "filesystem.h"  // for path
 
 class DocumentHandler;
-class PdfBookmarkIterator;
-typedef struct _GtkTreeIter GtkTreeIter;
-typedef struct _GtkTreeModel GtkTreeModel;
-typedef struct _GtkTreePath GtkTreePath;
 
 class Document {
 public:
@@ -86,8 +80,6 @@ public:
 
     fs::path getEvMetadataFilename() const;
 
-    GtkTreeModel* getContentsModel() const;
-
     void setCreateBackupOnSave(bool backup);
     bool shouldCreateBackupOnSave() const;
 
@@ -109,13 +101,7 @@ public:
     inline void setPathStorageMode(Util::PathStorageMode m) { pathStorageMode = m; }
 
 private:
-    void buildContentsModel();
-    void freeTreeContentModel();
-    static bool freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
-
-    void buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter);
     void updateIndexPageNumbers();
-    static bool fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
 
 private:
     DocumentHandler* handler = nullptr;
@@ -156,11 +142,6 @@ private:
      * Clears the index first in case it is already exists.
      */
     void indexPdfPages();
-
-    /**
-     * The bookmark contents model
-     */
-    vn::util::GObjectSPtr<GtkTreeModel> contentsModel;
 
     /**
      *  create a backup before save

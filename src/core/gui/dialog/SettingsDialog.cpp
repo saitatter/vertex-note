@@ -21,6 +21,7 @@
 #include "gui/widgets/ZoomCallib.h"                 // for zoomcallib_new, zoom...
 #include "model/PageType.h"                         // for PageType
 #include "util/Color.h"                             // for GdkRGBA_to_argb, rgb...
+#include "util/ColorGtk.h"
 #include "util/GtkUtil.h"                           // for getWidgetDPI
 #include "util/PathUtil.h"                          // for fromGFile, toGFilename
 #include "util/Util.h"                              // for systemWithMessage

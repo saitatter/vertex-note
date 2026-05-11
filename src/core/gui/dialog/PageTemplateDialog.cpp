@@ -19,6 +19,7 @@
 #include "model/FormatDefinitions.h"  // for FormatUnits, NOTE_UNITS
 #include "model/PageType.h"           // for PageType
 #include "util/Color.h"               // for GdkRGBA_to_argb, rgb_t...
+#include "util/ColorGtk.h"
 #include "util/PathUtil.h"            // for fromGFile, readString
 #include "util/PopupWindowWrapper.h"  // for PopupWindowWrapper
 #include "util/AppMessageBox.h"           // for AppMessageBox

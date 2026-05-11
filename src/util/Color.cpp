@@ -8,10 +8,7 @@
 #include "util/serdesstream.h"  // for serdes_stream
 
 float Util::as_grayscale_color(Color color) {
-    GdkRGBA components = rgb_to_GdkRGBA(color);
-    float componentAvg = static_cast<float>(components.red + components.green + components.blue) / 3.0f;
-
-    return componentAvg;
+    return static_cast<float>(color.red + color.green + color.blue) / (3.0f * 255.0f);
 }
 
 float Util::get_color_contrast(Color color1, Color color2) {

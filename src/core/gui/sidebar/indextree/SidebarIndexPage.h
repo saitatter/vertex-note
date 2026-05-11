@@ -63,7 +63,7 @@ public:
     /**
      * Select page in the tree
      */
-    bool selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* parent);
+    bool selectPageNrInModel(GtkTreeModel* model, size_t pdfPage, GtkTreeIter* parent);
 
     /**
      * @overwrite

@@ -8,9 +8,7 @@
 #include <utility>  // for move
 #include <vector>   // for vector
 
-#include <gdk/gdk.h>  // for gdk_cairo_set_source_rgba, gdk_t...
-
-#include "util/Color.h"              // for argb_to_GdkRGBA, rgb_to_GdkRGBA
+#include "util/Color.h"
 #include "util/OutputStream.h"       // for OutputStream
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/i18n.h"               // for FS, _F
@@ -27,13 +25,11 @@
 
 
 void Util::cairo_set_source_rgbi(cairo_t* cr, Color color, double alpha) {
-    auto rgba = argb_to_GdkRGBA(color, alpha);
-    gdk_cairo_set_source_rgba(cr, &rgba);
+    cairo_set_source_rgba(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0, alpha);
 }
 
 void Util::cairo_set_source_argb(cairo_t* cr, Color color) {
-    auto rgba = argb_to_GdkRGBA(color);
-    gdk_cairo_set_source_rgba(cr, &rgba);
+    cairo_set_source_rgba(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0, color.alpha / 255.0);
 }
 
 auto Util::getPid() -> PID {

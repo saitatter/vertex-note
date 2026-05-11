@@ -8,7 +8,8 @@
 #include "control/Control.h"        // for Control
 #include "control/ScrollHandler.h"  // for ScrollHandler
 #include "model/Document.h"         // for Document
-#include "model/LinkDestination.h"  // for LinkDestObject
+#include "model/DocumentGtkContentsModel.h"
+#include "model/LinkDestinationGtk.h"
 #include "util/Assert.h"            // for xoj_assert
 #include "util/glib_casts.h"        // for wrap_v
 #include "util/gtk4_helper.h"       //
@@ -204,21 +205,21 @@ auto SidebarIndexPage::expandOpenLinks(GtkTreeModel* model, GtkTreeIter* parent)
     return count;
 }
 
-void SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage) { selectPageNr(page, pdfPage, nullptr); }
+void SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage) {
+    (void) page;
 
-auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* parent) -> bool {
-    GtkTreeIter iter;
-
-    Document* doc = control->getDocument();
-    doc->lock_shared();
-    GtkTreeModel* model = doc->getContentsModel();
+    GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeViewBookmarks));
     if (model == nullptr) {
-        doc->unlock_shared();
-        return false;
+        return;
     }
 
     g_object_ref(model);
-    doc->unlock_shared();
+    selectPageNrInModel(model, pdfPage, nullptr);
+    g_object_unref(model);
+}
+
+auto SidebarIndexPage::selectPageNrInModel(GtkTreeModel* model, size_t pdfPage, GtkTreeIter* parent) -> bool {
+    GtkTreeIter iter;
 
     if (parent == nullptr) {
 
@@ -235,7 +236,6 @@ auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* pa
 
                 if (dest->getPdfPage() == pdfPage) {
 
-                    g_object_unref(model);
                     g_object_unref(link);
 
                     // already a bookmark from this page selected
@@ -259,15 +259,13 @@ auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* pa
             gtk_tree_selection_select_iter(selection, &iter);
 
             g_object_unref(link);
-            g_object_unref(model);
             return true;
         }
 
 
         g_object_unref(link);
 
-        if (selectPageNr(page, pdfPage, &iter)) {
-            g_object_unref(model);
+        if (selectPageNrInModel(model, pdfPage, &iter)) {
             return true;
         }
 
@@ -275,13 +273,13 @@ auto SidebarIndexPage::selectPageNr(size_t page, size_t pdfPage, GtkTreeIter* pa
         valid = gtk_tree_model_iter_next(model, &iter);
     }
 
-    g_object_unref(model);
     return false;
 }
 
 void SidebarIndexPage::documentChanged(DocumentChangeType type) {
     if (type == DOCUMENT_CHANGE_CLEARED) {
         gtk_tree_view_set_model(GTK_TREE_VIEW(this->treeViewBookmarks), nullptr);
+        hasContents = false;
     } else if (type == DOCUMENT_CHANGE_PDF_BOOKMARKS || type == DOCUMENT_CHANGE_COMPLETE) {
 
         Document* doc = this->control->getDocument();
@@ -291,9 +289,10 @@ void SidebarIndexPage::documentChanged(DocumentChangeType type) {
         //  lock the document.
         g_signal_handler_block(this->treeViewBookmarks, this->selectHandler);
         doc->lock_shared();
-        GtkTreeModel* model = doc->getContentsModel();
-        gtk_tree_view_set_model(GTK_TREE_VIEW(this->treeViewBookmarks), model);
-        int count = expandOpenLinks(model, nullptr);
+        auto model = vn::legacy::createDocumentGtkContentsModel(*doc);
+        GtkTreeModel* rawModel = model.get();
+        gtk_tree_view_set_model(GTK_TREE_VIEW(this->treeViewBookmarks), rawModel);
+        int count = expandOpenLinks(rawModel, nullptr);
         doc->unlock_shared();
         g_signal_handler_unblock(this->treeViewBookmarks, this->selectHandler);
         this->treeBookmarkSelected(GTK_TREE_VIEW(this->treeViewBookmarks), this);

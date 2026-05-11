@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "util/Color.h"
+#include "util/ColorGtk.h"
 
 using namespace std;
 

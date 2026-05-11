@@ -13,8 +13,9 @@
 
 #include "control/jobs/ProgressListener.h"  // for ProgressListener
 #include "model/Document.h"                 // for Document
+#include "model/DocumentGtkContentsModel.h"
 #include "model/Layer.h"                    // for Layer
-#include "model/LinkDestination.h"          // for LinkDestination, LinkDestObject
+#include "model/LinkDestinationGtk.h"
 #include "model/PageRef.h"                  // for PageRef
 #include "model/PageType.h"                 // for PageType
 #include "model/NotePage.h"                  // for NotePage
@@ -72,7 +73,8 @@ void CairoPdfExport::configureCairoFontOptions() {
 
 #if CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 16, 0)
 void CairoPdfExport::populatePdfOutline() {
-    auto tocModel = doc->getContentsModel();
+    auto tocModelRef = vn::legacy::createDocumentGtkContentsModel(*doc);
+    auto tocModel = tocModelRef.get();
     if (tocModel == nullptr)
         return;
 

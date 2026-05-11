@@ -8,6 +8,7 @@
 #include "control/Control.h"            // for Control
 #include "control/settings/Settings.h"  // for SElement, Settings
 #include "util/Color.h"
+#include "util/ColorGtk.h"
 #include "util/i18n.h"                  // for _
 #include "util/safe_casts.h"            // for as_unsigned
 

@@ -1,7 +1,5 @@
 #include "Document.h"
 
-#include "config-features.h"
-
 #include <codecvt>  // for codecvt_utf8_utf16
 #include <cstddef>
 #include <ctime>  // for size_t, localtime, strf...
@@ -12,30 +10,19 @@
 #include <string_view>
 #include <utility>  // for move, pair
 
-#include <glib-object.h>  // for g_object_unref, G_TYPE_...
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include <gtk/gtk.h>
-#endif
-
 #include "model/DocumentChangeType.h"         // for DOCUMENT_CHANGE_CLEARED
 #include "model/DocumentHandler.h"            // for DocumentHandler
 #include "model/PageRef.h"                    // for PageRef
 #include "model/PageType.h"                   // for PageType
-#include "pdf/base/PdfAction.h"            // for PdfAction
-#include "pdf/base/PdfBookmarkIterator.h"  // for PdfBookmarkIterator
 #include "util/Assert.h"                      // for xoj_assert
 #include "util/PathUtil.h"                    // for clearExtensions
 #include "util/PlaceholderString.h"           // for PlaceholderString
 #include "util/SaveNameUtils.h"               // for parseFilename
 #include "util/Util.h"                        // for npos
-#include "util/glib_casts.h"                  // for wrap_v
 #include "util/i18n.h"                        // for FS, _F
-#include "util/raii/GObjectSPtr.h"            // for GObjectSPtr
 #include "util/safe_casts.h"                  // for as_signed
 #include "util/utf8_view.h"                   // for utf8
 
-#include "LinkDestination.h"  // for LinkDestObject, DOCUMENT_L...
 #include "NotePage.h"          // for NotePage
 #include "filesystem.h"       // for path
 
@@ -43,43 +30,6 @@ Document::Document(DocumentHandler* handler): handler(handler) {}
 
 Document::~Document() {
     clearDocument(true);
-    freeTreeContentModel();
-}
-
-void Document::freeTreeContentModel() {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<freeTreeContentEntry>, this);
-
-        this->contentsModel.reset();
-    }
-#else
-    this->contentsModel.reset();
-#endif
-}
-
-auto Document::freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc)
-        -> bool {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    LinkDestObject* link = nullptr;
-    gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
-
-    if (link == nullptr) {
-        return false;
-    }
-
-    // The dispose function of LinkDestObject is not called, this workaround fixes the Memory Leak
-    delete link->dest;
-    link->dest = nullptr;
-
-    return false;
-#else
-    (void) treeModel;
-    (void) path;
-    (void) iter;
-    (void) doc;
-    return false;
-#endif
 }
 
 void Document::lock() { this->documentLock.lock(); }
@@ -105,7 +55,6 @@ void Document::clearDocument(bool destroy) {
 
     this->pages.clear();
     this->pageIndex.reset();
-    freeTreeContentModel();
 
     this->filepath = fs::path{};
     this->pdfFilepath = fs::path{};
@@ -237,48 +186,6 @@ auto Document::findPdfPage(size_t pdfPage) const -> size_t {
     }
 }
 
-void Document::buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter) {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    do {
-        GtkTreeIter treeIter = {0};
-
-        PdfAction* action = iter->getAction();
-        LinkDestination* dest = new LinkDestination(*action->getDestination());
-        LinkDestObject* link = link_dest_new();
-        link->dest = dest;
-
-        if (action->getTitle().empty()) {
-            g_object_unref(link);
-            delete action;
-            continue;
-        }
-
-        link->dest->setExpand(iter->isOpen());
-
-        gtk_tree_store_append(GTK_TREE_STORE(contentsModel.get()), &treeIter, parent);
-        char* titleMarkup = g_markup_escape_text(action->getTitle().c_str(), -1);
-
-        gtk_tree_store_set(GTK_TREE_STORE(contentsModel.get()), &treeIter, DOCUMENT_LINKS_COLUMN_NAME, titleMarkup,
-                           DOCUMENT_LINKS_COLUMN_LINK, link, DOCUMENT_LINKS_COLUMN_PAGE_NUMBER, "", -1);
-
-        g_free(titleMarkup);
-        g_object_unref(link);
-
-        PdfBookmarkIterator* child = iter->getChildIter();
-        if (child) {
-            buildTreeContentsModel(&treeIter, child);
-            delete child;
-        }
-
-        delete action;
-
-    } while (iter->next());
-#else
-    (void) parent;
-    (void) iter;
-#endif
-}
-
 void Document::indexPdfPages() {
     auto index = std::make_unique<PageIndex>();
     for (size_t i = 0; i < this->pages.size(); ++i) {
@@ -291,64 +198,8 @@ void Document::indexPdfPages() {
 }
 
 
-void Document::buildContentsModel() {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    freeTreeContentModel();
-
-    PdfBookmarkIterator* iter = pdfDocument.getContentsIter();
-    if (iter == nullptr) {
-        // No Bookmarks
-        return;
-    }
-
-    this->contentsModel.reset(reinterpret_cast<GtkTreeModel*>(gtk_tree_store_new(4, G_TYPE_STRING, G_TYPE_OBJECT,
-                                                                                 G_TYPE_BOOLEAN, G_TYPE_STRING)),
-                              vn::util::adopt);
-    buildTreeContentsModel(nullptr, iter);
-    delete iter;
-#else
-    this->contentsModel.reset();
-#endif
-}
-
-auto Document::getContentsModel() const -> GtkTreeModel* { return this->contentsModel.get(); }
-
-auto Document::fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc) -> bool {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    LinkDestObject* link = nullptr;
-    gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
-
-    if (link == nullptr) {
-        return false;
-    }
-
-    auto page = doc->findPdfPage(link->dest->getPdfPage());
-
-    gchar* pageLabel = nullptr;
-    if (page != npos) {
-        pageLabel = g_strdup_printf("%zu", page + 1);
-    }
-    gtk_tree_store_set(GTK_TREE_STORE(treeModel), iter, DOCUMENT_LINKS_COLUMN_PAGE_NUMBER, pageLabel, -1);
-    g_free(pageLabel);
-
-    g_object_unref(link);
-    return false;
-#else
-    (void) treeModel;
-    (void) path;
-    (void) iter;
-    (void) doc;
-    return false;
-#endif
-}
-
 void Document::updateIndexPageNumbers() {
     indexPdfPages();
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<fillPageLabels>, this);
-    }
-#endif
 }
 
 void Document::setPdfAttributes(const fs::path& filename, bool attachToDocument) {
@@ -401,7 +252,6 @@ auto Document::readPdf(const fs::path& filename, bool initPages, bool attachToDo
     }
 
     indexPdfPages();
-    buildContentsModel();
     updateIndexPageNumbers();
 
     unlock();
@@ -490,7 +340,6 @@ auto Document::operator=(const Document& doc) -> Document& {
     this->pathStorageMode = doc.pathStorageMode;
 
     indexPdfPages();
-    buildContentsModel();
     updateIndexPageNumbers();
 
     bool lastLock = try_lock();

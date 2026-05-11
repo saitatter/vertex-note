@@ -17,6 +17,7 @@
 #include "control/zoom/ZoomControl.h"        // for ZoomControl
 #include "gui/MainWindow.h"                  // for MainWindow
 #include "util/Color.h"                      // for argb_to_GdkRGBA, rgb_to_...
+#include "util/ColorGtk.h"
 #include "util/safe_casts.h"                 // for ceil_cast
 
 #include "VertexNoteView.h"  // for VertexNoteView

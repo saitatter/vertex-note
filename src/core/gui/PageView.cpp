@@ -76,6 +76,7 @@
 #include "undo/UndoRedoHandler.h"                   // for UndoRedoHandler
 #include "util/Assert.h"                            // for xoj_assert
 #include "util/Color.h"                             // for rgb_to_GdkRGBA
+#include "util/ColorGtk.h"
 #include "util/Range.h"                             // for Range
 #include "util/Rectangle.h"                         // for Rectangle
 #include "util/Util.h"                              // for npos

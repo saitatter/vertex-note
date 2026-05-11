@@ -15,7 +15,7 @@
 #include <memory>
 #include <vector>
 
-#include "model/LinkDestination.h"  // for LinkDestObject
+#include "model/LinkDestination.h"
 
 
 class PdfAction {

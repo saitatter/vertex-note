@@ -25,7 +25,7 @@ set(VERTEXNOTE_LEGACY_GTK_CORE_PATTERNS
         ".*/src/core/control/zoom/.*"
         ".*/src/core/control/actions/.*"
         ".*/src/core/gui/.*"
-        ".*/src/core/model/(Compass|Setsquare)\\.(cpp|h)$"
+        ".*/src/core/model/(Compass|DocumentGtkContentsModel|LinkDestinationGtk|Setsquare)\\.(cpp|h)$"
         ".*/src/core/pdf/base/(CairoPdfExport|HybridPdfExport|PdfExport|PdfExportFactory|QPdfExport)\\.(cpp|h)$"
         ".*/src/core/plugin/.*"
         ".*/src/core/undo/.*"
@@ -50,7 +50,7 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
 
 set(VERTEXNOTE_LEGACY_GTK_UTIL_PATTERNS
         ".*/src/util/(AppMessageBox|AppMessageBoxFallback|GtkUtil|gtk4_helper|UtilGtk)\\.(cpp|h)$"
-        ".*/src/util/include/util/(AppMessageBox|GtkUtil|gtk4_helper|PopupWindowWrapper)\\.h$"
+        ".*/src/util/include/util/(AppMessageBox|ColorGtk|GtkUtil|gtk4_helper|PopupWindowWrapper)\\.h$"
         ".*/src/util/include/util/raii/(GObjectSPtr|GtkPaperSizeUPtr|GtkWindowUPtr)\\.h$"
 )
 
