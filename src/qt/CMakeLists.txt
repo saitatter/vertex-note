@@ -4,17 +4,23 @@ set(vertexnote_qt_sources
         QtAudioController.cpp
         QtAppShell.h
         QtAppShell.cpp
-        QtAppShellCommandGroups.cpp
         QtAppShellCommands.cpp
         QtAppShellDialogs.cpp
         QtAppShellDocumentIo.cpp
+        QtAppShellEditCommands.cpp
         QtAppShellEditing.cpp
+        QtAppShellFileCommands.cpp
+        QtAppShellHelpCommands.cpp
+        QtAppShellJournalCommands.cpp
+        QtAppShellNavigationCommands.cpp
         QtAppShellNavigation.cpp
         QtAppShellPersistentState.cpp
         QtAppShellSettings.cpp
         QtAppShellStatus.cpp
         QtAppShellToolbar.cpp
         QtAppShellToolbarSync.cpp
+        QtAppShellToolCommands.cpp
+        QtAppShellViewCommands.cpp
         QtBackgroundDialog.h
         QtBackgroundDialog.cpp
         QtCanvas.h
