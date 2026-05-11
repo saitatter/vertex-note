@@ -37,7 +37,6 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
         ".*/src/core/control/(PdfCache|CompassController|SetsquareController)\\.(cpp|h)$"
         ".*/src/core/control/jobs/(ImageExport|PreviewJob|RenderJob|SaveJob)\\.(cpp|h)$"
         ".*/src/core/control/tools/(EditSelection|EditSelectionContents|PdfElemSelection|Selector|StrokeHandler|VerticalToolHandler)\\.(cpp|h)$"
-        ".*/src/core/view/.*"
         ".*/src/core/pdf/base/CairoPdfExport\\.(cpp|h)$"
         ".*/src/core/pdf/base/HybridPdfExport\\.cpp$"
         ".*/src/core/pdf/popplerapi/PopplerGlibPage\\.(cpp|h)$"

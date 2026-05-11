@@ -8,7 +8,7 @@
 
 namespace vn::view::render {
 
-enum class RenderBackend { Cairo, QtPainter };
+enum class RenderBackend { QtPainter };
 
 class RenderContext {
 public:
