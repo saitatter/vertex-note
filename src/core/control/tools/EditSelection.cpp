@@ -360,6 +360,18 @@ static int getBtnWidth(Control* c) {
     return std::max(10, round_cast<int>(c->getZoomControl()->getZoom100Value() * Util::DPI_NORMALIZATION_FACTOR / 8));
 }
 
+static void transformViewPointToSelectionPage(const cairo_matrix_t& matrix, double zoom, double& x, double& y) {
+    x /= zoom;
+    y /= zoom;
+    cairo_matrix_transform_point(&matrix, &x, &y);
+}
+
+static void transformViewPointToSelectionView(const cairo_matrix_t& matrix, double zoom, double& x, double& y) {
+    transformViewPointToSelectionPage(matrix, zoom, x, y);
+    x *= zoom;
+    y *= zoom;
+}
+
 EditSelection::EditSelection(Control* ctrl, InsertionOrder elts, const PageRef& page, Layer* layer, PageView* view,
                              const Range& bounds, const Range& snappingBounds):
         snappedBounds(snappingBounds),
@@ -767,9 +779,11 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is rotated to make bounding
     // box edges horizontal/vertical
-    cairo_matrix_transform_point(&this->cmatrix, &x, &y);
-    this->relMousePosRotX = x / zoom - this->snappedBounds.x;
-    this->relMousePosRotY = y / zoom - this->snappedBounds.y;
+    double rotatedX = x;
+    double rotatedY = y;
+    transformViewPointToSelectionPage(this->cmatrix, zoom, rotatedX, rotatedY);
+    this->relMousePosRotX = rotatedX - this->snappedBounds.x;
+    this->relMousePosRotY = rotatedY - this->snappedBounds.y;
 }
 
 void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
@@ -783,8 +797,8 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
 
         double transformedX = mouseX;
         double transformedY = mouseY;
-        cairo_matrix_transform_point(&this->cmatrix, &transformedX, &transformedY);
-        auto modelPosition = geometryVertexPreviewToModel(transformedX / zoom, transformedY / zoom);
+        transformViewPointToSelectionPage(this->cmatrix, zoom, transformedX, transformedY);
+        auto modelPosition = geometryVertexPreviewToModel(transformedX, transformedY);
         modelPosition = snapGeometryVertexDragPosition(modelPosition, alt, zoom);
 
         const vn::geom::Vec2 delta{modelPosition.x - this->activeGeometryVertexStart.x,
@@ -840,11 +854,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
         // compute corner of reduced bounding box in unmodified coordinate system closest to grabbing position
         cairo_matrix_t inv = this->cmatrix;
         cairo_matrix_invert(&inv);
-        cx *= zoom;
-        cy *= zoom;
         cairo_matrix_transform_point(&inv, &cx, &cy);
-        cx /= zoom;
-        cy /= zoom;
 
         // compute position where unsnapped corner would move
         Point p = Point(cx + dx, cy + dy);
@@ -870,9 +880,7 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
         // Translate mouse position into rotated coordinate system:
         double rx = mouseX;
         double ry = mouseY;
-        cairo_matrix_transform_point(&this->cmatrix, &rx, &ry);
-        rx /= zoom;
-        ry /= zoom;
+        transformViewPointToSelectionPage(this->cmatrix, zoom, rx, ry);
 
         double minSize = MINPIXSIZE / zoom;
 
@@ -981,14 +989,11 @@ void EditSelection::scaleShift(double fx, double fy, bool changeLeft, bool chang
     double cx = this->snappedBounds.x + this->snappedBounds.width / 2;
     double cy = this->snappedBounds.y + this->snappedBounds.height / 2;
     // transform it back with old rotation center
-    double zoom = this->view->getNoteView()->getZoom();
-    double cxRot = cx * zoom;
-    double cyRot = cy * zoom;
+    double cxRot = cx;
+    double cyRot = cy;
     cairo_matrix_t inv = this->cmatrix;
     cairo_matrix_invert(&inv);
     cairo_matrix_transform_point(&inv, &cxRot, &cyRot);
-    cxRot /= zoom;
-    cyRot /= zoom;
     // move to compensate for changed rotation centers
     moveSelection(cxRot - cx, cyRot - cy);
 }
@@ -1316,7 +1321,7 @@ auto EditSelection::insertActiveGeometryVertexOnEdge() -> bool {
 }
 
 auto EditSelection::insertGeometryVertexAt(double x, double y, double zoom) -> bool {
-    cairo_matrix_transform_point(&this->cmatrix, &x, &y);
+    transformViewPointToSelectionView(this->cmatrix, zoom, x, y);
     if (!selectGeometryEdgeAt(x, y, zoom)) {
         return false;
     }
@@ -1331,6 +1336,22 @@ auto EditSelection::applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bo
 
     auto before = this->activeGeometryElement->geometry();
     auto after = before;
+    const auto selectedLineVertexPair = [this, &before](bool allowConstructionLine)
+            -> std::optional<std::array<vn::geom::VertexId, 2>> {
+        if (this->activeGeometryVertices.size() == 2U) {
+            return std::array<vn::geom::VertexId, 2>{this->activeGeometryVertices[0], this->activeGeometryVertices[1]};
+        }
+        if (!this->activeGeometryVertices.empty() || this->activeGeometryEdges.size() != 1U) {
+            return std::nullopt;
+        }
+
+        const auto* edge = before.edge(this->activeGeometryEdges.front());
+        if (!edge || (edge->kind != vn::geom::EdgeKind::Line &&
+                      (!allowConstructionLine || edge->kind != vn::geom::EdgeKind::ConstructionLine))) {
+            return std::nullopt;
+        }
+        return std::array<vn::geom::VertexId, 2>{edge->start, edge->end};
+    };
 
     try {
         switch (kind) {
@@ -1341,25 +1362,26 @@ auto EditSelection::applyGeometryConstraint(vn::geom::ConstraintKind kind) -> bo
                 after.addConstraint(kind, this->activeGeometryVertices);
                 break;
             case vn::geom::ConstraintKind::Horizontal:
-            case vn::geom::ConstraintKind::Vertical:
-                if (this->activeGeometryVertices.size() != 2U) {
+            case vn::geom::ConstraintKind::Vertical: {
+                const auto vertices = selectedLineVertexPair(true);
+                if (!vertices) {
                     return false;
                 }
-                after.addConstraint(kind, {this->activeGeometryVertices[0], this->activeGeometryVertices[1]});
+                after.addConstraint(kind, {(*vertices)[0], (*vertices)[1]});
                 break;
+            }
             case vn::geom::ConstraintKind::FixedLength: {
-                if (this->activeGeometryVertices.size() != 2U) {
+                const auto vertices = selectedLineVertexPair(false);
+                if (!vertices) {
                     return false;
                 }
                 const vn::geom::Constraint preview{vn::geom::InvalidConstraintId, kind,
-                                                   {this->activeGeometryVertices[0], this->activeGeometryVertices[1]},
-                                                   {}, 0.0};
+                                                   {(*vertices)[0], (*vertices)[1]}, {}, 0.0};
                 const double length = SelectionFactory::edgeLength(before, preview);
                 if (length <= 0.0) {
                     return false;
                 }
-                after.addConstraint(kind, {this->activeGeometryVertices[0], this->activeGeometryVertices[1]}, {},
-                                    length);
+                after.addConstraint(kind, {(*vertices)[0], (*vertices)[1]}, {}, length);
                 break;
             }
             case vn::geom::ConstraintKind::Parallel:
@@ -1660,7 +1682,7 @@ auto EditSelection::getSelectionTypeForPos(double x, double y, double zoom) -> C
 
     double selectionX = x;
     double selectionY = y;
-    cairo_matrix_transform_point(&this->cmatrix, &selectionX, &selectionY);
+    transformViewPointToSelectionView(this->cmatrix, zoom, selectionX, selectionY);
 
     if (selectGeometryVertexHandleAt(selectionX, selectionY, zoom)) {
         this->hoveredGeometryElement = nullptr;

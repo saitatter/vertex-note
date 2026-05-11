@@ -477,25 +477,6 @@ void GeometryObject::cleanupDanglingVertices() {
     this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
                                           [&referenced](const Vertex& v) { return !referenced.contains(v.id); }),
                            this->vertexList.end());
-
-    std::unordered_set<VertexId> keptVertices;
-    keptVertices.reserve(this->vertexList.size());
-    for (const auto& vertex: this->vertexList) {
-        keptVertices.insert(vertex.id);
-    }
-
-    this->constraintList.erase(
-            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
-                           [&keptVertices, &existingEdges](const Constraint& constraint) {
-                               return std::ranges::any_of(constraint.vertices,
-                                                          [&keptVertices](VertexId vertexId) {
-                                                              return !keptVertices.contains(vertexId);
-                                                          }) ||
-                                      std::ranges::any_of(constraint.edges, [&existingEdges](EdgeId edgeId) {
-                                          return !existingEdges.contains(edgeId);
-                                      });
-                           }),
-            this->constraintList.end());
 }
 
 auto GeometryObject::nextVertexId() -> VertexId { return this->nextLocalVertexId++; }

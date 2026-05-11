@@ -108,7 +108,7 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
         const auto format = qtImageFormatFor(page.rasterContent.format);
         const QImage raster(page.rasterContent.pixels.data(), page.rasterContent.width, page.rasterContent.height,
                             page.rasterContent.stride, format);
-        painter->drawImage(pageRect, raster);
+        painter->drawImage(pageRect, raster.copy());
     }
 
     // Use page dimensions for accurate positioning, fall back to rect if missing
