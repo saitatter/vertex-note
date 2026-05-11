@@ -95,6 +95,9 @@ struct QtSettings {
     bool doActionOnStrokeFiltered = false;
     bool trySelectOnStrokeFiltered = false;
     bool eraserCursorHidden = true;
+    int ignoredStylusEvents = 0;
+    bool inputSystemTPCButton = false;
+    bool inputSystemDrawOutsideWindow = true;
     QtPointerButtonMatrix buttonMatrix{};
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     bool showFilePathInTitlebar = false;
@@ -231,6 +234,9 @@ private:
     QCheckBox* doActionOnStrokeFilteredCheck = nullptr;
     QCheckBox* trySelectOnStrokeFilteredCheck = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
+    QSpinBox* ignoredStylusEventsSpin = nullptr;
+    QCheckBox* inputSystemTPCButtonCheck = nullptr;
+    QCheckBox* inputSystemDrawOutsideWindowCheck = nullptr;
     QComboBox* eraserTipActionCombo = nullptr;
     QComboBox* stylusButton1ActionCombo = nullptr;
     QComboBox* stylusButton2ActionCombo = nullptr;

@@ -624,6 +624,12 @@ void QtCanvas::setEraserCursorHidden(bool hidden) {
     refreshToolCursor();
 }
 
+void QtCanvas::setInputSystemOptions(int ignoredEvents, bool tpcButtonEnabled, bool drawOutsideWindowEnabled) {
+    this->ignoredStylusEvents = std::clamp(ignoredEvents, 0, 20);
+    this->inputSystemTPCButton = tpcButtonEnabled;
+    this->inputSystemDrawOutsideWindow = drawOutsideWindowEnabled;
+}
+
 void QtCanvas::setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix) { this->buttonMatrix = buttonMatrix; }
 
 void QtCanvas::setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles) {
@@ -1201,6 +1207,15 @@ void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->lastCursorScreenPosition = event->position();
     this->cursorHighlightVisible = true;
     this->inputAdapter->handleTablet(*event);
+    if (event->type() == QEvent::TabletPress) {
+        this->ignoredStylusEventsRemaining = this->ignoredStylusEvents;
+    } else if (event->type() == QEvent::TabletMove && this->ignoredStylusEventsRemaining > 0) {
+        --this->ignoredStylusEventsRemaining;
+        event->accept();
+        return;
+    } else if (event->type() == QEvent::TabletRelease) {
+        this->ignoredStylusEventsRemaining = 0;
+    }
     const auto tool = this->currentToolState.activeTool;
     const auto pointerAction = pointerActionForTabletEvent(*event);
     const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter ||

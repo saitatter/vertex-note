@@ -2819,6 +2819,19 @@ void QtAppShell::loadPersistentUiState() {
                     .toBool();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
+    this->currentSettings.ignoredStylusEvents =
+            std::clamp(settings.value(QStringLiteral("devices/ignoredStylusEvents"),
+                                      this->currentSettings.ignoredStylusEvents)
+                               .toInt(),
+                       0, 20);
+    this->currentSettings.inputSystemTPCButton =
+            settings.value(QStringLiteral("devices/inputSystemTPCButton"),
+                           this->currentSettings.inputSystemTPCButton)
+                    .toBool();
+    this->currentSettings.inputSystemDrawOutsideWindow =
+            settings.value(QStringLiteral("devices/inputSystemDrawOutsideWindow"),
+                           this->currentSettings.inputSystemDrawOutsideWindow)
+                    .toBool();
     this->currentSettings.buttonMatrix.eraserTipAction =
             static_cast<QtPointerButtonAction>(
                     settings.value(QStringLiteral("devices/buttonMatrix/eraserTip"),
@@ -3273,6 +3286,10 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/trySelectOnStrokeFiltered"),
                       this->currentSettings.trySelectOnStrokeFiltered);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
+    settings.setValue(QStringLiteral("devices/ignoredStylusEvents"), this->currentSettings.ignoredStylusEvents);
+    settings.setValue(QStringLiteral("devices/inputSystemTPCButton"), this->currentSettings.inputSystemTPCButton);
+    settings.setValue(QStringLiteral("devices/inputSystemDrawOutsideWindow"),
+                      this->currentSettings.inputSystemDrawOutsideWindow);
     settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
                       static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
     settings.setValue(QStringLiteral("devices/buttonMatrix/stylusButton1"),
@@ -3759,6 +3776,9 @@ void QtAppShell::applyRuntimeSettings() {
                                 this->currentSettings.addVerticalSpaceAmountAbove,
                                 this->currentSettings.addVerticalSpaceAmountBelow);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
+    canvas->setInputSystemOptions(this->currentSettings.ignoredStylusEvents,
+                                  this->currentSettings.inputSystemTPCButton,
+                                  this->currentSettings.inputSystemDrawOutsideWindow);
     canvas->setPointerButtonActions(this->currentSettings.buttonMatrix);
     canvas->setInputDeviceButtonProfiles(this->currentSettings.inputDeviceButtonProfiles);
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);

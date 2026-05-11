@@ -961,6 +961,24 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->eraserCursorHiddenCheck = new QCheckBox(devicesPage);
     this->eraserCursorHiddenCheck->setChecked(current.eraserCursorHidden);
     devicesForm->addRow(QStringLiteral("Hide eraser cursor:"), this->eraserCursorHiddenCheck);
+
+    this->ignoredStylusEventsSpin = new QSpinBox(devicesPage);
+    this->ignoredStylusEventsSpin->setRange(0, 20);
+    this->ignoredStylusEventsSpin->setValue(current.ignoredStylusEvents);
+    devicesForm->addRow(QStringLiteral("Ignore first stylus events:"), this->ignoredStylusEventsSpin);
+
+    this->inputSystemTPCButtonCheck = new QCheckBox(devicesPage);
+    this->inputSystemTPCButtonCheck->setChecked(current.inputSystemTPCButton);
+    this->inputSystemTPCButtonCheck->setToolTip(
+            QStringLiteral("Stored for settings parity; Qt uses native tablet button state."));
+    devicesForm->addRow(QStringLiteral("TPC button emulation:"), this->inputSystemTPCButtonCheck);
+
+    this->inputSystemDrawOutsideWindowCheck = new QCheckBox(devicesPage);
+    this->inputSystemDrawOutsideWindowCheck->setChecked(current.inputSystemDrawOutsideWindow);
+    this->inputSystemDrawOutsideWindowCheck->setToolTip(
+            QStringLiteral("Stored for settings parity; Qt receives tablet events through the active window."));
+    devicesForm->addRow(QStringLiteral("Draw outside window:"), this->inputSystemDrawOutsideWindowCheck);
+
     this->eraserTipActionCombo = new QComboBox(devicesPage);
     populatePointerActionCombo(this->eraserTipActionCombo, current.buttonMatrix.eraserTipAction);
     devicesForm->addRow(QStringLiteral("Eraser tip:"), this->eraserTipActionCombo);
@@ -1146,6 +1164,9 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .doActionOnStrokeFiltered = this->doActionOnStrokeFilteredCheck->isChecked(),
             .trySelectOnStrokeFiltered = this->trySelectOnStrokeFilteredCheck->isChecked(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
+            .ignoredStylusEvents = this->ignoredStylusEventsSpin->value(),
+            .inputSystemTPCButton = this->inputSystemTPCButtonCheck->isChecked(),
+            .inputSystemDrawOutsideWindow = this->inputSystemDrawOutsideWindowCheck->isChecked(),
             .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
                              .stylusButton1Action =
                                      static_cast<QtPointerButtonAction>(this->stylusButton1ActionCombo->currentData().toInt()),

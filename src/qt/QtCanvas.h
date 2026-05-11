@@ -76,6 +76,7 @@ public:
     void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
     void setGridSnapOptions(double gridSize, double tolerance);
     void setEraserCursorHidden(bool hidden);
+    void setInputSystemOptions(int ignoredStylusEvents, bool tpcButtonEnabled, bool drawOutsideWindowEnabled);
     void setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix);
     void setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles);
     void setPageShadowEnabled(bool enabled);
@@ -321,6 +322,10 @@ private:
     double extraPageSpaceAbove = 0.0;
     double extraPageSpaceBelow = 0.0;
     bool eraserCursorHidden = true;
+    int ignoredStylusEvents = 0;
+    int ignoredStylusEventsRemaining = 0;
+    bool inputSystemTPCButton = false;
+    bool inputSystemDrawOutsideWindow = true;
     QtPointerButtonMatrix buttonMatrix;
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     Color selectionColor{0, 120, 255, 255};

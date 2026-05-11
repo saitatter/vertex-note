@@ -47,6 +47,7 @@ This audit compares GTK `Settings` keys from
 | `font` | Qt-only equivalent | `tools/defaultFontName`, `tools/defaultFontSize`; applied to the Qt text tool, toolbar font controls, and Lua font access. |
 | `stabilizerAveragingMethod`, `stabilizerBuffersize`, `stabilizerFinalizeStroke` | Partial / Qt-only equivalent | `tools/strokeStabilizerEnabled`, `tools/strokeStabilizerSamples`, `tools/strokeStabilizerStrength`, `tools/strokeStabilizerFinalizeStroke`; Qt applies a native moving-average stabilizer instead of reusing GTK `StrokeHandler`. |
 | Custom data `deviceClasses`, `buttonConfig` | Qt-only equivalent | Qt discovers `QInputDevice`s, persists a global button matrix and per-device override matrices, and applies them for mouse/tablet/touch input. |
+| `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Partial / Qt-native | `devices/ignoredStylusEvents`, `devices/inputSystemTPCButton`, `devices/inputSystemDrawOutsideWindow`; Qt applies ignored initial tablet events. The TPC/draw-outside flags are persisted for parity, while Qt uses native tablet button/window event delivery. |
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
 | `filepathShownInTitlebar`, `pageNumberShownInTitlebar` | Implemented | `appearance/showFilePathInTitlebar`, `appearance/showPageNumberInTitlebar`. |
 | `showPageShadow` | Implemented | `appearance/showPageShadow`; applied to the Qt page background renderer. |
@@ -76,7 +77,6 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
-| `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work
