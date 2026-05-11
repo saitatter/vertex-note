@@ -384,6 +384,20 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->numberOfSpacesForTabSpin->setValue(current.numberOfSpacesForTab);
     generalLayout->addRow(QStringLiteral("Spaces per tab:"), this->numberOfSpacesForTabSpin);
 
+    this->edgePanSpeedSpin = new QDoubleSpinBox(generalPage);
+    this->edgePanSpeedSpin->setRange(0.0, 200.0);
+    this->edgePanSpeedSpin->setDecimals(1);
+    this->edgePanSpeedSpin->setSingleStep(1.0);
+    this->edgePanSpeedSpin->setValue(current.edgePanSpeed);
+    generalLayout->addRow(QStringLiteral("Edge pan speed:"), this->edgePanSpeedSpin);
+
+    this->edgePanMaxMultSpin = new QDoubleSpinBox(generalPage);
+    this->edgePanMaxMultSpin->setRange(1.0, 20.0);
+    this->edgePanMaxMultSpin->setDecimals(1);
+    this->edgePanMaxMultSpin->setSingleStep(0.5);
+    this->edgePanMaxMultSpin->setValue(current.edgePanMaxMult);
+    generalLayout->addRow(QStringLiteral("Edge pan max multiplier:"), this->edgePanMaxMultSpin);
+
     this->laserPointerFadeOutSpin = new QSpinBox(generalPage);
     this->laserPointerFadeOutSpin->setRange(100, 10000);
     this->laserPointerFadeOutSpin->setSingleStep(100);
@@ -790,6 +804,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
             .useSpacesForTab = this->useSpacesForTabCheck->isChecked(),
             .numberOfSpacesForTab = this->numberOfSpacesForTabSpin->value(),
+            .edgePanSpeed = this->edgePanSpeedSpin->value(),
+            .edgePanMaxMult = this->edgePanMaxMultSpin->value(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
             .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
                              .stylusButton1Action =

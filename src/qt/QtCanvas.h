@@ -81,6 +81,7 @@ public:
     void setSnapRecognizedShapesEnabled(bool enabled);
     void setLaserPointerFadeOutMs(int value);
     void setTextEditorTabOptions(bool useSpaces, int numberOfSpaces);
+    void setEdgePanOptions(double speed, double maxMultiplier);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
@@ -254,6 +255,12 @@ private:
     void finalizeInstrumentTool();
     void cancelInstrumentTool();
     void processTouchDrawing(const vn::ui::input::TouchEvent& event);
+    void updateEdgePanAtScreen(const QPointF& screenPoint);
+    void stopEdgePan();
+    void applyEdgePanStep();
+    [[nodiscard]] auto edgePanDeltaFor(const QPointF& screenPoint) const -> QPointF;
+    [[nodiscard]] auto hasEdgePanDrag() const -> bool;
+    void updateGeometryDragAtScreen(const QPointF& screenPoint);
 
 private:
     std::unique_ptr<QtInputAdapter> inputAdapter;
@@ -351,6 +358,10 @@ private:
     };
     std::vector<QtLaserOverlayStroke> laserOverlayStrokes;
     QTimer* laserFadeTimer = nullptr;
+    QTimer* edgePanTimer = nullptr;
+    QPointF edgePanScreenPoint;
+    double edgePanSpeed = 20.0;
+    double edgePanMaxMultiplier = 5.0;
     QtToolState currentToolState;
     QtTextEditor* textEditor = nullptr;
 };

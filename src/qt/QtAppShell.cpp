@@ -2728,6 +2728,10 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.numberOfSpacesForTab =
             settings.value(QStringLiteral("tools/numberOfSpacesForTab"), this->currentSettings.numberOfSpacesForTab)
                     .toInt();
+    this->currentSettings.edgePanSpeed =
+            settings.value(QStringLiteral("view/edgePanSpeed"), this->currentSettings.edgePanSpeed).toDouble();
+    this->currentSettings.edgePanMaxMult =
+            settings.value(QStringLiteral("view/edgePanMaxMult"), this->currentSettings.edgePanMaxMult).toDouble();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
     this->currentSettings.buttonMatrix.eraserTipAction =
@@ -3044,6 +3048,8 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
     settings.setValue(QStringLiteral("tools/useSpacesForTab"), this->currentSettings.useSpacesForTab);
     settings.setValue(QStringLiteral("tools/numberOfSpacesForTab"), this->currentSettings.numberOfSpacesForTab);
+    settings.setValue(QStringLiteral("view/edgePanSpeed"), this->currentSettings.edgePanSpeed);
+    settings.setValue(QStringLiteral("view/edgePanMaxMult"), this->currentSettings.edgePanMaxMult);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
     settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
                       static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
@@ -3499,6 +3505,7 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
     canvas->setTextEditorTabOptions(this->currentSettings.useSpacesForTab,
                                     this->currentSettings.numberOfSpacesForTab);
+    canvas->setEdgePanOptions(this->currentSettings.edgePanSpeed, this->currentSettings.edgePanMaxMult);
     this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
                                                 this->currentSettings.pdfPreloadPagesBefore,
                                                 this->currentSettings.pdfPreloadPagesAfter,

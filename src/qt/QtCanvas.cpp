@@ -342,6 +342,9 @@ QtCanvas::QtCanvas(QWidget* parent): QWidget(parent) {
         }
         update();
     });
+    this->edgePanTimer = new QTimer(this);
+    this->edgePanTimer->setInterval(33);
+    QObject::connect(this->edgePanTimer, &QTimer::timeout, this, [this]() { applyEdgePanStep(); });
     newBlankDocument();
 }
 
@@ -681,6 +684,11 @@ void QtCanvas::setTextEditorTabOptions(bool useSpaces, int numberOfSpaces) {
     }
 }
 
+void QtCanvas::setEdgePanOptions(double speed, double maxMultiplier) {
+    this->edgePanSpeed = std::clamp(speed, 0.0, 200.0);
+    this->edgePanMaxMultiplier = std::clamp(maxMultiplier, 1.0, 20.0);
+}
+
 auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
 
 auto QtCanvas::isTouchDrawingEnabled() const -> bool { return this->touchDrawingEnabled; }
@@ -944,6 +952,7 @@ void QtCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
 
 void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
+    stopEdgePan();
     const auto pointerAction = pointerActionForMouseButton(event->button(), event->device());
     if (this->panning && (pointerAction == QtPointerButtonAction::Pan ||
                           (this->spaceHeld && event->button() == Qt::LeftButton))) {
@@ -1033,6 +1042,7 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     if (this->drawing) {
+        updateEdgePanAtScreen(event->position());
         updateStrokeAtScreen(event->position(), 0.5);
         event->accept();
         return;
@@ -1043,54 +1053,48 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     if (this->erasing) {
+        updateEdgePanAtScreen(event->position());
         eraseAtScreen(event->position());
         event->accept();
         return;
     }
     if (this->movingSelection) {
+        updateEdgePanAtScreen(event->position());
         updateMoveSelectionAtScreen(event->position());
         event->accept();
         return;
     }
     if (this->rubberBanding) {
+        updateEdgePanAtScreen(event->position());
         updateRubberBand(event->position());
         event->accept();
         return;
     }
     if (this->pdfTextSelecting) {
+        updateEdgePanAtScreen(event->position());
         updatePdfTextSelectionAtScreen(event->position());
         event->accept();
         return;
     }
     if (this->documentController && this->documentController->isVerticalSpacing()) {
+        updateEdgePanAtScreen(event->position());
         updateVerticalSpaceAtScreen(event->position());
         event->accept();
         return;
     }
     if (this->shapeDrawing) {
+        updateEdgePanAtScreen(event->position());
         updateShapeAtScreen(event->position());
         event->accept();
         return;
     }
     if (this->documentController && this->documentController->activeGeometryDrag()) {
-        const auto& drag = *this->documentController->activeGeometryDrag();
-        const auto rects = pageRects();
-        if (drag.pageIndex < rects.size()) {
-            const QPointF scenePoint = screenToScene(event->position());
-            const auto& pageRect = rects[drag.pageIndex];
-            const double pageX = scenePoint.x() - pageRect.x();
-            const double pageY = scenePoint.y() - pageRect.y();
-            static_cast<void>(this->documentController->updateGeometryVertexDrag(
-                    pageX, pageY, this->zoomFactor,
-                    {.geometryEnabled = this->geometrySnapEnabled,
-                     .gridEnabled = this->gridSnapEnabled,
-                     .gridSize = this->snapGridSize,
-                     .gridTolerance = this->snapGridTolerance}));
-            update();
-            event->accept();
-            return;
-        }
+        updateEdgePanAtScreen(event->position());
+        updateGeometryDragAtScreen(event->position());
+        event->accept();
+        return;
     }
+    stopEdgePan();
     updateGeometryHover(event->position());
     QWidget::mouseMoveEvent(event);
 }
@@ -1396,6 +1400,111 @@ void QtCanvas::drawOverlayHud(QPainter& painter) const {
 
 auto QtCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
     return QPointF(this->scrollX + screenPoint.x() / this->zoomFactor, this->scrollY + screenPoint.y() / this->zoomFactor);
+}
+
+auto QtCanvas::hasEdgePanDrag() const -> bool {
+    return this->drawing || this->erasing || this->movingSelection || this->rubberBanding || this->pdfTextSelecting ||
+           this->shapeDrawing || (this->documentController && (this->documentController->isVerticalSpacing() ||
+                                                                this->documentController->activeGeometryDrag()));
+}
+
+auto QtCanvas::edgePanDeltaFor(const QPointF& screenPoint) const -> QPointF {
+    if (this->edgePanSpeed <= 0.0 || width() <= 0 || height() <= 0) {
+        return {};
+    }
+
+    constexpr double edgeMargin = 48.0;
+    auto axisDelta = [this, edgeMargin](double position, double length) {
+        if (position < 0.0 || position > length) {
+            return 0.0;
+        }
+        if (position < edgeMargin) {
+            const double t = (edgeMargin - position) / edgeMargin;
+            return -this->edgePanSpeed * std::lerp(1.0, this->edgePanMaxMultiplier, t);
+        }
+        if (position > length - edgeMargin) {
+            const double t = (position - (length - edgeMargin)) / edgeMargin;
+            return this->edgePanSpeed * std::lerp(1.0, this->edgePanMaxMultiplier, t);
+        }
+        return 0.0;
+    };
+
+    return QPointF(axisDelta(screenPoint.x(), width()), axisDelta(screenPoint.y(), height()));
+}
+
+void QtCanvas::updateGeometryDragAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->documentController->activeGeometryDrag()) {
+        return;
+    }
+    const auto& drag = *this->documentController->activeGeometryDrag();
+    const auto rects = pageRects();
+    if (drag.pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto& pageRect = rects[drag.pageIndex];
+    const double pageX = scenePoint.x() - pageRect.x();
+    const double pageY = scenePoint.y() - pageRect.y();
+    static_cast<void>(this->documentController->updateGeometryVertexDrag(
+            pageX, pageY, this->zoomFactor,
+            {.geometryEnabled = this->geometrySnapEnabled,
+             .gridEnabled = this->gridSnapEnabled,
+             .gridSize = this->snapGridSize,
+             .gridTolerance = this->snapGridTolerance}));
+    update();
+}
+
+void QtCanvas::updateEdgePanAtScreen(const QPointF& screenPoint) {
+    this->edgePanScreenPoint = screenPoint;
+    if (!hasEdgePanDrag() || edgePanDeltaFor(screenPoint).isNull()) {
+        stopEdgePan();
+        return;
+    }
+    if (this->edgePanTimer && !this->edgePanTimer->isActive()) {
+        this->edgePanTimer->start();
+    }
+}
+
+void QtCanvas::stopEdgePan() {
+    if (this->edgePanTimer) {
+        this->edgePanTimer->stop();
+    }
+}
+
+void QtCanvas::applyEdgePanStep() {
+    if (!hasEdgePanDrag()) {
+        stopEdgePan();
+        return;
+    }
+    const QPointF delta = edgePanDeltaFor(this->edgePanScreenPoint);
+    if (delta.isNull()) {
+        stopEdgePan();
+        return;
+    }
+
+    this->scrollX += delta.x() / std::max(0.001, this->zoomFactor);
+    this->scrollY += delta.y() / std::max(0.001, this->zoomFactor);
+
+    if (this->drawing) {
+        updateStrokeAtScreen(this->edgePanScreenPoint, 0.5);
+    } else if (this->erasing) {
+        eraseAtScreen(this->edgePanScreenPoint);
+    } else if (this->movingSelection) {
+        updateMoveSelectionAtScreen(this->edgePanScreenPoint);
+    } else if (this->rubberBanding) {
+        updateRubberBand(this->edgePanScreenPoint);
+    } else if (this->pdfTextSelecting) {
+        updatePdfTextSelectionAtScreen(this->edgePanScreenPoint);
+    } else if (this->documentController && this->documentController->isVerticalSpacing()) {
+        updateVerticalSpaceAtScreen(this->edgePanScreenPoint);
+    } else if (this->shapeDrawing) {
+        updateShapeAtScreen(this->edgePanScreenPoint);
+    } else if (this->documentController && this->documentController->activeGeometryDrag()) {
+        updateGeometryDragAtScreen(this->edgePanScreenPoint);
+    }
+
+    emitViewportUpdate();
 }
 
 auto QtCanvas::pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t> {

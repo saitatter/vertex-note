@@ -72,6 +72,8 @@ struct QtSettings {
     int laserPointerFadeOutMs = 1500;
     bool useSpacesForTab = false;
     int numberOfSpacesForTab = 4;
+    double edgePanSpeed = 20.0;
+    double edgePanMaxMult = 5.0;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix{};
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
@@ -158,6 +160,8 @@ private:
     QSpinBox* laserPointerFadeOutSpin = nullptr;
     QCheckBox* useSpacesForTabCheck = nullptr;
     QSpinBox* numberOfSpacesForTabSpin = nullptr;
+    QDoubleSpinBox* edgePanSpeedSpin = nullptr;
+    QDoubleSpinBox* edgePanMaxMultSpin = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
     QComboBox* eraserTipActionCombo = nullptr;
     QComboBox* stylusButton1ActionCombo = nullptr;
