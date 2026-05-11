@@ -22,6 +22,7 @@ set(vertexnote_qt_sources
         QtAppShellToolbarSync.cpp
         QtAppShellToolCommands.cpp
         QtAppShellViewCommands.cpp
+        QtAppShellWindowState.cpp
         QtBackgroundDialog.h
         QtBackgroundDialog.cpp
         QtCanvas.h
