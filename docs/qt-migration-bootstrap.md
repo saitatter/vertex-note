@@ -257,7 +257,8 @@ latest Qt parity commits.
      selection copy on documents with attached and external PDFs.
    - Add manual smoke coverage for the Qt menu/dialog flows: `File > Annotate
      PDF...`, `Journal > Append New PDF Pages`, PDF text select/copy, and
-     highlight-selected-PDF-text.
+     highlight-selected-PDF-text. Checklist:
+     `docs/qt-manual-smoke-checklist.md`.
 
 5. **Plugin API compatibility audit**
    - ✓ Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB` in
@@ -271,6 +272,8 @@ latest Qt parity commits.
      sidebar/layer panel defaults, floating toolbar placement, and status bar.
    - Verify text never clips in toolbar/customize/settings dialogs on narrow
      Windows scaling configurations.
+   - Manual acceptance checklist lives in
+     `docs/qt-manual-smoke-checklist.md`.
 
 7. **Legacy boundary cleanup**
    - Continue moving remaining non-shell Cairo/GTK dependencies behind explicit
