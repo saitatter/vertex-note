@@ -441,7 +441,8 @@ auto splitToolbarTokens(const QString& text) -> std::vector<std::string> {
     for (const auto& part: parts) {
         const auto token = part.trimmed();
         if (!token.isEmpty()) {
-            tokens.push_back(token.toStdString());
+            const auto value = token.toStdString();
+            tokens.push_back(value == "DRAW_LEGACY" ? std::string("DRAW_STROKE") : value);
         }
     }
     return tokens;
@@ -1984,7 +1985,7 @@ void QtAppShell::rebuildToolbar() {
     const auto ensureStrokeDrawingButton = [&]() -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        button->setPopupMode(QToolButton::InstantPopup);
+        button->setPopupMode(QToolButton::MenuButtonPopup);
         button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
         button->setToolTip(QStringLiteral("Stroke drawing tools"));
         auto* drawingMenu = new QMenu(button);
@@ -1993,14 +1994,18 @@ void QtAppShell::rebuildToolbar() {
                 drawingMenu->addAction(action);
             }
         }
+        if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-line")) {
+            button->setDefaultAction(action);
+        }
         button->setMenu(drawingMenu);
+        button->setToolTip(QStringLiteral("Stroke drawing tools"));
         this->strokeDrawingToolButtons.push_back(button);
         return button;
     };
     const auto ensureVertexDrawingButton = [&]() -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        button->setPopupMode(QToolButton::InstantPopup);
+        button->setPopupMode(QToolButton::MenuButtonPopup);
         button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
         button->setToolTip(QStringLiteral("Vertex drawing tools"));
         auto* drawingMenu = new QMenu(button);
@@ -2009,7 +2014,11 @@ void QtAppShell::rebuildToolbar() {
                 drawingMenu->addAction(action);
             }
         }
+        if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-circle")) {
+            button->setDefaultAction(action);
+        }
         button->setMenu(drawingMenu);
+        button->setToolTip(QStringLiteral("Vertex drawing tools"));
         this->vertexDrawingToolButtons.push_back(button);
         return button;
     };
@@ -2466,6 +2475,7 @@ void QtAppShell::syncToolbarWidgets() {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
             button->setPopupMode(QToolButton::MenuButtonPopup);
+            button->setToolTip(QStringLiteral("Stroke drawing tools"));
         }
     }
 
@@ -2474,6 +2484,7 @@ void QtAppShell::syncToolbarWidgets() {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
             button->setPopupMode(QToolButton::MenuButtonPopup);
+            button->setToolTip(QStringLiteral("Vertex drawing tools"));
         }
     }
 

@@ -34,11 +34,12 @@ TEST(VertexNoteQtToolbarLayoutEngine, parsesToolbarProfilesAndTokens) {
 }
 
 TEST(VertexNoteQtToolbarLayoutEngine, expandsDrawAliasToStrokeAndVertexTokens) {
-    const std::vector<std::string> tokens = {"SAVE", "DRAW", "DRAW_STROKE", "DRAW_VERTEX"};
+    const std::vector<std::string> tokens = {"SAVE", "DRAW", "DRAW_LEGACY", "DRAW_STROKE", "DRAW_VERTEX"};
 
     const auto expanded = QtToolbarLayoutEngine::expandTokenAliases(tokens);
 
-    const std::vector<std::string> expected = {"SAVE", "DRAW_STROKE", "DRAW_VERTEX", "DRAW_STROKE", "DRAW_VERTEX"};
+    const std::vector<std::string> expected = {"SAVE", "DRAW_STROKE", "DRAW_VERTEX", "DRAW_STROKE", "DRAW_STROKE",
+                                               "DRAW_VERTEX"};
     EXPECT_EQ(expanded, expected);
 }
 
