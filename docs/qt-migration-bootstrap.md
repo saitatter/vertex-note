@@ -144,12 +144,125 @@ also sets `-DENABLE_LEGACY_GTK_SHELL=OFF`.
   and document management workflow, but does not host the GTK `Control` class.
   Tool management, undo/redo, and all editing operations are implemented
   Qt-natively using the same core model objects (`Stroke`, `Layer`, `Document`).
-- Plugin system has UI bridge for menu/toolbar actions but no Qt-native
-  Lua runtime; plugins requiring Lua execution need the GTK shell.
+- The Qt shell now has a Qt-native Lua plugin runtime for bundled plugin hooks,
+  menu/toolbar callbacks, document/page/layer state, stroke/image/text element
+  helpers, PDF page helpers, export helpers, settings folders, file dialogs,
+  fonts, zoom, and selected action state. Remaining plugin parity is focused on
+  API edge cases and toolbar placeholder UI, not on hosting GTK `Control`.
 - The remaining parity backlog is now concentrated in deeper shell/workflow
   behavior rather than missing top-level toolbar tools. The largest remaining
-  shell-visible gaps are now concentrated in plugin/runtime parity and final
-  screenshot-level chrome matching.
+  shell-visible gaps are now concentrated in final settings/device polish,
+  plugin API hardening, automated Qt UI tests, and screenshot-level chrome
+  matching.
+
+## Active Qt UI/UX Parity Plan
+
+This is the current implementation plan after the Qt parity batch through
+`f534e9626 feat: fill Qt Lua plugin API gaps`.
+
+### Completed in this batch
+
+1. ✓ Split drawing toolbar/menu into stroke and vertex families.
+   - Tokens: `DRAW_STROKE`, `DRAW_VERTEX`.
+   - `DRAW` remains a backwards-compatible alias that adds both dropdowns.
+   - Qt Tools menu now separates Stroke Drawing and Vertex Drawing.
+
+2. ✓ Toolbar manage/customize parity v1.
+   - `MANAGE_TOOLBAR` opens preferences/profile selection.
+   - `CUSTOMIZE_TOOLBAR` opens a Qt dialog for custom toolbar token editing.
+   - Known-token validation includes `DRAW_STROKE` and `DRAW_VERTEX`.
+   - Saved customization is Qt-profile scoped; GTK shared profiles are not
+     modified.
+
+3. ✓ View columns/rows parity v1.
+   - `View > Layout > Columns` and `Rows` support 1-8 spans.
+   - `QtCanvas` supports fixed columns and fixed rows.
+   - QSettings uses GTK-compatible signed span semantics:
+     positive = columns, negative = rows.
+   - Pair Pages is synchronized as a shortcut for 2 columns.
+
+4. ✓ PDF/journal parity v1.
+   - `File > Annotate PDF...` opens a PDF as document background with attach
+     choice.
+   - `Journal > Append New PDF Pages` appends missing pages from the attached
+     PDF and reports no-PDF/no-new-pages/success status.
+   - PDF text marker opacity is present as a disabled Qt action with tooltip
+     until marker annotation support exists.
+
+5. ✓ Paper/page template parity v1.
+   - Paper format, paper background, and page template dialogs are wired to the
+     shared Qt settings model.
+   - `Journal > Configure Page Template...` sets default page size/background.
+
+6. ✓ Settings parity v1.
+   - Qt settings cover General, Tools, Page, PDF, LaTeX, and Audio options.
+   - Toolbar profile selection is available; toolbar token editing is exposed
+     through the dedicated Customize Toolbar action.
+
+7. ✓ Help polish v1.
+   - `Help > Help` opens the project help URL.
+   - No Demo action has been added because no Qt demo asset/flow is present.
+
+8. ✓ Plugin runtime parity v1.
+   - Lua plugins load in Qt without instantiating GTK `Control`.
+   - Plugins can register menu/toolbar callbacks through `IPluginUiBridge`.
+   - Plugin manager lists plugins, enabled/default state, registered actions,
+     and load errors.
+   - Bundled plugin hooks are covered: UI registration, document structure,
+     page/layer state, strokes/images/texts, PDF helpers, export, file dialogs,
+     folders, fonts, zoom, action state, and tool colour changes.
+
+### Remaining work
+
+1. **Qt UI tests for the parity batch**
+   - Add unit coverage for toolbar token parsing:
+     `DRAW`, `DRAW_STROKE`, `DRAW_VERTEX`.
+   - Add test coverage for `QtCanvas` page layout spans:
+     1/2/3 columns and 1/2 rows. `pageRects()` is currently private, so this
+     either needs a small test seam or coverage through a public viewport helper.
+   - Add a small Lua runtime smoke test if the test target can link Lua in the
+     same configuration as the Qt shell.
+
+2. **Plugin runtime parity hardening**
+   - Replace `registerPlaceholder` / `setPlaceholderValue` no-op compatibility
+     with real Qt toolbar placeholder labels.
+   - Expand `getActionState` for more GTK action-state values:
+     current tool, current tool colour, pen line style, fill, sizes.
+   - Decide whether to support more legacy file/document APIs beyond the safe
+     `openFile` bridge already implemented.
+   - Add automated coverage for bundled plugin load/enable/reload behavior.
+
+3. **Settings parity v2**
+   - Split Toolbar into its own settings tab instead of keeping profile choice
+     in General plus a separate Customize Toolbar dialog.
+   - Add Device/Stylus/Button configuration as a Qt-native tab once there is a
+     clean backend; until then keep it explicit as unavailable in the Qt shell.
+   - Audit every GTK settings key against `QtSettings` and mark: implemented,
+     intentionally Qt-only, or unsupported.
+
+4. **PDF annotation parity v2**
+   - Implement real PDF text marker/highlight annotation behavior, then enable
+     `tool.select-pdf-text-marker-opacity`.
+   - Add manual and automated checks for annotate PDF, append PDF pages, and PDF
+     text selection copy on documents with attached and external PDFs.
+
+5. **Plugin API compatibility audit**
+   - Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB`.
+   - Track each API as implemented, no-op compatibility, intentionally
+     unsupported, or GTK-only.
+   - Keep no-op APIs documented so plugin authors are not surprised.
+
+6. **Chrome and interaction polish**
+   - Do screenshot-level comparison against GTK for toolbar density, menus,
+     sidebar/layer panel defaults, floating toolbar placement, and status bar.
+   - Verify text never clips in toolbar/customize/settings dialogs on narrow
+     Windows scaling configurations.
+
+7. **Legacy boundary cleanup**
+   - Continue moving remaining non-shell Cairo/GTK dependencies behind explicit
+     legacy boundaries.
+   - Keep GTK fallback build green while it exists, but avoid new Qt features
+     depending on GTK UI classes.
 
 ## GTK/Cairo Deprecation Order
 
