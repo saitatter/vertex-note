@@ -7,6 +7,7 @@
 #include "QtSettingsDialog.h"
 
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
@@ -23,6 +24,39 @@
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QVBoxLayout>
+
+namespace {
+
+auto colorToQColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
+
+auto qColorToColor(const QColor& color) -> Color {
+    return Color{static_cast<uint8_t>(color.red()), static_cast<uint8_t>(color.green()),
+                 static_cast<uint8_t>(color.blue()), static_cast<uint8_t>(color.alpha())};
+}
+
+void updateColorButton(QPushButton* button, const QColor& color) {
+    button->setText(color.name(QColor::HexArgb).toUpper());
+    button->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; color: %2; }")
+                                  .arg(color.name(QColor::HexArgb),
+                                       color.lightness() < 128 ? QStringLiteral("#ffffff") : QStringLiteral("#202020")));
+}
+
+auto makeColorButton(QWidget* parent, const QColor& initialColor) -> QPushButton* {
+    auto* button = new QPushButton(parent);
+    button->setMinimumWidth(96);
+    updateColorButton(button, initialColor);
+    return button;
+}
+
+void populatePointerActionCombo(QComboBox* combo, QtPointerButtonAction current) {
+    combo->addItem(QStringLiteral("Normal"), static_cast<int>(QtPointerButtonAction::None));
+    combo->addItem(QStringLiteral("Pan"), static_cast<int>(QtPointerButtonAction::Pan));
+    combo->addItem(QStringLiteral("Eraser"), static_cast<int>(QtPointerButtonAction::Eraser));
+    const int index = combo->findData(static_cast<int>(current));
+    combo->setCurrentIndex(index >= 0 ? index : 0);
+}
+
+}  // namespace
 
 QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<QtToolbarProfileOption>& toolbarProfiles,
                                    QWidget* parent):
@@ -222,6 +256,56 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->themeVariantCombo->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
     appearanceLayout->addRow(QStringLiteral("Theme:"), this->themeVariantCombo);
 
+    this->iconThemeCombo = new QComboBox(appearancePage);
+    this->iconThemeCombo->addItem(QStringLiteral("Color"), QStringLiteral("color"));
+    this->iconThemeCombo->addItem(QStringLiteral("Lucide"), QStringLiteral("lucide"));
+    const QString currentIconTheme = QString::fromStdString(current.iconTheme);
+    const int iconThemeIndex = this->iconThemeCombo->findData(currentIconTheme);
+    this->iconThemeCombo->setCurrentIndex(iconThemeIndex >= 0 ? iconThemeIndex : 0);
+    appearanceLayout->addRow(QStringLiteral("Icon theme:"), this->iconThemeCombo);
+
+    this->selectionColor = colorToQColor(current.selectionColor);
+    this->selectionColorButton = makeColorButton(appearancePage, this->selectionColor);
+    QObject::connect(this->selectionColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->selectionColor, this, QStringLiteral("Selection Colour"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->selectionColor = chosen;
+            updateColorButton(this->selectionColorButton, this->selectionColor);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Selection colour:"), this->selectionColorButton);
+
+    this->recolorMainViewCheck = new QCheckBox(appearancePage);
+    this->recolorMainViewCheck->setChecked(current.recolorMainView);
+    appearanceLayout->addRow(QStringLiteral("Recolor drawing area:"), this->recolorMainViewCheck);
+    this->recolorSidebarCheck = new QCheckBox(appearancePage);
+    this->recolorSidebarCheck->setChecked(current.recolorSidebarMiniatures);
+    appearanceLayout->addRow(QStringLiteral("Recolor sidebar previews:"), this->recolorSidebarCheck);
+
+    this->recolorLightColor = colorToQColor(current.recolorLight);
+    this->recolorDarkColor = colorToQColor(current.recolorDark);
+    this->recolorLightButton = makeColorButton(appearancePage, this->recolorLightColor);
+    this->recolorDarkButton = makeColorButton(appearancePage, this->recolorDarkColor);
+    QObject::connect(this->recolorLightButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->recolorLightColor, this, QStringLiteral("Recolor Light"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->recolorLightColor = chosen;
+            updateColorButton(this->recolorLightButton, this->recolorLightColor);
+        }
+    });
+    QObject::connect(this->recolorDarkButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->recolorDarkColor, this, QStringLiteral("Recolor Dark"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->recolorDarkColor = chosen;
+            updateColorButton(this->recolorDarkButton, this->recolorDarkColor);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Recolor light:"), this->recolorLightButton);
+    appearanceLayout->addRow(QStringLiteral("Recolor dark:"), this->recolorDarkButton);
+
     auto* paletteRow = new QWidget(appearancePage);
     auto* paletteRowLayout = new QHBoxLayout(paletteRow);
     paletteRowLayout->setContentsMargins(0, 0, 0, 0);
@@ -366,16 +450,33 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->eraserCursorHiddenCheck = new QCheckBox(devicesPage);
     this->eraserCursorHiddenCheck->setChecked(current.eraserCursorHidden);
     devicesForm->addRow(QStringLiteral("Hide eraser cursor:"), this->eraserCursorHiddenCheck);
-    this->rightButtonActionCombo = new QComboBox(devicesPage);
-    this->rightButtonActionCombo->addItem(QStringLiteral("None"), static_cast<int>(QtPointerButtonAction::None));
-    this->rightButtonActionCombo->addItem(QStringLiteral("Eraser"), static_cast<int>(QtPointerButtonAction::Eraser));
-    this->rightButtonActionCombo->setCurrentIndex(current.rightButtonAction == QtPointerButtonAction::None ? 0 : 1);
-    devicesForm->addRow(QStringLiteral("Right button:"), this->rightButtonActionCombo);
-    this->middleButtonActionCombo = new QComboBox(devicesPage);
-    this->middleButtonActionCombo->addItem(QStringLiteral("None"), static_cast<int>(QtPointerButtonAction::None));
-    this->middleButtonActionCombo->addItem(QStringLiteral("Pan"), static_cast<int>(QtPointerButtonAction::Pan));
-    this->middleButtonActionCombo->setCurrentIndex(current.middleButtonAction == QtPointerButtonAction::None ? 0 : 1);
-    devicesForm->addRow(QStringLiteral("Middle button:"), this->middleButtonActionCombo);
+    this->eraserTipActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->eraserTipActionCombo, current.buttonMatrix.eraserTipAction);
+    devicesForm->addRow(QStringLiteral("Eraser tip:"), this->eraserTipActionCombo);
+    this->stylusButton1ActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->stylusButton1ActionCombo, current.buttonMatrix.stylusButton1Action);
+    devicesForm->addRow(QStringLiteral("Stylus button 1:"), this->stylusButton1ActionCombo);
+    this->stylusButton2ActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->stylusButton2ActionCombo, current.buttonMatrix.stylusButton2Action);
+    devicesForm->addRow(QStringLiteral("Stylus button 2:"), this->stylusButton2ActionCombo);
+    this->mouseLeftActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->mouseLeftActionCombo, current.buttonMatrix.mouseLeftAction);
+    devicesForm->addRow(QStringLiteral("Mouse left:"), this->mouseLeftActionCombo);
+    this->mouseMiddleActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->mouseMiddleActionCombo, current.buttonMatrix.mouseMiddleAction);
+    devicesForm->addRow(QStringLiteral("Mouse middle:"), this->mouseMiddleActionCombo);
+    this->mouseRightActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->mouseRightActionCombo, current.buttonMatrix.mouseRightAction);
+    devicesForm->addRow(QStringLiteral("Mouse right:"), this->mouseRightActionCombo);
+    this->mouseBackActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->mouseBackActionCombo, current.buttonMatrix.mouseBackAction);
+    devicesForm->addRow(QStringLiteral("Mouse back:"), this->mouseBackActionCombo);
+    this->mouseForwardActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->mouseForwardActionCombo, current.buttonMatrix.mouseForwardAction);
+    devicesForm->addRow(QStringLiteral("Mouse forward:"), this->mouseForwardActionCombo);
+    this->touchActionCombo = new QComboBox(devicesPage);
+    populatePointerActionCombo(this->touchActionCombo, current.buttonMatrix.touchAction);
+    devicesForm->addRow(QStringLiteral("Touch contact:"), this->touchActionCombo);
     devicesLayout->addLayout(devicesForm);
 
     this->inputDeviceList = new QListWidget(devicesPage);
@@ -445,12 +546,32 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
-            .rightButtonAction = static_cast<QtPointerButtonAction>(this->rightButtonActionCombo->currentData().toInt()),
-            .middleButtonAction = static_cast<QtPointerButtonAction>(this->middleButtonActionCombo->currentData().toInt()),
+            .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
+                             .stylusButton1Action =
+                                     static_cast<QtPointerButtonAction>(this->stylusButton1ActionCombo->currentData().toInt()),
+                             .stylusButton2Action =
+                                     static_cast<QtPointerButtonAction>(this->stylusButton2ActionCombo->currentData().toInt()),
+                             .mouseLeftAction =
+                                     static_cast<QtPointerButtonAction>(this->mouseLeftActionCombo->currentData().toInt()),
+                             .mouseMiddleAction =
+                                     static_cast<QtPointerButtonAction>(this->mouseMiddleActionCombo->currentData().toInt()),
+                             .mouseRightAction =
+                                     static_cast<QtPointerButtonAction>(this->mouseRightActionCombo->currentData().toInt()),
+                             .mouseBackAction =
+                                     static_cast<QtPointerButtonAction>(this->mouseBackActionCombo->currentData().toInt()),
+                             .mouseForwardAction =
+                                     static_cast<QtPointerButtonAction>(this->mouseForwardActionCombo->currentData().toInt()),
+                             .touchAction = static_cast<QtPointerButtonAction>(this->touchActionCombo->currentData().toInt())},
             .showFilePathInTitlebar = this->showFilePathInTitlebarCheck->isChecked(),
             .showPageNumberInTitlebar = this->showPageNumberInTitlebarCheck->isChecked(),
             .showPageShadow = this->showPageShadowCheck->isChecked(),
             .themeVariant = this->themeVariantCombo->currentData().toString().toStdString(),
+            .iconTheme = this->iconThemeCombo->currentData().toString().toStdString(),
+            .selectionColor = qColorToColor(this->selectionColor),
+            .recolorMainView = this->recolorMainViewCheck->isChecked(),
+            .recolorSidebarMiniatures = this->recolorSidebarCheck->isChecked(),
+            .recolorLight = qColorToColor(this->recolorLightColor),
+            .recolorDark = qColorToColor(this->recolorDarkColor),
             .colorPalettePath = this->colorPalettePathEdit->text().trimmed().toStdString(),
             .autoloadPdfXoj = this->autoloadPdfXojCheck->isChecked(),
             .defaultPdfExportName = this->defaultPdfExportNameEdit->text().trimmed().toStdString(),

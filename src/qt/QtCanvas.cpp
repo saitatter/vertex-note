@@ -82,6 +82,24 @@ auto toQtCursor(vn::ui::common::CanvasCursor cursor) -> Qt::CursorShape {
 
 auto clampZoom(double zoom) -> double { return std::clamp(zoom, MIN_ZOOM, MAX_ZOOM); }
 
+auto qColorFromColor(Color color, int alphaOverride = -1) -> QColor {
+    return QColor(color.red, color.green, color.blue, alphaOverride >= 0 ? alphaOverride : color.alpha);
+}
+
+auto recolorDifference(Color light, Color dark) -> QColor {
+    return QColor(std::abs(static_cast<int>(dark.red) - static_cast<int>(light.red)),
+                  std::abs(static_cast<int>(dark.green) - static_cast<int>(light.green)),
+                  std::abs(static_cast<int>(dark.blue) - static_cast<int>(light.blue)));
+}
+
+auto recolorOffset(Color light, Color dark) -> QColor {
+    return QColor(std::min(light.red, dark.red), std::min(light.green, dark.green), std::min(light.blue, dark.blue));
+}
+
+auto recolorReference(Color light, Color dark) -> QColor {
+    return QColor(light.red < dark.red ? 255 : 0, light.green < dark.green ? 255 : 0, light.blue < dark.blue ? 255 : 0);
+}
+
 auto snapLabel(std::optional<vn::snap::SnapKind> kind) -> QString {
     if (!kind) {
         return QStringLiteral("HIT");
@@ -590,17 +608,25 @@ void QtCanvas::setEraserCursorHidden(bool hidden) {
     refreshToolCursor();
 }
 
-void QtCanvas::setPointerButtonActions(QtPointerButtonAction rightButtonAction,
-                                       QtPointerButtonAction middleButtonAction) {
-    this->rightButtonAction = rightButtonAction;
-    this->middleButtonAction = middleButtonAction;
-}
+void QtCanvas::setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix) { this->buttonMatrix = buttonMatrix; }
 
 void QtCanvas::setPageShadowEnabled(bool enabled) {
     if (auto* renderer = dynamic_cast<vn::view::render::QtPreviewBackgroundRenderer*>(this->backgroundRenderer.get())) {
         renderer->setPageShadowEnabled(enabled);
         update();
     }
+}
+
+void QtCanvas::setSelectionColor(Color color) {
+    this->selectionColor = color;
+    update();
+}
+
+void QtCanvas::setRecolorOptions(bool recolorMainView, Color light, Color dark) {
+    this->recolorMainView = recolorMainView;
+    this->recolorLight = light;
+    this->recolorDark = dark;
+    update();
 }
 
 void QtCanvas::setRotationSnapEnabled(bool enabled) {
@@ -736,6 +762,17 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawInstrumentOverlay(painter);
     drawEraserPreview(painter);
 
+    if (this->recolorMainView) {
+        painter.resetTransform();
+        painter.setCompositionMode(QPainter::CompositionMode_Difference);
+        painter.fillRect(rect(), recolorReference(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
+        painter.fillRect(rect(), recolorDifference(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_Plus);
+        painter.fillRect(rect(), recolorOffset(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    }
+
     painter.resetTransform();
 
     if (event) {
@@ -759,30 +796,18 @@ void QtCanvas::showEvent(QShowEvent* event) {
 
 void QtCanvas::mousePressEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
-    const bool middleButtonPans =
-            event->button() == Qt::MiddleButton && this->middleButtonAction == QtPointerButtonAction::Pan;
-    if (middleButtonPans || (event->button() == Qt::LeftButton && this->spaceHeld)) {
+    if (this->spaceHeld && event->button() == Qt::LeftButton) {
         beginPan(event->position());
+        event->accept();
+        return;
+    }
+    if (beginPointerAction(pointerActionForMouseButton(event->button()), event->position(), 0.5)) {
         event->accept();
         return;
     }
     if (this->currentToolState.activeTool == QtToolType::Setsquare ||
         this->currentToolState.activeTool == QtToolType::Compass) {
         beginInstrumentToolAtScreen(event->position(), event->button());
-        event->accept();
-        return;
-    }
-    if (event->button() == Qt::RightButton && !this->spaceHeld &&
-        this->rightButtonAction == QtPointerButtonAction::Eraser) {
-        this->temporaryRightButtonEraser = true;
-        setCursor(Qt::BlankCursor);
-        Q_EMIT toolStateChanged();
-        beginEraseAtScreen(event->position());
-        if (!this->erasing) {
-            this->temporaryRightButtonEraser = false;
-            refreshToolCursor();
-            Q_EMIT toolStateChanged();
-        }
         event->accept();
         return;
     }
@@ -877,7 +902,9 @@ void QtCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
 
 void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
-    if (this->panning && (event->button() == Qt::MiddleButton || event->button() == Qt::LeftButton)) {
+    const auto pointerAction = pointerActionForMouseButton(event->button());
+    if (this->panning && (pointerAction == QtPointerButtonAction::Pan ||
+                          (this->spaceHeld && event->button() == Qt::LeftButton))) {
         endPan();
         event->accept();
         return;
@@ -901,17 +928,12 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
-    if (event->button() == Qt::LeftButton && this->erasing) {
-        finalizeErase();
+    if (releasePointerAction(pointerAction)) {
         event->accept();
         return;
     }
-    if (event->button() == Qt::RightButton && this->erasing && this->temporaryRightButtonEraser) {
+    if (event->button() == Qt::LeftButton && this->erasing) {
         finalizeErase();
-        this->temporaryRightButtonEraser = false;
-        clearEraserPreview();
-        refreshToolCursor();
-        Q_EMIT toolStateChanged();
         event->accept();
         return;
     }
@@ -1058,25 +1080,33 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
     const auto tool = this->currentToolState.activeTool;
-    const auto* pointingDevice = event->pointingDevice();
-    const bool tabletEraserPointer =
-            pointingDevice && pointingDevice->pointerType() == QPointingDevice::PointerType::Eraser;
-    const bool tabletRightButtonEraser =
-            this->rightButtonAction == QtPointerButtonAction::Eraser &&
-            (event->button() == Qt::RightButton || event->buttons().testFlag(Qt::RightButton));
-    const bool tabletRequestsEraser = !this->spaceHeld && (tabletEraserPointer || tabletRightButtonEraser);
+    const auto pointerAction = pointerActionForTabletEvent(*event);
     const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter ||
                             tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter ||
                             tool == QtToolType::ShapeRecognizer;
     const bool isEraserTool = tool == QtToolType::Eraser;
-    if (tabletRequestsEraser) {
-        if (event->type() == QEvent::TabletPress) {
-            this->temporaryRightButtonEraser = !isEraserTool;
-            if (this->eraserCursorHidden) {
-                setCursor(Qt::BlankCursor);
-            }
-            Q_EMIT toolStateChanged();
-            beginEraseAtScreen(event->position());
+    if (pointerAction == QtPointerButtonAction::Pan) {
+        if (event->type() == QEvent::TabletPress && beginPointerAction(pointerAction, event->position(), event->pressure())) {
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletMove && this->panning) {
+            const QPointF delta = event->position() - this->lastPanScreenPosition;
+            this->lastPanScreenPosition = event->position();
+            this->scrollX -= delta.x() / this->zoomFactor;
+            this->scrollY -= delta.y() / this->zoomFactor;
+            emitViewportUpdate();
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletRelease && this->panning) {
+            endPan();
+            event->accept();
+            return;
+        }
+    }
+    if (pointerAction == QtPointerButtonAction::Eraser) {
+        if (event->type() == QEvent::TabletPress && beginPointerAction(pointerAction, event->position(), event->pressure())) {
             event->accept();
             return;
         }
@@ -1085,11 +1115,7 @@ void QtCanvas::tabletEvent(QTabletEvent* event) {
             event->accept();
             return;
         }
-        if (event->type() == QEvent::TabletRelease && this->erasing) {
-            finalizeErase();
-            this->temporaryRightButtonEraser = false;
-            refreshToolCursor();
-            Q_EMIT toolStateChanged();
+        if (event->type() == QEvent::TabletRelease && releasePointerAction(pointerAction)) {
             event->accept();
             return;
         }
@@ -1434,10 +1460,10 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
     };
 
     if (selected) {
-        drawEdgeOverlay(*selected, QColor(0, 102, 255, 215), 2.2);
+        drawEdgeOverlay(*selected, qColorFromColor(this->selectionColor, 215), 2.2);
     }
     if (hovered) {
-        drawEdgeOverlay(*hovered, QColor(0, 171, 255, 190), 1.2);
+        drawEdgeOverlay(*hovered, qColorFromColor(this->selectionColor, 190).lighter(120), 1.2);
     }
 
     std::optional<vn::geom::ObjectId> focusObject;
@@ -1469,12 +1495,13 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
             const double size = (isHovered ? 9.0 : isSelected ? 8.0 : 6.5) / zoomScale;
             const QRectF handle(rect.x() + vertex.position.x - size / 2.0, rect.y() + vertex.position.y - size / 2.0,
                                 size, size);
-            painter.setPen(QPen(QColor(0, 102, 255), (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
-            painter.setBrush(isSelected ? QBrush(QColor(0, 102, 255)) : QBrush(QColor(255, 255, 255, 240)));
+            const QColor selection = qColorFromColor(this->selectionColor);
+            painter.setPen(QPen(selection, (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
+            painter.setBrush(isSelected ? QBrush(selection) : QBrush(QColor(255, 255, 255, 240)));
             painter.drawRect(handle);
             if (isSelected || isHovered) {
                 painter.setPen(Qt::NoPen);
-                painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : QColor(0, 102, 255));
+                painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : selection);
                 painter.drawEllipse(QPointF(rect.x() + vertex.position.x, rect.y() + vertex.position.y),
                                     1.8 / zoomScale, 1.8 / zoomScale);
             }
@@ -1546,6 +1573,75 @@ void QtCanvas::endPan() {
     } else {
         refreshToolCursor();
     }
+}
+
+auto QtCanvas::pointerActionForMouseButton(Qt::MouseButton button) const -> QtPointerButtonAction {
+    switch (button) {
+        case Qt::LeftButton:
+            return this->buttonMatrix.mouseLeftAction;
+        case Qt::MiddleButton:
+            return this->buttonMatrix.mouseMiddleAction;
+        case Qt::RightButton:
+            return this->buttonMatrix.mouseRightAction;
+        case Qt::BackButton:
+            return this->buttonMatrix.mouseBackAction;
+        case Qt::ForwardButton:
+            return this->buttonMatrix.mouseForwardAction;
+        default:
+            return QtPointerButtonAction::None;
+    }
+}
+
+auto QtCanvas::pointerActionForTabletEvent(const QTabletEvent& event) const -> QtPointerButtonAction {
+    const auto* pointingDevice = event.pointingDevice();
+    if (pointingDevice && pointingDevice->pointerType() == QPointingDevice::PointerType::Eraser) {
+        return this->buttonMatrix.eraserTipAction;
+    }
+    if (event.button() == Qt::RightButton || event.buttons().testFlag(Qt::RightButton)) {
+        return this->buttonMatrix.stylusButton1Action;
+    }
+    if (event.button() == Qt::MiddleButton || event.buttons().testFlag(Qt::MiddleButton)) {
+        return this->buttonMatrix.stylusButton2Action;
+    }
+    return QtPointerButtonAction::None;
+}
+
+auto QtCanvas::beginPointerAction(QtPointerButtonAction action, const QPointF& screenPoint, double pressure) -> bool {
+    if (this->spaceHeld || action == QtPointerButtonAction::None) {
+        return false;
+    }
+    if (action == QtPointerButtonAction::Pan) {
+        beginPan(screenPoint);
+        return true;
+    }
+    if (action == QtPointerButtonAction::Eraser) {
+        this->temporaryRightButtonEraser = this->currentToolState.activeTool != QtToolType::Eraser;
+        if (this->eraserCursorHidden || this->temporaryRightButtonEraser) {
+            setCursor(Qt::BlankCursor);
+        }
+        Q_EMIT toolStateChanged();
+        beginEraseAtScreen(screenPoint);
+        if (!this->erasing) {
+            this->temporaryRightButtonEraser = false;
+            refreshToolCursor();
+            Q_EMIT toolStateChanged();
+        }
+        (void) pressure;
+        return true;
+    }
+    return false;
+}
+
+auto QtCanvas::releasePointerAction(QtPointerButtonAction action) -> bool {
+    if (action != QtPointerButtonAction::Eraser || !this->erasing || !this->temporaryRightButtonEraser) {
+        return false;
+    }
+    finalizeErase();
+    this->temporaryRightButtonEraser = false;
+    clearEraserPreview();
+    refreshToolCursor();
+    Q_EMIT toolStateChanged();
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -2461,15 +2557,16 @@ void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
     const QRectF outerRect = selRect.adjusted(-margin, -margin, margin, margin);
 
     // Draw selection rectangle
-    QPen dashPen(QColor(0, 120, 255, 200), 1.2 / this->zoomFactor);
+    const QColor selection = qColorFromColor(this->selectionColor);
+    QPen dashPen(qColorFromColor(this->selectionColor, 200), 1.2 / this->zoomFactor);
     dashPen.setStyle(Qt::DashLine);
     dashPen.setCosmetic(false);
     painter.setPen(dashPen);
-    painter.setBrush(QColor(0, 120, 255, 20));
+    painter.setBrush(qColorFromColor(this->selectionColor, 20));
     painter.drawRect(outerRect);
 
     // Draw corner handles
-    painter.setPen(QPen(QColor(0, 120, 255), 1.0 / this->zoomFactor));
+    painter.setPen(QPen(selection, 1.0 / this->zoomFactor));
     painter.setBrush(QColor(255, 255, 255, 230));
     const QPointF corners[] = {outerRect.topLeft(), outerRect.topRight(), outerRect.bottomLeft(),
                                outerRect.bottomRight()};
@@ -2527,10 +2624,10 @@ void QtCanvas::drawRubberBand(QPainter& painter) const {
     painter.resetTransform();
 
     const QRectF bandRect = QRectF(this->rubberBandOrigin, this->rubberBandCurrent).normalized();
-    QPen pen(QColor(0, 120, 255, 180), 1.0);
+    QPen pen(qColorFromColor(this->selectionColor, 180), 1.0);
     pen.setStyle(Qt::DashLine);
     painter.setPen(pen);
-    painter.setBrush(QColor(0, 120, 255, 30));
+    painter.setBrush(qColorFromColor(this->selectionColor, 30));
     painter.drawRect(bandRect);
 
     painter.restore();
@@ -2791,7 +2888,7 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
 
     // Draw vertex handles
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(0, 120, 255, 200));
+    painter.setBrush(qColorFromColor(this->selectionColor, 200));
     const double handleRadius = 3.0 / painter.transform().m11();
     for (const auto& pt: this->shapeClickPoints) {
         painter.drawEllipse(pt, handleRadius, handleRadius);
@@ -3102,20 +3199,23 @@ auto QtCanvas::applyRotationSnap(const QPointF& origin, const QPointF& point) co
 }
 
 void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
-    if (!this->touchDrawingEnabled) {
-        return;
-    }
-
-    const bool drawTool = this->currentToolState.activeTool == QtToolType::Pen ||
-                          this->currentToolState.activeTool == QtToolType::Highlighter ||
-                          this->currentToolState.activeTool == QtToolType::LaserPointerPen ||
-                          this->currentToolState.activeTool == QtToolType::LaserPointerHighlighter ||
-                          this->currentToolState.activeTool == QtToolType::ShapeRecognizer;
-    if (!drawTool) {
+    const auto touchAction = this->buttonMatrix.touchAction;
+    if (!this->touchDrawingEnabled && touchAction == QtPointerButtonAction::None) {
         return;
     }
 
     if (event.points.empty()) {
+        if (this->panning && touchAction == QtPointerButtonAction::Pan) {
+            endPan();
+            this->activeTouchPointId = -1;
+        }
+        if (this->erasing && touchAction == QtPointerButtonAction::Eraser) {
+            if (!releasePointerAction(touchAction)) {
+                finalizeErase();
+                clearEraserPreview();
+            }
+            this->activeTouchPointId = -1;
+        }
         if (this->drawing && this->activeTouchPointId >= 0) {
             finalizeActiveStroke();
             this->activeTouchPointId = -1;
@@ -3141,8 +3241,45 @@ void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
     const QPointF screenPoint(touchPoint->x, touchPoint->y);
     const double pressure = touchPoint->pressure > 0.0 ? touchPoint->pressure : 0.5;
 
+    if (touchAction == QtPointerButtonAction::Pan) {
+        if (!this->panning) {
+            this->activeTouchPointId = static_cast<int>(touchPoint->id);
+            beginPan(screenPoint);
+            return;
+        }
+        if (this->activeTouchPointId == touchPoint->id) {
+            const QPointF delta = screenPoint - this->lastPanScreenPosition;
+            this->lastPanScreenPosition = screenPoint;
+            this->scrollX -= delta.x() / this->zoomFactor;
+            this->scrollY -= delta.y() / this->zoomFactor;
+            emitViewportUpdate();
+        }
+        return;
+    }
+
+    if (touchAction == QtPointerButtonAction::Eraser) {
+        if (!this->erasing) {
+            this->activeTouchPointId = static_cast<int>(touchPoint->id);
+            (void) beginPointerAction(touchAction, screenPoint, pressure);
+            return;
+        }
+        if (this->activeTouchPointId == touchPoint->id) {
+            eraseAtScreen(screenPoint);
+        }
+        return;
+    }
+
+    const bool drawTool = this->currentToolState.activeTool == QtToolType::Pen ||
+                          this->currentToolState.activeTool == QtToolType::Highlighter ||
+                          this->currentToolState.activeTool == QtToolType::LaserPointerPen ||
+                          this->currentToolState.activeTool == QtToolType::LaserPointerHighlighter ||
+                          this->currentToolState.activeTool == QtToolType::ShapeRecognizer;
+    if (!drawTool) {
+        return;
+    }
+
     if (!this->drawing) {
-        this->activeTouchPointId = touchPoint->id;
+        this->activeTouchPointId = static_cast<int>(touchPoint->id);
         beginStrokeAtScreen(screenPoint, pressure);
         return;
     }

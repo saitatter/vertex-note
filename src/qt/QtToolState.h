@@ -45,6 +45,18 @@ enum class QtToolType {
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 enum class QtPointerButtonAction { None = 0, Pan = 1, Eraser = 2 };
 
+struct QtPointerButtonMatrix {
+    QtPointerButtonAction eraserTipAction = QtPointerButtonAction::Eraser;
+    QtPointerButtonAction stylusButton1Action = QtPointerButtonAction::None;
+    QtPointerButtonAction stylusButton2Action = QtPointerButtonAction::None;
+    QtPointerButtonAction mouseLeftAction = QtPointerButtonAction::None;
+    QtPointerButtonAction mouseMiddleAction = QtPointerButtonAction::Pan;
+    QtPointerButtonAction mouseRightAction = QtPointerButtonAction::Eraser;
+    QtPointerButtonAction mouseBackAction = QtPointerButtonAction::None;
+    QtPointerButtonAction mouseForwardAction = QtPointerButtonAction::None;
+    QtPointerButtonAction touchAction = QtPointerButtonAction::None;
+};
+
 struct QtToolState {
     QtToolType activeTool = QtToolType::Pen;
     Color penColor{0x3333ccffU};

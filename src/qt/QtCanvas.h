@@ -68,8 +68,10 @@ public:
     void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
     void setGridSnapOptions(double gridSize, double tolerance);
     void setEraserCursorHidden(bool hidden);
-    void setPointerButtonActions(QtPointerButtonAction rightButtonAction, QtPointerButtonAction middleButtonAction);
+    void setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix);
     void setPageShadowEnabled(bool enabled);
+    void setSelectionColor(Color color);
+    void setRecolorOptions(bool recolorMainView, Color light, Color dark);
     void setShapeRecognizerMinSize(double value);
     void setLaserPointerFadeOutMs(int value);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
@@ -170,6 +172,10 @@ private:
     void selectHoveredGeometry(bool additive = false);
     void beginPan(const QPointF& position);
     void endPan();
+    [[nodiscard]] auto pointerActionForMouseButton(Qt::MouseButton button) const -> QtPointerButtonAction;
+    [[nodiscard]] auto pointerActionForTabletEvent(const QTabletEvent& event) const -> QtPointerButtonAction;
+    [[nodiscard]] auto beginPointerAction(QtPointerButtonAction action, const QPointF& screenPoint, double pressure) -> bool;
+    [[nodiscard]] auto releasePointerAction(QtPointerButtonAction action) -> bool;
     void setCursorForTool(QtToolType tool);
     void refreshToolCursor();
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
@@ -261,8 +267,11 @@ private:
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     bool eraserCursorHidden = true;
-    QtPointerButtonAction rightButtonAction = QtPointerButtonAction::Eraser;
-    QtPointerButtonAction middleButtonAction = QtPointerButtonAction::Pan;
+    QtPointerButtonMatrix buttonMatrix;
+    Color selectionColor{0, 120, 255, 255};
+    bool recolorMainView = false;
+    Color recolorLight{198, 208, 245, 255};
+    Color recolorDark{48, 52, 70, 255};
     bool pairedPagesEnabled = false;
     int layoutColumnsRowsValue = 1;
     bool verticalLayoutEnabled = true;

@@ -88,12 +88,26 @@ auto isAutosavableDocumentPath(const std::filesystem::path& path) -> bool {
     return ext == ".xopp" || ext == ".xoj" || ext == ".xopt";
 }
 
+std::string gBundledIconTheme = "color";
+std::string gBundledIconTone = "light";
+
 auto bundledQtIcon(std::string_view fileName) -> QIcon {
     const auto tryPath = [&](const fs::path& path) -> QIcon {
         return QIcon(QString::fromStdString(path.string()));
     };
 
-    for (const auto& theme: {"iconsColor-dark", "iconsColor-light", "iconsLucide-light", "iconsLucide-dark"}) {
+    const auto preferredFamily = gBundledIconTheme == "lucide" ? std::string("iconsLucide") : std::string("iconsColor");
+    const auto fallbackFamily = gBundledIconTheme == "lucide" ? std::string("iconsColor") : std::string("iconsLucide");
+    const auto preferredTone = gBundledIconTone == "dark" ? std::string("dark") : std::string("light");
+    const auto fallbackTone = preferredTone == "dark" ? std::string("light") : std::string("dark");
+    const std::array<std::string, 4> themes = {{
+            preferredFamily + "-" + preferredTone,
+            preferredFamily + "-" + fallbackTone,
+            fallbackFamily + "-" + preferredTone,
+            fallbackFamily + "-" + fallbackTone,
+    }};
+
+    for (const auto& theme: themes) {
         for (const auto& sizeDir: {"24x24", "scalable"}) {
             const fs::path candidate =
                     fs::path(PROJECT_SOURCE_DIR) / "ui" / theme / "hicolor" / sizeDir / "actions" /
@@ -2620,15 +2634,52 @@ void QtAppShell::loadPersistentUiState() {
                     .toInt();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
-    this->currentSettings.rightButtonAction =
+    this->currentSettings.buttonMatrix.eraserTipAction =
             static_cast<QtPointerButtonAction>(
-                    settings.value(QStringLiteral("devices/rightButtonAction"),
-                                   static_cast<int>(this->currentSettings.rightButtonAction))
+                    settings.value(QStringLiteral("devices/buttonMatrix/eraserTip"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction))
                             .toInt());
-    this->currentSettings.middleButtonAction =
+    this->currentSettings.buttonMatrix.stylusButton1Action =
             static_cast<QtPointerButtonAction>(
-                    settings.value(QStringLiteral("devices/middleButtonAction"),
-                                   static_cast<int>(this->currentSettings.middleButtonAction))
+                    settings.value(QStringLiteral("devices/buttonMatrix/stylusButton1"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.stylusButton1Action))
+                            .toInt());
+    this->currentSettings.buttonMatrix.stylusButton2Action =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/stylusButton2"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.stylusButton2Action))
+                            .toInt());
+    this->currentSettings.buttonMatrix.mouseLeftAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/mouseLeft"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.mouseLeftAction))
+                            .toInt());
+    this->currentSettings.buttonMatrix.mouseMiddleAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/mouseMiddle"),
+                                   settings.value(QStringLiteral("devices/middleButtonAction"),
+                                                  static_cast<int>(this->currentSettings.buttonMatrix.mouseMiddleAction)))
+                            .toInt());
+    this->currentSettings.buttonMatrix.mouseRightAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/mouseRight"),
+                                   settings.value(QStringLiteral("devices/rightButtonAction"),
+                                                  static_cast<int>(this->currentSettings.buttonMatrix.mouseRightAction)))
+                            .toInt());
+    this->currentSettings.buttonMatrix.mouseBackAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/mouseBack"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.mouseBackAction))
+                            .toInt());
+    this->currentSettings.buttonMatrix.mouseForwardAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/mouseForward"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.mouseForwardAction))
+                            .toInt());
+    this->currentSettings.buttonMatrix.touchAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/buttonMatrix/touch"),
+                                   static_cast<int>(this->currentSettings.buttonMatrix.touchAction))
                             .toInt());
     this->currentSettings.showFilePathInTitlebar =
             settings.value(QStringLiteral("appearance/showFilePathInTitlebar"),
@@ -2644,6 +2695,28 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant))
                     .toString()
                     .toStdString();
+    this->currentSettings.iconTheme =
+            settings.value(QStringLiteral("appearance/iconTheme"), QString::fromStdString(this->currentSettings.iconTheme))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.selectionColor =
+            Color(settings.value(QStringLiteral("appearance/selectionColor"),
+                                 static_cast<uint>(static_cast<uint32_t>(this->currentSettings.selectionColor)))
+                          .toUInt());
+    this->currentSettings.recolorMainView =
+            settings.value(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView).toBool();
+    this->currentSettings.recolorSidebarMiniatures =
+            settings.value(QStringLiteral("appearance/recolorSidebarMiniatures"),
+                           this->currentSettings.recolorSidebarMiniatures)
+                    .toBool();
+    this->currentSettings.recolorLight =
+            Color(settings.value(QStringLiteral("appearance/recolorLight"),
+                                 static_cast<uint>(static_cast<uint32_t>(this->currentSettings.recolorLight)))
+                          .toUInt());
+    this->currentSettings.recolorDark =
+            Color(settings.value(QStringLiteral("appearance/recolorDark"),
+                                 static_cast<uint>(static_cast<uint32_t>(this->currentSettings.recolorDark)))
+                          .toUInt());
     this->currentSettings.colorPalettePath =
             settings.value(QStringLiteral("appearance/colorPalettePath"),
                            QString::fromStdString(this->currentSettings.colorPalettePath))
@@ -2787,15 +2860,40 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
-    settings.setValue(QStringLiteral("devices/rightButtonAction"), static_cast<int>(this->currentSettings.rightButtonAction));
-    settings.setValue(QStringLiteral("devices/middleButtonAction"),
-                      static_cast<int>(this->currentSettings.middleButtonAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/stylusButton1"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.stylusButton1Action));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/stylusButton2"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.stylusButton2Action));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/mouseLeft"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.mouseLeftAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/mouseMiddle"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.mouseMiddleAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/mouseRight"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.mouseRightAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/mouseBack"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.mouseBackAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/mouseForward"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.mouseForwardAction));
+    settings.setValue(QStringLiteral("devices/buttonMatrix/touch"),
+                      static_cast<int>(this->currentSettings.buttonMatrix.touchAction));
     settings.setValue(QStringLiteral("appearance/showFilePathInTitlebar"),
                       this->currentSettings.showFilePathInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
                       this->currentSettings.showPageNumberInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow);
     settings.setValue(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant));
+    settings.setValue(QStringLiteral("appearance/iconTheme"), QString::fromStdString(this->currentSettings.iconTheme));
+    settings.setValue(QStringLiteral("appearance/selectionColor"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.selectionColor)));
+    settings.setValue(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView);
+    settings.setValue(QStringLiteral("appearance/recolorSidebarMiniatures"),
+                      this->currentSettings.recolorSidebarMiniatures);
+    settings.setValue(QStringLiteral("appearance/recolorLight"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.recolorLight)));
+    settings.setValue(QStringLiteral("appearance/recolorDark"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.recolorDark)));
     settings.setValue(QStringLiteral("appearance/colorPalettePath"),
                       QString::fromStdString(this->currentSettings.colorPalettePath));
     settings.setValue(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj);
@@ -3092,8 +3190,11 @@ void QtAppShell::applyRuntimeSettings() {
                                        this->currentSettings.strokeStabilizerFinalizeStroke);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
-    canvas->setPointerButtonActions(this->currentSettings.rightButtonAction, this->currentSettings.middleButtonAction);
+    canvas->setPointerButtonActions(this->currentSettings.buttonMatrix);
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
+    canvas->setSelectionColor(this->currentSettings.selectionColor);
+    canvas->setRecolorOptions(this->currentSettings.recolorMainView, this->currentSettings.recolorLight,
+                              this->currentSettings.recolorDark);
     canvas->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
     canvas->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
     canvas->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
@@ -3110,8 +3211,8 @@ void QtAppShell::applyRuntimeSettings() {
 
 void QtAppShell::applyAppearanceSettings() {
     auto* app = qobject_cast<QApplication*>(QApplication::instance());
+    const auto theme = QString::fromStdString(this->currentSettings.themeVariant).toLower();
     if (app) {
-        const auto theme = QString::fromStdString(this->currentSettings.themeVariant).toLower();
         if (theme == QStringLiteral("light")) {
             app->setPalette(lightPalette());
         } else if (theme == QStringLiteral("dark")) {
@@ -3121,6 +3222,10 @@ void QtAppShell::applyAppearanceSettings() {
         }
     }
 
+    gBundledIconTheme = QString::fromStdString(this->currentSettings.iconTheme).toLower() == QStringLiteral("lucide")
+                                ? std::string("lucide")
+                                : std::string("color");
+    gBundledIconTone = theme == QStringLiteral("dark") ? std::string("dark") : std::string("light");
     updateWindowTitle();
     this->window.canvas()->update();
 }
@@ -3643,6 +3748,8 @@ void QtAppShell::showSettingsDialog() {
     }
 
     const auto previousToolbarProfileId = this->currentSettings.toolbarProfileId;
+    const auto previousIconTheme = this->currentSettings.iconTheme;
+    const auto previousThemeVariant = this->currentSettings.themeVariant;
     this->currentSettings = dialog.settings();
     if (this->currentSettings.audioFolder.empty()) {
         this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
@@ -3657,7 +3764,9 @@ void QtAppShell::showSettingsDialog() {
     this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", this->currentSettings.touchDrawingDefault);
 
     this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
-    if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
+    if (this->currentSettings.toolbarProfileId != previousToolbarProfileId ||
+        this->currentSettings.iconTheme != previousIconTheme ||
+        this->currentSettings.themeVariant != previousThemeVariant) {
         rebuildToolbar();
         applySidebarVisibility(this->window.commandHost()->actionForCommand("view.show-sidebar")
                                        ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()

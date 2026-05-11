@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <QColor>
 #include <QDialog>
 
 #include "QtToolState.h"
@@ -19,6 +20,7 @@ class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QListWidget;
+class QPushButton;
 
 struct QtToolbarProfileOption {
     std::string id;
@@ -52,12 +54,17 @@ struct QtSettings {
     double strokeRecognizerMinSize = 40.0;
     int laserPointerFadeOutMs = 1500;
     bool eraserCursorHidden = true;
-    QtPointerButtonAction rightButtonAction = QtPointerButtonAction::Eraser;
-    QtPointerButtonAction middleButtonAction = QtPointerButtonAction::Pan;
+    QtPointerButtonMatrix buttonMatrix{};
     bool showFilePathInTitlebar = false;
     bool showPageNumberInTitlebar = false;
     bool showPageShadow = true;
     std::string themeVariant = "system";
+    std::string iconTheme = "color";
+    Color selectionColor{0, 120, 255, 255};
+    bool recolorMainView = false;
+    bool recolorSidebarMiniatures = false;
+    Color recolorLight{198, 208, 245, 255};
+    Color recolorDark{48, 52, 70, 255};
     std::string colorPalettePath;
     bool autoloadPdfXoj = true;
     std::string defaultPdfExportName = "%{name}_annotated";
@@ -109,13 +116,26 @@ private:
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
-    QComboBox* rightButtonActionCombo = nullptr;
-    QComboBox* middleButtonActionCombo = nullptr;
+    QComboBox* eraserTipActionCombo = nullptr;
+    QComboBox* stylusButton1ActionCombo = nullptr;
+    QComboBox* stylusButton2ActionCombo = nullptr;
+    QComboBox* mouseLeftActionCombo = nullptr;
+    QComboBox* mouseMiddleActionCombo = nullptr;
+    QComboBox* mouseRightActionCombo = nullptr;
+    QComboBox* mouseBackActionCombo = nullptr;
+    QComboBox* mouseForwardActionCombo = nullptr;
+    QComboBox* touchActionCombo = nullptr;
     QListWidget* inputDeviceList = nullptr;
     QCheckBox* showFilePathInTitlebarCheck = nullptr;
     QCheckBox* showPageNumberInTitlebarCheck = nullptr;
     QCheckBox* showPageShadowCheck = nullptr;
     QComboBox* themeVariantCombo = nullptr;
+    QComboBox* iconThemeCombo = nullptr;
+    QPushButton* selectionColorButton = nullptr;
+    QCheckBox* recolorMainViewCheck = nullptr;
+    QCheckBox* recolorSidebarCheck = nullptr;
+    QPushButton* recolorLightButton = nullptr;
+    QPushButton* recolorDarkButton = nullptr;
     QLineEdit* colorPalettePathEdit = nullptr;
     QCheckBox* autoloadPdfXojCheck = nullptr;
     QLineEdit* defaultPdfExportNameEdit = nullptr;
@@ -129,4 +149,7 @@ private:
     QDoubleSpinBox* audioGainSpin = nullptr;
     QSpinBox* defaultSeekTimeSpin = nullptr;
     QComboBox* toolbarProfileCombo = nullptr;
+    QColor selectionColor;
+    QColor recolorLightColor;
+    QColor recolorDarkColor;
 };
