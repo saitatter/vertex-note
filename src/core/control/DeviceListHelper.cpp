@@ -1,5 +1,7 @@
 #include "control/DeviceListHelper.h"
 
+#include "config-features.h"
+
 #include <algorithm>  // for find, remove_if
 #include <utility>    // for move
 #include <vector>     // for vector
@@ -65,6 +67,7 @@ auto DeviceListHelper::getDeviceList(Settings* settings, bool ignoreTouchDevices
 }
 
 InputDeviceClass DeviceListHelper::getSourceMapping(GdkInputSource source, Settings* settings) {
+#ifdef ENABLE_LEGACY_GTK_SHELL
     auto deviceList = DeviceListHelper::getDeviceList(settings);
 
     for (InputDevice const& inputDevice: deviceList) {
@@ -77,6 +80,26 @@ InputDeviceClass DeviceListHelper::getSourceMapping(GdkInputSource source, Setti
     }
 
     return InputDeviceClass::INPUT_DEVICE_IGNORE;
+#else
+    (void) settings;
+    switch (source) {
+        case GDK_SOURCE_MOUSE:
+        case GDK_SOURCE_CURSOR:
+        case GDK_SOURCE_TOUCHPAD:
+#if (GDK_MAJOR_VERSION >= 3 && GDK_MINOR_VERSION >= 22)
+        case GDK_SOURCE_TRACKPOINT:
+#endif
+            return InputDeviceClass::INPUT_DEVICE_MOUSE;
+        case GDK_SOURCE_PEN:
+            return InputDeviceClass::INPUT_DEVICE_PEN;
+        case GDK_SOURCE_ERASER:
+            return InputDeviceClass::INPUT_DEVICE_ERASER;
+        case GDK_SOURCE_TOUCHSCREEN:
+            return InputDeviceClass::INPUT_DEVICE_TOUCHSCREEN;
+        default:
+            return InputDeviceClass::INPUT_DEVICE_IGNORE;
+    }
+#endif
 }
 
 InputDevice::InputDevice() = default;

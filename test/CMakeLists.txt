@@ -65,6 +65,11 @@ if (NOT ENABLE_QT_SHELL)
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtToolbarLayoutEngineTest\\.cpp$")
 endif ()
 
+if (NOT ENABLE_LEGACY_GTK_SHELL)
+  list(FILTER test-units-sources EXCLUDE REGEX ".*ActionDatabaseTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*ColorPaletteTest\\.cpp$")
+endif ()
+
 # Define test-units target
 add_executable (test-units EXCLUDE_FROM_ALL ${test-units-sources})
 target_link_libraries (test-units vertexnote::core vertexnote::util gtest)

@@ -4,9 +4,13 @@
 #include "audio/DeviceInfo.h"                // for DeviceInfo
 #include "audio/PortAudioConsumer.h"         // for PortAudioConsumer
 #include "audio/VorbisProducer.h"            // for VorbisProducer
+#include "config-features.h"
+
+#ifdef ENABLE_LEGACY_GTK_SHELL
 #include "control/Control.h"                 // for Control
 #include "control/actions/ActionDatabase.h"  // for ActionDatabase
 #include "gui/MainWindow.h"                  // for MainWindow
+#endif
 
 class Settings;
 
@@ -70,6 +74,7 @@ auto AudioPlayer::play() -> bool {
 
 void AudioPlayer::disableAudioPlaybackButtons() {
     if (this->audioQueue->hasStreamEnded()) {
+#ifdef ENABLE_LEGACY_GTK_SHELL
         if (this->control) {
             auto* actionDB = this->control->getActionDatabase();
             actionDB->enableAction(Action::AUDIO_PAUSE_PLAYBACK, false);
@@ -78,6 +83,7 @@ void AudioPlayer::disableAudioPlaybackButtons() {
             actionDB->enableAction(Action::AUDIO_SEEK_BACKWARDS, false);
             actionDB->setActionState(Action::AUDIO_PAUSE_PLAYBACK, false);
         }
+#endif
         notifyPlaybackState(false, false);
     }
 }

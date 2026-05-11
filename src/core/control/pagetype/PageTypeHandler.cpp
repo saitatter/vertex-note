@@ -1,13 +1,17 @@
 #include "PageTypeHandler.h"
 
+#include "config-features.h"
+
 #include <algorithm>
 #include <string_view>
 #include <utility>
 
+#ifdef ENABLE_LEGACY_GTK_SHELL
 #include "gui/GladeSearchpath.h"
+#include "util/AppMessageBox.h"
+#endif
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"
-#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 
 static void addPageTypeInfo(const std::string& name, PageTypeFormat format, const std::string& config,
@@ -20,7 +24,19 @@ static void addPageTypeInfo(const std::string& name, PageTypeFormat format, cons
     types.emplace_back(std::move(pt));
 }
 
+static void addFallbackPageTypes(std::vector<std::unique_ptr<PageTypeInfo>>& types) {
+    addPageTypeInfo(_("Plain"), PageTypeFormat::Plain, "", types);
+    addPageTypeInfo(_("Ruled"), PageTypeFormat::Ruled, "", types);
+    addPageTypeInfo(_("Ruled with vertical line"), PageTypeFormat::Lined, "", types);
+    addPageTypeInfo(_("Staves"), PageTypeFormat::Staves, "", types);
+    addPageTypeInfo(_("Graph"), PageTypeFormat::Graph, "", types);
+    addPageTypeInfo(_("Dotted"), PageTypeFormat::Dotted, "", types);
+    addPageTypeInfo(_("Isometric Dotted"), PageTypeFormat::IsoDotted, "", types);
+    addPageTypeInfo(_("Isometric Graph"), PageTypeFormat::IsoGraph, "", types);
+}
+
 PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
+#ifdef ENABLE_LEGACY_GTK_SHELL
     auto file = gladeSearchPath->findFile("", "pagetemplates.ini");
 
     if (!parseIni(file) || this->types.size() < 5) {
@@ -29,15 +45,12 @@ PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
         AppMessageBox::showErrorToUser(nullptr, msg);
 
         // On failure load the hardcoded and predefined values
-        addPageTypeInfo(_("Plain"), PageTypeFormat::Plain, "", types);
-        addPageTypeInfo(_("Ruled"), PageTypeFormat::Ruled, "", types);
-        addPageTypeInfo(_("Ruled with vertical line"), PageTypeFormat::Lined, "", types);
-        addPageTypeInfo(_("Staves"), PageTypeFormat::Staves, "", types);
-        addPageTypeInfo(_("Graph"), PageTypeFormat::Graph, "", types);
-        addPageTypeInfo(_("Dotted"), PageTypeFormat::Dotted, "", types);
-        addPageTypeInfo(_("Isometric Dotted"), PageTypeFormat::IsoDotted, "", types);
-        addPageTypeInfo(_("Isometric Graph"), PageTypeFormat::IsoGraph, "", types);
+        addFallbackPageTypes(types);
     }
+#else
+    (void) gladeSearchPath;
+    addFallbackPageTypes(types);
+#endif
 
     // Special types
     addPageTypeInfo(_("With PDF background"), PageTypeFormat::Pdf, "", specialTypes);
