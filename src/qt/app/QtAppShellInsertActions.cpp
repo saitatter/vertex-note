@@ -35,7 +35,6 @@
 #include "filesystem.h"
 #include "model/TexImage.h"
 #include "util/PathUtil.h"
-#include "util/raii/GObjectSPtr.h"
 
 namespace {
 
@@ -87,31 +86,15 @@ auto renderMathTex(const std::string& formula, const LatexSettings& settings, Co
 
     LatexGenerator generator(settings);
     const auto texContents = LatexGenerator::templateSub(formula, *latexTemplate, textColor);
-    auto result = generator.asyncRun(texDir, texContents);
+    auto result = generator.run(texDir, texContents);
     if (auto* err = std::get_if<LatexGenerator::GenError>(&result)) {
         return err->message;
     }
 
-    vn::util::GObjectSPtr<GSubprocess> process(std::get<GSubprocess*>(result), vn::util::adopt);
-    GError* error = nullptr;
-    char* stdoutBuffer = nullptr;
-    const bool communicated =
-            g_subprocess_communicate_utf8(process.get(), nullptr, nullptr, &stdoutBuffer, nullptr, &error);
-    const std::string processOutput = stdoutBuffer ? stdoutBuffer : "";
-    g_free(stdoutBuffer);
-
-    if (!communicated) {
-        const std::string message = error ? error->message : "VertexNote could not run the LaTeX generator.";
-        if (error) {
-            g_error_free(error);
-        }
-        return message;
-    }
-
-    const int exitStatus = g_subprocess_get_exit_status(process.get());
-    if (exitStatus != 0) {
-        if (!processOutput.empty()) {
-            return processOutput;
+    const auto& output = std::get<LatexGenerator::GenOutput>(result);
+    if (output.exitStatus != 0) {
+        if (!output.output.empty()) {
+            return output.output;
         }
         return std::string("The LaTeX generator exited with an error.");
     }
@@ -122,13 +105,7 @@ auto renderMathTex(const std::string& formula, const LatexSettings& settings, Co
     }
 
     auto image = std::make_unique<TexImage>();
-    error = nullptr;
-    const bool loaded = image->loadData(std::move(*contents), &error);
-    if (error) {
-        const std::string message = error->message;
-        g_error_free(error);
-        return message;
-    }
+    const bool loaded = image->loadData(std::move(*contents), nullptr);
     if (!loaded || !image->getPdf()) {
         return std::string("VertexNote could not load the generated LaTeX preview.");
     }
