@@ -213,10 +213,6 @@ TEST(UtilPath, pathGFilenameConvertion) {
         EXPECT_STREQ(Util::toGFilename(p).c_str(), gf.get());
         EXPECT_EQ(p, Util::fromGFilename(gf.get()));
 
-        vn::util::GObjectSPtr<GFile> gfile(g_file_new_for_path(gf.get()), vn::util::adopt);
-        EXPECT_TRUE(g_file_equal(Util::toGFile(p).get(), gfile.get()));
-        EXPECT_EQ(fs::absolute(p), fs::absolute(Util::fromGFile(gfile.get())));
-
         EXPECT_EQ(fs::absolute(p), fs::absolute(Util::fromUri(Util::toUri(p).value()).value()));
     };
     test(u8"foo/µbar/Ñ/ë€ds测试q.pdf");

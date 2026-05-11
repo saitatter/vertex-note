@@ -56,13 +56,13 @@ latest VertexNote release and a concise changelog inside the application.
 
 Current path:
 
-- Windows uses WinHTTP for the release fetch, so packaged builds do not depend on
-  external GIO TLS modules being present at runtime.
-- Linux and macOS keep the lightweight GIO/TLS fetch path already available through
-  GTK dependencies.
+- Windows uses WinHTTP for the release fetch.
+- Linux and macOS use Qt Network, keeping the update checker aligned with the Qt
+  shell and avoiding runtime GIO/TLS module dependencies.
 
-Fallback path: if the non-Windows GIO HTTP path is not reliable on all targets, add a
-small optional dependency (`libsoup`) in a separate commit with packaging updates.
+Fallback path: if the non-Windows Qt Network path is not reliable on all targets,
+add a small optional dependency (`libsoup`) in a separate commit with packaging
+updates.
 
 Rules:
 

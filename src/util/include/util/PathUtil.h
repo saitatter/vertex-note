@@ -17,12 +17,10 @@
 #include <variant>   // for variant
 #include <vector>    // for vector
 
-#include <gio/gio.h>  // for GFile
-#include <glib.h>     // for g_free, GError, g_error_free, g_filename_fro...
+#include <glib.h>  // for g_free, GError, g_error_free, g_filename_fro...
 
 #include "util/StringUtils.h"
 #include "util/raii/CStringWrapper.h"
-#include "util/raii/GObjectSPtr.h"
 #include "util/safe_casts.h"  // for as_signed
 
 #include "filesystem.h"  // for path
@@ -82,9 +80,6 @@ void clearExtensions(fs::path& path, const std::string& ext = "");
 
 [[maybe_unused]] [[nodiscard]] std::optional<std::string> toUri(const fs::path& path);
 
-
-[[maybe_unused]] [[nodiscard]] fs::path fromGFile(GFile* file);
-[[maybe_unused]] [[nodiscard]] xoj::util::GObjectSPtr<GFile> toGFile(fs::path const& path);
 
 /**
  * Stores a string in the encoding used by glib for filepaths

@@ -304,14 +304,6 @@ auto Util::toUri(const fs::path& path) -> std::optional<std::string> {
     return {std::move(uriString)};
 }
 
-auto Util::fromGFile(GFile* file) -> fs::path {
-    return GFilename(g_file_peek_path(file)).toPath().value_or(fs::path());
-}
-
-auto Util::toGFile(fs::path const& path) -> vn::util::GObjectSPtr<GFile> {
-    return vn::util::GObjectSPtr<GFile>(g_file_new_for_path(GFilename(path).c_str()), vn::util::adopt);
-}
-
 auto Util::fromGFilename(const char* path) -> fs::path { return GFilename(path).toPath().value_or(fs::path()); }
 
 auto Util::toGFilename(fs::path const& path) -> GFilename { return GFilename(path); }
