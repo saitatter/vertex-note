@@ -1,10 +1,14 @@
 #include "BackgroundImage.h"
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <string>   // for string
+#include <string_view>
 #include <utility>  // for move
+
+#include "util/PathUtil.h"
+#include "util/Stacktrace.h"  // for Stacktrace
+#include "util/StringUtils.h"
 
 #include <QByteArray>
 #include <QBuffer>
@@ -12,10 +16,6 @@
 #include <QImageReader>
 #include <QIODevice>
 #include <QString>
-
-#include "util/PathUtil.h"
-#include "util/Stacktrace.h"  // for Stacktrace
-#include "util/StringUtils.h"
 
 /*
  * The contents of a background image
@@ -38,9 +38,10 @@ void setLoadError(GError** error, const QString& message) {
     }
 }
 
-auto loadImageFromBytes(QByteArray bytes, GError** error) -> QImage {
+auto loadImageFromBytes(std::string_view bytes, GError** error) -> QImage {
     QImageReader reader;
-    QBuffer buffer(&bytes);
+    QByteArray data(bytes.data(), static_cast<qsizetype>(bytes.size()));
+    QBuffer buffer(&data);
     buffer.open(QIODevice::ReadOnly);
     reader.setDevice(&buffer);
     reader.setAutoTransform(true);
@@ -64,19 +65,7 @@ struct BackgroundImage::Content {
         }
     }
 
-    Content(GInputStream* stream, fs::path path, GError** error): path(std::move(path)) {
-        QByteArray bytes;
-        std::array<char, 8192> chunk{};
-        while (true) {
-            const auto read = g_input_stream_read(stream, chunk.data(), chunk.size(), nullptr, error);
-            if (read < 0) {
-                return;
-            }
-            if (read == 0) {
-                break;
-            }
-            bytes.append(chunk.data(), static_cast<qsizetype>(read));
-        }
+    Content(std::string_view bytes, fs::path path, GError** error): path(std::move(path)) {
         this->image = loadImageFromBytes(bytes, error);
     }
 
@@ -99,8 +88,8 @@ void BackgroundImage::loadFile(fs::path const& path, GError** error) {
     this->img = std::make_shared<Content>(path, error);
 }
 
-void BackgroundImage::loadFile(GInputStream* stream, fs::path const& path, GError** error) {
-    this->img = std::make_shared<Content>(stream, path, error);
+void BackgroundImage::loadFile(std::string_view bytes, fs::path const& path, GError** error) {
+    this->img = std::make_shared<Content>(bytes, path, error);
 }
 
 auto BackgroundImage::getCloneId() const -> int { return this->img ? this->img->pageId : -1; }

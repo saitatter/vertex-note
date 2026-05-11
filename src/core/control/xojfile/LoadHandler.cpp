@@ -209,22 +209,8 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
         if (!readResult) {
             return;
         }
-        const std::string& imgData = *readResult;  // Do not remove the const qualifier - see below
-
-        /**
-         * To avoid an unnecessary copy, the data is still managed by the std::unique_ptr<std::string> instance. The
-         * input stream assumes the data will not be modified: do not remove the const qualifier on readResult or
-         * imgData
-         */
-        const vn::util::GObjectSPtr<GInputStream> inputStream{
-                g_memory_input_stream_new_from_data(imgData.data(), static_cast<gssize>(imgData.size()), nullptr),
-                vn::util::adopt};
-
         vn::util::GErrorGuard error{};
-        img.loadFile(inputStream.get(), filename, vn::util::out_ptr(error));
-
-        g_input_stream_close(inputStream.get(), nullptr, nullptr);
-
+        img.loadFile(*readResult, filename, vn::util::out_ptr(error));
         if (error) {
             logError(FS(_F("Could not read image: {1}. Error message: {2}") % filename.u8string() % error->message));
         }

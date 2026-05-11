@@ -13,9 +13,9 @@
 
 #include <memory>  // for shared_ptr
 #include <string>
+#include <string_view>
 
-#include <gio/gio.h>   // for GInputStream
-#include <glib.h>      // for GError
+#include <glib.h>  // for GError
 
 #include "filesystem.h"  // for path
 #include "util/RasterImageData.h"
@@ -26,7 +26,7 @@ struct BackgroundImage {
     void free();
 
     void loadFile(fs::path const& filepath, GError** error);
-    void loadFile(GInputStream* stream, fs::path const& filepath, GError** error);
+    void loadFile(std::string_view bytes, fs::path const& filepath, GError** error);
 
     int getCloneId() const;
     void setCloneId(int id);
