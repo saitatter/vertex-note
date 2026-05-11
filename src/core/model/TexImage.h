@@ -14,8 +14,6 @@
 #include <memory>
 #include <string>  // for string
 
-#include <glib.h>  // for GError
-
 #include "util/RasterImageData.h"
 
 #include "Element.h"  // for Element
@@ -66,7 +64,7 @@ public:
     /**
      * @return true if the binary data (PNG or PDF) was loaded successfully.
      */
-    bool loadData(std::string&& bytes, GError** err = nullptr);
+    bool loadData(std::string&& bytes, std::string* errorMessage = nullptr);
 
 public:
     // Serialize interface

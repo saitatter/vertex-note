@@ -105,8 +105,12 @@ auto renderMathTex(const std::string& formula, const LatexSettings& settings, Co
     }
 
     auto image = std::make_unique<TexImage>();
-    const bool loaded = image->loadData(std::move(*contents), nullptr);
+    std::string loadError;
+    const bool loaded = image->loadData(std::move(*contents), &loadError);
     if (!loaded || !image->getPdf()) {
+        if (!loadError.empty()) {
+            return loadError;
+        }
         return std::string("VertexNote could not load the generated LaTeX preview.");
     }
 

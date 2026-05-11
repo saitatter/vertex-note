@@ -11,6 +11,8 @@
 #include <poppler/cpp/poppler-page-renderer.h>
 #include <poppler/cpp/poppler-page.h>
 
+#include <glib.h>  // for g_warning
+
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
@@ -31,6 +33,12 @@ auto makePopplerDocumentFromBytes(const std::string& bytes) -> std::shared_ptr<p
 
     return adoptPopplerDocument(
             poppler::document::load_from_raw_data(bytes.data(), static_cast<int>(bytes.size())));
+}
+
+void setErrorMessage(std::string* errorMessage, std::string message) {
+    if (errorMessage) {
+        *errorMessage = std::move(message);
+    }
 }
 
 }  // namespace
@@ -55,7 +63,7 @@ auto TexImage::cloneTexImage() const -> std::unique_ptr<TexImage> {
     img->snappedBounds = this->snappedBounds;
     img->sizeCalculated = this->sizeCalculated;
 
-    img->loadData(std::string(this->binaryData), nullptr);
+    img->loadData(std::string(this->binaryData));
 
     return img;
 }
@@ -81,23 +89,25 @@ void TexImage::setText(std::string text) { this->text = std::move(text); }
 
 auto TexImage::getText() const -> std::string { return this->text; }
 
-auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
+auto TexImage::loadData(std::string&& bytes, std::string* errorMessage) -> bool {
     this->freeImageAndPdf();
     this->binaryData = bytes;
     if (this->binaryData.length() < 4) {
+        setErrorMessage(errorMessage, "LaTeX image data is too short.");
         return false;
     }
 
     const std::string type = binaryData.substr(1, 3);
     if (type == "PDF") {
-        (void) err;
         this->pdf = makePopplerDocumentFromBytes(this->binaryData);
         if (!this->pdf || this->pdf->pages() < 1) {
+            setErrorMessage(errorMessage, "Could not load LaTeX PDF image.");
             return false;
         }
         if (std::abs(this->width * this->height) <= std::numeric_limits<double>::epsilon()) {
             std::unique_ptr<poppler::page> page(this->pdf->create_page(0));
             if (!page) {
+                setErrorMessage(errorMessage, "Could not read LaTeX PDF page.");
                 return false;
             }
             const auto rect = page->page_rect();
@@ -105,6 +115,7 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
             this->height = rect.height();
         }
     } else if (type != "PNG") {
+        setErrorMessage(errorMessage, "Unknown LaTeX image type: " + type);
         g_warning("Unknown Latex image type: \"%s\"", type.c_str());
     }
 
@@ -190,7 +201,7 @@ void TexImage::readSerialized(ObjectInputStream& in) {
     freeImageAndPdf();
 
     std::string data = in.readString();
-    this->loadData(std::move(data), nullptr);
+    this->loadData(std::move(data));
 
     in.endObject();
     this->calcSize();
