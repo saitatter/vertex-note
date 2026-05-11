@@ -41,8 +41,9 @@ namespace XmlParserHelper {
 class AttributeMap {
 public:
     /**
-     * Build an attribute map for the current node. Names and values parameters
-     * should be directly forwarded from the GMarkup callback.
+     * Build an attribute map for the current node. Names and values are
+     * null-terminated arrays owned by the caller for the duration of parsing
+     * the current node.
      */
     AttributeMap(const char** attributeNames, const char** attributeValues);
 

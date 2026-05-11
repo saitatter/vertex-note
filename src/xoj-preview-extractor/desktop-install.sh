@@ -1,4 +1,0 @@
-#!/bin/sh -e
-
-export GCONF_CONFIG_SOURCE=`gconftool-2 --get-default-source`
-gconftool-2 --makefile-$1-rule vertex-note-thumbnailer-xoj.schemas

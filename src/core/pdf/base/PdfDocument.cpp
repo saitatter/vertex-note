@@ -2,15 +2,15 @@
 
 #include "pdf/base/PdfDocumentInterface.h"    // for PdfDocumentInterface
 #include "pdf/base/PdfPage.h"                 // for PdfPagePtr
-#include "pdf/popplerapi/PopplerGlibDocument.h"  // for PopplerGlibDocument
+#include "pdf/popplerapi/PopplerPdfDocument.h"  // for PopplerPdfDocument
 
 #include "filesystem.h"  // for path
 
 class PdfBookmarkIterator;
 
-PdfDocument::PdfDocument(): doc(new PopplerGlibDocument()) {}
+PdfDocument::PdfDocument(): doc(new PopplerPdfDocument()) {}
 
-PdfDocument::PdfDocument(const PdfDocument& doc): doc(new PopplerGlibDocument()) {
+PdfDocument::PdfDocument(const PdfDocument& doc): doc(new PopplerPdfDocument()) {
     this->doc->assign(doc.doc);
 }
 

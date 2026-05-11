@@ -22,10 +22,10 @@ class LinkDest;
 class PDFDoc;
 
 
-class PopplerGlibAction: public PdfAction {
+class PopplerPdfAction: public PdfAction {
 public:
-    PopplerGlibAction(const LinkAction* action, std::shared_ptr<PDFDoc> document, std::string title = {});
-    ~PopplerGlibAction() override;
+    PopplerPdfAction(const LinkAction* action, std::shared_ptr<PDFDoc> document, std::string title = {});
+    ~PopplerPdfAction() override;
 
 public:
     virtual std::shared_ptr<const LinkDestination> getDestination() override;

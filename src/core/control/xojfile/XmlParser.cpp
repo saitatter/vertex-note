@@ -47,7 +47,7 @@ static auto isAllWhitespace(std::string_view string) -> bool {
  * returns false.
  *
  * When available, we use std::from_chars, because it is about 10x faster than
- * streams and about 5x faster than g_ascii_strtod.
+ * streams and about 5x faster than std::strtod.
  *
  * @param it    Pointer to the beginning of the string, modified to point to the
  *              first unparsed character

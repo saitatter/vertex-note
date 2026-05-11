@@ -20,8 +20,9 @@ classes.
 
 ## Current Allowed Legacy Boundaries
 
-- `src/core/pdf/*`: Poppler GLib remains for text/link/bookmark compatibility;
-  preview rasterization uses Poppler C++.
+- `src/core/pdf/*`: PDF loading, text, links, bookmarks, and preview
+  rasterization stay behind the shared `PdfDocument`/`PdfPage` boundary and use
+  the Poppler C++/internal APIs without exposing backend-specific types to Qt.
 - `src/core/view/render/*`: shared render models remain backend-neutral and are
   painted by the Qt shell.
 - `src/core/control/settings/*`: legacy settings still model GTK/GDK device

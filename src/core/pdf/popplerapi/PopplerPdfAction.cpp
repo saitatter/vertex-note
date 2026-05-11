@@ -1,4 +1,4 @@
-#include "PopplerGlibAction.h"
+#include "PopplerPdfAction.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -12,14 +12,14 @@
 #include "model/LinkDestination.h"
 #include "util/Util.h"
 
-PopplerGlibAction::PopplerGlibAction(const LinkAction* action, std::shared_ptr<PDFDoc> document, std::string title):
+PopplerPdfAction::PopplerPdfAction(const LinkAction* action, std::shared_ptr<PDFDoc> document, std::string title):
         document(std::move(document)), title(std::move(title)) {
     destination = getDestination(action);
 }
 
-PopplerGlibAction::~PopplerGlibAction() = default;
+PopplerPdfAction::~PopplerPdfAction() = default;
 
-auto PopplerGlibAction::getDestination(const LinkAction* action) -> std::shared_ptr<const LinkDestination> {
+auto PopplerPdfAction::getDestination(const LinkAction* action) -> std::shared_ptr<const LinkDestination> {
     auto dest = std::make_shared<LinkDestination>();
     dest->setName(getTitle());
 
@@ -50,9 +50,9 @@ auto PopplerGlibAction::getDestination(const LinkAction* action) -> std::shared_
     return dest;
 }
 
-auto PopplerGlibAction::getDestination() -> std::shared_ptr<const LinkDestination> { return destination; }
+auto PopplerPdfAction::getDestination() -> std::shared_ptr<const LinkDestination> { return destination; }
 
-void PopplerGlibAction::linkFromDest(LinkDestination& link, const LinkDest* dest) {
+void PopplerPdfAction::linkFromDest(LinkDestination& link, const LinkDest* dest) {
     if (!document || !dest || !dest->isOk()) {
         return;
     }
@@ -85,4 +85,4 @@ void PopplerGlibAction::linkFromDest(LinkDestination& link, const LinkDest* dest
     link.setPdfPage(static_cast<std::size_t>(pageNumber - 1));
 }
 
-auto PopplerGlibAction::getTitle() -> std::string { return title; }
+auto PopplerPdfAction::getTitle() -> std::string { return title; }

@@ -1,4 +1,4 @@
-#include "PopplerGlibDocument.h"
+#include "PopplerPdfDocument.h"
 
 #include <limits>
 #include <memory>    // for make_shared, unique_ptr
@@ -14,8 +14,8 @@
 
 #include "util/StringUtils.h"
 
-#include "PopplerGlibPage.h"                  // for PopplerGlibPage
-#include "PopplerGlibPageBookmarkIterator.h"  // for PopplerGlibPageBookmark...
+#include "PopplerPdfPage.h"                  // for PopplerPdfPage
+#include "PopplerPdfPageBookmarkIterator.h"  // for PopplerPdfPageBookmark...
 #include "filesystem.h"                       // for path
 
 class PdfBookmarkIterator;
@@ -74,28 +74,28 @@ void setErrorMessage(std::string* errorMessage, std::string message) {
 
 using std::string;
 
-PopplerGlibDocument::PopplerGlibDocument() = default;
+PopplerPdfDocument::PopplerPdfDocument() = default;
 
-PopplerGlibDocument::PopplerGlibDocument(const PopplerGlibDocument& doc):
+PopplerPdfDocument::PopplerPdfDocument(const PopplerPdfDocument& doc):
         linkDocument(doc.linkDocument),
         documentData(doc.documentData),
         document(doc.document) {}
 
-PopplerGlibDocument::~PopplerGlibDocument() = default;
+PopplerPdfDocument::~PopplerPdfDocument() = default;
 
-void PopplerGlibDocument::assign(PdfDocumentInterface* doc) {
-    const auto* popplerDoc = dynamic_cast<PopplerGlibDocument*>(doc);
+void PopplerPdfDocument::assign(PdfDocumentInterface* doc) {
+    const auto* popplerDoc = dynamic_cast<PopplerPdfDocument*>(doc);
     linkDocument = popplerDoc->linkDocument;
     documentData = popplerDoc->documentData;
     document = popplerDoc->document;
 }
 
-auto PopplerGlibDocument::equals(PdfDocumentInterface* doc) const -> bool {
-    return document == (dynamic_cast<PopplerGlibDocument*>(doc))->document &&
-           linkDocument == (dynamic_cast<PopplerGlibDocument*>(doc))->linkDocument;
+auto PopplerPdfDocument::equals(PdfDocumentInterface* doc) const -> bool {
+    return document == (dynamic_cast<PopplerPdfDocument*>(doc))->document &&
+           linkDocument == (dynamic_cast<PopplerPdfDocument*>(doc))->linkDocument;
 }
 
-auto PopplerGlibDocument::save(fs::path const& file, std::string* errorMessage) const -> bool {
+auto PopplerPdfDocument::save(fs::path const& file, std::string* errorMessage) const -> bool {
     if (document == nullptr) {
         setErrorMessage(errorMessage, "Document not loaded.");
         return false;
@@ -109,7 +109,7 @@ auto PopplerGlibDocument::save(fs::path const& file, std::string* errorMessage) 
     return true;
 }
 
-auto PopplerGlibDocument::load(fs::path const& file, string password, std::string* errorMessage) -> bool {
+auto PopplerPdfDocument::load(fs::path const& file, string password, std::string* errorMessage) -> bool {
     linkDocument.reset();
     document.reset();
     documentData.reset();
@@ -124,7 +124,7 @@ auto PopplerGlibDocument::load(fs::path const& file, string password, std::strin
     return true;
 }
 
-auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string password, std::string* errorMessage) -> bool {
+auto PopplerPdfDocument::load(std::unique_ptr<std::string> data, string password, std::string* errorMessage) -> bool {
     linkDocument.reset();
     document.reset();
     documentData = std::make_shared<std::string>(*data);
@@ -140,26 +140,26 @@ auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string passwor
     return true;
 }
 
-auto PopplerGlibDocument::isLoaded() const -> bool { return this->document != nullptr; }
+auto PopplerPdfDocument::isLoaded() const -> bool { return this->document != nullptr; }
 
-void PopplerGlibDocument::reset() {
+void PopplerPdfDocument::reset() {
     linkDocument.reset();
     documentData.reset();
     document.reset();
 }
 
-auto PopplerGlibDocument::getPage(size_t page) const -> PdfPagePtr {
+auto PopplerPdfDocument::getPage(size_t page) const -> PdfPagePtr {
     if (document == nullptr || page >= static_cast<std::size_t>(document->pages())) {
         return nullptr;
     }
 
     PdfPagePtr pageptr =
-            std::make_shared<PopplerGlibPage>(static_cast<int>(page), document, linkDocument);
+            std::make_shared<PopplerPdfPage>(static_cast<int>(page), document, linkDocument);
 
     return pageptr;
 }
 
-auto PopplerGlibDocument::getPageCount() const -> size_t {
+auto PopplerPdfDocument::getPageCount() const -> size_t {
     if (document == nullptr) {
         return 0;
     }
@@ -167,7 +167,7 @@ auto PopplerGlibDocument::getPageCount() const -> size_t {
     return size_t(document->pages());
 }
 
-auto PopplerGlibDocument::getContentsIter() const -> PdfBookmarkIterator* {
+auto PopplerPdfDocument::getContentsIter() const -> PdfBookmarkIterator* {
     if (linkDocument == nullptr) {
         return nullptr;
     }
@@ -182,5 +182,5 @@ auto PopplerGlibDocument::getContentsIter() const -> PdfBookmarkIterator* {
         return nullptr;
     }
 
-    return new PopplerGlibPageBookmarkIterator(items, linkDocument);
+    return new PopplerPdfPageBookmarkIterator(items, linkDocument);
 }

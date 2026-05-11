@@ -27,7 +27,6 @@ target_link_libraries (vertexnote-thumbnailer
   util
   Qt6::Gui
   ${ZLIB_LIBRARIES}
-  ${Glib_LDFLAGS}
   ${ZIP_LDFLAGS}
   )
 
@@ -40,20 +39,3 @@ install (TARGETS vertexnote-thumbnailer
   COMPONENT vertex-note-thumbnailer
 )
 
-## Desktop install targets ##
-
-configure_file (vertex-note-thumbnailer-xoj.schemas vertex-note-thumbnailer-xoj.schemas COPYONLY)
-
-add_custom_target (desktop-install-thumbnailer
-  COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" install
-
-  COMMENT "Install vertex-note-thumbnailer as xoj file thumbnail generator"
-  SOURCES vertex-note-thumbnailer.cpp vertex-note-thumbnailer-xoj.schemas desktop-install.sh
-)
-
-add_custom_target (desktop-uninstall-thumbnailer
-  COMMAND "${PROJECT_SOURCE_DIR}/src/xoj-preview-extractor/desktop-install.sh" uninstall
-
-  COMMENT "Uninstall vertex-note-thumbnailer as xoj file thumbnail generator"
-  SOURCES vertex-note-thumbnailer.cpp vertex-note-thumbnailer-xoj.schemas desktop-install.sh
-)

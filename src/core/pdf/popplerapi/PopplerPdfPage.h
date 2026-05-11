@@ -22,12 +22,12 @@
 
 class PDFDoc;
 
-class PopplerGlibPage: public PdfPage {
+class PopplerPdfPage: public PdfPage {
 public:
-    PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, std::shared_ptr<PDFDoc> linkDocument);
-    PopplerGlibPage(const PopplerGlibPage& other);
-    virtual ~PopplerGlibPage();
-    PopplerGlibPage& operator=(const PopplerGlibPage& other);
+    PopplerPdfPage(int pageIndex, std::shared_ptr<poppler::document> doc, std::shared_ptr<PDFDoc> linkDocument);
+    PopplerPdfPage(const PopplerPdfPage& other);
+    virtual ~PopplerPdfPage();
+    PopplerPdfPage& operator=(const PopplerPdfPage& other);
 
 public:
     double getWidth() const override;

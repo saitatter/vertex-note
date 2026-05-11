@@ -25,11 +25,11 @@
 class PdfBookmarkIterator;
 class PDFDoc;
 
-class PopplerGlibDocument: public PdfDocumentInterface {
+class PopplerPdfDocument: public PdfDocumentInterface {
 public:
-    PopplerGlibDocument();
-    PopplerGlibDocument(const PopplerGlibDocument& doc);
-    ~PopplerGlibDocument() override;
+    PopplerPdfDocument();
+    PopplerPdfDocument(const PopplerPdfDocument& doc);
+    ~PopplerPdfDocument() override;
 
 public:
     void assign(PdfDocumentInterface* doc) override;

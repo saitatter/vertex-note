@@ -11,19 +11,28 @@
 
 #pragma once
 
-#include <glib.h>  // for g_dpgettext2
+#include <cstring>
 #include <libintl.h>
+#include <string>
 
 #include "util/PlaceholderString.h"
 
 #undef snprintf
 
+namespace Util::i18n {
+inline const char* translateContext(const char* context, const char* msg) {
+    const std::string key = std::string(context) + '\004' + msg;
+    const char* translated = gettext(key.c_str());
+    return std::strcmp(translated, key.c_str()) == 0 ? msg : translated;
+}
+}  // namespace Util::i18n
+
 #define _(msg) gettext(msg)
-#define C_(context, msg) g_dpgettext2(nullptr, context, msg)
+#define C_(context, msg) Util::i18n::translateContext(context, msg)
 
 /// The string is not looked for by xgettext and should be added to the .po files another way (e.g. with N_ below)
 #define fetch_translation(msg) gettext(msg)
-#define fetch_translation_context(context, msg) g_dpgettext2(nullptr, context, msg)
+#define fetch_translation_context(context, msg) Util::i18n::translateContext(context, msg)
 
 // Formatted Translation
 #define _F(msg) PlaceholderString(_(msg))

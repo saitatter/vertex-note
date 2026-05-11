@@ -352,9 +352,6 @@ static auto buildUserStateDir() -> fs::path {
 }
 
 static auto getUserStateDir() -> const fs::path& {
-    // The GLib function g_get_user_state_dir is not supported on GLib < 2.72,
-    // so we implement our version here.
-
     // Cache fs::path so it is only computed once.
     static std::optional<const fs::path> userStateDir;
     if (!userStateDir.has_value()) {

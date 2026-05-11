@@ -1,4 +1,4 @@
-#include "PopplerGlibPage.h"
+#include "PopplerPdfPage.h"
 
 #include <algorithm>  // for max, min
 #include <cmath>
@@ -19,7 +19,7 @@
 #include "pdf/base/PdfAction.h"  // for PdfAction
 #include "pdf/base/PdfPage.h"    // for PdfRectangle, PdfPage::Link
 
-#include "PopplerGlibAction.h"  // for PopplerGlibAction
+#include "PopplerPdfAction.h"  // for PopplerPdfAction
 
 namespace {
 
@@ -52,20 +52,20 @@ auto intersects(const PdfRectangle& selection, const poppler::rectf& rect) -> bo
 
 }  // namespace
 
-PopplerGlibPage::PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc,
+PopplerPdfPage::PopplerPdfPage(int pageIndex, std::shared_ptr<poppler::document> doc,
                                  std::shared_ptr<PDFDoc> linkDocument):
         pageIndex(pageIndex),
         document(std::move(doc)),
         linkDocument(std::move(linkDocument)) {}
 
-PopplerGlibPage::PopplerGlibPage(const PopplerGlibPage& other):
+PopplerPdfPage::PopplerPdfPage(const PopplerPdfPage& other):
         pageIndex(other.pageIndex),
         document(other.document),
         linkDocument(other.linkDocument) {}
 
-PopplerGlibPage::~PopplerGlibPage() = default;
+PopplerPdfPage::~PopplerPdfPage() = default;
 
-PopplerGlibPage& PopplerGlibPage::operator=(const PopplerGlibPage& other) {
+PopplerPdfPage& PopplerPdfPage::operator=(const PopplerPdfPage& other) {
     if (&other == this) {
         return *this;
     }
@@ -77,24 +77,24 @@ PopplerGlibPage& PopplerGlibPage::operator=(const PopplerGlibPage& other) {
     return *this;
 }
 
-auto PopplerGlibPage::createPage() const -> std::unique_ptr<poppler::page> {
+auto PopplerPdfPage::createPage() const -> std::unique_ptr<poppler::page> {
     if (!document || pageIndex < 0 || pageIndex >= document->pages()) {
         return nullptr;
     }
     return std::unique_ptr<poppler::page>(document->create_page(pageIndex));
 }
 
-auto PopplerGlibPage::getWidth() const -> double {
+auto PopplerPdfPage::getWidth() const -> double {
     const auto page = createPage();
     return page ? page->page_rect().width() : 0.0;
 }
 
-auto PopplerGlibPage::getHeight() const -> double {
+auto PopplerPdfPage::getHeight() const -> double {
     const auto page = createPage();
     return page ? page->page_rect().height() : 0.0;
 }
 
-auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
+auto PopplerPdfPage::renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
         -> vn::util::RasterImageData {
     if (pixelWidth <= 0 || pixelHeight <= 0 || !document) {
         return {};
@@ -128,14 +128,14 @@ auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, doubl
     return raster;
 }
 
-auto PopplerGlibPage::getPageId() const -> int { return pageIndex; }
+auto PopplerPdfPage::getPageId() const -> int { return pageIndex; }
 
-auto PopplerGlibPage::getPageLabel() const -> std::string {
+auto PopplerPdfPage::getPageLabel() const -> std::string {
     const auto page = createPage();
     return page ? toStdString(page->label()) : std::string{};
 }
 
-auto PopplerGlibPage::findText(const std::string& text) -> std::vector<PdfRectangle> {
+auto PopplerPdfPage::findText(const std::string& text) -> std::vector<PdfRectangle> {
     std::vector<PdfRectangle> findings;
     const auto page = createPage();
     if (!page || text.empty()) {
@@ -152,7 +152,7 @@ auto PopplerGlibPage::findText(const std::string& text) -> std::vector<PdfRectan
     return findings;
 }
 
-auto PopplerGlibPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) -> std::string {
+auto PopplerPdfPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) -> std::string {
     const auto page = createPage();
     if (!page) {
         return {};
@@ -162,7 +162,7 @@ auto PopplerGlibPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle
     return toStdString(page->text(toPopplerRect(rect)));
 }
 
-auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSelectionStyle style)
+auto PopplerPdfPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSelectionStyle style)
         -> TextSelection {
     std::vector<PdfRectangle> textRects;
     const auto page = createPage();
@@ -209,7 +209,7 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
     return {textRects};
 }
 
-auto PopplerGlibPage::getLinks() -> std::vector<Link> {
+auto PopplerPdfPage::getLinks() -> std::vector<Link> {
     std::vector<Link> results;
     if (!linkDocument || pageIndex < 0) {
         return results;
@@ -226,7 +226,7 @@ auto PopplerGlibPage::getLinks() -> std::vector<Link> {
         }
         const auto& area = link->getRect();
         PdfRectangle rect{area.x1, height - area.y2, area.x2, height - area.y1};
-        results.emplace_back(Link{rect, std::make_unique<PopplerGlibAction>(link->getAction(), linkDocument)});
+        results.emplace_back(Link{rect, std::make_unique<PopplerPdfAction>(link->getAction(), linkDocument)});
     }
 
     return results;

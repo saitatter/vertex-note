@@ -31,13 +31,6 @@ Here you can find complete list of VertexNote CMake flags (sorted by categories)
 | `DEV_ERRORLOG_DIR` *[A]*       | errorlogs        | Directory where errorlogfiles will be placed
 
 
-## `EXT` – add dependency basing on precompiled deb packages (UNIX only)
-
-| Variable name | Default | Description
-| ------------- | ------- | -----------
-| `EXT_GLIBMM`  | OFF     | Glibmm and Gtkmm binaries
-
-
 ## `ENABLE` – basic stable features support
 
 | Variable name        | Default | Description

@@ -22,10 +22,10 @@ class PDFDoc;
 class PdfAction;
 
 
-class PopplerGlibPageBookmarkIterator: public PdfBookmarkIterator {
+class PopplerPdfPageBookmarkIterator: public PdfBookmarkIterator {
 public:
-    PopplerGlibPageBookmarkIterator(const std::vector<OutlineItem*>* items, std::shared_ptr<PDFDoc> document);
-    ~PopplerGlibPageBookmarkIterator() override;
+    PopplerPdfPageBookmarkIterator(const std::vector<OutlineItem*>* items, std::shared_ptr<PDFDoc> document);
+    ~PopplerPdfPageBookmarkIterator() override;
 
 public:
     bool next() override;

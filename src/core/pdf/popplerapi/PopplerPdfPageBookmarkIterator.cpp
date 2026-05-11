@@ -1,4 +1,4 @@
-#include "PopplerGlibPageBookmarkIterator.h"
+#include "PopplerPdfPageBookmarkIterator.h"
 
 #include <string>
 #include <utility>
@@ -6,7 +6,7 @@
 #include <Outline.h>
 #include <UTF.h>
 
-#include "pdf/popplerapi/PopplerGlibAction.h"
+#include "pdf/popplerapi/PopplerPdfAction.h"
 
 class PdfAction;
 
@@ -35,20 +35,20 @@ auto outlineTitleToUtf8(const std::vector<Unicode>& title) -> std::string {
 
 }  // namespace
 
-PopplerGlibPageBookmarkIterator::PopplerGlibPageBookmarkIterator(const std::vector<OutlineItem*>* items,
+PopplerPdfPageBookmarkIterator::PopplerPdfPageBookmarkIterator(const std::vector<OutlineItem*>* items,
                                                                  std::shared_ptr<PDFDoc> document):
         items(items), document(std::move(document)) {}
 
-PopplerGlibPageBookmarkIterator::~PopplerGlibPageBookmarkIterator() = default;
+PopplerPdfPageBookmarkIterator::~PopplerPdfPageBookmarkIterator() = default;
 
-auto PopplerGlibPageBookmarkIterator::current() const -> OutlineItem* {
+auto PopplerPdfPageBookmarkIterator::current() const -> OutlineItem* {
     if (!items || index >= items->size()) {
         return nullptr;
     }
     return (*items)[index];
 }
 
-auto PopplerGlibPageBookmarkIterator::next() -> bool {
+auto PopplerPdfPageBookmarkIterator::next() -> bool {
     if (!items || index + 1U >= items->size()) {
         return false;
     }
@@ -56,12 +56,12 @@ auto PopplerGlibPageBookmarkIterator::next() -> bool {
     return true;
 }
 
-auto PopplerGlibPageBookmarkIterator::isOpen() -> bool {
+auto PopplerPdfPageBookmarkIterator::isOpen() -> bool {
     auto* item = current();
     return item ? item->isOpen() : false;
 }
 
-auto PopplerGlibPageBookmarkIterator::getChildIter() -> PdfBookmarkIterator* {
+auto PopplerPdfPageBookmarkIterator::getChildIter() -> PdfBookmarkIterator* {
     auto* item = current();
     if (!item || !item->hasKids()) {
         return nullptr;
@@ -72,14 +72,14 @@ auto PopplerGlibPageBookmarkIterator::getChildIter() -> PdfBookmarkIterator* {
         return nullptr;
     }
 
-    return new PopplerGlibPageBookmarkIterator(children, document);
+    return new PopplerPdfPageBookmarkIterator(children, document);
 }
 
-auto PopplerGlibPageBookmarkIterator::getAction() -> PdfAction* {
+auto PopplerPdfPageBookmarkIterator::getAction() -> PdfAction* {
     auto* item = current();
     if (!item || !item->getAction()) {
         return nullptr;
     }
 
-    return new PopplerGlibAction(item->getAction(), document, outlineTitleToUtf8(item->getTitle()));
+    return new PopplerPdfAction(item->getAction(), document, outlineTitleToUtf8(item->getTitle()));
 }
