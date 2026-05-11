@@ -50,7 +50,7 @@ This audit compares GTK `Settings` keys from
 
 | GTK setting key(s) | Current Qt behavior | Gap |
 | --- | --- | --- |
-| Custom data `deviceClasses`, `buttonConfig` | Qt settings discovers current `QInputDevice`s and persists right/middle button action policy. | No per-device class matrix or full GTK button action editor yet. |
+| Custom data `deviceClasses`, `buttonConfig` | Qt settings discovers current `QInputDevice`s, uses Qt tablet pointer kinds, maps physical eraser pointers to erasing, and persists right/middle button action policy. | No per-device class matrix or full GTK button action editor yet. |
 | `iconTheme`, `useStockIcons` | Qt uses bundled Qt icons and native Qt palette/theme defaults. | No user-selectable icon theme or stock-icon toggle in Qt settings. |
 | `presentationMode` | Qt has the `view.presentation` command. | Presentation state is not persisted as a settings default. |
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt uses native file dialogs and recent documents. | Last dialog directories are not separately persisted. |

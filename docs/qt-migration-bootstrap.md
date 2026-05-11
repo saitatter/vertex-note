@@ -254,7 +254,8 @@ latest Qt parity commits.
    - ✓ Add Qt autosave settings and scheduler for existing `.xopp`/`.xoj`/`.xopt`
      documents.
    - ✓ Replace the Devices placeholder with Qt input-device discovery plus
-     right/middle button and eraser cursor policy settings.
+     right/middle button, physical tablet eraser, and eraser cursor policy
+     settings.
    - ✓ Add advanced pressure and grid snap settings: minimum pressure, pressure
      multiplier, pressure guessing, grid size, and grid tolerance.
    - ✓ Add Qt-native stroke stabilizer settings and moving-average stroke

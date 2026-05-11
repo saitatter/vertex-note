@@ -23,6 +23,7 @@
 #include <QPainterPath>
 #include <QPalette>
 #include <QPen>
+#include <QPointingDevice>
 #include <QRect>
 #include <QApplication>
 #include <QClipboard>
@@ -1057,10 +1058,42 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 void QtCanvas::tabletEvent(QTabletEvent* event) {
     this->inputAdapter->handleTablet(*event);
     const auto tool = this->currentToolState.activeTool;
+    const auto* pointingDevice = event->pointingDevice();
+    const bool tabletEraserPointer =
+            pointingDevice && pointingDevice->pointerType() == QPointingDevice::PointerType::Eraser;
+    const bool tabletRightButtonEraser =
+            this->rightButtonAction == QtPointerButtonAction::Eraser &&
+            (event->button() == Qt::RightButton || event->buttons().testFlag(Qt::RightButton));
+    const bool tabletRequestsEraser = !this->spaceHeld && (tabletEraserPointer || tabletRightButtonEraser);
     const bool isDrawTool = tool == QtToolType::Pen || tool == QtToolType::Highlighter ||
                             tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter ||
                             tool == QtToolType::ShapeRecognizer;
     const bool isEraserTool = tool == QtToolType::Eraser;
+    if (tabletRequestsEraser) {
+        if (event->type() == QEvent::TabletPress) {
+            this->temporaryRightButtonEraser = !isEraserTool;
+            if (this->eraserCursorHidden) {
+                setCursor(Qt::BlankCursor);
+            }
+            Q_EMIT toolStateChanged();
+            beginEraseAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletMove && this->erasing) {
+            eraseAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (event->type() == QEvent::TabletRelease && this->erasing) {
+            finalizeErase();
+            this->temporaryRightButtonEraser = false;
+            refreshToolCursor();
+            Q_EMIT toolStateChanged();
+            event->accept();
+            return;
+        }
+    }
     if (isDrawTool) {
         if (event->type() == QEvent::TabletPress && event->buttons().testFlag(Qt::LeftButton) && !this->spaceHeld) {
             beginStrokeAtScreen(event->position(), event->pressure());
