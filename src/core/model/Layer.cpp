@@ -1,11 +1,10 @@
 #include "Layer.h"
 
 #include <cstddef>
+#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
-
-#include <glib.h>  // for g_warning
 
 #include "model/Element.h"  // for Element, Element::Index, Element::Inval...
 #include "model/ElementInsertionPosition.h"
@@ -33,7 +32,7 @@ auto Layer::clone() const -> Layer* {
 
 void Layer::addElement(ElementPtr e) {
     if (e == nullptr) {
-        g_warning("addElement(nullptr)!");
+        std::cerr << "addElement(nullptr)!" << std::endl;
         Stacktrace::printStacktrace();
         return;
     }
@@ -43,7 +42,7 @@ void Layer::addElement(ElementPtr e) {
 
 void Layer::insertElement(ElementPtr e, Element::Index pos) {
     if (e == nullptr) {
-        g_warning("insertElement(nullptr)!");
+        std::cerr << "insertElement(nullptr)!" << std::endl;
         Stacktrace::printStacktrace();
         return;
     }
@@ -81,7 +80,7 @@ auto Layer::removeElement(const Element* e) -> InsertionPosition {
         }
     }
 
-    g_warning("Could not remove element %p from layer %p, it's not on the layer!", e, this);
+    std::cerr << "Could not remove element " << e << " from layer " << this << ", it's not on the layer!" << std::endl;
     Stacktrace::printStacktrace();
     return InsertionPosition{nullptr, Element::InvalidIndex};
 }
@@ -106,7 +105,7 @@ auto Layer::removeElementsAt(InsertionOrderRef const& elts) -> InsertionOrder {
         if (pos < 0 || pos > endIndex || elements[static_cast<size_t>(pos)].get() != e) {
             pos = indexOf(e);
             if (pos == Element::InvalidIndex) {
-                g_warning("Could not remove element from layer, it's not on the layer!");
+                std::cerr << "Could not remove element from layer, it's not on the layer!" << std::endl;
                 Stacktrace::printStacktrace();
                 continue;
             }

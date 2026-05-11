@@ -2,11 +2,10 @@
 
 #include <algorithm>  // for max, min, copy, lower_bound
 #include <cstddef>    // for size_t, ptrdiff_t
+#include <iostream>   // for cerr
 #include <iterator>   // for next
 #include <optional>   // for optional
 #include <tuple>      // for forward_as_tuple
-
-#include <glib.h>  // for g_warning
 
 #include "model/Point.h"            // for Point
 #include "model/Stroke.h"           // for Stroke, IntersectionParameter...
@@ -91,7 +90,7 @@ void ErasableStroke::beginErasure(const IntersectionParametersContainer& paddedI
 void ErasableStroke::erase(const PaddedBox& box, Range& range) {
     size_t n = (size_t)this->stroke.getPointCount();
     if (n < 2) {
-        g_warning("Erasing empty stroke");
+        std::cerr << "Erasing empty stroke" << std::endl;
         return;
     }
 

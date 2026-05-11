@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <utility>  // for move
@@ -10,8 +11,6 @@
 #include <poppler/cpp/poppler-image.h>
 #include <poppler/cpp/poppler-page-renderer.h>
 #include <poppler/cpp/poppler-page.h>
-
-#include <glib.h>  // for g_warning
 
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
@@ -116,7 +115,7 @@ auto TexImage::loadData(std::string&& bytes, std::string* errorMessage) -> bool 
         }
     } else if (type != "PNG") {
         setErrorMessage(errorMessage, "Unknown LaTeX image type: " + type);
-        g_warning("Unknown Latex image type: \"%s\"", type.c_str());
+        std::cerr << "Unknown Latex image type: \"" << type << "\"" << std::endl;
     }
 
     return true;

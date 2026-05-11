@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <memory>
 #include <utility>  // for move
 
@@ -9,8 +10,6 @@
 #include <QFontMetricsF>
 #include <QString>
 #include <QStringList>
-
-#include <glib.h>  // for g_warning
 
 #include "model/AudioElement.h"   // for AudioElement
 #include "model/Element.h"        // for ELEMENT_TEXT, Eleme...
@@ -131,7 +130,7 @@ void Text::scale(double x0, double y0, double fx, double fy, double rotation,
                  bool) {  // line width scaling option is not used
     // only proportional scale allowed...
     if (fx != fy) {
-        g_warning("rescale font with fx != fy not supported: %lf / %lf", fx, fy);
+        std::cerr << "rescale font with fx != fy not supported: " << fx << " / " << fy << std::endl;
         Stacktrace::printStacktrace();
     }
 
