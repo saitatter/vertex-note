@@ -72,7 +72,9 @@ target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 if (ENABLE_QT_SHELL)
   target_sources(test-units PRIVATE
     "${PROJECT_SOURCE_DIR}/src/qt/QtCanvasLayout.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtCommandHost.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtRecentFilesService.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtToolbarLayoutEngine.cpp"

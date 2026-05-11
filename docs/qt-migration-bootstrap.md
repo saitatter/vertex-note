@@ -218,6 +218,8 @@ This is the current implementation plan after the Qt parity batch through
    - Toolbar parsing covers `DRAW`, `DRAW_STROKE`, and `DRAW_VERTEX`.
    - Canvas layout coverage exercises 1/2/3 columns and 1/2 rows through a
      pure `QtCanvasLayout` helper used by `QtCanvas`.
+   - Qt plugin UI bridge coverage exercises toolbar placeholder
+     register/update/remove behavior offscreen.
 
 ### Remaining work
 
