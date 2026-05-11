@@ -3,22 +3,24 @@
 #include <algorithm>
 #include <cstdlib>      // for system
 #include <fstream>      // for ifstream, char_traits, basic_ist...
+#include <iostream>
 #include <iterator>     // for begin
 #include <sstream>      // for stringstream
 #include <stdexcept>    // for runtime_error
 #include <string_view>  // for basic_string_view, operator""sv
-#include <type_traits>  // for remove_reference<>::type
 #include <utility>      // for move
 #include <variant>
 
+#include <QDir>
+#include <QStandardPaths>
+#include <QUrl>
+
 #include <config-paths.h>  // for PROJECT_INSTALL_DIR
-#include <glib.h>          // for gchar, g_free, g_filename_to_uri
 
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/StringUtils.h"        // for replace_pair, StringUtils
-#include "util/Util.h"               // for getPid, execInUiThread
+#include "util/Util.h"               // for getPid
 #include "util/i18n.h"               // for FS, _F, FORMAT_STR
-#include "util/raii/CStringWrapper.h"
 #include "util/safe_casts.h"  // for as_signed
 #include "util/utf8_view.h"   // for utf8_view
 
@@ -29,7 +31,6 @@
 #else
 #include <unistd.h>  // for readlink, ssize_t
 #ifdef __APPLE__
-#include <glib.h>
 #include <mach-o/dyld.h>
 #else
 #include <climits>  // for PATH_MAX
@@ -40,7 +41,33 @@ constexpr auto const* CONFIG_FOLDER_NAME = "vertex-note";
 constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "vertex-note";
 
 static void reportPathErrorToUser(const std::string& msg) {
-    g_warning("%s", msg.c_str());
+    std::cerr << msg << '\n';
+}
+
+static auto pathToQString(const fs::path& path) -> QString {
+#ifdef _WIN32
+    return QString::fromStdWString(path.wstring());
+#else
+    const auto utf8 = path.u8string();
+    return QString::fromUtf8(char_cast(utf8.data()), static_cast<qsizetype>(utf8.size()));
+#endif
+}
+
+static auto pathFromQString(const QString& path) -> fs::path {
+#ifdef _WIN32
+    return fs::path(path.toStdWString());
+#else
+    const auto utf8 = path.toUtf8();
+    return fs::path(vn::util::utf8(utf8.constData()));
+#endif
+}
+
+static auto standardPath(QStandardPaths::StandardLocation location) -> fs::path {
+    const auto writable = QStandardPaths::writableLocation(location);
+    if (!writable.isEmpty()) {
+        return pathFromQString(writable);
+    }
+    return fs::current_path();
 }
 
 static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const fs::path& legacyFolder) {
@@ -52,8 +79,8 @@ static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const
         fs::create_directories(currentFolder.parent_path());
         fs::copy(legacyFolder, currentFolder, fs::copy_options::recursive | fs::copy_options::skip_existing);
     } catch (const fs::filesystem_error& fe) {
-        g_warning("Could not migrate legacy VertexNote folder %s to VertexNote folder %s: %s",
-                  char_cast(legacyFolder.u8string().c_str()), char_cast(currentFolder.u8string().c_str()), fe.what());
+        std::cerr << "Could not migrate legacy VertexNote folder " << char_cast(legacyFolder.u8string()) << " to "
+                  << char_cast(currentFolder.u8string()) << ": " << fe.what() << '\n';
     }
 }
 
@@ -103,10 +130,8 @@ fs::path Util::getExePath() {
         return p.parent_path();
     }
 
-    g_error("Could not get executable path!");
-
     delete[] path;
-    return "";
+    throw std::runtime_error("Could not get executable path");
 }
 #else
 auto Util::getExePath() -> fs::path {
@@ -206,102 +231,44 @@ auto Util::clearExtensions(fs::path& path, const std::string& ext) -> void {
     }
 }
 
-Util::GFilename::GFilename(const fs::path& p) {
-#ifndef _WIN32  // On Windows, g_filename are always in UTF8
-    if (!g_get_filename_charsets(nullptr)) {
-        // g_filename are NOT utf-8 encoded
-        GError* err = nullptr;
-        value = vn::util::OwnedCString::assumeOwnership(
-                g_filename_from_utf8(char_cast(p.u8string().c_str()), -1, nullptr, nullptr, &err));
-        if (err) {
-            g_warning("Failed to convert g_filename from utf8 with error code: %d\n%s", err->code, err->message);
-            g_error_free(err);
-            value = u8"";
-        }
-    } else
-#endif
-    {
-        value = p.u8string();
-    }
-}
+Util::GFilename::GFilename(const fs::path& p): value(p.u8string()) {}
 
 Util::GFilename::GFilename(const char* p): value(p) {}
 
-auto Util::GFilename::assumeOwnerhip(char* p) -> GFilename {
-    GFilename f;
-    f.value = vn::util::OwnedCString::assumeOwnership(p);
-    return f;
-}
 const char* Util::GFilename::c_str() const {
-    if (const auto* p = get_if<vn::util::OwnedCString>(&value); p) {
-        return p->get();
-    } else if (const auto* q = get_if<const char*>(&value); q) {
+    if (const auto* q = std::get_if<const char*>(&value); q) {
         return *q;
     }
-    return char_cast(get<std::u8string>(value).c_str());
+    return char_cast(std::get<std::u8string>(value).c_str());
 }
 
 std::optional<fs::path> Util::GFilename::toPath() const {
-#ifndef _WIN32  // On Windows, g_filename are always in UTF8
-    if (!g_get_filename_charsets(nullptr)) {
-        // g_filename are NOT utf-8 encoded
-        GError* err = nullptr;
-        auto utf8 =
-                vn::util::OwnedCString::assumeOwnership(g_filename_to_utf8(this->c_str(), -1, nullptr, nullptr, &err));
-        if (err) {
-            g_warning("Failed to convert g_filename to utf8 with error code: %d\n%s", err->code, err->message);
-            g_error_free(err);
-            return std::nullopt;
-        }
-        if (utf8) {
-            return fs::path(vn::util::utf8(utf8.get()));
-        } else {
-            // Conversion failed?
-            g_warning("Failed to convert g_filename to utf8: the resulting string is empty");
-            return std::nullopt;
-        }
-    } else
-#endif
-    {
-        if (const char* p = this->c_str(); p) {
-            return fs::path(vn::util::utf8(p));
-        } else {
-            return std::nullopt;
-        }
+    if (const char* p = this->c_str(); p) {
+        return fs::path(vn::util::utf8(p));
     }
+    return std::nullopt;
 }
 
 // Uri must be ASCII-encoded!
 auto Util::fromUri(const std::string& uri) -> std::optional<fs::path> {
-    if (!StringUtils::startsWith(uri, "file://")) {
+    const auto url = QUrl::fromEncoded(QByteArray(uri.data(), static_cast<qsizetype>(uri.size())));
+    if (!url.isValid() || !url.isLocalFile()) {
         return std::nullopt;
     }
-    return GFilename::assumeOwnerhip(g_filename_from_uri(uri.c_str(), nullptr, nullptr)).toPath();
+    if (!url.host().isEmpty() && url.host() != "localhost") {
+        return std::nullopt;
+    }
+    return pathFromQString(url.toLocalFile());
 }
 
 auto Util::toUri(const fs::path& path) -> std::optional<std::string> {
-    GError* error{};
-    char* uri = [&] {
-        if (isAbsolute(path)) {
-            return g_filename_to_uri(GFilename(path).c_str(), nullptr, &error);
-        }
-        return g_filename_to_uri(GFilename(fs::absolute(path)).c_str(), nullptr, &error);
-    }();
-
-    if (error != nullptr) {
-        g_warning("Util::toUri: could not parse path to URI, error: %s\n", error->message);
-        g_error_free(error);
+    const auto absolutePath = isAbsolute(path) ? path : fs::absolute(path);
+    const auto url = QUrl::fromLocalFile(pathToQString(absolutePath));
+    if (!url.isValid()) {
+        std::cerr << "Util::toUri: could not convert path to URI: " << char_cast(absolutePath.u8string()) << '\n';
         return std::nullopt;
     }
-
-    if (!uri) {
-        g_warning("Util::toUri: path results in empty URI");
-        return std::nullopt;
-    }
-
-    std::string uriString(uri);
-    g_free(uri);
-    return {std::move(uriString)};
+    return url.toEncoded().toStdString();
 }
 
 auto Util::fromGFilename(const char* path) -> fs::path { return GFilename(path).toPath().value_or(fs::path()); }
@@ -309,25 +276,27 @@ auto Util::fromGFilename(const char* path) -> fs::path { return GFilename(path).
 auto Util::toGFilename(fs::path const& path) -> GFilename { return GFilename(path); }
 
 auto Util::getGettextFilepath(fs::path const& localeDir) -> fs::path {
-    /// documentation of g_getenv is wrong, its UTF-8, see #5640
-    const char* gettextEnv = g_getenv("TEXTDOMAINDIR");
+    const char* gettextEnv = std::getenv("TEXTDOMAINDIR");
 
     auto dir = [&]() -> std::optional<fs::path> {
         if (gettextEnv) {
             // Only consider first path in environment variable
             std::string_view directories(gettextEnv);
-            size_t firstDot = directories.find(G_SEARCHPATH_SEPARATOR);
+            constexpr char pathListSeparator =
+#ifdef _WIN32
+                    ';';
+#else
+                    ':';
+#endif
+            size_t firstDot = directories.find(pathListSeparator);
             if (firstDot != std::string::npos) {
-                return GFilename::assumeOwnerhip(g_strndup(gettextEnv, firstDot)).toPath();
-            } else {
-                return GFilename(gettextEnv).toPath();
+                return fs::path(vn::util::utf8(std::string(directories.substr(0, firstDot)).c_str()));
             }
+            return GFilename(gettextEnv).toPath();
         } else {
             return std::nullopt;
         }
     }();
-    g_debug("TEXTDOMAINDIR = %s, Platform-specific locale dir = %s, chosen directory = %s", gettextEnv,
-            localeDir.string().c_str(), dir.value_or(localeDir).string().c_str());
     return dir.value_or(localeDir);
 }
 
@@ -338,7 +307,7 @@ auto Util::getAutosaveFilepath() -> fs::path {
 }
 
 auto Util::getConfigFolder() -> fs::path {
-    auto p = GFilename(g_get_user_config_dir()).toPath().value_or(fs::path());
+    auto p = standardPath(QStandardPaths::GenericConfigLocation);
     return migratedUserFolder(p);
 }
 
@@ -350,7 +319,7 @@ auto Util::getConfigSubfolder(const fs::path& subfolder) -> fs::path {
 }
 
 auto Util::getCacheSubfolder(const fs::path& subfolder) -> fs::path {
-    auto p = GFilename(g_get_user_cache_dir()).toPath().value_or(fs::path());
+    auto p = standardPath(QStandardPaths::GenericCacheLocation);
     p = migratedUserFolder(p);
     p /= subfolder;
 
@@ -358,7 +327,7 @@ auto Util::getCacheSubfolder(const fs::path& subfolder) -> fs::path {
 }
 
 auto Util::getDataSubfolder(const fs::path& subfolder) -> fs::path {
-    auto p = GFilename(g_get_user_data_dir()).toPath().value_or(fs::path());
+    auto p = standardPath(QStandardPaths::GenericDataLocation);
     p = migratedUserFolder(p);
     p /= subfolder;
 
@@ -368,7 +337,7 @@ auto Util::getDataSubfolder(const fs::path& subfolder) -> fs::path {
 static auto buildUserStateDir() -> fs::path {
 #if _WIN32
     // Windows: state directory is same as data directory (and the path is necessarily in utf-8)
-    return fs::path(vn::util::utf8(g_get_user_data_dir()));
+    return standardPath(QStandardPaths::GenericDataLocation);
 #else
     // Unix: $XDG_STATE_HOME or ~/.local/state
     const char* xdgStateHome = std::getenv("XDG_STATE_HOME");
@@ -377,7 +346,7 @@ static auto buildUserStateDir() -> fs::path {
         return Util::GFilename(xdgStateHome).toPath().value_or(fs::path());
     }
 
-    auto path = Util::GFilename(g_get_home_dir()).toPath().value_or(fs::path());
+    auto path = standardPath(QStandardPaths::HomeLocation);
     return path / ".local/state";
 #endif
 }
@@ -415,7 +384,7 @@ auto Util::getCacheFile(const fs::path& relativeFileName) -> fs::path {
 }
 
 auto Util::getTmpDirSubfolder(const fs::path& subfolder) -> fs::path {
-    auto p = GFilename(g_get_tmp_dir()).toPath().value_or(fs::path());
+    auto p = pathFromQString(QDir::tempPath());
     p /= FS(_F("vertex-note-{1}") % Util::getPid());
     p /= subfolder;
     return Util::ensureFolderExists(p);
@@ -441,8 +410,8 @@ auto Util::normalizeAssetPath(const fs::path& asset, const fs::path& base, PathS
             return fs::absolute(asset).lexically_normal().generic_u8string();
         }
     } catch (const fs::filesystem_error& fe) {
-        g_warning("Could not normalize path: %s\nFailed with error: %s", char_cast(asset.u8string().c_str()),
-                  fe.what());
+        std::cerr << "Could not normalize path: " << char_cast(asset.u8string())
+                  << "\nFailed with error: " << fe.what() << '\n';
         return asset.generic_u8string();
     }
 }
@@ -452,9 +421,8 @@ auto Util::isChildOrEquivalent(fs::path const& path, fs::path const& base) -> bo
         try {
             return fs::weakly_canonical(p);
         } catch (const fs::filesystem_error& fe) {
-            g_warning("Util::isChildOrEquivalent: Error resolving paths, failed with %s.\nFalling back to "
-                      "lexicographical path",
-                      fe.what());
+            std::cerr << "Util::isChildOrEquivalent: Error resolving paths, failed with " << fe.what()
+                      << ". Falling back to lexicographical path\n";
             return p;
         }
     };
@@ -481,9 +449,9 @@ bool Util::safeRenameFile(fs::path const& from, fs::path const& to) {
         fs::rename(from, to);
     } catch (const fs::filesystem_error& fe) {
         // Attempt copy and delete
-        g_warning("Renaming file %s to %s failed with %s. This may happen when source and target are on different "
-                  "filesystems. Attempt to copy the file.",
-                  char_cast(fe.path1().u8string().c_str()), char_cast(fe.path2().u8string().c_str()), fe.what());
+        std::cerr << "Renaming file " << char_cast(fe.path1().u8string()) << " to "
+                  << char_cast(fe.path2().u8string()) << " failed with " << fe.what()
+                  << ". This may happen when source and target are on different filesystems. Attempt to copy the file.\n";
         fs::copy_file(from, to, fs::copy_options::overwrite_existing);
         fs::remove(from);
     }
@@ -494,8 +462,8 @@ void Util::safeReplaceExtension(fs::path& p, const char* newExtension) {
     try {
         p.replace_extension(newExtension);
     } catch (const fs::filesystem_error& fe) {
-        g_warning("Could not replace extension of file \"%s\"! Failed with %s", char_cast(p.u8string().c_str()),
-                  fe.what());
+        std::cerr << "Could not replace extension of file \"" << char_cast(p.u8string()) << "\"! Failed with "
+                  << fe.what() << '\n';
     }
 }
 
@@ -533,7 +501,7 @@ auto Util::getCustomPaletteDirectoryPath() -> fs::path { return getConfigSubfold
 auto Util::listFilesSorted(fs::path directory) -> std::vector<fs::path> {
     std::vector<fs::path> filePaths{};
     if (!exists(directory)) {
-        g_warning("Directory %s does not exist.", char_cast(directory.u8string().c_str()));
+        std::cerr << "Directory " << char_cast(directory.u8string()) << " does not exist.\n";
         return filePaths;
     }
 

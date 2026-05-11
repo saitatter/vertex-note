@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 
 #include "util/PathUtil.h"
-#include "util/raii/CStringWrapper.h"
 
 #include "filesystem.h"
 
@@ -30,7 +29,7 @@ TEST(UtilPath, testUnsupportedUri) {
 TEST(UtilPath, testPathFromUri) {
     auto b = Util::fromUri("file:///tmp/test.txt");
     EXPECT_EQ(false, !b);
-    EXPECT_EQ(G_DIR_SEPARATOR_S + std::string("tmp") + G_DIR_SEPARATOR_S + std::string("test.txt"), b->string());
+    EXPECT_EQ(std::string("/tmp/test.txt"), b->generic_string());
 }
 
 TEST(UtilPath, testPathIsChildOf) {
@@ -206,12 +205,10 @@ TEST(UtilPath, normalizeAssetPath) {
 TEST(UtilPath, pathGFilenameConvertion) {
     auto test = [](const char8_t* str) {
         fs::path p = fs::path(str);
-        auto gf = vn::util::OwnedCString::assumeOwnership(
-                g_filename_from_utf8(char_cast(str), -1, nullptr, nullptr, nullptr));
 
         EXPECT_EQ(p.u8string(), str);
-        EXPECT_STREQ(Util::toGFilename(p).c_str(), gf.get());
-        EXPECT_EQ(p, Util::fromGFilename(gf.get()));
+        EXPECT_STREQ(Util::toGFilename(p).c_str(), char_cast(str));
+        EXPECT_EQ(p, Util::fromGFilename(char_cast(str)));
 
         EXPECT_EQ(fs::absolute(p), fs::absolute(Util::fromUri(Util::toUri(p).value()).value()));
     };

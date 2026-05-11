@@ -16,7 +16,7 @@ static std::atomic<const Document*> document = nullptr;
 static std::atomic<int> alreadyCrashed = 0;
 
 extern "C" void forceClose(int sig) {
-    g_warning("Force close requested with signal %i", sig);
+    std::cerr << "Force close requested with signal " << sig << '\n';
     emergencySave();
     exit(1);
 }
