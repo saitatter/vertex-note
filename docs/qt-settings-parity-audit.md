@@ -86,6 +86,7 @@ This audit compares GTK `Settings` keys from
 
 ## Next Settings Work
 
-1. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
-2. Add Qt equivalents for cursor position highlighting and filtered-stroke follow-up actions if those workflows are still wanted.
-3. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.
+1. Add `numPairsOffset` if Qt needs GTK's asymmetric paired-page first-page offset instead of the current 2-column shortcut.
+2. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
+3. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
+4. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.
