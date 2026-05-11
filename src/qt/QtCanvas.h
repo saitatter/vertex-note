@@ -81,6 +81,7 @@ public:
     void setInputSystemOptions(int ignoredStylusEvents, bool tpcButtonEnabled, bool drawOutsideWindowEnabled);
     void setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix);
     void setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles);
+    void setRestoreLineWidthOnScale(bool enabled);
     void setPageShadowEnabled(bool enabled);
     void setSelectionColor(Color color);
     void setCanvasBackgroundColor(Color color);
@@ -244,6 +245,11 @@ private:
     void updateMoveSelectionAtScreen(const QPointF& screenPoint);
     void finalizeMoveSelection();
     void cancelMoveSelection();
+    [[nodiscard]] auto selectionScaleHandleAtScreen(const QPointF& screenPoint) const -> int;
+    void beginScaleSelectionAtScreen(const QPointF& screenPoint, int handleIndex);
+    void updateScaleSelectionAtScreen(const QPointF& screenPoint);
+    void finalizeScaleSelection();
+    void cancelScaleSelection();
     void drawSelectionOverlay(QPainter& painter) const;
     void drawPdfTextSelectionOverlay(QPainter& painter) const;
     void drawRubberBand(QPainter& painter) const;
@@ -331,6 +337,7 @@ private:
     double extraPageSpaceAbove = 0.0;
     double extraPageSpaceBelow = 0.0;
     bool eraserCursorHidden = true;
+    bool restoreLineWidthOnScale = false;
     int ignoredStylusEvents = 0;
     int ignoredStylusEventsRemaining = 0;
     bool inputSystemTPCButton = false;
@@ -362,6 +369,7 @@ private:
     bool temporaryRightButtonEraser = false;
     bool rubberBanding = false;
     bool movingSelection = false;
+    bool scalingSelection = false;
     bool shapeDrawing = false;
     bool pdfTextSelecting = false;
     bool movingInstrumentOverlay = false;
@@ -382,6 +390,7 @@ private:
     int activeTouchPointId = -1;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
+    int activeSelectionScaleHandle = -1;
     struct VerticalSpacePreview {
         std::size_t pageIndex = 0U;
         double startY = 0.0;

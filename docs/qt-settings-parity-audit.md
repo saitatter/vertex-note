@@ -46,6 +46,7 @@ This audit compares GTK `Settings` keys from
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
 | `font` | Qt-only equivalent | `tools/defaultFontName`, `tools/defaultFontSize`; applied to the Qt text tool, toolbar font controls, and Lua font access. |
 | `stabilizerAveragingMethod`, `stabilizerPreprocessor`, `stabilizerBuffersize`, `stabilizerFinalizeStroke`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Implemented / Qt-native | `tools/strokeStabilizer*`; Qt applies native arithmetic/velocity-Gaussian averaging plus deadzone/inertia preprocessing on the Qt stroke pipeline instead of reusing GTK `StrokeHandler`. |
+| `restoreLineWidthEnabled` | Implemented / Qt-native | `tools/restoreLineWidthEnabled`; applied by Qt selection resize handles when scaling selected elements. |
 | Custom data `deviceClasses`, `buttonConfig` | Qt-only equivalent | Qt discovers `QInputDevice`s, persists a global button matrix and per-device override matrices, and applies them for mouse/tablet/touch input. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Partial / Qt-native | `devices/ignoredStylusEvents`, `devices/inputSystemTPCButton`, `devices/inputSystemDrawOutsideWindow`; Qt applies ignored initial tablet events. The TPC/draw-outside flags are persisted for parity, while Qt uses native tablet button/window event delivery. |
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
@@ -74,10 +75,8 @@ This audit compares GTK `Settings` keys from
 
 ## Legacy GTK Or Unsupported
 
-| GTK setting key(s) | Status | Notes |
-| --- | --- | --- |
-| `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
+No GTK settings from the audited list remain intentionally unsupported in the Qt shell. Remaining work should be tracked as feature parity issues rather than settings coverage gaps.
 
 ## Next Settings Work
 
-1. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
+1. Keep future GTK setting additions mirrored in this audit as they land.

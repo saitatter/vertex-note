@@ -124,6 +124,42 @@ TEST(VertexNoteQtDocumentControllerShapeTools, verticalSpaceMovesElementsWithUnd
     EXPECT_DOUBLE_EQ(125.0, moved[1].points.front().y);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, scalesSelectionWithUndoRedo) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    ASSERT_TRUE(controller.beginStroke(PageIndex, 20.0, 20.0, 0.5, Colors::black, 2.0, StrokeTool::PEN, false));
+    ASSERT_TRUE(controller.updateStroke(120.0, 20.0, 0.5));
+    ASSERT_TRUE(controller.finalizeStroke());
+
+    controller.selectElementAt(PageIndex, 70.0, 20.0, 20.0);
+    ASSERT_TRUE(controller.elementSelection());
+    ASSERT_TRUE(controller.beginScaleSelection(20.0, 20.0, 120.0, 20.0, true, false, true));
+    EXPECT_TRUE(controller.updateScaleSelection(220.0, 20.0));
+    EXPECT_TRUE(controller.endScaleSelection());
+
+    auto scaled = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(1U, scaled.size());
+    ASSERT_EQ(2U, scaled.front().points.size());
+    EXPECT_DOUBLE_EQ(20.0, scaled.front().points[0].x);
+    EXPECT_DOUBLE_EQ(220.0, scaled.front().points[1].x);
+    EXPECT_DOUBLE_EQ(2.0, scaled.front().width);
+
+    ASSERT_TRUE(controller.canUndo());
+    EXPECT_TRUE(controller.undo());
+    scaled = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(1U, scaled.size());
+    EXPECT_DOUBLE_EQ(120.0, scaled.front().points[1].x);
+    EXPECT_DOUBLE_EQ(2.0, scaled.front().width);
+
+    ASSERT_TRUE(controller.canRedo());
+    EXPECT_TRUE(controller.redo());
+    scaled = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(1U, scaled.size());
+    EXPECT_DOUBLE_EQ(220.0, scaled.front().points[1].x);
+    EXPECT_DOUBLE_EQ(2.0, scaled.front().width);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, pdfTextMarkersCreateHighlighterStrokesWithUndoRedo) {
     QtDocumentController controller;
     constexpr std::size_t PageIndex = 0U;

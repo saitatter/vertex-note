@@ -86,6 +86,7 @@ struct QtSettings {
     double strokeStabilizerDrag = 0.4;
     double strokeStabilizerMass = 5.0;
     bool strokeStabilizerCuspDetection = true;
+    bool restoreLineWidthEnabled = false;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     double strokeRecognizerMinSize = 40.0;
@@ -201,6 +202,7 @@ private:
     QDoubleSpinBox* strokeStabilizerDragSpin = nullptr;
     QDoubleSpinBox* strokeStabilizerMassSpin = nullptr;
     QCheckBox* strokeStabilizerCuspDetectionCheck = nullptr;
+    QCheckBox* restoreLineWidthCheck = nullptr;
     QComboBox* eraserModeCombo = nullptr;
     QDoubleSpinBox* pageWidthSpin = nullptr;
     QDoubleSpinBox* pageHeightSpin = nullptr;

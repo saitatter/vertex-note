@@ -320,6 +320,10 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->strokeStabilizerMassSpin->setValue(current.strokeStabilizerMass);
     toolsLayout->addRow(QStringLiteral("Inertia mass:"), this->strokeStabilizerMassSpin);
 
+    this->restoreLineWidthCheck = new QCheckBox(toolsPage);
+    this->restoreLineWidthCheck->setChecked(current.restoreLineWidthEnabled);
+    toolsLayout->addRow(QStringLiteral("Keep stroke width while scaling:"), this->restoreLineWidthCheck);
+
     this->eraserModeCombo = new QComboBox(toolsPage);
     this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::Standard));
     this->eraserModeCombo->addItem(QStringLiteral("Segment"), static_cast<int>(QtEraserMode::Segment));
@@ -1205,6 +1209,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .strokeStabilizerDrag = this->strokeStabilizerDragSpin->value(),
             .strokeStabilizerMass = this->strokeStabilizerMassSpin->value(),
             .strokeStabilizerCuspDetection = this->strokeStabilizerCuspDetectionCheck->isChecked(),
+            .restoreLineWidthEnabled = this->restoreLineWidthCheck->isChecked(),
             .snapGridTolerance = this->snapGridToleranceSpin->value(),
             .snapGridSize = this->snapGridSizeSpin->value(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),

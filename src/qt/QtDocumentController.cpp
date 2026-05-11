@@ -1356,6 +1356,35 @@ auto QtDocumentController::elementSelection() const -> const std::optional<QtEle
     return this->currentSelection;
 }
 
+auto QtDocumentController::selectionBounds() const -> std::optional<QtSelectionBounds> {
+    if (!this->currentSelection || this->currentSelection->elements.empty()) {
+        return std::nullopt;
+    }
+
+    double minX = std::numeric_limits<double>::max();
+    double minY = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double maxY = std::numeric_limits<double>::lowest();
+    bool hasElement = false;
+
+    for (const auto* element: this->currentSelection->elements) {
+        if (!element) {
+            continue;
+        }
+        const auto bounds = element->boundingRect();
+        minX = std::min(minX, bounds.x);
+        minY = std::min(minY, bounds.y);
+        maxX = std::max(maxX, bounds.x + bounds.width);
+        maxY = std::max(maxY, bounds.y + bounds.height);
+        hasElement = true;
+    }
+
+    if (!hasElement) {
+        return std::nullopt;
+    }
+    return QtSelectionBounds{.x = minX, .y = minY, .width = maxX - minX, .height = maxY - minY};
+}
+
 auto QtDocumentController::isElementSelected(const Element* e) const -> bool {
     if (!this->currentSelection || !e) {
         return false;
@@ -1878,6 +1907,146 @@ auto QtDocumentController::cancelMoveSelection() -> void {
 }
 
 auto QtDocumentController::isMovingSelection() const -> bool { return this->moveState.has_value(); }
+
+auto QtDocumentController::beginScaleSelection(double originX, double originY, double startX, double startY,
+                                               bool scaleX, bool scaleY, bool restoreLineWidth) -> bool {
+    if (!this->currentSelection || this->currentSelection->elements.empty() || (!scaleX && !scaleY)) {
+        return false;
+    }
+
+    if (scaleX && std::abs(startX - originX) < 1e-6) {
+        return false;
+    }
+    if (scaleY && std::abs(startY - originY) < 1e-6) {
+        return false;
+    }
+
+    bool preserveAspectRatio = false;
+    bool supportMirroring = true;
+    for (const auto* element: this->currentSelection->elements) {
+        if (!element) {
+            continue;
+        }
+        preserveAspectRatio = preserveAspectRatio || element->rescaleOnlyAspectRatio();
+        supportMirroring = supportMirroring && element->rescaleWithMirror();
+    }
+
+    this->scaleState = QtScaleState{.originX = originX,
+                                    .originY = originY,
+                                    .startX = startX,
+                                    .startY = startY,
+                                    .currentFx = 1.0,
+                                    .currentFy = 1.0,
+                                    .scaleX = scaleX,
+                                    .scaleY = scaleY,
+                                    .preserveAspectRatio = preserveAspectRatio,
+                                    .supportMirroring = supportMirroring,
+                                    .restoreLineWidth = restoreLineWidth,
+                                    .elements = this->currentSelection->elements,
+                                    .pageIndex = this->currentSelection->pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateScaleSelection(double pageX, double pageY) -> bool {
+    if (!this->scaleState || !this->document) {
+        return false;
+    }
+
+    constexpr double minScale = 0.02;
+    auto scaleForAxis = [&](bool enabled, double current, double start, double origin) {
+        if (!enabled) {
+            return 1.0;
+        }
+        double factor = (current - origin) / (start - origin);
+        if (!this->scaleState->supportMirroring) {
+            factor = std::max(minScale, factor);
+        } else if (std::abs(factor) < minScale) {
+            factor = std::copysign(minScale, factor == 0.0 ? 1.0 : factor);
+        }
+        return factor;
+    };
+
+    double newFx = scaleForAxis(this->scaleState->scaleX, pageX, this->scaleState->startX, this->scaleState->originX);
+    double newFy = scaleForAxis(this->scaleState->scaleY, pageY, this->scaleState->startY, this->scaleState->originY);
+
+    if (this->scaleState->preserveAspectRatio) {
+        if (this->scaleState->scaleX && this->scaleState->scaleY) {
+            const double chosen = std::abs(newFx) >= std::abs(newFy) ? newFx : newFy;
+            newFx = chosen;
+            newFy = chosen;
+        } else if (this->scaleState->scaleX) {
+            newFy = newFx;
+        } else if (this->scaleState->scaleY) {
+            newFx = newFy;
+        }
+    }
+
+    const double deltaFx = newFx / this->scaleState->currentFx;
+    const double deltaFy = newFy / this->scaleState->currentFy;
+    if (std::abs(deltaFx - 1.0) < 1e-6 && std::abs(deltaFy - 1.0) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->scaleState->elements) {
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->scale(this->scaleState->originX, this->scaleState->originY, deltaFx, deltaFy, 0.0,
+                           this->scaleState->restoreLineWidth);
+    }
+    this->document->unlock();
+
+    this->scaleState->currentFx = newFx;
+    this->scaleState->currentFy = newFy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endScaleSelection() -> bool {
+    if (!this->scaleState) {
+        return false;
+    }
+
+    const double fx = this->scaleState->currentFx;
+    const double fy = this->scaleState->currentFy;
+    if (std::abs(fx - 1.0) < 1e-6 && std::abs(fy - 1.0) < 1e-6) {
+        this->scaleState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtScaleHistoryEntry{.pageIndex = this->scaleState->pageIndex,
+                                                   .elements = this->scaleState->elements,
+                                                   .originX = this->scaleState->originX,
+                                                   .originY = this->scaleState->originY,
+                                                   .fx = fx,
+                                                   .fy = fy,
+                                                   .restoreLineWidth = this->scaleState->restoreLineWidth,
+                                                   .text = "Scale elements"}});
+    this->scaleState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelScaleSelection() -> void {
+    if (!this->scaleState || !this->document) {
+        this->scaleState.reset();
+        return;
+    }
+
+    const double fx = this->scaleState->currentFx;
+    const double fy = this->scaleState->currentFy;
+    if (std::abs(fx - 1.0) > 1e-6 || std::abs(fy - 1.0) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->scaleState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->scale(this->scaleState->originX, this->scaleState->originY, 1.0 / fx, 1.0 / fy, 0.0,
+                               this->scaleState->restoreLineWidth);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+    this->scaleState.reset();
+}
+
+auto QtDocumentController::isScalingSelection() const -> bool { return this->scaleState.has_value(); }
 
 auto QtDocumentController::beginVerticalSpace(std::size_t pageIndex, double pageY, bool moveAbove) -> bool {
     if (!this->document || pageIndex >= this->document->getPageCount()) {
@@ -2955,6 +3124,20 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtScaleHistoryEntry>) {
+                    if (e.elements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    for (const auto* elem: e.elements) {
+                        auto* mutableElem = const_cast<Element*>(elem);
+                        mutableElem->scale(e.originX, e.originY, 1.0 / e.fx, 1.0 / e.fy, 0.0,
+                                           e.restoreLineWidth);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 } else if constexpr (std::is_same_v<T, QtTextHistoryEntry>) {
                     // Text undo: remove the text element from the layer
                     if (!this->document || e.pageIndex >= this->document->getPageCount()) {
@@ -3175,6 +3358,19 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                     for (const auto* elem: e.elements) {
                         auto* mutableElem = const_cast<Element*>(elem);
                         mutableElem->move(e.dx, e.dy);
+                    }
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
+                } else if constexpr (std::is_same_v<T, QtScaleHistoryEntry>) {
+                    if (e.elements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    for (const auto* elem: e.elements) {
+                        auto* mutableElem = const_cast<Element*>(elem);
+                        mutableElem->scale(e.originX, e.originY, e.fx, e.fy, 0.0, e.restoreLineWidth);
                     }
                     this->document->unlock();
                     rebuildPageSnapshots();

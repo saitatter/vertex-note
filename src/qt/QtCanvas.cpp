@@ -640,6 +640,8 @@ void QtCanvas::setInputSystemOptions(int ignoredEvents, bool tpcButtonEnabled, b
     this->inputSystemDrawOutsideWindow = drawOutsideWindowEnabled;
 }
 
+void QtCanvas::setRestoreLineWidthOnScale(bool enabled) { this->restoreLineWidthOnScale = enabled; }
+
 void QtCanvas::setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix) { this->buttonMatrix = buttonMatrix; }
 
 void QtCanvas::setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles) {
@@ -962,8 +964,15 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
             return;
         }
         if (tool == QtToolType::SelectRect) {
-            // Check if clicking on an already-selected element to start a move
             if (this->documentController && this->documentController->elementSelection()) {
+                const int handleIndex = selectionScaleHandleAtScreen(event->position());
+                if (handleIndex >= 0) {
+                    beginScaleSelectionAtScreen(event->position(), handleIndex);
+                    event->accept();
+                    return;
+                }
+
+                // Check if clicking on an already-selected element to start a move
                 const auto& sel = *this->documentController->elementSelection();
                 const QPointF scenePoint = screenToScene(event->position());
                 const auto pageIdx = pageIndexAtScenePoint(scenePoint);
@@ -1070,6 +1079,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->scalingSelection) {
+        finalizeScaleSelection();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->rubberBanding) {
         finalizeRubberBand();
         event->accept();
@@ -1143,6 +1157,12 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (this->scalingSelection) {
+        updateEdgePanAtScreen(event->position());
+        updateScaleSelectionAtScreen(event->position());
+        event->accept();
+        return;
+    }
     if (this->rubberBanding) {
         updateEdgePanAtScreen(event->position());
         updateRubberBand(event->position());
@@ -1174,6 +1194,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     stopEdgePan();
+    if (this->currentToolState.activeTool == QtToolType::SelectRect && selectionScaleHandleAtScreen(event->position()) >= 0) {
+        setCursor(Qt::SizeFDiagCursor);
+    } else if (this->currentToolState.activeTool == QtToolType::SelectRect) {
+        setCursor(Qt::ArrowCursor);
+    }
     updateGeometryHover(event->position());
     QWidget::mouseMoveEvent(event);
 }
@@ -1328,6 +1353,9 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         }
         if (this->movingSelection) {
             cancelMoveSelection();
+        }
+        if (this->scalingSelection) {
+            cancelScaleSelection();
         }
         if (this->documentController->isVerticalSpacing()) {
             cancelVerticalSpace();
@@ -1532,9 +1560,10 @@ auto QtCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
 }
 
 auto QtCanvas::hasEdgePanDrag() const -> bool {
-    return this->drawing || this->erasing || this->movingSelection || this->rubberBanding || this->pdfTextSelecting ||
-           this->shapeDrawing || (this->documentController && (this->documentController->isVerticalSpacing() ||
-                                                                this->documentController->activeGeometryDrag()));
+    return this->drawing || this->erasing || this->movingSelection || this->scalingSelection || this->rubberBanding ||
+           this->pdfTextSelecting || this->shapeDrawing ||
+           (this->documentController && (this->documentController->isVerticalSpacing() ||
+                                         this->documentController->activeGeometryDrag()));
 }
 
 auto QtCanvas::edgePanDeltaFor(const QPointF& screenPoint) const -> QPointF {
@@ -1621,6 +1650,8 @@ void QtCanvas::applyEdgePanStep() {
         eraseAtScreen(this->edgePanScreenPoint);
     } else if (this->movingSelection) {
         updateMoveSelectionAtScreen(this->edgePanScreenPoint);
+    } else if (this->scalingSelection) {
+        updateScaleSelectionAtScreen(this->edgePanScreenPoint);
     } else if (this->rubberBanding) {
         updateRubberBand(this->edgePanScreenPoint);
     } else if (this->pdfTextSelecting) {
@@ -2976,13 +3007,161 @@ void QtCanvas::cancelMoveSelection() {
     update();
 }
 
+auto QtCanvas::selectionScaleHandleAtScreen(const QPointF& screenPoint) const -> int {
+    if (!this->documentController) {
+        return -1;
+    }
+
+    const auto& sel = this->documentController->elementSelection();
+    const auto bounds = this->documentController->selectionBounds();
+    if (!sel || !bounds || (bounds->width <= 0.0 && bounds->height <= 0.0)) {
+        return -1;
+    }
+
+    const auto rects = pageRects();
+    if (sel->pageIndex >= rects.size()) {
+        return -1;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const double margin = 4.0 / this->zoomFactor;
+    const double visualWidth = std::max(bounds->width, 8.0 / this->zoomFactor);
+    const double visualHeight = std::max(bounds->height, 8.0 / this->zoomFactor);
+    const QRectF rect(rects[sel->pageIndex].x() + bounds->x - margin,
+                      rects[sel->pageIndex].y() + bounds->y - margin,
+                      visualWidth + (2.0 * margin),
+                      visualHeight + (2.0 * margin));
+    const QPointF handles[] = {rect.topLeft(),
+                               QPointF(rect.center().x(), rect.top()),
+                               rect.topRight(),
+                               QPointF(rect.right(), rect.center().y()),
+                               rect.bottomRight(),
+                               QPointF(rect.center().x(), rect.bottom()),
+                               rect.bottomLeft(),
+                               QPointF(rect.left(), rect.center().y())};
+
+    const double hitSize = 12.0 / this->zoomFactor;
+    for (int i = 0; i < 8; ++i) {
+        const QRectF hitRect(handles[i].x() - hitSize / 2.0, handles[i].y() - hitSize / 2.0, hitSize, hitSize);
+        if (hitRect.contains(scenePoint)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void QtCanvas::beginScaleSelectionAtScreen(const QPointF& screenPoint, int handleIndex) {
+    if (!this->documentController || handleIndex < 0 || handleIndex > 7) {
+        return;
+    }
+
+    const auto& sel = this->documentController->elementSelection();
+    const auto bounds = this->documentController->selectionBounds();
+    if (!sel || !bounds || (bounds->width <= 0.0 && bounds->height <= 0.0)) {
+        return;
+    }
+
+    struct ScaleHandle {
+        double originX = 0.0;
+        double originY = 0.0;
+        double startX = 0.0;
+        double startY = 0.0;
+        bool scaleX = true;
+        bool scaleY = true;
+    };
+
+    const double left = bounds->x;
+    const double top = bounds->y;
+    const double right = bounds->x + bounds->width;
+    const double bottom = bounds->y + bounds->height;
+    const double centerX = bounds->x + bounds->width / 2.0;
+    const double centerY = bounds->y + bounds->height / 2.0;
+    const ScaleHandle handles[] = {
+            {.originX = right, .originY = bottom, .startX = left, .startY = top, .scaleX = true, .scaleY = true},
+            {.originX = centerX, .originY = bottom, .startX = centerX, .startY = top, .scaleX = false, .scaleY = true},
+            {.originX = left, .originY = bottom, .startX = right, .startY = top, .scaleX = true, .scaleY = true},
+            {.originX = left, .originY = centerY, .startX = right, .startY = centerY, .scaleX = true, .scaleY = false},
+            {.originX = left, .originY = top, .startX = right, .startY = bottom, .scaleX = true, .scaleY = true},
+            {.originX = centerX, .originY = top, .startX = centerX, .startY = bottom, .scaleX = false, .scaleY = true},
+            {.originX = right, .originY = top, .startX = left, .startY = bottom, .scaleX = true, .scaleY = true},
+            {.originX = right, .originY = centerY, .startX = left, .startY = centerY, .scaleX = true, .scaleY = false},
+    };
+    const auto& handle = handles[handleIndex];
+
+    if (this->documentController->beginScaleSelection(handle.originX, handle.originY, handle.startX, handle.startY,
+                                                      handle.scaleX, handle.scaleY, this->restoreLineWidthOnScale)) {
+        this->scalingSelection = true;
+        this->activeSelectionScaleHandle = handleIndex;
+        if (!handle.scaleX) {
+            setCursor(Qt::SizeVerCursor);
+        } else if (!handle.scaleY) {
+            setCursor(Qt::SizeHorCursor);
+        } else {
+            setCursor((handleIndex == 0 || handleIndex == 4) ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor);
+        }
+        updateScaleSelectionAtScreen(screenPoint);
+    }
+}
+
+void QtCanvas::updateScaleSelectionAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->scalingSelection) {
+        return;
+    }
+
+    const auto& sel = this->documentController->elementSelection();
+    if (!sel) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (sel->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const double pageX = scenePoint.x() - rects[sel->pageIndex].x();
+    const double pageY = scenePoint.y() - rects[sel->pageIndex].y();
+
+    if (this->documentController->updateScaleSelection(pageX, pageY)) {
+        update();
+    }
+}
+
+void QtCanvas::finalizeScaleSelection() {
+    if (!this->documentController) {
+        this->scalingSelection = false;
+        this->activeSelectionScaleHandle = -1;
+        return;
+    }
+
+    const bool changed = this->documentController->endScaleSelection();
+    this->scalingSelection = false;
+    this->activeSelectionScaleHandle = -1;
+    setCursor(Qt::ArrowCursor);
+    update();
+    if (changed) {
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::cancelScaleSelection() {
+    if (this->documentController) {
+        this->documentController->cancelScaleSelection();
+    }
+    this->scalingSelection = false;
+    this->activeSelectionScaleHandle = -1;
+    setCursor(Qt::ArrowCursor);
+    update();
+}
+
 void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
     if (!this->documentController) {
         return;
     }
 
     const auto& sel = this->documentController->elementSelection();
-    if (!sel || sel->elements.empty()) {
+    const auto bounds = this->documentController->selectionBounds();
+    if (!sel || !bounds || sel->elements.empty()) {
         return;
     }
 
@@ -2994,20 +3173,9 @@ void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
     const QRectF& pageRect = rects[sel->pageIndex];
     painter.save();
 
-    // Compute union bounding box of all selected elements
-    double minX = 1e18, minY = 1e18, maxX = -1e18, maxY = -1e18;
-    for (const auto* elem: sel->elements) {
-        if (!elem) {
-            continue;
-        }
-        auto bounds = elem->boundingRect();
-        minX = std::min(minX, bounds.x);
-        minY = std::min(minY, bounds.y);
-        maxX = std::max(maxX, bounds.x + bounds.width);
-        maxY = std::max(maxY, bounds.y + bounds.height);
-    }
-
-    const QRectF selRect(pageRect.x() + minX, pageRect.y() + minY, maxX - minX, maxY - minY);
+    const QRectF selRect(pageRect.x() + bounds->x, pageRect.y() + bounds->y,
+                         std::max(bounds->width, 8.0 / this->zoomFactor),
+                         std::max(bounds->height, 8.0 / this->zoomFactor));
     const double handleSize = 6.0 / this->zoomFactor;
     const double margin = 4.0 / this->zoomFactor;
     const QRectF outerRect = selRect.adjusted(-margin, -margin, margin, margin);
@@ -3021,13 +3189,19 @@ void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
     painter.setBrush(qColorFromColor(this->selectionColor, 20));
     painter.drawRect(outerRect);
 
-    // Draw corner handles
+    // Draw resize handles
     painter.setPen(QPen(selection, 1.0 / this->zoomFactor));
     painter.setBrush(QColor(255, 255, 255, 230));
-    const QPointF corners[] = {outerRect.topLeft(), outerRect.topRight(), outerRect.bottomLeft(),
-                               outerRect.bottomRight()};
-    for (const auto& corner: corners) {
-        painter.drawRect(QRectF(corner.x() - handleSize / 2.0, corner.y() - handleSize / 2.0, handleSize, handleSize));
+    const QPointF handles[] = {outerRect.topLeft(),
+                               QPointF(outerRect.center().x(), outerRect.top()),
+                               outerRect.topRight(),
+                               QPointF(outerRect.right(), outerRect.center().y()),
+                               outerRect.bottomRight(),
+                               QPointF(outerRect.center().x(), outerRect.bottom()),
+                               outerRect.bottomLeft(),
+                               QPointF(outerRect.left(), outerRect.center().y())};
+    for (const auto& handle: handles) {
+        painter.drawRect(QRectF(handle.x() - handleSize / 2.0, handle.y() - handleSize / 2.0, handleSize, handleSize));
     }
 
     painter.restore();

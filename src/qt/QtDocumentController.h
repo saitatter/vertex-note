@@ -108,6 +108,17 @@ struct QtMoveHistoryEntry {
     std::string text;
 };
 
+struct QtScaleHistoryEntry {
+    std::size_t pageIndex = 0U;
+    std::vector<const Element*> elements;
+    double originX = 0.0;
+    double originY = 0.0;
+    double fx = 1.0;
+    double fy = 1.0;
+    bool restoreLineWidth = false;
+    std::string text;
+};
+
 struct QtTextHistoryEntry {
     std::size_t pageIndex = 0U;
     const Element* element = nullptr;
@@ -157,8 +168,8 @@ struct QtPageSizeHistoryEntry {
 
 struct QtHistoryEntry {
     std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtSegmentEraseHistoryEntry,
-                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry, QtInsertElementsHistoryEntry,
-                 QtLayerTransferHistoryEntry, QtPageSizeHistoryEntry>
+                 QtMoveHistoryEntry, QtScaleHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry,
+                 QtInsertElementsHistoryEntry, QtLayerTransferHistoryEntry, QtPageSizeHistoryEntry>
             data;
     [[nodiscard]] auto text() const -> std::string;
 };
@@ -168,11 +179,34 @@ struct QtElementSelection {
     std::vector<const Element*> elements;
 };
 
+struct QtSelectionBounds {
+    double x = 0.0;
+    double y = 0.0;
+    double width = 0.0;
+    double height = 0.0;
+};
+
 struct QtMoveState {
     double startX = 0.0;
     double startY = 0.0;
     double currentDx = 0.0;
     double currentDy = 0.0;
+    std::vector<const Element*> elements;
+    std::size_t pageIndex = 0U;
+};
+
+struct QtScaleState {
+    double originX = 0.0;
+    double originY = 0.0;
+    double startX = 0.0;
+    double startY = 0.0;
+    double currentFx = 1.0;
+    double currentFy = 1.0;
+    bool scaleX = true;
+    bool scaleY = true;
+    bool preserveAspectRatio = false;
+    bool supportMirroring = true;
+    bool restoreLineWidth = false;
     std::vector<const Element*> elements;
     std::size_t pageIndex = 0U;
 };
@@ -327,6 +361,7 @@ public:
     void selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h);
     void clearElementSelection();
     [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
+    [[nodiscard]] auto selectionBounds() const -> std::optional<QtSelectionBounds>;
     [[nodiscard]] auto isElementSelected(const Element* e) const -> bool;
     [[nodiscard]] auto elementsForPluginScope(std::string_view scope, ElementType type,
                                               std::size_t currentPageIndex) const
@@ -355,6 +390,12 @@ public:
     auto endMoveSelection() -> bool;
     auto cancelMoveSelection() -> void;
     [[nodiscard]] auto isMovingSelection() const -> bool;
+    auto beginScaleSelection(double originX, double originY, double startX, double startY, bool scaleX, bool scaleY,
+                             bool restoreLineWidth) -> bool;
+    auto updateScaleSelection(double pageX, double pageY) -> bool;
+    auto endScaleSelection() -> bool;
+    auto cancelScaleSelection() -> void;
+    [[nodiscard]] auto isScalingSelection() const -> bool;
     auto beginVerticalSpace(std::size_t pageIndex, double pageY, bool moveAbove) -> bool;
     auto updateVerticalSpace(double pageY) -> bool;
     auto endVerticalSpace() -> bool;
@@ -482,6 +523,7 @@ private:
     std::optional<QtSegmentEraseHistoryEntry> pendingSegmentErase;
     std::optional<QtElementSelection> currentSelection;
     std::optional<QtMoveState> moveState;
+    std::optional<QtScaleState> scaleState;
     std::optional<QtVerticalSpaceState> verticalSpaceState;
     std::deque<QtHistoryEntry> undoHistory;
     std::deque<QtHistoryEntry> redoHistory;

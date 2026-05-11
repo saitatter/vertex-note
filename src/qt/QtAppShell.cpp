@@ -2804,6 +2804,10 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("tools/strokeStabilizerCuspDetection"),
                            this->currentSettings.strokeStabilizerCuspDetection)
                     .toBool();
+    this->currentSettings.restoreLineWidthEnabled =
+            settings.value(QStringLiteral("tools/restoreLineWidthEnabled"),
+                           this->currentSettings.restoreLineWidthEnabled)
+                    .toBool();
     this->currentSettings.snapGridTolerance =
             settings.value(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance).toDouble();
     this->currentSettings.snapGridSize =
@@ -3268,6 +3272,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/strokeStabilizerMass"), this->currentSettings.strokeStabilizerMass);
     settings.setValue(QStringLiteral("tools/strokeStabilizerCuspDetection"),
                       this->currentSettings.strokeStabilizerCuspDetection);
+    settings.setValue(QStringLiteral("tools/restoreLineWidthEnabled"), this->currentSettings.restoreLineWidthEnabled);
     settings.setValue(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance);
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
@@ -3807,6 +3812,7 @@ void QtAppShell::applyRuntimeSettings() {
                                        this->currentSettings.strokeStabilizerDrag,
                                        this->currentSettings.strokeStabilizerMass,
                                        this->currentSettings.strokeStabilizerCuspDetection);
+    canvas->setRestoreLineWidthOnScale(this->currentSettings.restoreLineWidthEnabled);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
