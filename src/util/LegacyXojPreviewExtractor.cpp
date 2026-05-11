@@ -1,10 +1,12 @@
 #include "util/LegacyXojPreviewExtractor.h"
 
 #include <array>    // for array
+#include <cctype>   // for isspace
 #include <cstring>  // for strlen, strncmp
 #include <string>   // for allocator, string
+#include <string_view>  // for string_view
+#include <vector>   // for vector
 
-#include <glib.h>     // for g_free, g_base64_decode, g_malloc, gsize
 #include <zip.h>      // for zip_close, zip_fclose, zip_stat_t, zip_fopen
 #include <zipconf.h>  // for zip_int64_t, zip_uint64_t
 #include <zlib.h>     // for gzclose, gzread, gzFile
@@ -29,20 +31,59 @@ const size_t TAG_PREVIEW_END_NAME_LEN = strlen(TAG_PREVIEW_END_NAME);
 // round it up a bit
 constexpr auto BUF_SIZE = 68000;
 
+namespace {
+auto decodeBase64(std::string_view encoded) -> std::vector<unsigned char> {
+    constexpr std::array signedLookup = [] {
+        std::array<int, 256> table{};
+        table.fill(-1);
+        for (int i = 0; i < 26; ++i) {
+            table[static_cast<std::size_t>('A' + i)] = i;
+            table[static_cast<std::size_t>('a' + i)] = i + 26;
+        }
+        for (int i = 0; i < 10; ++i) { table[static_cast<std::size_t>('0' + i)] = i + 52; }
+        table[static_cast<std::size_t>('+')] = 62;
+        table[static_cast<std::size_t>('/')] = 63;
+        return table;
+    }();
+
+    std::vector<unsigned char> decoded;
+    decoded.reserve((encoded.size() / 4U) * 3U);
+
+    int value = 0;
+    int bits = -8;
+    for (const unsigned char ch: encoded) {
+        if (std::isspace(ch)) {
+            continue;
+        }
+        if (ch == '=') {
+            break;
+        }
+        const int digit = signedLookup[ch];
+        if (digit < 0) {
+            continue;
+        }
+        value = (value << 6U) + digit;
+        bits += 6;
+        if (bits >= 0) {
+            decoded.push_back(static_cast<unsigned char>((value >> bits) & 0xFF));
+            bits -= 8;
+        }
+    }
+
+    return decoded;
+}
+}  // namespace
+
 LegacyXojPreviewExtractor::LegacyXojPreviewExtractor() = default;
 
-LegacyXojPreviewExtractor::~LegacyXojPreviewExtractor() {
-    g_free(data);
-    data = nullptr;
-    dataLen = 0;
-}
+LegacyXojPreviewExtractor::~LegacyXojPreviewExtractor() = default;
 
 /**
  * @return The preview data, should be a binary PNG
  */
-auto LegacyXojPreviewExtractor::getData(gsize& dataLen) -> unsigned char* {
-    dataLen = this->dataLen;
-    return this->data;
+auto LegacyXojPreviewExtractor::getData(size_t& dataLen) const -> const unsigned char* {
+    dataLen = this->data.size();
+    return this->data.data();
 }
 
 /**
@@ -88,8 +129,7 @@ auto LegacyXojPreviewExtractor::readPreview(char* buffer, int len) -> PreviewExt
     }
 
     if (startPreview != -1 && endPreview != -1) {
-        buffer[endPreview] = 0;
-        this->data = g_base64_decode(buffer + startPreview, &dataLen);
+        this->data = decodeBase64(std::string_view(buffer + startPreview, static_cast<size_t>(endPreview - startPreview)));
         return PREVIEW_RESULT_IMAGE_READ;
     }
 
@@ -141,9 +181,7 @@ auto LegacyXojPreviewExtractor::readFile(const fs::path& file) -> PreviewExtract
         return PREVIEW_RESULT_NO_PREVIEW;
     }
 
-    if (thumbStat.valid & ZIP_STAT_SIZE) {
-        dataLen = thumbStat.size;
-    } else {
+    if (!(thumbStat.valid & ZIP_STAT_SIZE)) {
         zip_close(zipFp);
         return PREVIEW_RESULT_ERROR_READING_PREVIEW;
     }
@@ -155,12 +193,12 @@ auto LegacyXojPreviewExtractor::readFile(const fs::path& file) -> PreviewExtract
         return PREVIEW_RESULT_ERROR_READING_PREVIEW;
     }
 
-    data = static_cast<unsigned char*>(g_malloc(thumbStat.size));
+    data.assign(static_cast<size_t>(thumbStat.size), 0U);
     zip_uint64_t readBytes = 0;
-    while (readBytes < dataLen) {
-        zip_int64_t read = zip_fread(thumb, data, thumbStat.size);
+    while (readBytes < thumbStat.size) {
+        zip_int64_t read = zip_fread(thumb, data.data() + readBytes, thumbStat.size - readBytes);
         if (read == -1) {
-            g_free(data);
+            data.clear();
             zip_fclose(thumb);
             zip_close(zipFp);
             return PREVIEW_RESULT_ERROR_READING_PREVIEW;

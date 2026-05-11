@@ -19,7 +19,6 @@
 
 #include <QImage>
 
-#include <glib.h>     // for gchar
 #include <libintl.h>  // for bindtextdomain, textdomain
 
 #include "util/PathUtil.h"             // for getLocalePath
@@ -108,8 +107,8 @@ int main(int argc, char* argv[]) {
     }
 
 
-    gsize dataLen = 0;
-    unsigned char* imageData = extractor.getData(dataLen);
+    size_t dataLen = 0;
+    const unsigned char* imageData = extractor.getData(dataLen);
 
     QImage thumbnail;
     if (thumbnail.loadFromData(imageData, static_cast<int>(dataLen), "PNG")) {

@@ -42,8 +42,8 @@ TEST(UtilLegacyXojPreviewExtractor, testLoadGzipped) {
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
 
-    gsize dataLen = 0;
-    unsigned char* imageData = extractor.getData(dataLen);
+    size_t dataLen = 0;
+    const unsigned char* imageData = extractor.getData(dataLen);
     EXPECT_EQ(string("CppUnitTestString"), string((char*)imageData, (size_t)dataLen));
 }
 
@@ -53,7 +53,7 @@ TEST(UtilLegacyXojPreviewExtractor, testLoadGzipped2) {
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
 
-    gsize dataLen = 0;
+    size_t dataLen = 0;
     extractor.getData(dataLen);
     EXPECT_EQ((std::string::size_type)2856, dataLen);
 }
@@ -64,8 +64,8 @@ TEST(UtilLegacyXojPreviewExtractor, testLoad1Unzipped) {
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
 
-    gsize dataLen = 0;
-    unsigned char* imageData = extractor.getData(dataLen);
+    size_t dataLen = 0;
+    const unsigned char* imageData = extractor.getData(dataLen);
     EXPECT_EQ(string("CppUnitTestString"), string((char*)imageData, (size_t)dataLen));
 }
 
@@ -75,8 +75,8 @@ TEST(UtilLegacyXojPreviewExtractor, testLoad1Zipped) {
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
 
-    gsize dataLen = 0;
-    unsigned char* imageData = extractor.getData(dataLen);
+    size_t dataLen = 0;
+    const unsigned char* imageData = extractor.getData(dataLen);
     EXPECT_EQ(string("CppUnitTestString \n"), string((char*)imageData, (size_t)dataLen));
 }
 
@@ -86,7 +86,7 @@ TEST(UtilLegacyXojPreviewExtractor, testLoad2Zipped) {
 
     EXPECT_EQ(PREVIEW_RESULT_IMAGE_READ, result);
 
-    gsize dataLen = 0;
+    size_t dataLen = 0;
     extractor.getData(dataLen);
     EXPECT_EQ((std::string::size_type)804, dataLen);
 }
