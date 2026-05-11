@@ -242,8 +242,9 @@ This is the current implementation plan after the Qt parity batch through
    - ✓ Add Device/Stylus/Button configuration as a Qt-native tab placeholder
      and keep it explicit as unavailable in the Qt shell until there is a clean
      backend.
-   - Audit every GTK settings key against `QtSettings` and mark: implemented,
-     intentionally Qt-only, or unsupported.
+   - ✓ Audit every GTK settings key against `QtSettings` and mark:
+     implemented, intentionally Qt-only, partial, legacy GTK, or unsupported in
+     `docs/qt-settings-parity-audit.md`.
 
 4. **PDF annotation parity v2**
    - Implement real PDF text marker/highlight annotation behavior, then enable
