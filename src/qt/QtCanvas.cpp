@@ -689,6 +689,13 @@ void QtCanvas::setEdgePanOptions(double speed, double maxMultiplier) {
     this->edgePanMaxMultiplier = std::clamp(maxMultiplier, 1.0, 20.0);
 }
 
+void QtCanvas::setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs) {
+    this->strokeFilterEnabled = enabled;
+    this->strokeFilterIgnoreTimeMs = std::clamp(ignoreTimeMs, 0, 5000);
+    this->strokeFilterIgnoreLengthMm = std::clamp(ignoreLengthMm, 0.0, 100.0);
+    this->strokeFilterSuccessiveTimeMs = std::clamp(successiveTimeMs, 0, 5000);
+}
+
 auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
 
 auto QtCanvas::isTouchDrawingEnabled() const -> bool { return this->touchDrawingEnabled; }
@@ -2014,6 +2021,7 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
                                                this->currentToolState.fillEnabled
                                                        ? this->currentToolState.fillOpacity
                                                        : -1)) {
+        this->activeStrokeStartedMs = QDateTime::currentMSecsSinceEpoch();
         this->drawing = true;
         update();
     }
@@ -2139,11 +2147,19 @@ void QtCanvas::finalizeActiveStroke() {
         this->documentController->cancelStroke();
     } else {
         maybeFinalizeStabilizedStroke();
-        added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
-                                                         this->shapeRecognizerMinSize,
-                                                         this->snapRecognizedShapesEnabled);
+        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+        if (shouldFilterActiveStroke(nowMs)) {
+            this->lastFilteredStrokeMs = nowMs;
+            this->documentController->cancelStroke();
+            Q_EMIT statusHintChanged(QStringLiteral("Stroke filtered"));
+        } else {
+            added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
+                                                             this->shapeRecognizerMinSize,
+                                                             this->snapRecognizedShapesEnabled);
+        }
     }
     this->drawing = false;
+    this->activeStrokeStartedMs = 0;
     this->activeTouchPointId = -1;
     this->strokeStabilizerSamplesBuffer.clear();
     this->lastRawStrokeSample.reset();
@@ -2154,11 +2170,42 @@ void QtCanvas::finalizeActiveStroke() {
     }
 }
 
+auto QtCanvas::shouldFilterActiveStroke(qint64 nowMs) -> bool {
+    if (!this->strokeFilterEnabled || !this->documentController || this->strokeFilterIgnoreLengthMm <= 0.0) {
+        return false;
+    }
+    if (this->strokeFilterSuccessiveTimeMs > 0 && this->lastFilteredStrokeMs > 0 &&
+        nowMs - this->lastFilteredStrokeMs <= this->strokeFilterSuccessiveTimeMs) {
+        return false;
+    }
+
+    const auto* active = this->documentController->activeStroke();
+    if (!active || !active->stroke) {
+        return false;
+    }
+    const auto pointCount = active->stroke->getPointCount();
+    if (pointCount == 0) {
+        return true;
+    }
+
+    double lengthPoints = 0.0;
+    for (std::size_t index = 1; index < pointCount; ++index) {
+        const Point previous = active->stroke->getPoint(index - 1U);
+        const Point current = active->stroke->getPoint(index);
+        lengthPoints += std::hypot(current.x - previous.x, current.y - previous.y);
+    }
+    constexpr double millimetersPerPoint = 25.4 / 72.0;
+    const double lengthMm = lengthPoints * millimetersPerPoint;
+    const qint64 durationMs = this->activeStrokeStartedMs > 0 ? nowMs - this->activeStrokeStartedMs : 0;
+    return durationMs <= this->strokeFilterIgnoreTimeMs && lengthMm <= this->strokeFilterIgnoreLengthMm;
+}
+
 void QtCanvas::cancelActiveStroke() {
     if (this->documentController) {
         this->documentController->cancelStroke();
     }
     this->drawing = false;
+    this->activeStrokeStartedMs = 0;
     this->activeTouchPointId = -1;
     this->strokeStabilizerSamplesBuffer.clear();
     this->lastRawStrokeSample.reset();

@@ -82,6 +82,7 @@ public:
     void setLaserPointerFadeOutMs(int value);
     void setTextEditorTabOptions(bool useSpaces, int numberOfSpaces);
     void setEdgePanOptions(double speed, double maxMultiplier);
+    void setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
@@ -196,6 +197,7 @@ private:
     void resetStrokeStabilizer(const QPointF& pagePoint, double pressure);
     void maybeFinalizeStabilizedStroke();
     void finalizeActiveStroke();
+    [[nodiscard]] auto shouldFilterActiveStroke(qint64 nowMs) -> bool;
     void cancelActiveStroke();
     void drawActiveStroke(QPainter& painter) const;
     void drawLaserPointerStrokes(QPainter& painter) const;
@@ -351,6 +353,12 @@ private:
     int laserPointerFadeOutMs = 1500;
     bool useSpacesForTab = false;
     int numberOfSpacesForTab = 4;
+    bool strokeFilterEnabled = false;
+    int strokeFilterIgnoreTimeMs = 150;
+    double strokeFilterIgnoreLengthMm = 1.0;
+    int strokeFilterSuccessiveTimeMs = 500;
+    qint64 activeStrokeStartedMs = 0;
+    qint64 lastFilteredStrokeMs = 0;
     struct QtLaserOverlayStroke {
         std::size_t pageIndex = 0U;
         vn::view::render::StrokeRenderModel model;

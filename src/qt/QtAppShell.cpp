@@ -2732,6 +2732,18 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("view/edgePanSpeed"), this->currentSettings.edgePanSpeed).toDouble();
     this->currentSettings.edgePanMaxMult =
             settings.value(QStringLiteral("view/edgePanMaxMult"), this->currentSettings.edgePanMaxMult).toDouble();
+    this->currentSettings.strokeFilterEnabled =
+            settings.value(QStringLiteral("tools/strokeFilterEnabled"), this->currentSettings.strokeFilterEnabled).toBool();
+    this->currentSettings.strokeFilterIgnoreTime =
+            settings.value(QStringLiteral("tools/strokeFilterIgnoreTime"), this->currentSettings.strokeFilterIgnoreTime)
+                    .toInt();
+    this->currentSettings.strokeFilterIgnoreLength =
+            settings.value(QStringLiteral("tools/strokeFilterIgnoreLength"), this->currentSettings.strokeFilterIgnoreLength)
+                    .toDouble();
+    this->currentSettings.strokeFilterSuccessiveTime =
+            settings.value(QStringLiteral("tools/strokeFilterSuccessiveTime"),
+                           this->currentSettings.strokeFilterSuccessiveTime)
+                    .toInt();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
     this->currentSettings.buttonMatrix.eraserTipAction =
@@ -3050,6 +3062,11 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/numberOfSpacesForTab"), this->currentSettings.numberOfSpacesForTab);
     settings.setValue(QStringLiteral("view/edgePanSpeed"), this->currentSettings.edgePanSpeed);
     settings.setValue(QStringLiteral("view/edgePanMaxMult"), this->currentSettings.edgePanMaxMult);
+    settings.setValue(QStringLiteral("tools/strokeFilterEnabled"), this->currentSettings.strokeFilterEnabled);
+    settings.setValue(QStringLiteral("tools/strokeFilterIgnoreTime"), this->currentSettings.strokeFilterIgnoreTime);
+    settings.setValue(QStringLiteral("tools/strokeFilterIgnoreLength"), this->currentSettings.strokeFilterIgnoreLength);
+    settings.setValue(QStringLiteral("tools/strokeFilterSuccessiveTime"),
+                      this->currentSettings.strokeFilterSuccessiveTime);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
     settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
                       static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
@@ -3506,6 +3523,10 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setTextEditorTabOptions(this->currentSettings.useSpacesForTab,
                                     this->currentSettings.numberOfSpacesForTab);
     canvas->setEdgePanOptions(this->currentSettings.edgePanSpeed, this->currentSettings.edgePanMaxMult);
+    canvas->setStrokeFilterOptions(this->currentSettings.strokeFilterEnabled,
+                                   this->currentSettings.strokeFilterIgnoreTime,
+                                   this->currentSettings.strokeFilterIgnoreLength,
+                                   this->currentSettings.strokeFilterSuccessiveTime);
     this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
                                                 this->currentSettings.pdfPreloadPagesBefore,
                                                 this->currentSettings.pdfPreloadPagesAfter,

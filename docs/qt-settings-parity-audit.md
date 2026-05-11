@@ -54,6 +54,7 @@ This audit compares GTK `Settings` keys from
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
 | `snapRecognizedShapesEnabled` | Implemented | `tools/snapRecognizedShapesEnabled`; applied to Qt shape recognizer finalization. |
+| `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled` | Partial / Qt-only equivalent | `tools/strokeFilter*`; Qt filters very short, fast strokes before finalization. GTK post-filter actions are not migrated. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
 | `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Implemented | `appearance/recolorMainView`, `appearance/recolorSidebarMiniatures`, `appearance/recolorLight`, `appearance/recolorDark`; applied to Qt canvas and page sidebar previews. |
 | `backgroundColor` | Implemented | `appearance/backgroundColor`; applied to the Qt canvas/document background outside page bounds. |
@@ -81,7 +82,7 @@ This audit compares GTK `Settings` keys from
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
 | `pageRerenderThreshold` | Unsupported | Qt rendering cache policy is not fully settings-backed yet. |
 | `sizeUnit` | Unsupported | Qt numeric settings currently use fixed point/second units in labels. |
-| `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled`, `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | No Qt stroke filtering settings path yet. |
+| `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `preferredLocale` | Unsupported | Qt shell does not expose localization selection yet. |

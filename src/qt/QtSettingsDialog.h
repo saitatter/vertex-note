@@ -74,6 +74,10 @@ struct QtSettings {
     int numberOfSpacesForTab = 4;
     double edgePanSpeed = 20.0;
     double edgePanMaxMult = 5.0;
+    bool strokeFilterEnabled = false;
+    int strokeFilterIgnoreTime = 150;
+    double strokeFilterIgnoreLength = 1.0;
+    int strokeFilterSuccessiveTime = 500;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix{};
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
@@ -162,6 +166,10 @@ private:
     QSpinBox* numberOfSpacesForTabSpin = nullptr;
     QDoubleSpinBox* edgePanSpeedSpin = nullptr;
     QDoubleSpinBox* edgePanMaxMultSpin = nullptr;
+    QCheckBox* strokeFilterEnabledCheck = nullptr;
+    QSpinBox* strokeFilterIgnoreTimeSpin = nullptr;
+    QDoubleSpinBox* strokeFilterIgnoreLengthSpin = nullptr;
+    QSpinBox* strokeFilterSuccessiveTimeSpin = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
     QComboBox* eraserTipActionCombo = nullptr;
     QComboBox* stylusButton1ActionCombo = nullptr;

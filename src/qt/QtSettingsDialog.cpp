@@ -398,6 +398,30 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->edgePanMaxMultSpin->setValue(current.edgePanMaxMult);
     generalLayout->addRow(QStringLiteral("Edge pan max multiplier:"), this->edgePanMaxMultSpin);
 
+    this->strokeFilterEnabledCheck = new QCheckBox(generalPage);
+    this->strokeFilterEnabledCheck->setChecked(current.strokeFilterEnabled);
+    generalLayout->addRow(QStringLiteral("Stroke filter:"), this->strokeFilterEnabledCheck);
+
+    this->strokeFilterIgnoreTimeSpin = new QSpinBox(generalPage);
+    this->strokeFilterIgnoreTimeSpin->setRange(0, 5000);
+    this->strokeFilterIgnoreTimeSpin->setValue(current.strokeFilterIgnoreTime);
+    this->strokeFilterIgnoreTimeSpin->setSuffix(QStringLiteral(" ms"));
+    generalLayout->addRow(QStringLiteral("Filter ignore time:"), this->strokeFilterIgnoreTimeSpin);
+
+    this->strokeFilterIgnoreLengthSpin = new QDoubleSpinBox(generalPage);
+    this->strokeFilterIgnoreLengthSpin->setRange(0.0, 100.0);
+    this->strokeFilterIgnoreLengthSpin->setDecimals(2);
+    this->strokeFilterIgnoreLengthSpin->setSingleStep(0.1);
+    this->strokeFilterIgnoreLengthSpin->setValue(current.strokeFilterIgnoreLength);
+    this->strokeFilterIgnoreLengthSpin->setSuffix(QStringLiteral(" mm"));
+    generalLayout->addRow(QStringLiteral("Filter ignore length:"), this->strokeFilterIgnoreLengthSpin);
+
+    this->strokeFilterSuccessiveTimeSpin = new QSpinBox(generalPage);
+    this->strokeFilterSuccessiveTimeSpin->setRange(0, 5000);
+    this->strokeFilterSuccessiveTimeSpin->setValue(current.strokeFilterSuccessiveTime);
+    this->strokeFilterSuccessiveTimeSpin->setSuffix(QStringLiteral(" ms"));
+    generalLayout->addRow(QStringLiteral("Filter successive time:"), this->strokeFilterSuccessiveTimeSpin);
+
     this->laserPointerFadeOutSpin = new QSpinBox(generalPage);
     this->laserPointerFadeOutSpin->setRange(100, 10000);
     this->laserPointerFadeOutSpin->setSingleStep(100);
@@ -806,6 +830,10 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .numberOfSpacesForTab = this->numberOfSpacesForTabSpin->value(),
             .edgePanSpeed = this->edgePanSpeedSpin->value(),
             .edgePanMaxMult = this->edgePanMaxMultSpin->value(),
+            .strokeFilterEnabled = this->strokeFilterEnabledCheck->isChecked(),
+            .strokeFilterIgnoreTime = this->strokeFilterIgnoreTimeSpin->value(),
+            .strokeFilterIgnoreLength = this->strokeFilterIgnoreLengthSpin->value(),
+            .strokeFilterSuccessiveTime = this->strokeFilterSuccessiveTimeSpin->value(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
             .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
                              .stylusButton1Action =
