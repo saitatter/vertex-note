@@ -63,6 +63,8 @@ struct QtGeometryDragState {
 struct QtSnapOptions {
     bool geometryEnabled = true;
     bool gridEnabled = false;
+    double gridSize = 14.17;
+    double gridTolerance = 0.50;
 };
 
 struct QtGeometryHistoryEntry {
@@ -420,7 +422,8 @@ private:
     [[nodiscard]] auto applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState) -> bool;
     [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> vn::geom::GeometryElement*;
-    [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format) -> std::shared_ptr<const vn::snap::ISnapProvider>;
+    [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)
+            -> std::shared_ptr<const vn::snap::ISnapProvider>;
     void clearHistory();
     void pushHistory(QtHistoryEntry entry);
     [[nodiscard]] auto applyHistoryUndo(QtHistoryEntry& entry) -> bool;

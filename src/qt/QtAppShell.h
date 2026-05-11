@@ -29,6 +29,7 @@ class QFontComboBox;
 class QSpinBox;
 class QAction;
 class QToolButton;
+class QTimer;
 
 class QtAppShell: public vn::ui::common::IAppShell {
 public:
@@ -69,6 +70,9 @@ private:
     auto openPath(const std::filesystem::path& path, bool fromRecentDocuments) -> bool;
     void saveSessionAs();
     void markSessionDirty();
+    void configureAutosave();
+    void autosaveNow();
+    void applyRuntimeSettings();
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
@@ -192,6 +196,7 @@ private:
     QtDocumentController documentController;
     QtDocumentSession session;
     std::unique_ptr<QtDocumentExporter> exporter;
+    QTimer* autosaveTimer = nullptr;
     bool suppressDirtyTracking = false;
     bool presentationMode = false;
     QtSettings currentSettings;

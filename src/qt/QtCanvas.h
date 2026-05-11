@@ -63,6 +63,11 @@ public:
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
     void setTouchDrawingEnabled(bool enabled);
+    void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
+    void setGridSnapOptions(double gridSize, double tolerance);
+    void setEraserCursorHidden(bool hidden);
+    void setPointerButtonActions(QtPointerButtonAction rightButtonAction, QtPointerButtonAction middleButtonAction);
+    void setPageShadowEnabled(bool enabled);
     void setShapeRecognizerMinSize(double value);
     void setLaserPointerFadeOutMs(int value);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
@@ -167,6 +172,7 @@ private:
     void refreshToolCursor();
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
+    [[nodiscard]] auto adjustedPressure(double pressure) const -> double;
     void finalizeActiveStroke();
     void cancelActiveStroke();
     void drawActiveStroke(QPainter& painter) const;
@@ -240,6 +246,14 @@ private:
     bool gridSnapEnabled = false;
     bool rotationSnapEnabled = false;
     bool touchDrawingEnabled = false;
+    double minimumPressure = 0.05;
+    double pressureMultiplier = 1.0;
+    bool pressureGuessing = false;
+    double snapGridTolerance = 0.50;
+    double snapGridSize = 14.17;
+    bool eraserCursorHidden = true;
+    QtPointerButtonAction rightButtonAction = QtPointerButtonAction::Eraser;
+    QtPointerButtonAction middleButtonAction = QtPointerButtonAction::Pan;
     bool pairedPagesEnabled = false;
     int layoutColumnsRowsValue = 1;
     bool verticalLayoutEnabled = true;

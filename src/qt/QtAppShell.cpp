@@ -46,6 +46,7 @@
 #include <QTableWidgetItem>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTimer>
 #include <QUrl>
 #include <QComboBox>
 #include <QSlider>
@@ -74,6 +75,17 @@ const std::vector<vn::ui::common::FileDialogFilter> SESSION_FILTERS = {
 };
 
 auto isSessionFile(const std::filesystem::path& path) -> bool { return path.extension() == ".vnsession"; }
+
+auto lowerExtension(const std::filesystem::path& path) -> std::string {
+    auto ext = path.extension().string();
+    std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return ext;
+}
+
+auto isAutosavableDocumentPath(const std::filesystem::path& path) -> bool {
+    const auto ext = lowerExtension(path);
+    return ext == ".xopp" || ext == ".xoj" || ext == ".xopt";
+}
 
 auto bundledQtIcon(std::string_view fileName) -> QIcon {
     const auto tryPath = [&](const fs::path& path) -> QIcon {
@@ -383,6 +395,8 @@ QtAppShell::QtAppShell():
         updates(&this->window, this->window.statusBar()),
         plugins(this->window.commandHost(), &this->window),
         luaPlugins(&this->plugins, this->window.commandHost(), &this->window) {
+    this->autosaveTimer = new QTimer(&this->window);
+    QObject::connect(this->autosaveTimer, &QTimer::timeout, &this->window, [this]() { autosaveNow(); });
     this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     for (const auto& profile: QtToolbarLayoutEngine::loadProfiles(toolbarProfilePath())) {
         this->availableToolbarProfiles.push_back(
@@ -393,8 +407,7 @@ QtAppShell::QtAppShell():
     loadPersistentUiState();
     this->session.newDocument();
     this->window.canvas()->setDocumentController(&this->documentController);
-    this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
-    this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    applyRuntimeSettings();
     this->audioController.applySettings(this->currentSettings);
     this->window.layerPanel()->setDocumentController(&this->documentController);
     this->window.toolPalette()->setCompactToolbarMode(true);
@@ -582,6 +595,7 @@ QtAppShell::QtAppShell():
     sidebar->refresh();
     updateWindowTitle();
     updateEditCommandStates();
+    configureAutosave();
 }
 
 QtAppShell::~QtAppShell() { savePersistentUiState(); }
@@ -2449,8 +2463,19 @@ void QtAppShell::syncFooterWidgets() {
 }
 
 void QtAppShell::updateWindowTitle() {
-    const auto title = std::string("VertexNote - ") + this->documentController.titleText() +
-                       (this->session.isDirty() ? " *" : "");
+    std::string title = "VertexNote - ";
+    if (this->currentSettings.showFilePathInTitlebar && this->documentController.sourcePath()) {
+        title += this->documentController.sourcePath()->string();
+    } else {
+        title += this->documentController.titleText();
+    }
+    if (this->currentSettings.showPageNumberInTitlebar && this->documentController.pageCount() > 0U) {
+        title += " - Page " + std::to_string(this->window.canvas()->currentPageIndex() + 1U) + "/" +
+                 std::to_string(this->documentController.pageCount());
+    }
+    if (this->session.isDirty()) {
+        title += " *";
+    }
     setMainWindowTitle(title);
 }
 
@@ -2513,6 +2538,11 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight).toDouble();
     this->currentSettings.undoHistoryLimit =
             settings.value(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit).toInt();
+    this->currentSettings.autosaveEnabled =
+            settings.value(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled).toBool();
+    this->currentSettings.autosaveTimeoutMinutes =
+            settings.value(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes)
+                    .toInt();
     this->currentSettings.geometrySnapDefault =
             settings.value(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault).toBool();
     this->currentSettings.gridSnapDefault =
@@ -2521,12 +2551,44 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault).toBool();
     this->currentSettings.touchDrawingDefault =
             settings.value(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault).toBool();
+    this->currentSettings.minimumPressure =
+            settings.value(QStringLiteral("tools/minimumPressure"), this->currentSettings.minimumPressure).toDouble();
+    this->currentSettings.pressureMultiplier =
+            settings.value(QStringLiteral("tools/pressureMultiplier"), this->currentSettings.pressureMultiplier).toDouble();
+    this->currentSettings.pressureGuessing =
+            settings.value(QStringLiteral("tools/pressureGuessing"), this->currentSettings.pressureGuessing).toBool();
+    this->currentSettings.snapGridTolerance =
+            settings.value(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance).toDouble();
+    this->currentSettings.snapGridSize =
+            settings.value(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize).toDouble();
     this->currentSettings.strokeRecognizerMinSize =
             settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
                     .toDouble();
     this->currentSettings.laserPointerFadeOutMs =
             settings.value(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs)
                     .toInt();
+    this->currentSettings.eraserCursorHidden =
+            settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
+    this->currentSettings.rightButtonAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/rightButtonAction"),
+                                   static_cast<int>(this->currentSettings.rightButtonAction))
+                            .toInt());
+    this->currentSettings.middleButtonAction =
+            static_cast<QtPointerButtonAction>(
+                    settings.value(QStringLiteral("devices/middleButtonAction"),
+                                   static_cast<int>(this->currentSettings.middleButtonAction))
+                            .toInt());
+    this->currentSettings.showFilePathInTitlebar =
+            settings.value(QStringLiteral("appearance/showFilePathInTitlebar"),
+                           this->currentSettings.showFilePathInTitlebar)
+                    .toBool();
+    this->currentSettings.showPageNumberInTitlebar =
+            settings.value(QStringLiteral("appearance/showPageNumberInTitlebar"),
+                           this->currentSettings.showPageNumberInTitlebar)
+                    .toBool();
+    this->currentSettings.showPageShadow =
+            settings.value(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow).toBool();
     this->currentSettings.autoloadPdfXoj =
             settings.value(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj).toBool();
     this->currentSettings.defaultPdfExportName =
@@ -2534,6 +2596,14 @@ void QtAppShell::loadPersistentUiState() {
                            QString::fromStdString(this->currentSettings.defaultPdfExportName))
                     .toString()
                     .toStdString();
+    this->currentSettings.pdfPageCacheSize =
+            settings.value(QStringLiteral("pdf/pageCacheSize"), this->currentSettings.pdfPageCacheSize).toInt();
+    this->currentSettings.pdfPreloadPagesBefore =
+            settings.value(QStringLiteral("pdf/preloadPagesBefore"), this->currentSettings.pdfPreloadPagesBefore).toInt();
+    this->currentSettings.pdfPreloadPagesAfter =
+            settings.value(QStringLiteral("pdf/preloadPagesAfter"), this->currentSettings.pdfPreloadPagesAfter).toInt();
+    this->currentSettings.pdfEagerPageCleanup =
+            settings.value(QStringLiteral("pdf/eagerPageCleanup"), this->currentSettings.pdfEagerPageCleanup).toBool();
     this->currentSettings.latexTemplatePath =
             settings.value(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath))
                     .toString()
@@ -2635,17 +2705,37 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/defaultEraserWidth"), this->currentSettings.defaultEraserWidth);
     settings.setValue(QStringLiteral("tools/defaultPressureSensitive"), this->currentSettings.defaultPressureSensitive);
     settings.setValue(QStringLiteral("tools/defaultEraserMode"), static_cast<int>(this->currentSettings.defaultEraserMode));
+    settings.setValue(QStringLiteral("tools/minimumPressure"), this->currentSettings.minimumPressure);
+    settings.setValue(QStringLiteral("tools/pressureMultiplier"), this->currentSettings.pressureMultiplier);
+    settings.setValue(QStringLiteral("tools/pressureGuessing"), this->currentSettings.pressureGuessing);
+    settings.setValue(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance);
+    settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
     settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
     settings.setValue(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit);
+    settings.setValue(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled);
+    settings.setValue(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes);
     settings.setValue(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault);
     settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
     settings.setValue(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault);
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
+    settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
+    settings.setValue(QStringLiteral("devices/rightButtonAction"), static_cast<int>(this->currentSettings.rightButtonAction));
+    settings.setValue(QStringLiteral("devices/middleButtonAction"),
+                      static_cast<int>(this->currentSettings.middleButtonAction));
+    settings.setValue(QStringLiteral("appearance/showFilePathInTitlebar"),
+                      this->currentSettings.showFilePathInTitlebar);
+    settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
+                      this->currentSettings.showPageNumberInTitlebar);
+    settings.setValue(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow);
     settings.setValue(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj);
     settings.setValue(QStringLiteral("pdf/defaultExportName"), QString::fromStdString(this->currentSettings.defaultPdfExportName));
+    settings.setValue(QStringLiteral("pdf/pageCacheSize"), this->currentSettings.pdfPageCacheSize);
+    settings.setValue(QStringLiteral("pdf/preloadPagesBefore"), this->currentSettings.pdfPreloadPagesBefore);
+    settings.setValue(QStringLiteral("pdf/preloadPagesAfter"), this->currentSettings.pdfPreloadPagesAfter);
+    settings.setValue(QStringLiteral("pdf/eagerPageCleanup"), this->currentSettings.pdfEagerPageCleanup);
     settings.setValue(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath));
     settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
@@ -2882,6 +2972,62 @@ void QtAppShell::markSessionDirty() {
         this->session.markDirty(true);
         updateWindowTitle();
     }
+}
+
+void QtAppShell::configureAutosave() {
+    if (!this->autosaveTimer) {
+        return;
+    }
+    this->autosaveTimer->stop();
+    if (!this->currentSettings.autosaveEnabled) {
+        return;
+    }
+    const int intervalMinutes = std::clamp(this->currentSettings.autosaveTimeoutMinutes, 1, 120);
+    this->autosaveTimer->setInterval(intervalMinutes * 60 * 1000);
+    this->autosaveTimer->start();
+}
+
+void QtAppShell::autosaveNow() {
+    if (!this->currentSettings.autosaveEnabled || !this->session.isDirty() || !this->documentController.hasDocument()) {
+        return;
+    }
+    const auto source = this->documentController.sourcePath();
+    if (!source || !isAutosavableDocumentPath(*source)) {
+        return;
+    }
+
+    std::string errorMsg;
+    if (this->documentController.saveDocument(*source, &errorMsg)) {
+        this->session.markDirty(false);
+        updateWindowTitle();
+        this->window.statusBar()->showMessage(QStringLiteral("Document autosaved"), 2000);
+    } else {
+        this->window.statusBar()->showMessage(QStringLiteral("Autosave failed: %1").arg(QString::fromStdString(errorMsg)),
+                                              5000);
+    }
+}
+
+void QtAppShell::applyRuntimeSettings() {
+    auto* canvas = this->window.canvas();
+    auto& ts = canvas->toolState();
+    ts.penWidth = this->currentSettings.defaultPenWidth;
+    ts.highlighterWidth = this->currentSettings.defaultHighlighterWidth;
+    ts.eraserWidth = this->currentSettings.defaultEraserWidth;
+    ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
+    ts.eraserMode = this->currentSettings.defaultEraserMode;
+
+    canvas->setPressureOptions(this->currentSettings.minimumPressure, this->currentSettings.pressureMultiplier,
+                               this->currentSettings.pressureGuessing);
+    canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
+    canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
+    canvas->setPointerButtonActions(this->currentSettings.rightButtonAction, this->currentSettings.middleButtonAction);
+    canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
+    canvas->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
+    canvas->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
+    canvas->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
+    canvas->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
+    canvas->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
+    canvas->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
 }
 
 void QtAppShell::updateEditCommandStates() {
@@ -3394,33 +3540,23 @@ void QtAppShell::showSettingsDialog() {
     }
 
     // Apply relevant settings immediately
-    auto& ts = this->window.canvas()->toolState();
-    ts.penWidth = this->currentSettings.defaultPenWidth;
-    ts.highlighterWidth = this->currentSettings.defaultHighlighterWidth;
-    ts.eraserWidth = this->currentSettings.defaultEraserWidth;
-    ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
-    ts.eraserMode = this->currentSettings.defaultEraserMode;
-
-    this->window.canvas()->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
-    this->window.canvas()->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
-    this->window.canvas()->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
-    this->window.canvas()->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
-    this->window.canvas()->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
-    this->window.canvas()->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    applyRuntimeSettings();
     this->audioController.applySettings(this->currentSettings);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", this->currentSettings.rotationSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", this->currentSettings.touchDrawingDefault);
 
-    this->window.toolPalette()->syncFromToolState(ts);
+    this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
     if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
         rebuildToolbar();
         applySidebarVisibility(this->window.commandHost()->actionForCommand("view.show-sidebar")
                                        ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()
                                        : this->persistedShowSidebar);
     }
+    configureAutosave();
     savePersistentUiState();
+    updateWindowTitle();
     updateAudioCommandStates();
     this->window.statusBar()->showMessage(QStringLiteral("Settings applied"), 3000);
 }

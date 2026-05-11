@@ -565,6 +565,35 @@ auto QtCanvas::isGeometrySnapEnabled() const -> bool { return this->geometrySnap
 
 auto QtCanvas::isGridSnapEnabled() const -> bool { return this->gridSnapEnabled; }
 
+void QtCanvas::setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing) {
+    this->minimumPressure = std::clamp(minimumPressure, 0.0, 0.95);
+    this->pressureMultiplier = std::clamp(pressureMultiplier, 0.1, 4.0);
+    this->pressureGuessing = pressureGuessing;
+}
+
+void QtCanvas::setGridSnapOptions(double gridSize, double tolerance) {
+    this->snapGridSize = std::clamp(gridSize, 1.0, 500.0);
+    this->snapGridTolerance = std::clamp(tolerance, 0.01, 10.0);
+}
+
+void QtCanvas::setEraserCursorHidden(bool hidden) {
+    this->eraserCursorHidden = hidden;
+    refreshToolCursor();
+}
+
+void QtCanvas::setPointerButtonActions(QtPointerButtonAction rightButtonAction,
+                                       QtPointerButtonAction middleButtonAction) {
+    this->rightButtonAction = rightButtonAction;
+    this->middleButtonAction = middleButtonAction;
+}
+
+void QtCanvas::setPageShadowEnabled(bool enabled) {
+    if (auto* renderer = dynamic_cast<vn::view::render::QtPreviewBackgroundRenderer*>(this->backgroundRenderer.get())) {
+        renderer->setPageShadowEnabled(enabled);
+        update();
+    }
+}
+
 void QtCanvas::setRotationSnapEnabled(bool enabled) {
     this->rotationSnapEnabled = enabled;
     update();
@@ -705,7 +734,9 @@ void QtCanvas::showEvent(QShowEvent* event) {
 
 void QtCanvas::mousePressEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
-    if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && this->spaceHeld)) {
+    const bool middleButtonPans =
+            event->button() == Qt::MiddleButton && this->middleButtonAction == QtPointerButtonAction::Pan;
+    if (middleButtonPans || (event->button() == Qt::LeftButton && this->spaceHeld)) {
         beginPan(event->position());
         event->accept();
         return;
@@ -716,7 +747,8 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
-    if (event->button() == Qt::RightButton && !this->spaceHeld) {
+    if (event->button() == Qt::RightButton && !this->spaceHeld &&
+        this->rightButtonAction == QtPointerButtonAction::Eraser) {
         this->temporaryRightButtonEraser = true;
         setCursor(Qt::BlankCursor);
         Q_EMIT toolStateChanged();
@@ -951,7 +983,10 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
             const double pageY = scenePoint.y() - pageRect.y();
             static_cast<void>(this->documentController->updateGeometryVertexDrag(
                     pageX, pageY, this->zoomFactor,
-                    {.geometryEnabled = this->geometrySnapEnabled, .gridEnabled = this->gridSnapEnabled}));
+                    {.geometryEnabled = this->geometrySnapEnabled,
+                     .gridEnabled = this->gridSnapEnabled,
+                     .gridSize = this->snapGridSize,
+                     .gridTolerance = this->snapGridTolerance}));
             update();
             event->accept();
             return;
@@ -1484,7 +1519,7 @@ void QtCanvas::setCursorForTool(QtToolType tool) {
             setCursor(Qt::CrossCursor);
             break;
         case QtToolType::Eraser:
-            setCursor(Qt::BlankCursor);
+            setCursor(this->eraserCursorHidden ? Qt::BlankCursor : Qt::CrossCursor);
             break;
         case QtToolType::Hand:
             setCursor(Qt::OpenHandCursor);
@@ -1625,7 +1660,7 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
         return;
     }
 
-    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, pressure, color, width, toolType,
+    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, adjustedPressure(pressure), color, width, toolType,
                                                this->currentToolState.pressureSensitive,
                                                this->currentToolState.penLineStyle,
                                                this->currentToolState.fillEnabled
@@ -1656,9 +1691,22 @@ void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure)
     const double pageX = scenePoint.x() - pageRect.x();
     const double pageY = scenePoint.y() - pageRect.y();
 
-    if (this->documentController->updateStroke(pageX, pageY, pressure)) {
+    if (this->documentController->updateStroke(pageX, pageY, adjustedPressure(pressure))) {
         update();
     }
+}
+
+auto QtCanvas::adjustedPressure(double pressure) const -> double {
+    if (!this->currentToolState.pressureSensitive) {
+        return pressure;
+    }
+    if (pressure <= 0.0) {
+        return this->pressureGuessing ? 0.5 : pressure;
+    }
+
+    const double minPressure = std::clamp(this->minimumPressure, 0.0, 0.95);
+    const double normalized = std::clamp((pressure - minPressure) / std::max(0.05, 1.0 - minPressure), 0.01, 1.0);
+    return std::clamp(normalized * this->pressureMultiplier, 0.01, 4.0);
 }
 
 void QtCanvas::finalizeActiveStroke() {

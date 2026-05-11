@@ -297,7 +297,7 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
     }
 
     if (options.gridEnabled) {
-        if (auto provider = gridSnapProviderFor(page->getBackgroundType().format)) {
+        if (auto provider = gridSnapProviderFor(page->getBackgroundType().format, options.gridSize, options.gridTolerance)) {
             engine.addProvider(std::move(provider));
             hasSnapProviders = true;
         }
@@ -607,14 +607,14 @@ auto QtDocumentController::findMutableGeometryElement(std::size_t pageIndex, vn:
     return nullptr;
 }
 
-auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format)
+auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)
         -> std::shared_ptr<const vn::snap::ISnapProvider> {
     switch (format) {
         case PageTypeFormat::Graph:
         case PageTypeFormat::Dotted:
         case PageTypeFormat::IsoDotted:
         case PageTypeFormat::IsoGraph:
-            return std::make_shared<vn::snap::GridSnapProvider>(28.0, 28.0, 0.35);
+            return std::make_shared<vn::snap::GridSnapProvider>(gridSize, gridSize, gridTolerance);
         default:
             return nullptr;
     }

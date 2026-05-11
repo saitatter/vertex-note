@@ -13,6 +13,10 @@ namespace vn::view::render {
 class QtPreviewBackgroundRenderer: public BackgroundRenderer {
 public:
     void draw(const PageBackgroundRenderModel& page, const RenderRect& rect, RenderContext& context) const override;
+    void setPageShadowEnabled(bool enabled);
+
+private:
+    bool pageShadowEnabled = true;
 };
 
 }  // namespace vn::view::render

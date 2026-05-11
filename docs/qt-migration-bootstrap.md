@@ -250,7 +250,18 @@ latest Qt parity commits.
      implemented, intentionally Qt-only, partial, legacy GTK, or unsupported in
      `docs/qt-settings-parity-audit.md`.
 
-4. **PDF annotation parity v2**
+4. **Settings parity v3**
+   - ✓ Add Qt autosave settings and scheduler for existing `.xopp`/`.xoj`/`.xopt`
+     documents.
+   - ✓ Replace the Devices placeholder with Qt input-device discovery plus
+     right/middle button and eraser cursor policy settings.
+   - ✓ Add advanced pressure and grid snap settings: minimum pressure, pressure
+     multiplier, pressure guessing, grid size, and grid tolerance.
+   - ✓ Add appearance settings for titlebar file/page display and page shadow.
+   - ✓ Add persisted PDF performance/cache knobs. They are stored in Qt settings
+     now; wiring them to a dedicated Qt PDF cache remains future cache-layer work.
+
+5. **PDF annotation parity v2**
    - ✓ Implement real PDF text marker/highlight annotation behavior and enable
      `tool.select-pdf-text-marker-opacity`.
    - ✓ Add automated checks for annotate PDF, append PDF pages, and PDF text
@@ -260,14 +271,14 @@ latest Qt parity commits.
      highlight-selected-PDF-text. Checklist:
      `docs/qt-manual-smoke-checklist.md`.
 
-5. **Plugin API compatibility audit**
+6. **Plugin API compatibility audit**
    - ✓ Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB` in
      `docs/qt-plugin-api-audit.md`.
    - ✓ Export every legacy Lua application API in the Qt shell.
    - ✓ Track full, partial, and no-op compatibility shims in the audit.
    - ✓ Keep no-op APIs documented so plugin authors are not surprised.
 
-6. **Chrome and interaction polish**
+7. **Chrome and interaction polish**
    - Do screenshot-level comparison against GTK for toolbar density, menus,
      sidebar/layer panel defaults, floating toolbar placement, and status bar.
    - Verify text never clips in toolbar/customize/settings dialogs on narrow
@@ -275,11 +286,14 @@ latest Qt parity commits.
    - Manual acceptance checklist lives in
      `docs/qt-manual-smoke-checklist.md`.
 
-7. **Legacy boundary cleanup**
-   - Continue moving remaining non-shell Cairo/GTK dependencies behind explicit
-     legacy boundaries.
-   - Keep GTK fallback build green while it exists, but avoid new Qt features
-     depending on GTK UI classes.
+8. **Legacy boundary cleanup**
+   - ✓ Enforce that `src/qt` does not include GTK/GDK/Cairo headers or GTK
+     `Control`.
+   - ✓ Document current allowed legacy boundaries in
+     `docs/qt-legacy-boundary-audit.md`.
+   - Continue extracting UI-neutral services when new Qt behavior would
+     otherwise need GTK control code.
+   - Keep GTK fallback build green while it exists.
 
 ## GTK/Cairo Deprecation Order
 

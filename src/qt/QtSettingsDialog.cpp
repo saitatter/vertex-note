@@ -15,8 +15,11 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPushButton>
 #include <QFileDialog>
+#include <QInputDevice>
+#include <QPointingDevice>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -59,6 +62,24 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->pressureCheck->setChecked(current.defaultPressureSensitive);
     toolsLayout->addRow(QStringLiteral("Pressure sensitive by default:"), this->pressureCheck);
 
+    this->minimumPressureSpin = new QDoubleSpinBox(toolsPage);
+    this->minimumPressureSpin->setRange(0.0, 0.95);
+    this->minimumPressureSpin->setSingleStep(0.01);
+    this->minimumPressureSpin->setDecimals(2);
+    this->minimumPressureSpin->setValue(current.minimumPressure);
+    toolsLayout->addRow(QStringLiteral("Minimum pressure:"), this->minimumPressureSpin);
+
+    this->pressureMultiplierSpin = new QDoubleSpinBox(toolsPage);
+    this->pressureMultiplierSpin->setRange(0.1, 4.0);
+    this->pressureMultiplierSpin->setSingleStep(0.1);
+    this->pressureMultiplierSpin->setDecimals(2);
+    this->pressureMultiplierSpin->setValue(current.pressureMultiplier);
+    toolsLayout->addRow(QStringLiteral("Pressure multiplier:"), this->pressureMultiplierSpin);
+
+    this->pressureGuessingCheck = new QCheckBox(toolsPage);
+    this->pressureGuessingCheck->setChecked(current.pressureGuessing);
+    toolsLayout->addRow(QStringLiteral("Guess pressure if missing:"), this->pressureGuessingCheck);
+
     this->eraserModeCombo = new QComboBox(toolsPage);
     this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::Standard));
     this->eraserModeCombo->addItem(QStringLiteral("Segment"), static_cast<int>(QtEraserMode::Segment));
@@ -100,6 +121,16 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->undoLimitSpin->setValue(current.undoHistoryLimit);
     generalLayout->addRow(QStringLiteral("Undo history limit:"), this->undoLimitSpin);
 
+    this->autosaveEnabledCheck = new QCheckBox(generalPage);
+    this->autosaveEnabledCheck->setChecked(current.autosaveEnabled);
+    generalLayout->addRow(QStringLiteral("Autosave existing documents:"), this->autosaveEnabledCheck);
+
+    this->autosaveTimeoutSpin = new QSpinBox(generalPage);
+    this->autosaveTimeoutSpin->setRange(1, 120);
+    this->autosaveTimeoutSpin->setValue(current.autosaveTimeoutMinutes);
+    this->autosaveTimeoutSpin->setSuffix(QStringLiteral(" min"));
+    generalLayout->addRow(QStringLiteral("Autosave interval:"), this->autosaveTimeoutSpin);
+
     this->geoSnapCheck = new QCheckBox(generalPage);
     this->geoSnapCheck->setChecked(current.geometrySnapDefault);
     generalLayout->addRow(QStringLiteral("Geometry snap enabled:"), this->geoSnapCheck);
@@ -115,6 +146,21 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->touchDrawingCheck = new QCheckBox(generalPage);
     this->touchDrawingCheck->setChecked(current.touchDrawingDefault);
     generalLayout->addRow(QStringLiteral("Touch drawing enabled:"), this->touchDrawingCheck);
+
+    this->snapGridSizeSpin = new QDoubleSpinBox(generalPage);
+    this->snapGridSizeSpin->setRange(1.0, 500.0);
+    this->snapGridSizeSpin->setSingleStep(1.0);
+    this->snapGridSizeSpin->setDecimals(2);
+    this->snapGridSizeSpin->setValue(current.snapGridSize);
+    this->snapGridSizeSpin->setSuffix(QStringLiteral(" pt"));
+    generalLayout->addRow(QStringLiteral("Grid snap size:"), this->snapGridSizeSpin);
+
+    this->snapGridToleranceSpin = new QDoubleSpinBox(generalPage);
+    this->snapGridToleranceSpin->setRange(0.01, 10.0);
+    this->snapGridToleranceSpin->setSingleStep(0.05);
+    this->snapGridToleranceSpin->setDecimals(2);
+    this->snapGridToleranceSpin->setValue(current.snapGridTolerance);
+    generalLayout->addRow(QStringLiteral("Grid snap tolerance:"), this->snapGridToleranceSpin);
 
     this->strokeRecognizerMinSizeSpin = new QDoubleSpinBox(generalPage);
     this->strokeRecognizerMinSizeSpin->setRange(5.0, 500.0);
@@ -133,6 +179,21 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
 
     generalPage->setLayout(generalLayout);
     tabs->addTab(generalPage, QStringLiteral("General"));
+
+    // --- Appearance tab ---
+    auto* appearancePage = new QWidget(this);
+    auto* appearanceLayout = new QFormLayout(appearancePage);
+    this->showFilePathInTitlebarCheck = new QCheckBox(appearancePage);
+    this->showFilePathInTitlebarCheck->setChecked(current.showFilePathInTitlebar);
+    appearanceLayout->addRow(QStringLiteral("Show file path in titlebar:"), this->showFilePathInTitlebarCheck);
+    this->showPageNumberInTitlebarCheck = new QCheckBox(appearancePage);
+    this->showPageNumberInTitlebarCheck->setChecked(current.showPageNumberInTitlebar);
+    appearanceLayout->addRow(QStringLiteral("Show page number in titlebar:"), this->showPageNumberInTitlebarCheck);
+    this->showPageShadowCheck = new QCheckBox(appearancePage);
+    this->showPageShadowCheck->setChecked(current.showPageShadow);
+    appearanceLayout->addRow(QStringLiteral("Show page shadow:"), this->showPageShadowCheck);
+    appearancePage->setLayout(appearanceLayout);
+    tabs->addTab(appearancePage, QStringLiteral("Appearance"));
 
     // --- Toolbar tab ---
     auto* toolbarPage = new QWidget(this);
@@ -164,6 +225,21 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     pdfLayout->addRow(QStringLiteral("Autoload PDF .xoj:"), this->autoloadPdfXojCheck);
     this->defaultPdfExportNameEdit = new QLineEdit(QString::fromStdString(current.defaultPdfExportName), pdfPage);
     pdfLayout->addRow(QStringLiteral("Default PDF export name:"), this->defaultPdfExportNameEdit);
+    this->pdfPageCacheSizeSpin = new QSpinBox(pdfPage);
+    this->pdfPageCacheSizeSpin->setRange(1, 500);
+    this->pdfPageCacheSizeSpin->setValue(current.pdfPageCacheSize);
+    pdfLayout->addRow(QStringLiteral("PDF page cache size:"), this->pdfPageCacheSizeSpin);
+    this->pdfPreloadBeforeSpin = new QSpinBox(pdfPage);
+    this->pdfPreloadBeforeSpin->setRange(0, 50);
+    this->pdfPreloadBeforeSpin->setValue(current.pdfPreloadPagesBefore);
+    pdfLayout->addRow(QStringLiteral("Preload pages before:"), this->pdfPreloadBeforeSpin);
+    this->pdfPreloadAfterSpin = new QSpinBox(pdfPage);
+    this->pdfPreloadAfterSpin->setRange(0, 50);
+    this->pdfPreloadAfterSpin->setValue(current.pdfPreloadPagesAfter);
+    pdfLayout->addRow(QStringLiteral("Preload pages after:"), this->pdfPreloadAfterSpin);
+    this->pdfEagerCleanupCheck = new QCheckBox(pdfPage);
+    this->pdfEagerCleanupCheck->setChecked(current.pdfEagerPageCleanup);
+    pdfLayout->addRow(QStringLiteral("Eager PDF cleanup:"), this->pdfEagerCleanupCheck);
     pdfPage->setLayout(pdfLayout);
     tabs->addTab(pdfPage, QStringLiteral("PDF"));
 
@@ -239,11 +315,45 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     // --- Devices tab ---
     auto* devicesPage = new QWidget(this);
     auto* devicesLayout = new QVBoxLayout(devicesPage);
-    auto* devicesUnavailableLabel =
-            new QLabel(QStringLiteral("Device, stylus, and button configuration is not available in the Qt shell yet."),
-                       devicesPage);
-    devicesUnavailableLabel->setWordWrap(true);
-    devicesLayout->addWidget(devicesUnavailableLabel);
+    auto* devicesForm = new QFormLayout();
+    this->eraserCursorHiddenCheck = new QCheckBox(devicesPage);
+    this->eraserCursorHiddenCheck->setChecked(current.eraserCursorHidden);
+    devicesForm->addRow(QStringLiteral("Hide eraser cursor:"), this->eraserCursorHiddenCheck);
+    this->rightButtonActionCombo = new QComboBox(devicesPage);
+    this->rightButtonActionCombo->addItem(QStringLiteral("None"), static_cast<int>(QtPointerButtonAction::None));
+    this->rightButtonActionCombo->addItem(QStringLiteral("Eraser"), static_cast<int>(QtPointerButtonAction::Eraser));
+    this->rightButtonActionCombo->setCurrentIndex(current.rightButtonAction == QtPointerButtonAction::None ? 0 : 1);
+    devicesForm->addRow(QStringLiteral("Right button:"), this->rightButtonActionCombo);
+    this->middleButtonActionCombo = new QComboBox(devicesPage);
+    this->middleButtonActionCombo->addItem(QStringLiteral("None"), static_cast<int>(QtPointerButtonAction::None));
+    this->middleButtonActionCombo->addItem(QStringLiteral("Pan"), static_cast<int>(QtPointerButtonAction::Pan));
+    this->middleButtonActionCombo->setCurrentIndex(current.middleButtonAction == QtPointerButtonAction::None ? 0 : 1);
+    devicesForm->addRow(QStringLiteral("Middle button:"), this->middleButtonActionCombo);
+    devicesLayout->addLayout(devicesForm);
+
+    this->inputDeviceList = new QListWidget(devicesPage);
+    const auto devices = QInputDevice::devices();
+    for (const auto* device: devices) {
+        if (!device) {
+            continue;
+        }
+        QString type = QStringLiteral("device");
+        if (auto* pointing = dynamic_cast<const QPointingDevice*>(device)) {
+            switch (pointing->pointerType()) {
+                case QPointingDevice::PointerType::Generic: type = QStringLiteral("pointer"); break;
+                case QPointingDevice::PointerType::Finger: type = QStringLiteral("touch"); break;
+                case QPointingDevice::PointerType::Pen: type = QStringLiteral("pen"); break;
+                case QPointingDevice::PointerType::Eraser: type = QStringLiteral("eraser"); break;
+                case QPointingDevice::PointerType::Cursor: type = QStringLiteral("cursor"); break;
+                default: break;
+            }
+        }
+        this->inputDeviceList->addItem(QStringLiteral("%1 (%2)").arg(device->name(), type));
+    }
+    if (this->inputDeviceList->count() == 0) {
+        this->inputDeviceList->addItem(QStringLiteral("No Qt input devices reported yet"));
+    }
+    devicesLayout->addWidget(this->inputDeviceList);
     devicesLayout->addStretch(1);
     devicesPage->setLayout(devicesLayout);
     tabs->addTab(devicesPage, QStringLiteral("Devices"));
@@ -270,14 +380,31 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .defaultPageWidth = this->pageWidthSpin->value(),
             .defaultPageHeight = this->pageHeightSpin->value(),
             .undoHistoryLimit = this->undoLimitSpin->value(),
+            .autosaveEnabled = this->autosaveEnabledCheck->isChecked(),
+            .autosaveTimeoutMinutes = this->autosaveTimeoutSpin->value(),
             .geometrySnapDefault = this->geoSnapCheck->isChecked(),
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
             .rotationSnapDefault = this->rotationSnapCheck->isChecked(),
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
+            .minimumPressure = this->minimumPressureSpin->value(),
+            .pressureMultiplier = this->pressureMultiplierSpin->value(),
+            .pressureGuessing = this->pressureGuessingCheck->isChecked(),
+            .snapGridTolerance = this->snapGridToleranceSpin->value(),
+            .snapGridSize = this->snapGridSizeSpin->value(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),
+            .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
+            .rightButtonAction = static_cast<QtPointerButtonAction>(this->rightButtonActionCombo->currentData().toInt()),
+            .middleButtonAction = static_cast<QtPointerButtonAction>(this->middleButtonActionCombo->currentData().toInt()),
+            .showFilePathInTitlebar = this->showFilePathInTitlebarCheck->isChecked(),
+            .showPageNumberInTitlebar = this->showPageNumberInTitlebarCheck->isChecked(),
+            .showPageShadow = this->showPageShadowCheck->isChecked(),
             .autoloadPdfXoj = this->autoloadPdfXojCheck->isChecked(),
             .defaultPdfExportName = this->defaultPdfExportNameEdit->text().trimmed().toStdString(),
+            .pdfPageCacheSize = this->pdfPageCacheSizeSpin->value(),
+            .pdfPreloadPagesBefore = this->pdfPreloadBeforeSpin->value(),
+            .pdfPreloadPagesAfter = this->pdfPreloadAfterSpin->value(),
+            .pdfEagerPageCleanup = this->pdfEagerCleanupCheck->isChecked(),
             .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
             .audioSampleRate = this->audioSampleRateSpin->value(),

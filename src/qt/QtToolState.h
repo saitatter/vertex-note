@@ -43,6 +43,7 @@ enum class QtToolType {
     DrawConstructionCircle,
 };
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
+enum class QtPointerButtonAction { None = 0, Pan = 1, Eraser = 2 };
 
 struct QtToolState {
     QtToolType activeTool = QtToolType::Pen;

@@ -88,12 +88,14 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
 
     const QRectF pageRect(rect.x, rect.y, rect.width, rect.height);
 
-    // Drop shadow — asymmetric like GTK: thin top-left, thicker bottom-right
     painter->setPen(Qt::NoPen);
-    painter->setBrush(QColor(0, 0, 0, 40));
-    painter->drawRect(pageRect.adjusted(3.0, 3.0, 6.0, 6.0));
-    painter->setBrush(QColor(0, 0, 0, 20));
-    painter->drawRect(pageRect.adjusted(1.0, 1.0, 3.0, 3.0));
+    if (this->pageShadowEnabled) {
+        // Drop shadow — asymmetric like GTK: thin top-left, thicker bottom-right
+        painter->setBrush(QColor(0, 0, 0, 40));
+        painter->drawRect(pageRect.adjusted(3.0, 3.0, 6.0, 6.0));
+        painter->setBrush(QColor(0, 0, 0, 20));
+        painter->drawRect(pageRect.adjusted(1.0, 1.0, 3.0, 3.0));
+    }
 
     // Page fill with background color — sharp corners
     painter->setBrush(toQColor(page.backgroundColor));
@@ -262,5 +264,7 @@ void QtPreviewBackgroundRenderer::draw(const PageBackgroundRenderModel& page, co
                           Qt::AlignLeft | Qt::AlignVCenter, footer);
     }
 }
+
+void QtPreviewBackgroundRenderer::setPageShadowEnabled(bool enabled) { this->pageShadowEnabled = enabled; }
 
 }  // namespace vn::view::render
