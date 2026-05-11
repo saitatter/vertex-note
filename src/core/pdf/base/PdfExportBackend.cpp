@@ -1,5 +1,7 @@
 #include "PdfExportBackend.h"
 
+#include <iostream>  // for cerr
+
 #include "util/i18n.h"
 
 #include "config-features.h"
@@ -15,9 +17,10 @@ ExportBackend ExportBackend::fromString(std::string_view str) {
     }
 #endif
     if (str != DEFAULT_ID_STRING && !str.empty()) {
-        g_warning("%s", (_F("Unknown pdf backend: {1}. Available backends are: {2}. Using default backend.") % str %
-                         listAvailableBackends())
-                                .c_str());
+        std::cerr << (_F("Unknown pdf backend: {1}. Available backends are: {2}. Using default backend.") % str %
+                      listAvailableBackends())
+                             .str()
+                  << std::endl;
     }
     return ExportBackend::DEFAULT;
 }

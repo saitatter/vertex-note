@@ -3,8 +3,7 @@
 #include <array>    // for array
 #include <cstdint>  // for uint32_t
 #include <cstdio>   // for snprintf
-
-#include <glib.h>  // for g_warning
+#include <iostream>  // for cerr
 
 #include "util/PlaceholderString.h"                 // for PlaceholderString
 #include "util/i18n.h"                              // for FORMAT_STR, FS
@@ -55,12 +54,12 @@ auto ObjectInputStream::read(std::stringstream stream, size_t length) -> bool {
     try {
         std::string version = readString();
         if (version != XML_VERSION_STR) {
-            g_warning("ObjectInputStream version mismatch... two different Xournal versions running? (%s / %s)",
-                      version.c_str(), XML_VERSION_STR);
+            std::cerr << "ObjectInputStream version mismatch... two different Xournal versions running? (" << version
+                      << " / " << XML_VERSION_STR << ")" << std::endl;
             return false;
         }
     } catch (const InputStreamException& e) {
-        g_warning("InputStreamException: %s", e.what());
+        std::cerr << "InputStreamException: " << e.what() << std::endl;
         return false;
     }
     return true;

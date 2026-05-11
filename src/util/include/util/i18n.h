@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <glib.h>  // for g_dpgettext2
 #include <libintl.h>
 
 #include "util/PlaceholderString.h"

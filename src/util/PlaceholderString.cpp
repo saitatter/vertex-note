@@ -2,9 +2,8 @@
 
 #include <charconv>
 #include <exception>  // for exception
+#include <stdexcept>  // for runtime_error
 #include <string>
-
-#include <glib.h>  // for g_error
 
 #include "util/safe_casts.h"  // for as_unsigned
 
@@ -27,7 +26,7 @@ auto PlaceholderString::formatPart(std::string_view format) const -> std::string
 
     auto res = std::from_chars(format.data(), format.data() + format.size(), index);
     if (res.ec != std::errc()) {
-        g_error("Could not parse \"%s\" as int, error: %i", format.data(), int(res.ec));
+        throw std::runtime_error("Could not parse placeholder index as int: " + std::string(format));
     }
 
     // Placeholder index starting at 1, vector at 0
