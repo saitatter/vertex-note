@@ -2,10 +2,9 @@
 
 #include <algorithm>  // for min, max
 #include <cstddef>    // for size_t
+#include <iostream>   // for cerr
 #include <iterator>   // for next
 #include <string>     // for to_string, string
-
-#include <glib.h>  // for g_message
 
 #include "audio/AudioQueue.h"           // for AudioQueue
 #include "audio/DeviceInfo.h"           // for DeviceInfo
@@ -34,9 +33,8 @@ auto PortAudioProducer::getSelectedInputDevice() const -> DeviceInfo {
     try {
         return DeviceInfo(&sys.deviceByIndex(this->settings.getAudioInputDevice()), true);
     } catch (const portaudio::PaException& e) {
-        g_message(
-                "PortAudioProducer: Selected input device not found - fallback to default input device\nCaused by: %s",
-                e.what());
+        std::cerr << "PortAudioProducer: Selected input device not found - fallback to default input device\nCaused by: "
+                  << e.what() << std::endl;
         return DeviceInfo(&sys.defaultInputDevice(), true);
     }
 }
@@ -54,7 +52,7 @@ auto PortAudioProducer::startRecording() -> bool {
     try {
         device = &sys.deviceByIndex(getSelectedInputDevice().getIndex());
     } catch (const portaudio::PaException&) {
-        g_message("PortAudioProducer: Unable to find selected input device");
+        std::cerr << "PortAudioProducer: Unable to find selected input device" << std::endl;
         return false;
     }
 
@@ -73,7 +71,7 @@ auto PortAudioProducer::startRecording() -> bool {
         this->inputStream = std::make_unique<portaudio::MemFunCallbackStream<PortAudioProducer>>(
                 params, *this, &PortAudioProducer::recordCallback);
     } catch (const portaudio::PaException&) {
-        g_message("PortAudioProducer: Unable to open stream");
+        std::cerr << "PortAudioProducer: Unable to open stream" << std::endl;
         return false;
     }
 
@@ -81,7 +79,7 @@ auto PortAudioProducer::startRecording() -> bool {
     try {
         this->inputStream->start();
     } catch (const portaudio::PaException&) {
-        g_message("PortAudioProducer: Unable to start stream");
+        std::cerr << "PortAudioProducer: Unable to start stream" << std::endl;
         this->inputStream.reset();
         return false;
     }
@@ -92,7 +90,7 @@ auto PortAudioProducer::startRecording() -> bool {
 auto PortAudioProducer::recordCallback(const void* inputBuffer, void* /*outputBuffer*/, unsigned long framesPerBuffer,
                                        const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags statusFlags) -> int {
     if (statusFlags) {
-        g_message("PortAudioProducer: statusFlag: %s", std::to_string(statusFlags).c_str());
+        std::cerr << "PortAudioProducer: statusFlag: " << statusFlags << std::endl;
     }
 
     if (inputBuffer != nullptr) {
@@ -111,7 +109,7 @@ void PortAudioProducer::stopRecording() {
                 this->inputStream->stop();
             }
         } catch (const portaudio::PaException&) {
-            g_message("PortAudioProducer: Closing stream failed");
+            std::cerr << "PortAudioProducer: Closing stream failed" << std::endl;
         }
     }
 
