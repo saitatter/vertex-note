@@ -38,6 +38,7 @@ This audit compares GTK `Settings` keys from
 | `snapGridTolerance`, `snapGridSize` | Implemented | `tools/snapGridTolerance`, `tools/snapGridSize`; applied to Qt geometry grid snapping. |
 | `zoomStep`, `zoomStepScroll` | Implemented | `view/zoomStepPercent`, `view/zoomStepScrollPercent`; applied to Qt zoom commands and Ctrl+wheel zoom. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
+| `font` | Qt-only equivalent | `tools/defaultFontName`, `tools/defaultFontSize`; applied to the Qt text tool, toolbar font controls, and Lua font access. |
 | `stabilizerAveragingMethod`, `stabilizerBuffersize`, `stabilizerFinalizeStroke` | Partial / Qt-only equivalent | `tools/strokeStabilizerEnabled`, `tools/strokeStabilizerSamples`, `tools/strokeStabilizerStrength`, `tools/strokeStabilizerFinalizeStroke`; Qt applies a native moving-average stabilizer instead of reusing GTK `StrokeHandler`. |
 | Custom data `deviceClasses`, `buttonConfig` | Qt-only equivalent | Qt discovers `QInputDevice`s, persists a global button matrix and per-device override matrices, and applies them for mouse/tablet/touch input. |
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
@@ -83,7 +84,6 @@ This audit compares GTK `Settings` keys from
 | `preferredLocale` | Unsupported | Qt shell does not expose localization selection yet. |
 | `useSpacesForTab`, `numberOfSpacesForTab` | Unsupported | Text editor tab behavior is not user-configurable in Qt. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
-| `font` | Partial | Qt text tool has current font state, but no persisted full GTK default font model. |
 
 ## Next Settings Work
 

@@ -15,6 +15,7 @@
 #include "QtToolState.h"
 
 class QDoubleSpinBox;
+class QFontComboBox;
 class QSpinBox;
 class QCheckBox;
 class QComboBox;
@@ -32,6 +33,8 @@ struct QtSettings {
     double defaultPenWidth = 1.41;
     double defaultHighlighterWidth = 8.50;
     double defaultEraserWidth = 8.50;
+    std::string defaultFontName = "Sans";
+    double defaultFontSize = 12.0;
     bool defaultPressureSensitive = true;
     QtEraserMode defaultEraserMode = QtEraserMode::Standard;
     double defaultPageWidth = 595.0;
@@ -112,6 +115,8 @@ private:
     QDoubleSpinBox* penWidthSpin = nullptr;
     QDoubleSpinBox* highlighterWidthSpin = nullptr;
     QDoubleSpinBox* eraserWidthSpin = nullptr;
+    QFontComboBox* defaultFontCombo = nullptr;
+    QDoubleSpinBox* defaultFontSizeSpin = nullptr;
     QCheckBox* pressureCheck = nullptr;
     QDoubleSpinBox* minimumPressureSpin = nullptr;
     QDoubleSpinBox* pressureMultiplierSpin = nullptr;

@@ -2629,6 +2629,13 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth).toDouble();
     this->currentSettings.defaultPageHeight =
             settings.value(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight).toDouble();
+    this->currentSettings.defaultFontName =
+            settings.value(QStringLiteral("tools/defaultFontName"),
+                           QString::fromStdString(this->currentSettings.defaultFontName))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.defaultFontSize =
+            settings.value(QStringLiteral("tools/defaultFontSize"), this->currentSettings.defaultFontSize).toDouble();
     this->currentSettings.addHorizontalSpace =
             settings.value(QStringLiteral("page/addHorizontalSpace"), this->currentSettings.addHorizontalSpace).toBool();
     this->currentSettings.addHorizontalSpaceAmountRight =
@@ -2991,6 +2998,9 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
     settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
+    settings.setValue(QStringLiteral("tools/defaultFontName"),
+                      QString::fromStdString(this->currentSettings.defaultFontName));
+    settings.setValue(QStringLiteral("tools/defaultFontSize"), this->currentSettings.defaultFontSize);
     settings.setValue(QStringLiteral("page/addHorizontalSpace"), this->currentSettings.addHorizontalSpace);
     settings.setValue(QStringLiteral("page/addHorizontalSpaceAmountRight"),
                       this->currentSettings.addHorizontalSpaceAmountRight);
@@ -3430,6 +3440,8 @@ void QtAppShell::applyRuntimeSettings() {
     ts.penWidth = this->currentSettings.defaultPenWidth;
     ts.highlighterWidth = this->currentSettings.defaultHighlighterWidth;
     ts.eraserWidth = this->currentSettings.defaultEraserWidth;
+    ts.fontName = this->currentSettings.defaultFontName;
+    ts.fontSize = this->currentSettings.defaultFontSize;
     ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
     ts.eraserMode = this->currentSettings.defaultEraserMode;
 

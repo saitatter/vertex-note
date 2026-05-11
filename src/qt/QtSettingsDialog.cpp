@@ -16,6 +16,7 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QFontComboBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -157,6 +158,18 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->eraserWidthSpin->setDecimals(2);
     this->eraserWidthSpin->setValue(current.defaultEraserWidth);
     toolsLayout->addRow(QStringLiteral("Default eraser width:"), this->eraserWidthSpin);
+
+    this->defaultFontCombo = new QFontComboBox(toolsPage);
+    this->defaultFontCombo->setCurrentFont(QFont(QString::fromStdString(current.defaultFontName)));
+    toolsLayout->addRow(QStringLiteral("Default text font:"), this->defaultFontCombo);
+
+    this->defaultFontSizeSpin = new QDoubleSpinBox(toolsPage);
+    this->defaultFontSizeSpin->setRange(4.0, 200.0);
+    this->defaultFontSizeSpin->setDecimals(1);
+    this->defaultFontSizeSpin->setSingleStep(1.0);
+    this->defaultFontSizeSpin->setValue(current.defaultFontSize);
+    this->defaultFontSizeSpin->setSuffix(QStringLiteral(" pt"));
+    toolsLayout->addRow(QStringLiteral("Default text size:"), this->defaultFontSizeSpin);
 
     this->pressureCheck = new QCheckBox(toolsPage);
     this->pressureCheck->setChecked(current.defaultPressureSensitive);
@@ -712,6 +725,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .defaultPenWidth = this->penWidthSpin->value(),
             .defaultHighlighterWidth = this->highlighterWidthSpin->value(),
             .defaultEraserWidth = this->eraserWidthSpin->value(),
+            .defaultFontName = this->defaultFontCombo->currentFont().family().toStdString(),
+            .defaultFontSize = this->defaultFontSizeSpin->value(),
             .defaultPressureSensitive = this->pressureCheck->isChecked(),
             .defaultEraserMode = this->eraserModeCombo->currentIndex() == 1 ? QtEraserMode::Segment
                                                                             : QtEraserMode::Standard,
