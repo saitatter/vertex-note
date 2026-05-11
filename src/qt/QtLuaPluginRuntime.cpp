@@ -393,12 +393,12 @@ auto sidebarActionCommand(std::string_view action) -> std::string {
             {"DELETE", "page.delete"},
             {"NEW_BEFORE", "page.add-before"},
             {"NEW_AFTER", "page.add"},
+            {"MOVE_UP", "page.move-up"},
+            {"MOVE_DOWN", "page.move-down"},
     };
     const auto it = ACTIONS.find(action);
     return it == ACTIONS.end() ? std::string() : std::string(it->second);
 }
-
-auto isNoOpSidebarAction(std::string_view action) -> bool { return action == "MOVE_UP" || action == "MOVE_DOWN"; }
 #endif
 
 }  // namespace
@@ -2333,9 +2333,6 @@ auto luaSidebarAction(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     const auto action = luaOptionalString(lua, 1);
     const auto command = sidebarActionCommand(action);
-    if (command.empty() && isNoOpSidebarAction(action)) {
-        return 0;
-    }
     if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
         return luaL_error(lua, "Qt shell cannot activate sidebar action '%s'", action.c_str());
     }

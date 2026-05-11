@@ -232,8 +232,10 @@ latest Qt parity commits.
 2. **Plugin runtime parity hardening**
    - ✓ Expand `getActionState` for more GTK action-state values:
      current tool, current tool colour, pen line style, fill, sizes.
-   - Decide whether to support more legacy file/document APIs beyond the safe
-     `openFile` bridge already implemented.
+   - ✓ Support the remaining safe legacy sidebar page actions by mapping
+     `MOVE_UP`/`MOVE_DOWN` to Qt page movement commands.
+   - Keep broader file/document APIs limited to the safe `openFile` bridge
+     until they have UI-neutral controller behavior.
    - ✓ Add automated coverage for plugin load/enable/reload behavior using a
      synthetic Lua plugin fixture.
    - ✓ Add automated coverage for bundled plugin load behavior.
@@ -262,7 +264,7 @@ latest Qt parity commits.
      `docs/qt-plugin-api-audit.md`.
    - ✓ Export every legacy Lua application API in the Qt shell.
    - ✓ Track full, partial, and no-op compatibility shims in the audit.
-   - Keep no-op APIs documented so plugin authors are not surprised.
+   - ✓ Keep no-op APIs documented so plugin authors are not surprised.
 
 6. **Chrome and interaction polish**
    - Do screenshot-level comparison against GTK for toolbar density, menus,

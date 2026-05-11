@@ -967,6 +967,14 @@ void QtAppShell::registerBootstrapCommands() {
             {.id = "page.duplicate", .text = "Duplicate Page", .tooltip = "Duplicate the current page", .menu = "Journal"},
             [this]() { duplicatePage(); });
     ch->registerCommand(
+            {.id = "page.move-up", .text = "Move Page Up", .tooltip = "Move the current page toward the start of the document",
+             .menu = "Journal"},
+            [this]() { movePageUp(); });
+    ch->registerCommand(
+            {.id = "page.move-down", .text = "Move Page Down", .tooltip = "Move the current page toward the end of the document",
+             .menu = "Journal"},
+            [this]() { movePageDown(); });
+    ch->registerCommand(
             {.id = "journal.append-new-pdf-pages", .text = "Append New PDF Pages",
              .tooltip = "Append PDF pages not yet present in the document", .menu = "Journal"},
             [this]() { appendNewPdfPages(); });

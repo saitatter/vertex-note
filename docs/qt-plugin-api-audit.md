@@ -47,7 +47,7 @@ None.
 | `getSidebarPageNo` | Compatibility no-op | Returns `1`; Qt has separate page/layer docks instead of GTK sidebar tabs. |
 | `setSidebarPageNo` | Compatibility no-op | Accepts positive page numbers so older plugins do not fail when switching GTK sidebar tabs. |
 | `layerAction` | Shim | Maps known legacy layer action constants to Qt command IDs. |
-| `sidebarAction` | Partial shim | Maps page sidebar actions that exist in Qt: copy/duplicate, delete, new before, new after. Move up/down are accepted as no-ops until Qt has page movement commands. |
+| `sidebarAction` | Shim | Maps legacy page sidebar actions to Qt commands: copy/duplicate, delete, new before, new after, move up, and move down. |
 | `showFloatingToolbox` | Compatibility no-op | The Qt shell does not expose the GTK floating toolbox. |
 | `uiAction` | Shim | Maps known legacy action constants to Qt command IDs; disabled actions update command enabled state where available. |
 
@@ -55,5 +55,5 @@ None.
 
 1. Replace deprecated GTK wrapper use in bundled and third-party plugins with
    explicit Qt-neutral APIs over time.
-2. Expand `sidebarAction` only if Qt gains page movement commands or a unified
-   sidebar tab model.
+2. Expand `sidebarAction` only if Qt gains a unified sidebar tab model with
+   additional GTK-only sidebar actions.

@@ -241,7 +241,7 @@ TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
 
     RecordingPluginUiBridge bridge;
     RecordingCommandHost commandHost;
-    commandHost.commandIds = {"edit.paste", "edit.copy", "layer.goto-next", "page.add"};
+    commandHost.commandIds = {"edit.paste", "edit.copy", "layer.goto-next", "page.add", "page.move-up"};
     QtDocumentController controller;
     bool refreshed = false;
     bool dirty = false;
@@ -278,6 +278,7 @@ TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
     EXPECT_TRUE(hasString(commandHost.enabledCommandIds, "edit.copy=false"));
     EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "layer.goto-next"));
     EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "page.add"));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "page.move-up"));
     ASSERT_EQ(1U, controller.snapshotPages().size());
     EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
 
