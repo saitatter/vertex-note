@@ -22,6 +22,7 @@
 #include "QtSettingsDialog.h"
 #include "QtToolState.h"
 #include "QtToolbarLayoutEngine.h"
+#include "QtToolbarProfileStore.h"
 #include "QtUpdatePresentationService.h"
 #include "ui/common/IAppShell.h"
 

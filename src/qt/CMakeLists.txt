@@ -60,6 +60,8 @@ set(vertexnote_qt_sources
         QtTextEditor.cpp
         QtToolbarLayoutEngine.h
         QtToolbarLayoutEngine.cpp
+        QtToolbarProfileStore.h
+        QtToolbarProfileStore.cpp
         QtSettingsDialog.h
         QtSettingsDialog.cpp
 )

@@ -12,6 +12,7 @@
 #include <QColor>
 #include <QDialog>
 
+#include "QtToolbarProfileStore.h"
 #include "QtToolState.h"
 
 class QDoubleSpinBox;
@@ -23,11 +24,6 @@ class QLineEdit;
 class QListWidget;
 class QTableWidget;
 class QPushButton;
-
-struct QtToolbarProfileOption {
-    std::string id;
-    std::string displayName;
-};
 
 struct QtAudioDeviceOption {
     int index = -1;

@@ -5,6 +5,7 @@
 
 #include "filesystem.h"
 #include "qt/QtToolbarLayoutEngine.h"
+#include "qt/QtToolbarProfileStore.h"
 
 TEST(VertexNoteQtToolbarLayoutEngine, parsesToolbarProfilesAndTokens) {
     const auto path = fs::temp_directory_path() / "vertexnote-qt-toolbar-layout-test.ini";
@@ -51,4 +52,12 @@ TEST(VertexNoteQtToolbarLayoutEngine, normalizesLegacyDrawingButtonsToStrokeAndV
 
     const std::vector<std::string> expected = {"PEN", "SEPARATOR", "DRAW_STROKE", "DRAW_VERTEX", "HAND"};
     EXPECT_EQ(normalized, expected);
+}
+
+TEST(VertexNoteQtToolbarProfileStore, splitsAndJoinsToolbarTokensWithCompatibilityAliases) {
+    const auto tokens = splitToolbarTokens(QStringLiteral("SAVE, DRAW_LEGACY, DRAW_VERTEX"));
+
+    const std::vector<std::string> expected = {"SAVE", "DRAW_STROKE", "DRAW_VERTEX"};
+    EXPECT_EQ(tokens, expected);
+    EXPECT_EQ(joinToolbarTokens(tokens), QStringLiteral("SAVE,DRAW_STROKE,DRAW_VERTEX"));
 }
