@@ -12,7 +12,7 @@ ImageBackgroundView::ImageBackgroundView(double pageWidth, double pageHeight, co
         BackgroundView(pageWidth, pageHeight), image(image) {}
 
 void ImageBackgroundView::draw(cairo_t* cr) const {
-    const GdkPixbuf* pixbuff = this->image.getPixbuf();
+    const GdkPixbuf* pixbuff = getBackgroundImagePixbuf(this->image);
     if (pixbuff) {
         cairo_matrix_t matrix = {0};
         cairo_get_matrix(cr, &matrix);

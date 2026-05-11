@@ -17,7 +17,7 @@ ImageElementView::~ImageElementView() = default;
 
 void ImageElementView::calcSize() {
     if (this->width == -1) {
-        GdkPixbuf* p = backgroundImage.getPixbuf();
+        GdkPixbuf* p = getBackgroundImagePixbuf(backgroundImage);
         this->width = gdk_pixbuf_get_width(p);
         this->height = gdk_pixbuf_get_height(p);
 
@@ -36,7 +36,7 @@ void ImageElementView::calcSize() {
 void ImageElementView::paintContents(cairo_t* cr) {
     cairo_scale(cr, this->zoom, this->zoom);
 
-    GdkPixbuf* p = this->backgroundImage.getPixbuf();
+    GdkPixbuf* p = getBackgroundImagePixbuf(this->backgroundImage);
     gdk_cairo_set_source_pixbuf(cr, p, 0, 0);
     cairo_paint(cr);
 }

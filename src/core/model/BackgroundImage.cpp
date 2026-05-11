@@ -4,8 +4,10 @@
 #include <string>   // for string
 #include <utility>  // for move
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib-object.h>  // for g_object_unref
 
+#include "util/PathUtil.h"
 #include "util/Stacktrace.h"  // for Stacktrace
 #include "util/StringUtils.h"
 
@@ -82,11 +84,22 @@ void BackgroundImage::setAttach(bool attach) {
     this->img->attach = attach;
 }
 
-auto BackgroundImage::getPixbuf() -> GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
-auto BackgroundImage::getPixbuf() const -> const GdkPixbuf* { return this->img ? this->img->pixbuf : nullptr; }
+auto getBackgroundImagePixbuf(BackgroundImage& image) -> GdkPixbuf* { return image.img ? image.img->pixbuf : nullptr; }
+
+auto getBackgroundImagePixbuf(const BackgroundImage& image) -> const GdkPixbuf* {
+    return image.img ? image.img->pixbuf : nullptr;
+}
+
+auto saveBackgroundImagePng(const BackgroundImage& image, const fs::path& path) -> bool {
+    const auto* pixbuf = getBackgroundImagePixbuf(image);
+    if (!pixbuf) {
+        return false;
+    }
+    return gdk_pixbuf_save(const_cast<GdkPixbuf*>(pixbuf), Util::toGFilename(path).c_str(), "png", nullptr, nullptr);
+}
 
 auto BackgroundImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
-    const auto* pixbuf = getPixbuf();
+    const auto* pixbuf = getBackgroundImagePixbuf(*this);
     if (!pixbuf) {
         return {};
     }

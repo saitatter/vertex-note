@@ -4,8 +4,7 @@
 #include <cstdint>     // for uint32_t
 #include <cstdio>      // for sprintf, size_t
 
-#include <cairo.h>                  // for cairo_surface_t
-#include <gdk-pixbuf/gdk-pixbuf.h>  // for gdk_pixbuf_save
+#include <cairo.h>  // for cairo_surface_t
 #include <glib.h>                   // for g_free, g_strdup_printf
 
 #include "control/pagetype/PageTypeHandler.h"  // for PageTypeHandler
@@ -302,7 +301,7 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
             char* filename = g_strdup_printf("%i", cloneId);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);
             g_free(filename);
-        } else if (p->getBackgroundImage().isAttached() && p->getBackgroundImage().getPixbuf()) {
+        } else if (p->getBackgroundImage().isAttached() && getBackgroundImagePixbuf(p->getBackgroundImage())) {
             char* filename = g_strdup_printf("bg_%d.png", this->attachBgId++);
             background->setAttrib(vn::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);
@@ -379,9 +378,7 @@ void SaveHandler::saveTo(OutputStream* out, const fs::path& filepath, ProgressLi
     for (const auto& info: backgroundImages) {
         if (info.newPath) {
             auto tmpfn = (fs::path(filepath) += ".") += info.newPath.value();
-            // Are we certain that does not modify the GdkPixbuf?
-            if (!gdk_pixbuf_save(const_cast<GdkPixbuf*>(info.image.getPixbuf()), Util::toGFilename(tmpfn).c_str(),
-                                 "png", nullptr, nullptr)) {
+            if (!saveBackgroundImagePng(info.image, tmpfn)) {
                 if (!this->errorMessage.empty()) {
                     this->errorMessage += "\n";
                 }

@@ -1789,7 +1789,7 @@ bool Control::openPngFile(fs::path filepath, bool attachToDocument, int scrollTo
     page->setBackgroundType(PageType(PageTypeFormat::Image));
 
     // Apply correct page size
-    GdkPixbuf* pixbuf = page->getBackgroundImage().getPixbuf();
+    GdkPixbuf* pixbuf = getBackgroundImagePixbuf(page->getBackgroundImage());
     if (pixbuf) {
         page->setSize(gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf));
     } else {
