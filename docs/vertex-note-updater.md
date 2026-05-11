@@ -49,8 +49,8 @@ latest VertexNote release and a concise changelog inside the application.
 - `vn::update::VersionComparator`
   - strips the `vertex-note-v` prefix
   - compares semantic versions without relying on locale-sensitive parsing
-- `xoj::popup::UpdateDialog`
-  - GTK3 dialog responsible only for presentation and user actions
+- `QtUpdatePresentationService`
+  - Qt presentation layer responsible only for user-visible update actions
 
 ## Network Strategy
 

@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include <cairo.h>
 #include <glib.h>
 
 #include "config-git.h"
@@ -49,7 +48,6 @@ std::string getVersionInfo() {
 
     str << "├──shell: Qt" << std::endl;
     str << "├──glib: " << glib_major_version << "." << glib_minor_version << "." << glib_micro_version << std::endl;
-    str << "├──cairo:  " << cairo_version_string() << std::endl;
 
     str << "└──OS info: " << getOsInfo() << std::endl;
 

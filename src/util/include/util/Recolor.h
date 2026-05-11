@@ -25,17 +25,6 @@ public:
 
     ColorU8 convertColor(const ColorU8& other) const;
 
-    /**
-     * recolors the current cairo region (may be preceeded by clip)
-     * recoloring is done by
-     * 1. invert the whole background
-     * 2. scale (multiply) the color spectrum to fit between low/dark and high/light
-     * 3. move (add) the color spectrum to lay exactly in range low/dark and high/light
-     *
-     * @param cr the cairo context to work on
-     */
-    void recolorCurrentCairoRegion(cairo_t* cr) const;
-
 private:
     constexpr friend bool operator==(Recolor const& lhs, Recolor const& rhs) {
         return lhs.difference == rhs.difference && lhs.offset == rhs.offset && lhs.ref == rhs.ref;

@@ -66,6 +66,5 @@ Use this checklist for the remaining Qt UI/UX parity pass after
 
 ## Legacy Boundary
 
-1. Run the GTK shell or GTK fallback build path, if enabled locally.
-2. Confirm toolbar profile fallback still accepts `DRAW`.
-3. Confirm no new Qt-only feature depends on GTK UI widgets or GTK `Control`.
+1. Confirm toolbar profile fallback still accepts `DRAW`.
+2. Confirm no new Qt-only feature depends on GTK UI widgets or GTK `Control`.

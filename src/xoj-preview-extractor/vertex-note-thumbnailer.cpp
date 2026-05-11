@@ -12,17 +12,15 @@
 // Set to true to write a log with errors and debug logs to /tmp/xojtmb.log
 #define DEBUG_THUMBNAILER false
 
-#include <algorithm>  // for max, min
 #include <cstdio>     // for fclose, fopen, fwrite, FILE
 #include <iostream>   // for endl, ostream, basic_ostream
 #include <locale>     // for locale
 #include <string>     // for string, basic_string, allocator
-#include <vector>     // for vector
 
-#include <cairo.h>         // for cairo_create, cairo_image_surf...
-#include <glib.h>          // for gchar, g_get_home_dir, g_getenv
-#include <libintl.h>       // for bindtextdomain, textdomain
-#include <librsvg/rsvg.h>  // for RsvgDimensionData, rsvg_handle...
+#include <QImage>
+
+#include <glib.h>     // for gchar
+#include <libintl.h>  // for bindtextdomain, textdomain
 
 #include "util/PathUtil.h"             // for getLocalePath
 #include "util/PlaceholderString.h"    // for PlaceholderString
@@ -74,45 +72,6 @@ void logMessage(string msg, bool error) {
 #endif
 }
 
-static const std::string iconName = "app.vertexnote.VertexNote";
-
-/**
- * Search for VertexNote icon based on the freedesktop icon theme specification
- */
-fs::path findAppIcon() {
-    std::vector<fs::path> basedirs;
-#if DEBUG_THUMBNAILER
-    basedirs.emplace_back(fs::path("../ui/pixmaps"));
-#endif
-    // $HOME/.icons
-    basedirs.emplace_back(Util::GFilename(g_get_home_dir()).toPath().value_or(fs::path()) / ".icons");
-    // $XDG_DATA_DIRS/icons
-    if (const char* datadirs = g_getenv("XDG_DATA_DIRS")) {
-        std::string_view dds = datadirs;
-        std::string::size_type lastp = 0;
-        std::string::size_type p;
-        while ((p = dds.find(G_SEARCHPATH_SEPARATOR, lastp)) != std::string::npos) {
-            auto file = Util::GFilename::assumeOwnerhip(g_strndup(dds.data() + lastp, p - lastp));
-            basedirs.emplace_back(file.toPath().value_or(fs::path()) / "icons");
-            lastp = p + 1;
-        }
-    }
-    basedirs.emplace_back(fs::path("/usr/share/pixmaps"));
-
-    const auto iconFile = iconName + ".svg";
-    // Search through base directories
-    for (auto&& d: basedirs) {
-        fs::path svgPath;
-        if (fs::exists((svgPath = d / "hicolor/scalable/apps" / iconFile))) {
-            return svgPath;
-        } else if (fs::exists((svgPath = d / iconFile))) {
-            return svgPath;
-        }
-    }
-
-    return "";
-}
-
 int main(int argc, char* argv[]) {
     initLocalisation();
 
@@ -152,54 +111,14 @@ int main(int argc, char* argv[]) {
     gsize dataLen = 0;
     unsigned char* imageData = extractor.getData(dataLen);
 
-    // The following code is for rendering the VertexNote icon on top of thumbnails.
-
-    // Struct for reading imageData into a cairo surface
-    struct ReadClosure {
-        unsigned int pos;
-        unsigned char* data;
-        gsize maxLen;
-    };
-    cairo_read_func_t processRead =
-            (cairo_read_func_t) + [](ReadClosure* closure, unsigned char* data, unsigned int length) {
-                if (closure->pos + length > closure->maxLen) {
-                    return CAIRO_STATUS_READ_ERROR;
-                }
-
-                for (auto i = 0U; i < length; i++) {
-                    data[i] = closure->data[closure->pos + i];
-                }
-                closure->pos += length;
-                return CAIRO_STATUS_SUCCESS;
-            };
-    ReadClosure closure{0, imageData, dataLen};
-    cairo_surface_t* thumbnail = cairo_image_surface_create_from_png_stream(processRead, &closure);
-    // This application is short-lived, so we'll purposefully be sloppy and let the OS free memory.
-    if (cairo_surface_status(thumbnail) == CAIRO_STATUS_SUCCESS) {
-        GError* err = nullptr;
-        const auto width = cairo_image_surface_get_width(thumbnail);
-        const auto height = cairo_image_surface_get_height(thumbnail);
-        const auto iconSize = 0.5 * std::min(width, height);
-
-        const auto svgPath = findAppIcon();
-        RsvgHandle* handle = rsvg_handle_new_from_file(svgPath.c_str(), &err);
-        if (err) {
-            logMessage((_F("xoj-preview-extractor: could not find icon \"{1}\"") % iconName).str(), true);
-        } else {
-            rsvg_handle_set_dpi(handle, 90);  // does the dpi matter for an icon overlay?
-            // Render at bottom right
-            cairo_t* cr = cairo_create(thumbnail);
-            const RsvgRectangle viewport{width - iconSize, height - iconSize, iconSize, iconSize};
-            GError* error = nullptr;
-            rsvg_handle_render_document(handle, cr, &viewport, &error);
-            if (error != nullptr) {
-                g_warning("Could not render the icon");
-                g_clear_error(&error);
-            }
+    QImage thumbnail;
+    if (thumbnail.loadFromData(imageData, static_cast<int>(dataLen), "PNG")) {
+        if (!thumbnail.save(argv[2], "PNG")) {
+            logMessage((_F("xoj-preview-extractor: opening output file \"{1}\" failed") % argv[2]).str(), true);
+            return 6;
         }
-        cairo_surface_write_to_png(thumbnail, argv[2]);
     } else {
-        // Cairo was unable to load the image, so fallback to writing the PNG data to disk.
+        // If Qt cannot decode the preview, preserve the embedded PNG bytes.
         FILE* fp = fopen(argv[2], "wb");
         if (!fp) {
             logMessage((_F("xoj-preview-extractor: opening output file \"{1}\" failed") % argv[2]).str(), true);

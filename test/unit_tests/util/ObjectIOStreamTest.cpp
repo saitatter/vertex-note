@@ -5,7 +5,6 @@
 #include <tuple>
 #include <vector>
 
-#include <cairo.h>
 #include <gtest/gtest.h>
 
 #include "model/Stroke.h"
@@ -26,10 +25,9 @@ std::string serializeDataVector(const std::vector<T>& data) {
     return resStr;
 }
 
-std::string serializeImage(cairo_surface_t* surf) {
+std::string serializeImage(std::string_view imageData) {
     ObjectOutputStream outStream(new BinObjectEncoding);
-    std::string data{reinterpret_cast<char*>(cairo_image_surface_get_data(surf))};
-    outStream.writeImage(data);
+    outStream.writeImage(imageData);
     auto outStr = outStream.stealData();
     auto resStr = std::string{outStr->str, outStr->len};
     g_string_free(outStr, true);
@@ -120,42 +118,24 @@ TEST(UtilObjectIOStream, testReadData) {
 }
 
 TEST(UtilObjectIOStream, testReadImage) {
-    // Generate a "random" image and serialize/deserialize it.
+    // Generate a "random" image byte buffer and serialize/deserialize it.
     std::mt19937 gen(4242);
     std::uniform_int_distribution<uint16_t> distrib(0, 255);
 
-    const cairo_format_t format = CAIRO_FORMAT_ARGB32;
-    cairo_surface_t* surface = cairo_image_surface_create(format, 800, 800);
-    unsigned char* surfaceData = cairo_image_surface_get_data(surface);
+    constexpr int width = 800;
+    constexpr int height = 800;
+    std::string imageData;
+    imageData.resize(width * height * 4);
+    for (auto& byte: imageData) { byte = static_cast<char>(distrib(gen)); }
 
-    int width = cairo_image_surface_get_width(surface);
-    int height = cairo_image_surface_get_height(surface);
-
-    for (int i = 0; i < width * height * 4; ++i) { surfaceData[i] = distrib(gen); }
-
-    std::string strSurface = serializeImage(surface);
+    std::string strSurface = serializeImage(imageData);
 
     ObjectInputStream stream;
     EXPECT_TRUE(stream.read(&strSurface[0], strSurface.size() + 1));
 
     std::string outputStr = stream.readImage();
 
-    cairo_surface_t* outputSurface =
-            cairo_image_surface_create_for_data(reinterpret_cast<unsigned char*>(outputStr.data()), format, width,
-                                                height, cairo_format_stride_for_width(format, width));
-    EXPECT_NE(outputSurface, nullptr);
-
-    int widthOutput = cairo_image_surface_get_width(outputSurface);
-    int heightOutput = cairo_image_surface_get_height(outputSurface);
-    unsigned char* outputData = cairo_image_surface_get_data(surface);
-
-    EXPECT_EQ(width, widthOutput);
-    EXPECT_EQ(height, heightOutput);
-
-    for (int i = 0; i < width * height * 4; ++i) { EXPECT_EQ(surfaceData[i], outputData[i]); }
-
-    cairo_surface_destroy(surface);
-    cairo_surface_destroy(outputSurface);
+    EXPECT_EQ(imageData, outputStr);
 }
 
 TEST(UtilObjectIOStream, testReadString) {

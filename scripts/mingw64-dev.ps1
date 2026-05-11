@@ -1,7 +1,6 @@
 param(
     [ValidateSet("configure", "build", "test", "vertex-tests", "run", "all",
-                 "configure-qt", "build-qt", "run-qt", "all-qt",
-                 "configure-gtk", "build-gtk", "run-gtk", "all-gtk")]
+                 "configure-qt", "build-qt", "run-qt", "all-qt")]
     [string] $Task = "all"
 )
 
@@ -26,24 +25,12 @@ function Invoke-Mingw64 {
     }
 }
 
-function Configure-VertexNote {
-    Invoke-Mingw64 "cmake -S . -B build/mingw64 -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON"
-}
-
 function Configure-VertexNoteQt {
     Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DENABLE_LEGACY_GTK_SHELL=OFF -DCMAKE_PREFIX_PATH=/mingw64"
 }
 
-function Build-VertexNote {
-    Invoke-Mingw64 "cmake --build build/mingw64"
-}
-
 function Build-VertexNoteQt {
     Invoke-Mingw64 "cmake --build build/mingw64-qt --target vertexnote-qt-shell"
-}
-
-function Build-Tests {
-    Invoke-Mingw64 "cmake --build build/mingw64 --target test-units"
 }
 
 function Build-TestsQt {
@@ -61,16 +48,9 @@ switch ($Task) {
     "configure-qt" {
         Configure-VertexNoteQt
     }
-    "configure-gtk" {
-        Configure-VertexNote
-    }
     "build-qt" {
         Configure-VertexNoteQt
         Build-VertexNoteQt
-    }
-    "build-gtk" {
-        Configure-VertexNote
-        Build-VertexNote
     }
     "test" {
         Configure-VertexNoteQt
@@ -87,11 +67,6 @@ switch ($Task) {
         Build-VertexNoteQt
         Invoke-Mingw64 "./build/mingw64-qt/vertex-note-qt-shell.exe"
     }
-    "run-gtk" {
-        Configure-VertexNote
-        Build-VertexNote
-        Invoke-Mingw64 "./build/mingw64/src/vertex-note.exe"
-    }
     "run-qt" {
         Configure-VertexNoteQt
         Build-VertexNoteQt
@@ -102,12 +77,6 @@ switch ($Task) {
         Build-VertexNoteQt
         Build-TestsQt
         Invoke-Mingw64 "./build/mingw64-qt/test/test-units.exe"
-    }
-    "all-gtk" {
-        Configure-VertexNote
-        Build-VertexNote
-        Build-Tests
-        Invoke-Mingw64 "./build/mingw64/test/test-units.exe"
     }
     "all-qt" {
         Configure-VertexNoteQt

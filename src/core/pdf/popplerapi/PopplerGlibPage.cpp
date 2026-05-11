@@ -2,35 +2,44 @@
 
 #include <algorithm>  // for max, min
 #include <cstdlib>    // for abs, NULL, ptrdiff_t
+#include <cstring>    // for memcpy
 #include <memory>     // for make_unique
 #include <sstream>    // for operator<<, ostringstream, bas...
 
 #include <glib.h>          // for g_free, g_utf8_offset_to_pointer
 #include <poppler-page.h>  // for _PopplerRectangle, _PopplerLin...
 #include <poppler.h>       // for PopplerRectangle, g_object_ref
+#include <poppler/cpp/poppler-image.h>
+#include <poppler/cpp/poppler-page-renderer.h>
+#include <poppler/cpp/poppler-page.h>
 
 #include "pdf/base/PdfAction.h"     // for PdfAction
 #include "pdf/base/PdfPage.h"       // for PdfRectangle, PdfPage::Link
 #include "util/Assert.h"               // for xoj_assert
 #include "util/GListView.h"            // for GListView, GListView<>::GListV...
-#include "util/raii/CLibrariesSPtr.h"  // for adopt
-#include "util/raii/CairoWrappers.h"   // for CairoRegionSPtr
 
 #include "PopplerGlibAction.h"  // for PopplerGlibAction
-#include "cairo.h"              // for cairo_region_create, cairo_reg...
 
-PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc): page(page), document(parentDoc) {
+PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc):
+        PopplerGlibPage(page, parentDoc, nullptr) {}
+
+PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc,
+                                 std::shared_ptr<poppler::document> renderDocument):
+        page(page),
+        document(parentDoc),
+        renderDocument(std::move(renderDocument)) {
     if (page != nullptr) {
         g_object_ref(page);
     }
 }
 
-PopplerGlibPage::PopplerGlibPage(const PopplerGlibPage& other): page(other.page), document(other.document) {
+PopplerGlibPage::PopplerGlibPage(const PopplerGlibPage& other):
+        page(other.page),
+        document(other.document),
+        renderDocument(other.renderDocument) {
     if (page != nullptr) {
         g_object_ref(page);
     }
-
-    document = nullptr;
 }
 
 PopplerGlibPage::~PopplerGlibPage() {
@@ -55,6 +64,7 @@ PopplerGlibPage& PopplerGlibPage::operator=(const PopplerGlibPage& other) {
     }
 
     document = other.document;
+    renderDocument = other.renderDocument;
 
     return *this;
 }
@@ -75,32 +85,35 @@ auto PopplerGlibPage::getHeight() const -> double {
 
 auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
         -> vn::util::RasterImageData {
-    if (pixelWidth <= 0 || pixelHeight <= 0) {
+    if (pixelWidth <= 0 || pixelHeight <= 0 || !renderDocument) {
         return {};
     }
 
-    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixelWidth, pixelHeight),
-                                       vn::util::adopt);
-    vn::util::CairoSPtr cr(cairo_create(surface.get()), vn::util::adopt);
+    std::unique_ptr<poppler::page> cppPage(renderDocument->create_page(getPageId()));
+    if (!cppPage) {
+        return {};
+    }
 
-    cairo_set_source_rgb(cr.get(), 1.0, 1.0, 1.0);
-    cairo_paint(cr.get());
-    cairo_scale(cr.get(), pixelWidth / std::max(pageWidth, 1.0), pixelHeight / std::max(pageHeight, 1.0));
-    poppler_page_render(page, cr.get());
-    cairo_surface_flush(surface.get());
+    poppler::page_renderer renderer;
+    renderer.set_render_hints(poppler::page_renderer::antialiasing | poppler::page_renderer::text_antialiasing);
+    renderer.set_image_format(poppler::image::format_argb32);
+    renderer.set_paper_color(0xffffffff);
 
-    auto* data = cairo_image_surface_get_data(surface.get());
-    const int stride = cairo_image_surface_get_stride(surface.get());
-    if (!data || stride <= 0) {
+    const double xres = static_cast<double>(pixelWidth) / std::max(pageWidth, 1.0) * 72.0;
+    const double yres = static_cast<double>(pixelHeight) / std::max(pageHeight, 1.0) * 72.0;
+    const poppler::image image = renderer.render_page(cppPage.get(), xres, yres);
+    if (!image.is_valid() || image.format() != poppler::image::format_argb32 || !image.const_data() ||
+        image.bytes_per_row() <= 0 || image.width() <= 0 || image.height() <= 0) {
         return {};
     }
 
     vn::util::RasterImageData raster;
-    raster.width = pixelWidth;
-    raster.height = pixelHeight;
-    raster.stride = stride;
+    raster.width = image.width();
+    raster.height = image.height();
+    raster.stride = image.bytes_per_row();
     raster.format = vn::util::RasterPixelFormat::Argb32Premultiplied;
-    raster.pixels.assign(data, data + static_cast<std::size_t>(stride * pixelHeight));
+    const auto* data = reinterpret_cast<const unsigned char*>(image.const_data());
+    raster.pixels.assign(data, data + static_cast<std::size_t>(raster.stride * raster.height));
     return raster;
 }
 
@@ -197,22 +210,12 @@ auto PopplerGlibPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle
 
 namespace {
 
-auto selectTextRegion(PopplerPage* page, const PdfRectangle& rect, PdfPageSelectionStyle style)
-        -> vn::util::CairoRegionSPtr {
-    PopplerRectangle pRect = {rect.x1, rect.y1, rect.x2, rect.y2};
-    const auto pStyle = getPopplerSelectionStyle(style);
-    // The computed region is technically wrong for
-    // PdfPageSelectionStyle::Area, but there is no selection preview with
-    // area select.
-    cairo_region_t* region = poppler_page_get_selected_region(page, 1.0, pStyle, &pRect);
-    if (!region) {
-        region = cairo_region_create();
-    }
-    return vn::util::CairoRegionSPtr(region, vn::util::adopt);
-}
-
-cairo_rectangle_int_t cairoRectFromDouble(double x1, double y1, double width, double height) {
-    return {static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(width), static_cast<int>(height)};
+auto intersects(const PopplerRectangle& selection, const PopplerRectangle& rect) -> bool {
+    const auto x1 = std::max(selection.x1, rect.x1);
+    const auto y1 = std::max(selection.y1, rect.y1);
+    const auto x2 = std::min(selection.x2, rect.x2);
+    const auto y2 = std::min(selection.y2, rect.y2);
+    return x2 > x1 && y2 > y1;
 }
 }  // namespace
 
@@ -220,9 +223,8 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         -> TextSelection {
     std::vector<PdfRectangle> textRects;
 
-    // The selection rectangle may be "improper" by having x2 <= x1 or y1 <= y2 (e.g., if user
-    // selects from right to left or from bottom to top). This is incompatible with cairo, so
-    // construct a proper rectangle satisfying x1 <= x2 and y1 <= y2.
+    // The selection rectangle may be "improper" when selecting right-to-left
+    // or bottom-to-top, so construct a normalized rectangle for hit testing.
     PopplerRectangle rect{std::min(selectRect.x1, selectRect.x2), std::min(selectRect.y1, selectRect.y2),
                           std::max(selectRect.x1, selectRect.x2), std::max(selectRect.y1, selectRect.y2)};
 
@@ -240,15 +242,8 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         }
     }
     if (numRects == 0) {
+        g_free(rectArray);
         return {textRects};
-    }
-
-    // construct the region later for area selection, but use poppler's region
-    // for other selection styles
-    vn::util::CairoRegionSPtr region;
-    if (style != PdfPageSelectionStyle::Area) {
-        // do not use the "proper" rectangle here as it may be different from the actual selection.
-        region = selectTextRegion(this->page, selectRect, style);
     }
 
     const auto isSameLine = [&](const auto& r1, const auto& r2) {
@@ -291,23 +286,11 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
             prevRect = nextRect;
         }
         addTextRectsInArea(prevRect);
-
-        region = vn::util::CairoRegionSPtr(cairo_region_create(), vn::util::adopt);
-        for (const PdfRectangle& r: textRects) {
-            const auto x1 = std::min(r.x1, r.x2);
-            const auto x2 = std::max(r.x1, r.x2);
-            const auto y1 = std::min(r.y1, r.y2);
-            const auto y2 = std::max(r.y1, r.y2);
-            cairo_rectangle_int_t crect = cairoRectFromDouble(x1, y1, x2 - x1, y2 - y1);
-            cairo_region_union_rectangle(region.get(), &crect);
-        }
     } else {
         // this is for all other styles (e.g., linear)
 
-        // helper to add only those rectangles that are contained in the selection region
-        const auto addTextRectsInRegion = [&](const PopplerRectangle& r) {
-            auto crect = cairoRectFromDouble(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
-            if (cairo_region_contains_rectangle(region.get(), &crect) == CAIRO_REGION_OVERLAP_IN) {
+        const auto addTextRectsInSelection = [&](const PopplerRectangle& r) {
+            if (intersects(rect, r)) {
                 textRects.emplace_back(r.x1, r.y1, r.x2, r.y2);
             }
         };
@@ -316,23 +299,23 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         for (guint i = 1; i < numRects; i++) {
             PopplerRectangle nextRect = rectArray[i];
             if (isSameLine(prevRect, nextRect)) {
-                // merge the rectangles if they, when combined, are contained in the selection region
+                // merge the rectangles if their combined bounds still intersect the selection
                 auto x1 = std::min(prevRect.x1, nextRect.x2);
                 auto x2 = std::max(prevRect.x2, nextRect.x2);
-                auto crect = cairoRectFromDouble(x1, prevRect.y1, x2 - x1, prevRect.y2 - prevRect.y1);
-                if (cairo_region_contains_rectangle(region.get(), &crect) == CAIRO_REGION_OVERLAP_IN) {
+                const PopplerRectangle merged{x1, prevRect.y1, x2, prevRect.y2};
+                if (intersects(rect, merged)) {
                     prevRect.x1 = x1;
                     prevRect.x2 = x2;
                     continue;
                 }
             }
-            addTextRectsInRegion(prevRect);
+            addTextRectsInSelection(prevRect);
             prevRect = nextRect;
         }
-        addTextRectsInRegion(prevRect);
+        addTextRectsInSelection(prevRect);
     }
 
-    xoj_assert(region.get());
+    g_free(rectArray);
     return {textRects};
 }
 

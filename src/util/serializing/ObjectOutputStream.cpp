@@ -2,8 +2,6 @@
 
 #include <string_view>
 
-#include <cairo.h>  // for CAIRO_STATUS_SUCCESS
-
 #include "util/Assert.h"                      // for xoj_assert
 #include "util/serializing/ObjectEncoding.h"  // for ObjectEncoding
 #include "util/serializing/Serializable.h"    // for XML_VERSION_STR

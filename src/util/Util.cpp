@@ -4,9 +4,7 @@
 #include <cstdlib>  // for system
 #include <string>   // for allocator, string
 #include <utility>  // for move
-#include <vector>   // for vector
 
-#include "util/Color.h"
 #include "util/OutputStream.h"       // for OutputStream
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/i18n.h"               // for FS, _F
@@ -18,24 +16,12 @@
 #endif
 
 
-void Util::cairo_set_source_rgbi(cairo_t* cr, Color color, double alpha) {
-    cairo_set_source_rgba(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0, alpha);
-}
-
-void Util::cairo_set_source_argb(cairo_t* cr, Color color) {
-    cairo_set_source_rgba(cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0, color.alpha / 255.0);
-}
-
 auto Util::getPid() -> PID {
 #if defined(_MSC_VER)
     return GetCurrentProcessId();
 #else
     return ::getpid();
 #endif
-}
-
-void Util::cairo_set_dash_from_vector(cairo_t* cr, const std::vector<double>& dashes, double offset) {
-    cairo_set_dash(cr, dashes.data(), static_cast<int>(dashes.size()), offset);
 }
 
 void Util::writeCoordinateString(OutputStream* out, double xVal, double yVal) {

@@ -1,16 +1,20 @@
 #include "TexImage.h"
 
-#include <memory>
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <memory>
 #include <utility>  // for move
 
 #include <poppler-document.h>  // for poppler_document_ge...
 #include <poppler-page.h>      // for poppler_page_get_size
+#include <poppler/cpp/poppler-document.h>
+#include <poppler/cpp/poppler-image.h>
+#include <poppler/cpp/poppler-page-renderer.h>
+#include <poppler/cpp/poppler-page.h>
 
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
-#include "util/raii/CairoWrappers.h"
 #include "util/raii/GObjectSPtr.h"                // for GObjectSPtr
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
@@ -104,36 +108,44 @@ auto TexImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
         return {};
     }
 
-    vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
-    if (!page) {
+    if (this->binaryData.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
         return {};
     }
 
     const int pixelWidth = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->width))));
     const int pixelHeight = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->height))));
 
-    vn::util::CairoSurfaceSPtr surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixelWidth, pixelHeight),
-                                       vn::util::adopt);
-    vn::util::CairoSPtr cr(cairo_create(surface.get()), vn::util::adopt);
+    std::unique_ptr<poppler::document> renderDocument(poppler::document::load_from_raw_data(
+            this->binaryData.data(), static_cast<int>(this->binaryData.size())));
+    if (!renderDocument || renderDocument->pages() < 1) {
+        return {};
+    }
 
-    cairo_set_source_rgb(cr.get(), 1.0, 1.0, 1.0);
-    cairo_paint(cr.get());
-    cairo_scale(cr.get(), pixelWidth / std::max(this->width, 1.0), pixelHeight / std::max(this->height, 1.0));
-    poppler_page_render(page.get(), cr.get());
-    cairo_surface_flush(surface.get());
+    std::unique_ptr<poppler::page> page(renderDocument->create_page(0));
+    if (!page) {
+        return {};
+    }
 
-    auto* data = cairo_image_surface_get_data(surface.get());
-    const int stride = cairo_image_surface_get_stride(surface.get());
-    if (!data || stride <= 0) {
+    poppler::page_renderer renderer;
+    renderer.set_render_hints(poppler::page_renderer::antialiasing | poppler::page_renderer::text_antialiasing);
+    renderer.set_image_format(poppler::image::format_argb32);
+    renderer.set_paper_color(0xffffffff);
+
+    const double xres = static_cast<double>(pixelWidth) / std::max(this->width, 1.0) * 72.0;
+    const double yres = static_cast<double>(pixelHeight) / std::max(this->height, 1.0) * 72.0;
+    const poppler::image image = renderer.render_page(page.get(), xres, yres);
+    if (!image.is_valid() || image.format() != poppler::image::format_argb32 || !image.const_data() ||
+        image.bytes_per_row() <= 0 || image.width() <= 0 || image.height() <= 0) {
         return {};
     }
 
     xoj::util::RasterImageData raster;
-    raster.width = pixelWidth;
-    raster.height = pixelHeight;
-    raster.stride = stride;
+    raster.width = image.width();
+    raster.height = image.height();
+    raster.stride = image.bytes_per_row();
     raster.format = xoj::util::RasterPixelFormat::Argb32Premultiplied;
-    raster.pixels.assign(data, data + static_cast<std::size_t>(stride * pixelHeight));
+    const auto* data = reinterpret_cast<const unsigned char*>(image.const_data());
+    raster.pixels.assign(data, data + static_cast<std::size_t>(raster.stride * raster.height));
     return raster;
 }
 

@@ -19,7 +19,6 @@
 #include <typeinfo>    // for typeid
 #include <utility>
 
-#include <cairo.h>  // for cairo_t
 #include <glib.h>   // for G_PRIORITY_DEFAULT_IDLE, gboolean, gchar, gint
 
 #include "config-features.h"
@@ -71,8 +70,6 @@ void execInUiThread(Fun&& callback, gint priority = G_PRIORITY_DEFAULT_IDLE) {
         g_idle_add_full(priority, fn, new auto(std::forward<Fun>(callback)), &xoj::util::destroy_cb<Fun>);
     }
 }
-
-void cairo_set_dash_from_vector(cairo_t* cr, const std::vector<double>& dashes, double offset);
 
 /**
  * Format coordinates to use 8 digits of precision https://m.xkcd.com/2170/

@@ -6,17 +6,16 @@ features incrementally.
 
 ## Current Xournal++-Derived Subsystems
 
-- Input dispatch starts in `src/core/gui/PageView.cpp`, where `PageView` selects a tool handler.
-- Freehand strokes are handled by `src/core/control/tools/StrokeHandler.*`.
-- Drag-created shapes are handled by `src/core/control/tools/BaseShapeHandler.*` and subclasses.
-- Click-based spline drawing already exists in `src/core/control/tools/SplineHandler.*`.
+- Input dispatch for the active shell starts in `src/qt/canvas/QtCanvas.*`.
+- Freehand strokes are coordinated by `src/qt/document/QtDocumentController.*`.
+- Drag-created and click-created shapes are handled by Qt document/controller tool paths.
 - The document model is `Document -> NotePage -> Layer -> Element`.
 - Existing persistent element types are stroke, image, teximage, and text.
-- Rendering dispatches through `src/core/view/ElementView.cpp`.
-- Stroke rendering uses Cairo through `src/core/view/StrokeView.*`.
+- Rendering dispatches through backend-neutral render models under `src/core/view/render`.
+- The Qt shell paints those render models with Qt painter renderers.
 - File IO is implemented by `src/core/control/xojfile/SaveHandler.*`,
   `LoadHandler.*`, and `XmlParser.*`.
-- Undo/redo is command-based under `src/core/undo`.
+- Undo/redo for the Qt shell is handled by `QtHistoryEntry` variants.
 
 ## Architectural Rule
 

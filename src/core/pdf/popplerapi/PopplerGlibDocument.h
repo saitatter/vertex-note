@@ -12,10 +12,12 @@
 #pragma once
 
 #include <cstddef>  // for size_t
-#include <string>   // for string
+#include <memory>
+#include <string>  // for string
 
 #include <glib.h>     // for GError, gpointer, gsize
 #include <poppler.h>  // for PopplerDocument
+#include <poppler/cpp/poppler-document.h>
 
 #include "pdf/base/PdfDocumentInterface.h"  // for PdfDocumentInterface
 #include "pdf/base/PdfPage.h"               // for PdfPagePtr
@@ -47,4 +49,6 @@ public:
 
 private:
     PopplerDocument* document = nullptr;
+    std::shared_ptr<std::string> renderDocumentData;
+    std::shared_ptr<poppler::document> renderDocument;
 };

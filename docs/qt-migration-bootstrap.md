@@ -20,9 +20,9 @@ This document tracks the executable slices of the Qt migration.
   - `GeometryHitTest` for vertex/edge intersection detection.
   - `PageRenderSnapshotFactory` builds `PageRenderSnapshot` vectors from
     a `Document`.
-  - `CairoRenderContext` and `QtPainterRenderContext` backend wrappers.
-  - GTK page-type previews now consume the same background render model
-    seam through a Cairo preview renderer.
+  - `QtPainterRenderContext` backend wrapper.
+  - Page previews consume the same background render model seam through Qt
+    preview renderers.
 
 ### Qt shell (`src/qt/`)
 
@@ -132,14 +132,11 @@ powershell -ExecutionPolicy Bypass -File scripts/mingw64-dev.ps1 run
 ```
 
 For local development, the default `configure/build/test/run/all` tasks in
-`scripts/mingw64-dev.ps1` now point at the Qt shell path. The GTK shell remains
-available through the explicit `*-gtk` tasks. The default Qt configure path
-also sets `-DENABLE_LEGACY_GTK_SHELL=OFF`.
+`scripts/mingw64-dev.ps1` point at the Qt shell path. The default Qt configure
+path also sets `-DENABLE_LEGACY_GTK_SHELL=OFF`.
 
 ## Intentional Limits
 
-- The GTK shell is now a deprecated fallback shell. It remains available while
-  plugin/runtime parity and the remaining Cairo-bound workflows are isolated.
 - The Qt shell opens real core documents and supports the full drawing, editing,
   and document management workflow, but does not host the GTK `Control` class.
   Tool management, undo/redo, and all editing operations are implemented
@@ -292,35 +289,30 @@ latest Qt parity commits.
      `docs/qt-manual-smoke-checklist.md`.
 
 8. **Legacy boundary cleanup**
-   - ✓ Enforce that `src/qt` does not include GTK/GDK/Cairo headers or GTK
+   - ✓ Enforce that `src/qt` does not include GTK/GDK/legacy drawing headers or GTK
      `Control`.
    - ✓ Document current allowed legacy boundaries in
      `docs/qt-legacy-boundary-audit.md`.
    - Continue extracting UI-neutral services when new Qt behavior would
      otherwise need GTK control code.
-   - Keep GTK fallback build green while it exists.
+   - Keep configure reporting zero legacy GTK/render files.
 
-## GTK/Cairo Deprecation Order
+## GTK/Legacy Render Deprecation Order
 
 The shell migration now follows this order:
 
 1. Officially deprecate the GTK shell and stop treating it as the primary UI.
-2. Isolate the remaining Cairo/GTK paths into explicit legacy boundaries
+2. Isolate the remaining legacy GTK/render paths into explicit boundaries
    (`legacy/gtk`, `legacy/render`). The build now tracks these surfaces through
    `src/legacy/LegacyBoundaries.cmake` and reports their size during configure.
 3. Make the Qt shell the only active application shell. This is now true for
-   local development workflows (`configure/build/test/run/all` default to Qt);
-   the GTK shell remains available only through explicit `*-gtk` fallback tasks.
-4. Remove Cairo once no active runtime, preview, export, or print path still
-   depends on it.
+   local development workflows (`configure/build/test/run/all` target Qt).
+4. Keep legacy GTK/render boundary counts at zero.
 
 ### Legacy-only build targets
 
-The following build targets now stay behind `ENABLE_LEGACY_GTK_SHELL` because
-they do not participate in the active Qt shell path:
-
-- `test-gtk-integration`
-- `vertexnote-thumbnailer`
+The local MinGW helper script no longer exposes GTK fallback tasks. The
+thumbnailer is kept as a Qt-backed utility for platforms that install it.
 
 ## Completed Slices
 

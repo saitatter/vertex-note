@@ -9,9 +9,6 @@ ExportBackend ExportBackend::fromString(const char* str) {
 }
 
 ExportBackend ExportBackend::fromString(std::string_view str) {
-    if (str == "cairo") {
-        return ExportBackend::CAIRO;
-    }
 #ifdef ENABLE_QPDF
     if (str == "qpdf") {
         return ExportBackend::QPDF;
@@ -26,18 +23,17 @@ ExportBackend ExportBackend::fromString(std::string_view str) {
 }
 
 const char* ExportBackend::listAvailableBackends() {
-    static const char* availablePdfExportBackends = "cairo"
 #ifdef ENABLE_QPDF
-                                                    " qpdf"
+    static const char* availablePdfExportBackends = "default qpdf";
+#else
+    static const char* availablePdfExportBackends = "default";
 #endif
-            ;
     return availablePdfExportBackends;
 }
 
 std::vector<std::pair<const char*, const char*>> ExportBackend::getPrettyNamesOfAvailableBackends() {
     std::vector<std::pair<const char*, const char*>> res;
     res.emplace_back(DEFAULT_ID_STRING, _("Default"));
-    res.emplace_back("cairo", "Cairo");
 #ifdef ENABLE_QPDF
     res.emplace_back("qpdf", "QPDF");
 #endif

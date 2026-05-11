@@ -5,7 +5,6 @@
 [![Issues](https://img.shields.io/github/issues/saitatter/vertex-note)](https://github.com/saitatter/vertex-note/issues)
 ![Made with C++](https://img.shields.io/badge/Made%20with-C%2B%2B-00599C?logo=cplusplus&logoColor=white)
 ![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)
-![Cairo Legacy](https://img.shields.io/badge/Rendering-Cairo%20Legacy-8A2BE2)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
 > CAD-inspired technical note-taking based on Xournal++, with precision geometry, vertex editing, snapping, and future lightweight 3D wireframe tools.
@@ -28,7 +27,7 @@ VertexNote is a long-term fork of **Xournal++**. The goal is not to replace Xour
 
 ## 🧭 Current Status
 
-VertexNote has a working geometry system and a Qt Widgets shell. The inherited GTK3 shell has been removed; remaining legacy work is limited to Cairo/Poppler-era rendering, preview, and export paths.
+VertexNote has a working geometry system and a Qt Widgets shell. The inherited GTK3 shell has been removed; preview rendering and thumbnail extraction now use Qt/Poppler C++ paths.
 
 | Area | Status |
 |------|--------|
@@ -157,7 +156,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-Cairo, Poppler, CMake, Qt6, and platform-specific dependencies are still required for several migration-era rendering/export paths. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
+Poppler, CMake, Qt6, and platform-specific dependencies are still required for document loading, PDF handling, and packaging. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
 
 - Linux setup: `linux-setup/`
 - macOS setup: `mac-setup/`

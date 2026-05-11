@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "util/raii/CairoWrappers.h"
+#include "util/raii/CLibrariesSPtr.h"
 #include "util/raii/GObjectSPtr.h"
 
 namespace {

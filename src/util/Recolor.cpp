@@ -38,20 +38,3 @@ ColorU8 Recolor::convertColor(const ColorU8& other) const {
                                           offset.blue)),
     };
 }
-
-void Recolor::recolorCurrentCairoRegion(cairo_t* cr) const {
-    // Apply inversion
-    cairo_set_operator(cr, CAIRO_OPERATOR_DIFFERENCE);
-    Util::cairo_set_source_rgbi(cr, ref);
-    cairo_paint(cr);
-
-    // Scale the spectrum
-    cairo_set_operator(cr, CAIRO_OPERATOR_MULTIPLY);
-    Util::cairo_set_source_rgbi(cr, difference);
-    cairo_paint(cr);
-
-    // Move the spectrum
-    cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-    Util::cairo_set_source_rgbi(cr, offset);
-    cairo_paint(cr);
-}
