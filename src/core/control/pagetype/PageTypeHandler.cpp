@@ -1,8 +1,11 @@
 #include "PageTypeHandler.h"
 
 #include <algorithm>
+#include <iostream>
 #include <string_view>
 #include <utility>
+
+#include <QSettings>
 
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"
@@ -41,45 +44,24 @@ PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
 PageTypeHandler::~PageTypeHandler() = default;
 
 auto PageTypeHandler::parseIni(fs::path const& filepath) -> bool {
-    GKeyFile* config = g_key_file_new();
-    g_key_file_set_list_separator(config, ',');
-    if (!g_key_file_load_from_file(config, Util::toGFilename(filepath).c_str(), G_KEY_FILE_NONE, nullptr)) {
-        g_key_file_free(config);
+    if (!fs::exists(filepath)) {
         return false;
     }
 
-    gsize length = 0;
-    gchar** groups = g_key_file_get_groups(config, &length);
-
-    for (gsize i = 0; i < length; i++) { loadFormat(config, groups[i]); }
-
-    g_strfreev(groups);
-    g_key_file_free(config);
+    QSettings config(QString::fromUtf8(Util::toGFilename(filepath).c_str()), QSettings::IniFormat);
+    if (config.status() != QSettings::NoError) {
+        return false;
+    }
+    for (const auto& group: config.childGroups()) { loadFormat(config, group); }
     return true;
 }
 
-void PageTypeHandler::loadFormat(GKeyFile* config, const char* group) {
-    std::string strName;
-    gchar* name = g_key_file_get_locale_string(config, group, "name", nullptr, nullptr);
-    if (name != nullptr) {
-        strName = name;
-        g_free(name);
-    }
-
-    std::string strFormat;
-    gchar* format = g_key_file_get_string(config, group, "format", nullptr);
-    if (format != nullptr) {
-        strFormat = format;
-        g_free(format);
-    }
-
-    std::string strConfig;
-    gchar* cconfig = g_key_file_get_string(config, group, "config", nullptr);
-    if (cconfig != nullptr) {
-        strConfig = cconfig;
-        g_free(cconfig);
-    }
-
+void PageTypeHandler::loadFormat(QSettings& config, const QString& group) {
+    config.beginGroup(group);
+    std::string strName = config.value("name").toString().toStdString();
+    std::string strFormat = config.value("format").toString().toStdString();
+    std::string strConfig = config.value("config").toString().toStdString();
+    config.endGroup();
     addPageTypeInfo(strName, getPageTypeFormatForString(strFormat), strConfig, types);
 }
 
@@ -125,9 +107,8 @@ auto PageTypeHandler::getPageTypeFormatForString(std::string_view format) -> Pag
     if (format == ":image") {
         return PageTypeFormat::Image;
     }
-    g_warning("PageTypeHandler::getPageTypeFormatForString: unknown PageType: \"" SV_FMT "\". Replacing with "
-              "PageTypeFormat::Plain",
-              SV_ARG(format));
+    std::cerr << "PageTypeHandler::getPageTypeFormatForString: unknown PageType: \"" << format
+              << "\". Replacing with PageTypeFormat::Plain\n";
     return PageTypeFormat::Plain;
 }
 
@@ -154,8 +135,7 @@ auto PageTypeHandler::getStringForPageTypeFormat(const PageTypeFormat& format) -
         case PageTypeFormat::Image:
             return ":image";
     }
-    g_warning("PageTypeHandler::getStringForPageTypeFormat: unknown PageType: %d. Replacing with "
-              "PageTypeFormat::Ruled",
-              static_cast<int>(format));
+    std::cerr << "PageTypeHandler::getStringForPageTypeFormat: unknown PageType: " << static_cast<int>(format)
+              << ". Replacing with PageTypeFormat::Ruled\n";
     return "ruled";
 }
