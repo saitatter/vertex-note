@@ -76,7 +76,6 @@ void AudioPlayer::stop() {
 
     // Reset the queue for the next playback
     this->audioQueue->reset();
-    notifyPlaybackState(false, false);
 }
 
 void AudioPlayer::seek(int seconds) {
