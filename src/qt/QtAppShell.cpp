@@ -571,6 +571,7 @@ QtAppShell::QtAppShell():
                 updateStatusBarLabels();
             },
             [this]() { return this->window.canvas()->layoutColumnsRows(); });
+    this->luaPlugins.configureDisplayAccess([this]() { return this->currentSettings.displayDpi; });
     this->luaPlugins.configureViewportAccess(
             [this]() { return this->window.canvas()->viewport(); },
             [this](double x, double y, bool relative) {
@@ -2656,6 +2657,10 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("page/addVerticalSpaceAmountBelow"),
                            this->currentSettings.addVerticalSpaceAmountBelow)
                     .toInt();
+    this->currentSettings.sizeUnit =
+            settings.value(QStringLiteral("page/sizeUnit"), QString::fromStdString(this->currentSettings.sizeUnit))
+                    .toString()
+                    .toStdString();
     this->currentSettings.undoHistoryLimit =
             settings.value(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit).toInt();
     this->currentSettings.autosaveEnabled =
@@ -2672,6 +2677,8 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.presentationModeDefault =
             settings.value(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault)
                     .toBool();
+    this->currentSettings.displayDpi =
+            settings.value(QStringLiteral("view/displayDpi"), this->currentSettings.displayDpi).toInt();
     this->currentSettings.geometrySnapDefault =
             settings.value(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault).toBool();
     this->currentSettings.gridSnapDefault =
@@ -3036,6 +3043,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
     settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
+    settings.setValue(QStringLiteral("page/sizeUnit"), QString::fromStdString(this->currentSettings.sizeUnit));
     settings.setValue(QStringLiteral("tools/defaultFontName"),
                       QString::fromStdString(this->currentSettings.defaultFontName));
     settings.setValue(QStringLiteral("tools/defaultFontSize"), this->currentSettings.defaultFontSize);
@@ -3056,6 +3064,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/automaticUpdateCheckEnabled"),
                       this->currentSettings.automaticUpdateCheckEnabled);
     settings.setValue(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault);
+    settings.setValue(QStringLiteral("view/displayDpi"), this->currentSettings.displayDpi);
     settings.setValue(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault);
     settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
     settings.setValue(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault);

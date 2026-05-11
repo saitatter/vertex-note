@@ -59,6 +59,7 @@ public:
     void configureColorPaletteAccess(std::function<std::vector<QtPaletteColor>()> colorPaletteProvider);
     void configureViewAccess(std::function<double()> zoomProvider, std::function<void(double)> zoomSetter,
                              std::function<int()> layoutSpanProvider);
+    void configureDisplayAccess(std::function<int()> displayDpiProvider);
     void configureViewportAccess(std::function<vn::ui::common::CanvasViewport()> viewportProvider,
                                  std::function<void(double, double, bool)> viewportScroller);
     void configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
@@ -80,6 +81,7 @@ public:
     [[nodiscard]] auto currentZoom() const -> double;
     void setZoom(double zoom) const;
     [[nodiscard]] auto currentLayoutSpan() const -> int;
+    [[nodiscard]] auto currentDisplayDpi() const -> int;
     [[nodiscard]] auto currentViewport() const -> vn::ui::common::CanvasViewport;
     void scrollViewportTo(double x, double y, bool relative) const;
     [[nodiscard]] auto currentFont() const -> std::pair<std::string, double>;
@@ -108,6 +110,7 @@ private:
     std::function<double()> zoomProvider;
     std::function<void(double)> zoomSetter;
     std::function<int()> layoutSpanProvider;
+    std::function<int()> displayDpiProvider;
     std::function<vn::ui::common::CanvasViewport()> viewportProvider;
     std::function<void(double, double, bool)> viewportScroller;
     std::function<std::pair<std::string, double>()> fontProvider;

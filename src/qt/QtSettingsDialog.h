@@ -45,6 +45,7 @@ struct QtSettings {
     bool autoloadMostRecent = false;
     bool automaticUpdateCheckEnabled = false;
     bool presentationModeDefault = false;
+    int displayDpi = -1;
     bool addHorizontalSpace = false;
     int addHorizontalSpaceAmountRight = 150;
     int addHorizontalSpaceAmountLeft = 150;
@@ -101,6 +102,7 @@ struct QtSettings {
     bool pdfEagerPageCleanup = false;
     double pdfPageRerenderThreshold = 5.0;
     std::string emptyLastPageAppend = "disabled";
+    std::string sizeUnit = "cm";
     std::string latexTemplatePath;
     std::string audioFolder;
     std::string lastOpenPath;
@@ -140,6 +142,7 @@ private:
     QComboBox* eraserModeCombo = nullptr;
     QDoubleSpinBox* pageWidthSpin = nullptr;
     QDoubleSpinBox* pageHeightSpin = nullptr;
+    QComboBox* sizeUnitCombo = nullptr;
     QCheckBox* addHorizontalSpaceCheck = nullptr;
     QSpinBox* addHorizontalSpaceLeftSpin = nullptr;
     QSpinBox* addHorizontalSpaceRightSpin = nullptr;
@@ -152,6 +155,7 @@ private:
     QCheckBox* autoloadMostRecentCheck = nullptr;
     QCheckBox* automaticUpdateCheckEnabledCheck = nullptr;
     QCheckBox* presentationModeDefaultCheck = nullptr;
+    QSpinBox* displayDpiSpin = nullptr;
     QCheckBox* geoSnapCheck = nullptr;
     QCheckBox* gridSnapCheck = nullptr;
     QCheckBox* rotationSnapCheck = nullptr;

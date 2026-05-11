@@ -26,6 +26,7 @@
 #include <QFileDialog>
 #include <QInputDevice>
 #include <QPointingDevice>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTableWidget>
@@ -33,6 +34,7 @@
 #include <QVBoxLayout>
 
 #include "QtInputDeviceKey.h"
+#include "model/FormatDefinitions.h"
 
 namespace {
 
@@ -56,6 +58,21 @@ auto makeColorButton(QWidget* parent, const QColor& initialColor) -> QPushButton
     updateColorButton(button, initialColor);
     return button;
 }
+
+auto unitScale(std::string_view unitName) -> double {
+    for (int index = 0; index < NOTE_UNIT_COUNT; ++index) {
+        if (unitName == NOTE_UNITS[index].name) {
+            return NOTE_UNITS[index].scale;
+        }
+    }
+    return NOTE_UNITS[0].scale;
+}
+
+auto currentSizeUnitName(const QComboBox* combo) -> std::string {
+    return combo ? combo->currentData().toString().toStdString() : std::string(NOTE_UNITS[0].name);
+}
+
+auto currentSizeUnitScale(const QComboBox* combo) -> double { return unitScale(currentSizeUnitName(combo)); }
 
 void populatePointerActionCombo(QComboBox* combo, QtPointerButtonAction current) {
     combo->addItem(QStringLiteral("Normal"), static_cast<int>(QtPointerButtonAction::None));
@@ -226,21 +243,47 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     auto* pagePage = new QWidget(this);
     auto* pageLayout = new QFormLayout(pagePage);
 
+    this->sizeUnitCombo = new QComboBox(pagePage);
+    for (int index = 0; index < NOTE_UNIT_COUNT; ++index) {
+        this->sizeUnitCombo->addItem(QString::fromUtf8(NOTE_UNITS[index].name),
+                                     QString::fromUtf8(NOTE_UNITS[index].name));
+    }
+    const int unitIndex = this->sizeUnitCombo->findData(QString::fromStdString(current.sizeUnit));
+    this->sizeUnitCombo->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
+    pageLayout->addRow(QStringLiteral("Size unit:"), this->sizeUnitCombo);
+
     this->pageWidthSpin = new QDoubleSpinBox(pagePage);
-    this->pageWidthSpin->setRange(50.0, 5000.0);
-    this->pageWidthSpin->setSingleStep(10.0);
-    this->pageWidthSpin->setDecimals(1);
-    this->pageWidthSpin->setValue(current.defaultPageWidth);
-    this->pageWidthSpin->setSuffix(QStringLiteral(" pt"));
     pageLayout->addRow(QStringLiteral("Default page width:"), this->pageWidthSpin);
 
     this->pageHeightSpin = new QDoubleSpinBox(pagePage);
-    this->pageHeightSpin->setRange(50.0, 5000.0);
-    this->pageHeightSpin->setSingleStep(10.0);
-    this->pageHeightSpin->setDecimals(1);
-    this->pageHeightSpin->setValue(current.defaultPageHeight);
-    this->pageHeightSpin->setSuffix(QStringLiteral(" pt"));
     pageLayout->addRow(QStringLiteral("Default page height:"), this->pageHeightSpin);
+
+    double pageSizeScale = currentSizeUnitScale(this->sizeUnitCombo);
+    const auto configurePageSizeSpin = [](QDoubleSpinBox* spin, double scale, std::string_view unitName) {
+        spin->setRange(50.0 / scale, 5000.0 / scale);
+        spin->setSingleStep(unitName == "points" ? 10.0 : 0.5);
+        spin->setDecimals(unitName == "points" ? 1 : 2);
+        spin->setSuffix(QStringLiteral(" ") + QString::fromUtf8(unitName.data(), static_cast<int>(unitName.size())));
+    };
+    const auto configurePageSizeSpins = [this, configurePageSizeSpin](double scale) {
+        const auto unitName = currentSizeUnitName(this->sizeUnitCombo);
+        configurePageSizeSpin(this->pageWidthSpin, scale, unitName);
+        configurePageSizeSpin(this->pageHeightSpin, scale, unitName);
+    };
+    configurePageSizeSpins(pageSizeScale);
+    this->pageWidthSpin->setValue(current.defaultPageWidth / pageSizeScale);
+    this->pageHeightSpin->setValue(current.defaultPageHeight / pageSizeScale);
+    QObject::connect(this->sizeUnitCombo, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+                     [this, configurePageSizeSpins, pageSizeScale]() mutable {
+                         const double widthPoints = this->pageWidthSpin->value() * pageSizeScale;
+                         const double heightPoints = this->pageHeightSpin->value() * pageSizeScale;
+                         pageSizeScale = currentSizeUnitScale(this->sizeUnitCombo);
+                         QSignalBlocker widthBlocker(this->pageWidthSpin);
+                         QSignalBlocker heightBlocker(this->pageHeightSpin);
+                         configurePageSizeSpins(pageSizeScale);
+                         this->pageWidthSpin->setValue(widthPoints / pageSizeScale);
+                         this->pageHeightSpin->setValue(heightPoints / pageSizeScale);
+                     });
 
     this->addHorizontalSpaceCheck = new QCheckBox(pagePage);
     this->addHorizontalSpaceCheck->setChecked(current.addHorizontalSpace);
@@ -307,6 +350,12 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->presentationModeDefaultCheck = new QCheckBox(generalPage);
     this->presentationModeDefaultCheck->setChecked(current.presentationModeDefault);
     generalLayout->addRow(QStringLiteral("Start in presentation mode:"), this->presentationModeDefaultCheck);
+
+    this->displayDpiSpin = new QSpinBox(generalPage);
+    this->displayDpiSpin->setRange(-1, 1000);
+    this->displayDpiSpin->setSpecialValueText(QStringLiteral("Automatic"));
+    this->displayDpiSpin->setValue(current.displayDpi);
+    generalLayout->addRow(QStringLiteral("Display DPI:"), this->displayDpiSpin);
 
     this->geoSnapCheck = new QCheckBox(generalPage);
     this->geoSnapCheck->setChecked(current.geometrySnapDefault);
@@ -810,14 +859,15 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .defaultPressureSensitive = this->pressureCheck->isChecked(),
             .defaultEraserMode = this->eraserModeCombo->currentIndex() == 1 ? QtEraserMode::Segment
                                                                             : QtEraserMode::Standard,
-            .defaultPageWidth = this->pageWidthSpin->value(),
-            .defaultPageHeight = this->pageHeightSpin->value(),
+            .defaultPageWidth = this->pageWidthSpin->value() * currentSizeUnitScale(this->sizeUnitCombo),
+            .defaultPageHeight = this->pageHeightSpin->value() * currentSizeUnitScale(this->sizeUnitCombo),
             .undoHistoryLimit = this->undoLimitSpin->value(),
             .autosaveEnabled = this->autosaveEnabledCheck->isChecked(),
             .autosaveTimeoutMinutes = this->autosaveTimeoutSpin->value(),
             .autoloadMostRecent = this->autoloadMostRecentCheck->isChecked(),
             .automaticUpdateCheckEnabled = this->automaticUpdateCheckEnabledCheck->isChecked(),
             .presentationModeDefault = this->presentationModeDefaultCheck->isChecked(),
+            .displayDpi = this->displayDpiSpin->value(),
             .addHorizontalSpace = this->addHorizontalSpaceCheck->isChecked(),
             .addHorizontalSpaceAmountRight = this->addHorizontalSpaceRightSpin->value(),
             .addHorizontalSpaceAmountLeft = this->addHorizontalSpaceLeftSpin->value(),
@@ -889,6 +939,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .pdfEagerPageCleanup = this->pdfEagerCleanupCheck->isChecked(),
             .pdfPageRerenderThreshold = this->pdfPageRerenderThresholdSpin->value(),
             .emptyLastPageAppend = this->emptyLastPageAppendCombo->currentData().toString().toStdString(),
+            .sizeUnit = currentSizeUnitName(this->sizeUnitCombo),
             .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
             .lastOpenPath = this->lastOpenPath,

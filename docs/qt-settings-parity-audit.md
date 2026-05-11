@@ -24,12 +24,14 @@ This audit compares GTK `Settings` keys from
 | `numColumns`, `numRows`, `viewFixedRows` | Implemented | `view/layoutColumnsRows`; positive = columns, negative = rows. |
 | `showPairedPages` | Implemented | `view/pairedPages`; also synchronized with 2 columns. |
 | `layoutVertical`, `layoutRightToLeft`, `layoutBottomToTop` | Implemented | `view/verticalLayout`, `view/layoutRtl`, `view/layoutBtt`. |
+| `displayDpi` | Partial / Qt-only equivalent | `view/displayDpi`; exposed as Automatic/manual DPI and used by the Qt Lua plugin `app.getDisplayDpi()` API. Qt canvas zoom remains device-independent. |
 | `autoloadPdfXoj` | Implemented | `pdf/autoloadPdfXoj`. |
 | `defaultPdfExportName` | Implemented | `pdf/defaultExportName`. |
 | `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup`, `pageRerenderThreshold` | Implemented | `pdf/pageCacheSize`, `pdf/preloadPagesBefore`, `pdf/preloadPagesAfter`, `pdf/eagerPageCleanup`, `pdf/pageRerenderThreshold`; applied to the Qt PDF background raster cache. |
 | `pageTemplate` | Partial | Qt persists default page width/height under `page/defaultWidth` and `page/defaultHeight`; background template presets exist in the Qt page template flow. |
 | `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Qt-only equivalent | `page/addHorizontalSpace*` and `page/addVerticalSpace*`; applied to Qt canvas scrollable page padding. The Vertical Space tool also supports click-drag insertion with undo/redo. |
 | `emptyLastPageAppend` | Implemented | `page/emptyLastPageAppend`; Qt appends a blank page on draw/scroll at the last page when no PDF is attached. |
+| `sizeUnit` | Implemented | `page/sizeUnit`; Qt page defaults show cm/in/points while preserving model values in points. |
 | `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`. |
 | `pluginEnabled`, `pluginDisabled` | Qt-only equivalent | Qt stores per-plugin enabled overrides under `plugins/enabled/<plugin-key>`. |
 | `latexSettings.globalTemplatePath` | Implemented | `latex/templatePath`. |
@@ -75,12 +77,10 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
-| `displayDpi` | Unsupported | Qt does not expose a manual DPI override setting. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
-| `sizeUnit` | Unsupported | Qt numeric settings currently use fixed point/second units in labels. |
 | `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |

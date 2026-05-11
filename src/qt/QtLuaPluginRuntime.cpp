@@ -1888,10 +1888,7 @@ auto luaGetFolder(lua_State* lua) -> int {
 
 auto luaGetDisplayDpi(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
-    QScreen* screen = plugin && plugin->runtime && plugin->runtime->parentWidget()
-                              ? plugin->runtime->parentWidget()->screen()
-                              : QGuiApplication::primaryScreen();
-    lua_pushinteger(lua, static_cast<lua_Integer>(std::lround(screen ? screen->logicalDotsPerInch() : 96.0)));
+    lua_pushinteger(lua, static_cast<lua_Integer>(plugin && plugin->runtime ? plugin->runtime->currentDisplayDpi() : 96));
     return 1;
 }
 
@@ -2625,6 +2622,10 @@ void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvide
     this->layoutSpanProvider = std::move(layoutSpanProvider);
 }
 
+void QtLuaPluginRuntime::configureDisplayAccess(std::function<int()> displayDpiProvider) {
+    this->displayDpiProvider = std::move(displayDpiProvider);
+}
+
 void QtLuaPluginRuntime::configureViewportAccess(
         std::function<vn::ui::common::CanvasViewport()> viewportProvider,
         std::function<void(double, double, bool)> viewportScroller) {
@@ -2770,6 +2771,18 @@ void QtLuaPluginRuntime::setZoom(double zoom) const {
 
 auto QtLuaPluginRuntime::currentLayoutSpan() const -> int {
     return this->layoutSpanProvider ? this->layoutSpanProvider() : 1;
+}
+
+auto QtLuaPluginRuntime::currentDisplayDpi() const -> int {
+    if (this->displayDpiProvider) {
+        const int configuredDpi = this->displayDpiProvider();
+        if (configuredDpi > 0) {
+            return configuredDpi;
+        }
+    }
+
+    QScreen* screen = this->parent ? this->parent->screen() : QGuiApplication::primaryScreen();
+    return static_cast<int>(std::lround(screen ? screen->logicalDotsPerInch() : 96.0));
 }
 
 auto QtLuaPluginRuntime::currentViewport() const -> vn::ui::common::CanvasViewport {
