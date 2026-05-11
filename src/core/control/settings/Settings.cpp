@@ -2170,7 +2170,8 @@ void Settings::customSettingsChanged() { save(); }
 
 auto Settings::getButtonConfig(unsigned int id) -> ButtonConfig* {
     if (id >= this->buttonConfig.size()) {
-        g_error("Settings::getButtonConfig try to get id=%i out of range!", id);
+        std::cerr << "Settings::getButtonConfig try to get id=" << id << " out of range!\n";
+        std::abort();
         return nullptr;
     }
     return this->buttonConfig[id].get();

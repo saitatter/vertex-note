@@ -15,7 +15,6 @@
 #include <locale>
 #include <stdexcept>
 
-#include <glib.h>
 #include <gtest/gtest.h>
 #include <QApplication>
 
@@ -26,7 +25,7 @@ void initTestLocalisation() {
     try {
         std::locale::global(std::locale(""));
     } catch (const std::runtime_error& e) {
-        g_warning("VertexNote tests: System default locale could not be set: %s", e.what());
+        std::cerr << "VertexNote tests: System default locale could not be set: " << e.what() << '\n';
     }
     std::cout.imbue(std::locale());
 }
