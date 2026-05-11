@@ -14,7 +14,8 @@ set(vertexnote_qt_sources
         QtAppShellJournalCommands.cpp
         QtAppShellNavigationCommands.cpp
         QtAppShellNavigation.cpp
-        QtAppShellPersistentState.cpp
+        QtAppShellPersistentStateLoad.cpp
+        QtAppShellPersistentStateSave.cpp
         QtAppShellSettings.cpp
         QtAppShellStatus.cpp
         QtAppShellToolbar.cpp
