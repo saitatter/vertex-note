@@ -26,6 +26,12 @@ auto ImageRenderModelFactory::fromImage(const Image& image) -> ImageRenderModel 
 auto ImageRenderModelFactory::fromTexImage(const TexImage& image) -> ImageRenderModel {
     ImageRenderModel model;
     model.rasterContent = image.renderPreviewRaster();
+    if (model.rasterContent.empty()) {
+        const auto& binaryData = image.getBinaryData();
+        if (binaryData.size() >= 4 && binaryData.substr(1, 3) == "PNG") {
+            model.encodedBytes = binaryData;
+        }
+    }
     model.x = image.getX();
     model.y = image.getY();
     model.width = image.getElementWidth();

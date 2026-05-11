@@ -20,8 +20,6 @@
 #include <unordered_map>  // for unordered_map
 #include <vector>         // for vector
 
-#include <cairo.h>    // for cairo_surface_t
-
 #include "pdf/base/PdfDocument.h"  // for PdfDocument
 #include "pdf/base/PdfPage.h"      // for PdfPagePtr
 #include "util/PathUtil.h"            // for PathStorageMode
@@ -87,8 +85,8 @@ public:
 
     bool isAttachPdf() const;
 
-    vn::util::CairoSurfaceSPtr getPreview() const;
-    void setPreview(vn::util::CairoSurfaceSPtr preview);
+    const std::string& getPreviewPngData() const;
+    void setPreviewPngData(std::string previewPngData);
 
     void lock();
     void unlock();
@@ -149,9 +147,9 @@ private:
     bool createBackupOnSave = false;
 
     /**
-     * The preview for the file
+     * The preview PNG bytes for the file
      */
-    vn::util::CairoSurfaceSPtr preview;
+    std::string previewPngData;
 
     /**
      * The lock of the document

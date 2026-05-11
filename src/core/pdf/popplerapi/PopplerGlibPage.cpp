@@ -73,16 +73,6 @@ auto PopplerGlibPage::getHeight() const -> double {
     return height;
 }
 
-void PopplerGlibPage::render(cairo_t* cr) const {
-    cairo_save(cr);
-    cairo_set_source_rgb(cr, 1., 1., 1.);
-    cairo_paint(cr);
-    poppler_page_render(page, cr);
-    cairo_restore(cr);
-}
-
-void PopplerGlibPage::renderForPrinting(cairo_t* cr) const { poppler_page_render_for_printing(page, cr); }
-
 auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
         -> vn::util::RasterImageData {
     if (pixelWidth <= 0 || pixelHeight <= 0) {
@@ -205,17 +195,22 @@ auto PopplerGlibPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle
     }
 }
 
-auto PopplerGlibPage::selectTextRegion(const PdfRectangle& rect, PdfPageSelectionStyle style) -> cairo_region_t* {
+namespace {
+
+auto selectTextRegion(PopplerPage* page, const PdfRectangle& rect, PdfPageSelectionStyle style)
+        -> vn::util::CairoRegionSPtr {
     PopplerRectangle pRect = {rect.x1, rect.y1, rect.x2, rect.y2};
     const auto pStyle = getPopplerSelectionStyle(style);
     // The computed region is technically wrong for
     // PdfPageSelectionStyle::Area, but there is no selection preview with
     // area select.
     cairo_region_t* region = poppler_page_get_selected_region(page, 1.0, pStyle, &pRect);
-    return region;
+    if (!region) {
+        region = cairo_region_create();
+    }
+    return vn::util::CairoRegionSPtr(region, vn::util::adopt);
 }
 
-namespace {
 cairo_rectangle_int_t cairoRectFromDouble(double x1, double y1, double width, double height) {
     return {static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(width), static_cast<int>(height)};
 }
@@ -237,20 +232,23 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         // We always want to select in the "proper" rectangle.
         PopplerRectangle area{rect.x1, rect.y1, rect.x2, rect.y2};
         if (!poppler_page_get_text_layout_for_area(this->page, &area, &rectArray, &numRects)) {
-            return {vn::util::CairoRegionSPtr(cairo_region_create(), vn::util::adopt), textRects};
+            return {textRects};
         }
     } else {
         if (!poppler_page_get_text_layout(this->page, &rectArray, &numRects)) {
-            return {vn::util::CairoRegionSPtr(cairo_region_create(), vn::util::adopt), textRects};
+            return {textRects};
         }
+    }
+    if (numRects == 0) {
+        return {textRects};
     }
 
     // construct the region later for area selection, but use poppler's region
     // for other selection styles
-    cairo_region_t* region = nullptr;
+    vn::util::CairoRegionSPtr region;
     if (style != PdfPageSelectionStyle::Area) {
         // do not use the "proper" rectangle here as it may be different from the actual selection.
-        region = selectTextRegion(selectRect, style);
+        region = selectTextRegion(this->page, selectRect, style);
     }
 
     const auto isSameLine = [&](const auto& r1, const auto& r2) {
@@ -294,14 +292,14 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         }
         addTextRectsInArea(prevRect);
 
-        region = cairo_region_create();
+        region = vn::util::CairoRegionSPtr(cairo_region_create(), vn::util::adopt);
         for (const PdfRectangle& r: textRects) {
             const auto x1 = std::min(r.x1, r.x2);
             const auto x2 = std::max(r.x1, r.x2);
             const auto y1 = std::min(r.y1, r.y2);
             const auto y2 = std::max(r.y1, r.y2);
             cairo_rectangle_int_t crect = cairoRectFromDouble(x1, y1, x2 - x1, y2 - y1);
-            cairo_region_union_rectangle(region, &crect);
+            cairo_region_union_rectangle(region.get(), &crect);
         }
     } else {
         // this is for all other styles (e.g., linear)
@@ -309,7 +307,7 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         // helper to add only those rectangles that are contained in the selection region
         const auto addTextRectsInRegion = [&](const PopplerRectangle& r) {
             auto crect = cairoRectFromDouble(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1);
-            if (cairo_region_contains_rectangle(region, &crect) == CAIRO_REGION_OVERLAP_IN) {
+            if (cairo_region_contains_rectangle(region.get(), &crect) == CAIRO_REGION_OVERLAP_IN) {
                 textRects.emplace_back(r.x1, r.y1, r.x2, r.y2);
             }
         };
@@ -322,7 +320,7 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
                 auto x1 = std::min(prevRect.x1, nextRect.x2);
                 auto x2 = std::max(prevRect.x2, nextRect.x2);
                 auto crect = cairoRectFromDouble(x1, prevRect.y1, x2 - x1, prevRect.y2 - prevRect.y1);
-                if (cairo_region_contains_rectangle(region, &crect) == CAIRO_REGION_OVERLAP_IN) {
+                if (cairo_region_contains_rectangle(region.get(), &crect) == CAIRO_REGION_OVERLAP_IN) {
                     prevRect.x1 = x1;
                     prevRect.x2 = x2;
                     continue;
@@ -334,8 +332,8 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
         addTextRectsInRegion(prevRect);
     }
 
-    xoj_assert(region);
-    return {vn::util::CairoRegionSPtr(region, vn::util::adopt), textRects};
+    xoj_assert(region.get());
+    return {textRects};
 }
 
 auto PopplerGlibPage::getLinks() -> std::vector<Link> {

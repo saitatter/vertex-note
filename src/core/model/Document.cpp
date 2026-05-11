@@ -40,7 +40,7 @@ void Document::unlock_shared() { this->documentLock.unlock_shared(); }
 auto Document::try_lock_shared() -> bool { return this->documentLock.try_lock_shared(); }
 
 void Document::clearDocument(bool destroy) {
-    this->preview.reset();
+    this->previewPngData.clear();
 
     if (!destroy) {
         // release lock
@@ -159,9 +159,9 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
     return p;
 }
 
-auto Document::getPreview() const -> vn::util::CairoSurfaceSPtr { return this->preview; }
+auto Document::getPreviewPngData() const -> const std::string& { return this->previewPngData; }
 
-void Document::setPreview(vn::util::CairoSurfaceSPtr preview) { this->preview = std::move(preview); }
+void Document::setPreviewPngData(std::string previewPngData) { this->previewPngData = std::move(previewPngData); }
 
 auto Document::getEvMetadataFilename() const -> fs::path {
     if (!this->filepath.empty()) {
@@ -336,6 +336,7 @@ auto Document::operator=(const Document& doc) -> Document& {
     this->pdfFilepath = doc.pdfFilepath;
     this->filepath = doc.filepath;
     this->pages = doc.pages;
+    this->previewPngData = doc.previewPngData;
     this->attachPdf = doc.attachPdf;
     this->pathStorageMode = doc.pathStorageMode;
 

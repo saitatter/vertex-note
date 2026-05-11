@@ -16,11 +16,8 @@
 #include <string>   // for string
 #include <vector>   // for vector
 
-#include <cairo.h>  // for cairo_region_t, cairo_t
-#include <glib.h>   // for GURI
-
+#include "util/NamespaceAliases.h"
 #include "util/RasterImageData.h"
-#include "util/raii/CairoWrappers.h"
 
 #include "PdfAction.h"
 
@@ -53,7 +50,6 @@ public:
 class PdfPage {
 public:
     struct TextSelection {
-        vn::util::CairoRegionSPtr region;
         std::vector<PdfRectangle> rects;
     };
 
@@ -65,16 +61,7 @@ public:
     virtual double getWidth() const = 0;
     virtual double getHeight() const = 0;
 
-    /**
-     * Renders the page to the given cairo context.
-     * Use render() for rendering to a screen (or a raster image format),
-     * Use renderForPrinting() for exports to vector formats (not sure it will be vectorial, but the quality is better)
-     *
-     * See https://poppler.freedesktop.org/api/glib/poppler-Poppler-Page.html#poppler-page-render-for-printing
-     * for actual differences between the two functions in the poppler based implementation.
-     */
-    virtual void render(cairo_t* cr) const = 0;
-    virtual void renderForPrinting(cairo_t* cr) const = 0;
+    /// Renders the page to a detached raster buffer for previews.
     virtual vn::util::RasterImageData renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth,
                                                           double pageHeight) const = 0;
 
@@ -86,13 +73,6 @@ public:
     /// @param style The text selection style
     /// @return The selected text.
     virtual std::string selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) = 0;
-
-    /// Retrieve the cairo_region_t that encompasses the text that would be
-    /// selected in the given rectangle with the given text selection style.
-    /// @param rect start and end points
-    /// @param style The text selection style
-    /// @return A region that contains the text that would be selected.
-    virtual cairo_region_t* selectTextRegion(const PdfRectangle& rect, PdfPageSelectionStyle style) = 0;
 
     /// Retrieve the set of rectangles that represent each line of text selected
     /// in the given rectangle with the given text selection style.

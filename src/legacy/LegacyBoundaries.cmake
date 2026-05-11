@@ -37,14 +37,12 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
         ".*/src/core/control/(PdfCache|CompassController|SetsquareController)\\.(cpp|h)$"
         ".*/src/core/control/jobs/(ImageExport|PreviewJob|RenderJob|SaveJob)\\.(cpp|h)$"
         ".*/src/core/control/tools/(EditSelection|EditSelectionContents|PdfElemSelection|Selector|StrokeHandler|VerticalToolHandler)\\.(cpp|h)$"
-        ".*/src/core/control/xml/XmlImageNode\\.(cpp|h)$"
-        ".*/src/core/control/xojfile/SaveHandler\\.cpp$"
         ".*/src/core/view/.*"
         ".*/src/core/pdf/base/CairoPdfExport\\.(cpp|h)$"
         ".*/src/core/pdf/base/HybridPdfExport\\.cpp$"
-        ".*/src/core/pdf/base/PdfPage\\.h$"
         ".*/src/core/pdf/popplerapi/PopplerGlibPage\\.(cpp|h)$"
-        ".*/src/core/model/(Document|GeometryTool|SplineSegment|Stroke|StrokeContour|TexImage)\\.(cpp|h)$"
+        ".*/src/core/model/(GeometryTool|SplineSegment|Stroke|StrokeContour)\\.(cpp|h)$"
+        ".*/src/core/model/TexImage\\.cpp$"
         ".*/src/core/model/eraser/.*"
 )
 

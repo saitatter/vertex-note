@@ -22,11 +22,6 @@ TexImage::TexImage(): Element(ELEMENT_TEXIMAGE) { this->sizeCalculated = true; }
 TexImage::~TexImage() { freeImageAndPdf(); }
 
 void TexImage::freeImageAndPdf() {
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
-
     this->pdf.reset();
 }
 
@@ -65,17 +60,6 @@ void TexImage::setHeight(double height) {
     this->calcSize();
 }
 
-auto TexImage::cairoReadFunction(TexImage* image, unsigned char* data, unsigned int length) -> cairo_status_t {
-    for (unsigned int i = 0; i < length; i++, image->read++) {
-        if (image->read >= image->binaryData.length()) {
-            return CAIRO_STATUS_READ_ERROR;
-        }
-        data[i] = static_cast<unsigned char>(image->binaryData[image->read]);
-    }
-
-    return CAIRO_STATUS_SUCCESS;
-}
-
 /**
  * Gets the binary data, a .PNG image or a .PDF
  */
@@ -106,17 +90,12 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
             vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
             poppler_page_get_size(page.get(), &this->width, &this->height);
         }
-    } else if (type == "PNG") {
-        this->image = cairo_image_surface_create_from_png_stream(
-                reinterpret_cast<cairo_read_func_t>(&cairoReadFunction), this);
-    } else {
+    } else if (type != "PNG") {
         g_warning("Unknown Latex image type: \"%s\"", type.c_str());
     }
 
     return true;
 }
-
-auto TexImage::getImage() const -> cairo_surface_t* { return this->image; }
 
 auto TexImage::getPdf() const -> PopplerDocument* { return this->pdf.get(); }
 

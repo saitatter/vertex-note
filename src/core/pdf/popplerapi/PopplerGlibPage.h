@@ -14,7 +14,6 @@
 #include <string>  // for string
 #include <vector>  // for vector
 
-#include <cairo.h>    // for cairo_t, cairo_region_t
 #include <poppler.h>  // for PopplerPage
 
 #include "pdf/base/PdfPage.h"  // for PdfRectangle (ptr only), XojPdfP...
@@ -31,16 +30,12 @@ public:
     double getWidth() const override;
     double getHeight() const override;
 
-    void render(cairo_t* cr) const override;
-    void renderForPrinting(cairo_t* cr) const override;
     vn::util::RasterImageData renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth,
                                                   double pageHeight) const override;
 
     std::vector<PdfRectangle> findText(const std::string& text) override;
 
     std::string selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
-
-    cairo_region_t* selectTextRegion(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
 
     TextSelection selectTextLines(const PdfRectangle& rect, PdfPageSelectionStyle style) override;
 

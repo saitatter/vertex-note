@@ -4,7 +4,6 @@
 #include <cstdint>     // for uint32_t
 #include <cstdio>      // for sprintf, size_t
 
-#include <cairo.h>  // for cairo_surface_t
 #include <glib.h>                   // for g_free, g_strdup_printf
 
 #include "control/pagetype/PageTypeHandler.h"  // for PageTypeHandler
@@ -66,10 +65,10 @@ void SaveHandler::prepareSave(const Document* doc, const fs::path& target) {
 
     writeHeader();
 
-    auto preview = doc->getPreview();
-    if (preview) {
+    const auto& preview = doc->getPreviewPngData();
+    if (!preview.empty()) {
         auto* image = new XmlImageNode(TAG_NAMES[TagType::PREVIEW]);
-        image->setImage(preview.get());
+        image->setImage(preview);
         this->root->addChild(image);
     }
 

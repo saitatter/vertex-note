@@ -14,7 +14,6 @@
 #include <memory>
 #include <string>  // for string
 
-#include <cairo.h>    // for cairo_surface_t, cairo_status_t
 #include <glib.h>     // for GError
 #include <poppler.h>  // for PopplerDocument
 
@@ -44,11 +43,6 @@ public:
      * Returns the binary data (PDF or PNG (deprecated)).
      */
     const std::string& getBinaryData() const;
-
-    /**
-     * @return The image, if render source is PNG. Note: this is deprecated.
-     */
-    cairo_surface_t* getImage() const;
 
     /**
      * @return The PDF Document, if rendered as a PDF.
@@ -82,8 +76,6 @@ public:
 private:
     void calcSize() const override;
 
-    static cairo_status_t cairoReadFunction(TexImage* image, unsigned char* data, unsigned int length);
-
     /**
      * Free image and PDF
      */
@@ -96,19 +88,9 @@ private:
     vn::util::GObjectSPtr<PopplerDocument> pdf;
 
     /**
-     * Tex image, if rendered as image. Note: this is deprecated and subject to removal in a later version.
-     */
-    cairo_surface_t* image = nullptr;
-
-    /**
      * PNG Image / PDF Document
      */
     std::string binaryData;
-
-    /**
-     * Read position for PNG binaryData (deprecated).
-     */
-    std::string::size_type read = 0;
 
     /**
      * Tex String

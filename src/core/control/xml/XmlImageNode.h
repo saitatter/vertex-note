@@ -14,8 +14,6 @@
 #include <string>
 #include <string_view>
 
-#include <cairo.h>
-
 #include "XmlNode.h"  // for XmlNode
 
 class OutputStream;
@@ -27,7 +25,6 @@ public:
 
 public:
     void setImage(std::string_view encodedImage);
-    void setImage(cairo_surface_t* image);
 
     void writeOut(OutputStream* out) override;
 

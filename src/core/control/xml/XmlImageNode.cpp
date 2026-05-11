@@ -12,19 +12,6 @@
 #include "util/OutputStream.h"    // for OutputStream
 #include "util/StringUtils.h"     // for StaticStringView
 
-namespace {
-
-struct PngWriteContext {
-    std::string* data = nullptr;
-};
-
-auto writePngChunk(PngWriteContext* context, const unsigned char* data, unsigned int length) -> cairo_status_t {
-    context->data->append(reinterpret_cast<const char*>(data), length);
-    return CAIRO_STATUS_SUCCESS;
-}
-
-}  // namespace
-
 XmlImageNode::XmlImageNode(StringUtils::StaticStringView tag): XmlNode(tag) {}
 
 XmlImageNode::~XmlImageNode() = default;
@@ -48,16 +35,6 @@ void XmlImageNode::setImage(std::string_view encodedImage) {
     if (image.save(&pngBuffer, "PNG")) {
         this->pngData.assign(pngBytes.constData(), static_cast<std::size_t>(pngBytes.size()));
     }
-}
-
-void XmlImageNode::setImage(cairo_surface_t* image) {
-    this->pngData.clear();
-    if (!image) {
-        return;
-    }
-
-    PngWriteContext context{&this->pngData};
-    cairo_surface_write_to_png_stream(image, reinterpret_cast<cairo_write_func_t>(&writePngChunk), &context);
 }
 
 void XmlImageNode::writeOut(OutputStream* out) {
