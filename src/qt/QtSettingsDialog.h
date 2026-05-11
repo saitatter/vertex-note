@@ -40,6 +40,7 @@ struct QtSettings {
     bool autosaveEnabled = true;
     int autosaveTimeoutMinutes = 3;
     bool autoloadMostRecent = false;
+    bool automaticUpdateCheckEnabled = false;
     bool presentationModeDefault = false;
     bool geometrySnapDefault = true;
     bool gridSnapDefault = false;
@@ -120,6 +121,7 @@ private:
     QCheckBox* autosaveEnabledCheck = nullptr;
     QSpinBox* autosaveTimeoutSpin = nullptr;
     QCheckBox* autoloadMostRecentCheck = nullptr;
+    QCheckBox* automaticUpdateCheckEnabledCheck = nullptr;
     QCheckBox* presentationModeDefaultCheck = nullptr;
     QCheckBox* geoSnapCheck = nullptr;
     QCheckBox* gridSnapCheck = nullptr;

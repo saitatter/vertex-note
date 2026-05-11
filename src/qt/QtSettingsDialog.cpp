@@ -255,6 +255,10 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->autoloadMostRecentCheck->setChecked(current.autoloadMostRecent);
     generalLayout->addRow(QStringLiteral("Autoload most recent document:"), this->autoloadMostRecentCheck);
 
+    this->automaticUpdateCheckEnabledCheck = new QCheckBox(generalPage);
+    this->automaticUpdateCheckEnabledCheck->setChecked(current.automaticUpdateCheckEnabled);
+    generalLayout->addRow(QStringLiteral("Check for updates on startup:"), this->automaticUpdateCheckEnabledCheck);
+
     this->presentationModeDefaultCheck = new QCheckBox(generalPage);
     this->presentationModeDefaultCheck->setChecked(current.presentationModeDefault);
     generalLayout->addRow(QStringLiteral("Start in presentation mode:"), this->presentationModeDefaultCheck);
@@ -685,6 +689,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .autosaveEnabled = this->autosaveEnabledCheck->isChecked(),
             .autosaveTimeoutMinutes = this->autosaveTimeoutSpin->value(),
             .autoloadMostRecent = this->autoloadMostRecentCheck->isChecked(),
+            .automaticUpdateCheckEnabled = this->automaticUpdateCheckEnabledCheck->isChecked(),
             .presentationModeDefault = this->presentationModeDefaultCheck->isChecked(),
             .geometrySnapDefault = this->geoSnapCheck->isChecked(),
             .gridSnapDefault = this->gridSnapCheck->isChecked(),

@@ -10,6 +10,8 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <exception>
+#include <thread>
 #include <unordered_set>
 #include <utility>
 #include <variant>
@@ -34,8 +36,10 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMenu>
+#include <QMetaObject>
 #include <QPlainTextEdit>
 #include <QPalette>
+#include <QPointer>
 #include <QSettings>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -60,12 +64,17 @@
 #include <QFrame>
 
 #include "config-paths.h"
+#include "config.h"
 #include "control/latex/LatexGenerator.h"
 #include "control/settings/LatexSettings.h"
 #include "model/TexImage.h"
 #include "QtBackgroundDialog.h"
 #include "QtPageSidebar.h"
 #include "QtSettingsDialog.h"
+#include "vertexnote/update/GithubReleaseParser.h"
+#include "vertexnote/update/ReleaseAssetSelector.h"
+#include "vertexnote/update/ReleaseFetcher.h"
+#include "vertexnote/update/VersionComparator.h"
 #include "filesystem.h"
 #include "util/PathUtil.h"
 
@@ -663,6 +672,9 @@ QtAppShell::QtAppShell():
     updateWindowTitle();
     updateEditCommandStates();
     configureAutosave();
+    if (this->currentSettings.automaticUpdateCheckEnabled) {
+        QTimer::singleShot(0, &this->window, [this]() { checkForUpdates(true); });
+    }
 }
 
 QtAppShell::~QtAppShell() { savePersistentUiState(); }
@@ -1432,10 +1444,7 @@ void QtAppShell::registerBootstrapCommands() {
             []() { QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/saitatter/vertex-note"))); });
     ch->registerCommand(
             {.id = "app.check-updates", .text = "Check for Updates", .tooltip = "Check for new versions", .menu = "Help"},
-            [this]() {
-                this->updates.showCheckingForUpdates();
-                this->updates.showUpToDate("qt-bootstrap");
-            });
+            [this]() { checkForUpdates(false); });
     ch->registerCommand(
             {.id = "app.about-qt-shell", .text = "About VertexNote", .tooltip = "About this application", .menu = "Help"},
             [this]() {
@@ -2631,6 +2640,10 @@ void QtAppShell::loadPersistentUiState() {
                     .toInt();
     this->currentSettings.autoloadMostRecent =
             settings.value(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent).toBool();
+    this->currentSettings.automaticUpdateCheckEnabled =
+            settings.value(QStringLiteral("general/automaticUpdateCheckEnabled"),
+                           this->currentSettings.automaticUpdateCheckEnabled)
+                    .toBool();
     this->currentSettings.presentationModeDefault =
             settings.value(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault)
                     .toBool();
@@ -2964,6 +2977,8 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled);
     settings.setValue(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes);
     settings.setValue(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent);
+    settings.setValue(QStringLiteral("general/automaticUpdateCheckEnabled"),
+                      this->currentSettings.automaticUpdateCheckEnabled);
     settings.setValue(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault);
     settings.setValue(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault);
     settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
@@ -3325,6 +3340,60 @@ void QtAppShell::autosaveNow() {
         this->window.statusBar()->showMessage(QStringLiteral("Autosave failed: %1").arg(QString::fromStdString(errorMsg)),
                                               5000);
     }
+}
+
+void QtAppShell::checkForUpdates(bool silentWhenCurrent) {
+    this->updates.showCheckingForUpdates();
+    QPointer<QtMainWindow> windowGuard(&this->window);
+    std::thread([this, windowGuard, silentWhenCurrent]() {
+        struct UpdateResult {
+            bool ok = false;
+            bool available = false;
+            vn::ui::common::UpdateReleaseSummary summary;
+            std::string error;
+        } result;
+
+        try {
+            const auto payload = vn::update::fetchLatestReleaseJson();
+            const auto release = vn::update::parseGithubRelease(payload);
+            if (!release) {
+                result.error = "Could not parse GitHub release response.";
+            } else {
+                result.ok = true;
+                result.available = vn::update::isUpdateAvailable(PROJECT_VERSION, release->tagName);
+                const auto asset = vn::update::selectBestAsset(*release, vn::update::currentReleasePlatform());
+                result.summary = {.version = release->tagName,
+                                  .title = release->name.empty() ? release->tagName : release->name,
+                                  .notes = release->body,
+                                  .downloadUrl = asset ? asset->downloadUrl : release->htmlUrl};
+            }
+        } catch (const std::exception& ex) {
+            result.error = ex.what();
+        } catch (...) {
+            result.error = "Unknown update check failure.";
+        }
+
+        if (!windowGuard) {
+            return;
+        }
+
+        QMetaObject::invokeMethod(windowGuard.data(), [this, windowGuard, silentWhenCurrent, result = std::move(result)]() {
+            if (!windowGuard) {
+                return;
+            }
+            if (!result.ok) {
+                if (!silentWhenCurrent) {
+                    this->updates.showUpdateError(result.error.empty() ? "Could not check for updates." : result.error);
+                }
+                return;
+            }
+            if (result.available) {
+                this->updates.showUpdateAvailable(result.summary);
+            } else if (!silentWhenCurrent) {
+                this->updates.showUpToDate(PROJECT_VERSION);
+            }
+        }, Qt::QueuedConnection);
+    }).detach();
 }
 
 void QtAppShell::applyRuntimeSettings() {

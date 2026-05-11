@@ -46,6 +46,7 @@ This audit compares GTK `Settings` keys from
 | `colorPalette` | Implemented | `appearance/colorPalettePath`; Qt loads `.gpl` palette files for toolbar quick colors and Lua `app.getColorPalette()`, falling back to the built-in palette on parse errors. |
 | `autosaveEnabled`, `autosaveTimeout` | Implemented | `general/autosaveEnabled`, `general/autosaveTimeoutMinutes`; autosaves dirty existing `.xopp`/`.xoj`/`.xopt` documents without prompting. |
 | `autoloadMostRecent` | Implemented | `general/autoloadMostRecent`; opens the first available recent document during Qt shell startup. |
+| `vertexNoteAutomaticUpdateCheckEnabled` | Qt-only equivalent | `general/automaticUpdateCheckEnabled`; runs the shared update checker on startup and keeps manual Help > Check for Updates. |
 | `presentationMode` | Implemented | `view/presentationModeDefault`; Qt can start directly in presentation mode. |
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
@@ -72,7 +73,6 @@ This audit compares GTK `Settings` keys from
 | `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Unsupported | Space insertion settings are not wired into Qt tools. |
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
-| `vertexNoteAutomaticUpdateCheckEnabled` | Unsupported | Qt can check for updates manually, but no persisted automatic check setting. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
 | `backgroundColor` | Unsupported | Qt still uses the canvas palette/background rather than a dedicated user setting. |
 | `pageRerenderThreshold` | Unsupported | Qt rendering cache policy is not fully settings-backed yet. |
@@ -90,4 +90,4 @@ This audit compares GTK `Settings` keys from
 1. Add Qt-native implementations for vertical/horizontal space insertion settings.
 2. Add advanced Tools settings for stroke filtering and GTK's full stabilizer matrix.
 3. Add Qt edge-pan/unlimited-scroll behavior if the shell keeps GTK's selection-edge workflow.
-4. Add automatic update checks and remaining advanced LaTeX/audio device selectors.
+4. Add remaining advanced LaTeX/audio device selectors.

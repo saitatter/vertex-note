@@ -73,6 +73,7 @@ private:
     void markSessionDirty();
     void configureAutosave();
     void autosaveNow();
+    void checkForUpdates(bool silentWhenCurrent = false);
     void applyRuntimeSettings();
     void applyAppearanceSettings();
     void reloadColorPalette();
