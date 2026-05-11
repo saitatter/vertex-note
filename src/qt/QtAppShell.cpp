@@ -4540,7 +4540,7 @@ void QtAppShell::showToolbarCustomizeDialog() {
         if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) {
             continue;
         }
-        const int equalsIndex = line.indexOf(QLatin1Char('='));
+        const qsizetype equalsIndex = line.indexOf(QLatin1Char('='));
         if (equalsIndex <= 0) {
             QMessageBox::warning(&dialog, QStringLiteral("Customize Toolbars"),
                                  QStringLiteral("Each line must be key=tokens."));

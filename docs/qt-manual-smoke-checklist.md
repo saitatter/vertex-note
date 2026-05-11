@@ -22,7 +22,8 @@ Use this checklist for the remaining Qt UI/UX parity pass after
 
 ## Toolbar And Menus
 
-1. Confirm the toolbar has separate stroke and vertex drawing dropdowns.
+1. Confirm the toolbar has separate stroke and vertex drawing dropdown buttons,
+   each with a visible split-menu arrow.
 2. Confirm `DRAW` profile fallback still expands to both dropdowns.
 3. Open `Tools > Stroke Drawing` and `Tools > Vertex Drawing`; compare group
    contents with GTK.
@@ -51,6 +52,8 @@ Use this checklist for the remaining Qt UI/UX parity pass after
    expected persisted state.
 5. Open the plugin manager and settings tabs; confirm tables and labels remain
    readable at narrow widths.
+6. Select a stroke, drag selection resize handles, undo/redo the scale, and
+   repeat with `Keep stroke width while scaling` enabled in Preferences.
 
 ## Plugin Runtime
 
