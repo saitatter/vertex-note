@@ -349,6 +349,9 @@ private:
     void rebuildGeometrySnapEngine();
     void clearGeometrySnapState();
     void clearGeometryVertexSelection();
+    [[nodiscard]] auto handleGeometryVertexMouseDown(bool shiftDown) -> bool;
+    void beginActiveGeometryVertexDrag();
+    void handleGeometryEdgeMouseDown(bool shiftDown);
     void setSingleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,
                                           vn::geom::Vec2 position);
     void toggleGeometryVertexSelection(vn::geom::GeometryElement* element, vn::geom::VertexId vertex,

@@ -734,6 +734,50 @@ void EditSelection::mouseUp() {
     }
 }
 
+auto EditSelection::handleGeometryVertexMouseDown(bool shiftDown) -> bool {
+    if (!this->hoveredGeometryVertexElement || this->hoveredGeometryVertex == vn::geom::InvalidVertexId) {
+        return false;
+    }
+
+    if (shiftDown) {
+        toggleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
+                                      this->hoveredGeometryVertexPosition);
+    } else if (!isGeometryVertexSelected(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex)) {
+        setSingleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
+                                         this->hoveredGeometryVertexPosition);
+    }
+
+    beginActiveGeometryVertexDrag();
+    return true;
+}
+
+void EditSelection::beginActiveGeometryVertexDrag() {
+    if (!this->activeGeometryElement || this->activeGeometryVertices.empty()) {
+        return;
+    }
+
+    this->activeGeometryVertexStartPositions = this->activeGeometryVertexCurrentPositions;
+    this->activeGeometryVertexStart = this->activeGeometryVertexCurrent;
+    if (const auto index = findSelectedGeometryVertex(this->activeGeometryElement, this->activeGeometryVertex)) {
+        this->activeGeometryVertexStart = this->activeGeometryVertexCurrentPositions[*index];
+        this->activeGeometryVertexCurrent = this->activeGeometryVertexCurrentPositions[*index];
+    }
+    this->activeGeometryVertexMoved = false;
+    rebuildGeometrySnapEngine();
+    this->activeGeometryBeforeDrag = this->activeGeometryElement->geometry();
+}
+
+void EditSelection::handleGeometryEdgeMouseDown(bool shiftDown) {
+    if (this->hoveredGeometryElement && this->hoveredGeometryEdge != vn::geom::InvalidEdgeId) {
+        if (shiftDown) {
+            toggleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
+        } else if (!isGeometryEdgeSelected(this->hoveredGeometryElement, this->hoveredGeometryEdge)) {
+            setSingleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
+        }
+    }
+    clearGeometrySnapState();
+}
+
 void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool shiftDown) {
     double zoom = this->view->getNoteView()->getZoom();
 
@@ -742,35 +786,8 @@ void EditSelection::mouseDown(CursorSelectionType type, double x, double y, bool
         clearGeometryVertexSelection();
         this->hoveredGeometryElement = nullptr;
         this->hoveredGeometryEdge = vn::geom::InvalidEdgeId;
-    } else if (this->hoveredGeometryVertexElement && this->hoveredGeometryVertex != vn::geom::InvalidVertexId) {
-        if (shiftDown) {
-            toggleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
-                                          this->hoveredGeometryVertexPosition);
-        } else if (!isGeometryVertexSelected(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex)) {
-            setSingleGeometryVertexSelection(this->hoveredGeometryVertexElement, this->hoveredGeometryVertex,
-                                             this->hoveredGeometryVertexPosition);
-        }
-
-        if (this->activeGeometryElement && !this->activeGeometryVertices.empty()) {
-            this->activeGeometryVertexStartPositions = this->activeGeometryVertexCurrentPositions;
-            this->activeGeometryVertexStart = this->activeGeometryVertexCurrent;
-            if (const auto index = findSelectedGeometryVertex(this->activeGeometryElement, this->activeGeometryVertex)) {
-                this->activeGeometryVertexStart = this->activeGeometryVertexCurrentPositions[*index];
-                this->activeGeometryVertexCurrent = this->activeGeometryVertexCurrentPositions[*index];
-            }
-            this->activeGeometryVertexMoved = false;
-            rebuildGeometrySnapEngine();
-            this->activeGeometryBeforeDrag = this->activeGeometryElement->geometry();
-        }
-    } else if (type == CURSOR_SELECTION_GEOMETRY_EDGE) {
-        if (this->hoveredGeometryElement && this->hoveredGeometryEdge != vn::geom::InvalidEdgeId) {
-            if (shiftDown) {
-                toggleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
-            } else if (!isGeometryEdgeSelected(this->hoveredGeometryElement, this->hoveredGeometryEdge)) {
-                setSingleGeometryEdgeSelection(this->hoveredGeometryElement, this->hoveredGeometryEdge);
-            }
-        }
-        clearGeometrySnapState();
+    } else if (!handleGeometryVertexMouseDown(shiftDown) && type == CURSOR_SELECTION_GEOMETRY_EDGE) {
+        handleGeometryEdgeMouseDown(shiftDown);
     }
 
     // coordinates relative to top left corner of snapped bounds in coordinate system which is not modified
@@ -812,7 +829,11 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
             const vn::geom::Vec2 next{start.x + delta.x, start.y + delta.y};
             changed = this->activeGeometryElement->setVertexPosition(this->activeGeometryVertices[i], next) || changed;
         }
-        changed = applyGeometryConstraints(this->activeGeometryElement->geometry()) || changed;
+
+        auto& geometry = this->activeGeometryElement->geometry();
+        if (!geometry.constraints().empty()) {
+            changed = applyGeometryConstraints(geometry) || changed;
+        }
 
         this->activeGeometryVertexCurrentPositions.clear();
         this->activeGeometryVertexCurrentPositions.reserve(this->activeGeometryVertices.size());
