@@ -655,6 +655,11 @@ void QtCanvas::setViewInteractionOptions(double zoomStepPercent, double zoomStep
     this->rotationSnapTolerance = std::clamp(rotationSnapTolerance, 0.01, M_PI / 2.0);
 }
 
+void QtCanvas::setDrawDirectionModifiers(bool enabled, int radiusPixels) {
+    this->drawDirectionModifiersEnabled = enabled;
+    this->drawDirectionModifiersRadiusPixels = std::clamp(radiusPixels, 1, 500);
+}
+
 void QtCanvas::setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below) {
     this->extraPageSpaceLeft = horizontalEnabled ? std::max(0, left) : 0;
     this->extraPageSpaceRight = horizontalEnabled ? std::max(0, right) : 0;
@@ -3076,6 +3081,11 @@ void QtCanvas::beginShapeAtScreen(const QPointF& screenPoint) {
     this->shapeCurrentScene = this->shapeStartScene;
     this->shapeClickPoints.clear();
     this->shapeClickPoints.push_back(this->shapeStartScene);
+    this->shapeDirectionModifiersFixed = false;
+    this->shapeDirectionModifierShift = false;
+    this->shapeDirectionModifierControl = false;
+    this->shapeEffectiveShiftModifier = false;
+    this->shapeEffectiveControlModifier = false;
     this->shapeDrawing = true;
     setCursor(Qt::CrossCursor);
     update();
@@ -3092,9 +3102,47 @@ void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
                     this->shapeClickPoints.empty() ? this->shapeStartScene : this->shapeClickPoints.back();
             pagePoint = applyRotationSnap(origin, pagePoint);
         }
+        pagePoint = applyShapeDirectionModifiers(pagePoint);
         this->shapeCurrentScene = pagePoint;
     }
     update();
+}
+
+auto QtCanvas::applyShapeDirectionModifiers(const QPointF& pagePoint) -> QPointF {
+    const auto tool = this->currentToolState.activeTool;
+    const bool supportedTool = tool == QtToolType::DrawRectangle || tool == QtToolType::DrawEllipse ||
+                               tool == QtToolType::DrawCoordinateSystem;
+    if (!supportedTool) {
+        return pagePoint;
+    }
+
+    const double dx = pagePoint.x() - this->shapeStartScene.x();
+    const double dy = pagePoint.y() - this->shapeStartScene.y();
+    const auto keyboardModifiers = QApplication::keyboardModifiers();
+    bool shift = keyboardModifiers.testFlag(Qt::ShiftModifier);
+    bool control = keyboardModifiers.testFlag(Qt::ControlModifier);
+    if (this->drawDirectionModifiersEnabled) {
+        if (!this->shapeDirectionModifiersFixed) {
+            this->shapeDirectionModifierShift = dx < 0.0;
+            this->shapeDirectionModifierControl = dy < 0.0;
+            const double lockDistance = this->drawDirectionModifiersRadiusPixels / std::max(0.001, this->zoomFactor);
+            this->shapeDirectionModifiersFixed = std::abs(dx) > lockDistance || std::abs(dy) > lockDistance;
+        }
+        shift = shift != this->shapeDirectionModifierShift;
+        control = control != this->shapeDirectionModifierControl;
+    }
+    this->shapeEffectiveShiftModifier = shift;
+    this->shapeEffectiveControlModifier = control;
+
+    double width = dx;
+    double height = dy;
+    if (shift) {
+        const double size = std::max(std::abs(width), std::abs(height));
+        width = std::copysign(size, width == 0.0 ? 1.0 : width);
+        height = std::copysign(size, height == 0.0 ? 1.0 : height);
+    }
+
+    return QPointF(this->shapeStartScene.x() + width, this->shapeStartScene.y() + height);
 }
 
 void QtCanvas::addShapeClickAtScreen(const QPointF& screenPoint) {
@@ -3129,6 +3177,10 @@ void QtCanvas::finalizeShape() {
     const std::string& lineStyle = this->currentToolState.penLineStyle;
     const int fill = this->currentToolState.fillEnabled ? this->currentToolState.fillOpacity : -1;
     const Element* created = nullptr;
+    const auto centeredStart = [&]() {
+        return QPointF(2.0 * this->shapeStartScene.x() - this->shapeCurrentScene.x(),
+                       2.0 * this->shapeStartScene.y() - this->shapeCurrentScene.y());
+    };
 
     switch (this->currentToolState.activeTool) {
         case QtToolType::DrawLine:
@@ -3136,21 +3188,25 @@ void QtCanvas::finalizeShape() {
                                                            this->shapeStartScene.y(), this->shapeCurrentScene.x(),
                                                            this->shapeCurrentScene.y(), color, width);
             break;
-        case QtToolType::DrawRectangle:
-            created = this->documentController->createRectangle(this->shapePageIndex, this->shapeStartScene.x(),
-                                                                this->shapeStartScene.y(), this->shapeCurrentScene.x(),
-                                                                this->shapeCurrentScene.y(), color, width);
+        case QtToolType::DrawRectangle: {
+            const QPointF start = this->shapeEffectiveControlModifier ? centeredStart() : this->shapeStartScene;
+            created = this->documentController->createRectangle(this->shapePageIndex, start.x(), start.y(),
+                                                                this->shapeCurrentScene.x(), this->shapeCurrentScene.y(),
+                                                                color, width);
             break;
+        }
         case QtToolType::DrawCircle:
             created = this->documentController->createCircle(this->shapePageIndex, this->shapeStartScene.x(),
                                                              this->shapeStartScene.y(), this->shapeCurrentScene.x(),
                                                              this->shapeCurrentScene.y(), color, width);
             break;
-        case QtToolType::DrawEllipse:
+        case QtToolType::DrawEllipse: {
+            const QPointF start = this->shapeEffectiveControlModifier ? centeredStart() : this->shapeStartScene;
             created = this->documentController->createEllipse(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
+                    this->shapePageIndex, start.x(), start.y(),
                     this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, fill);
             break;
+        }
         case QtToolType::DrawArrow:
             created = this->documentController->createArrow(
                     this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
@@ -3246,6 +3302,9 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
 
     const QPointF start = this->shapeStartScene;
     const QPointF current = this->shapeCurrentScene;
+    const auto centeredStart = [&]() {
+        return QPointF(2.0 * start.x() - current.x(), 2.0 * start.y() - current.y());
+    };
 
     switch (this->currentToolState.activeTool) {
         case QtToolType::DrawLine:
@@ -3253,7 +3312,7 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
             painter.drawLine(start, current);
             break;
         case QtToolType::DrawRectangle:
-            painter.drawRect(QRectF(start, current).normalized());
+            painter.drawRect(QRectF(this->shapeEffectiveControlModifier ? centeredStart() : start, current).normalized());
             break;
         case QtToolType::DrawCircle:
         case QtToolType::DrawConstructionCircle: {
@@ -3262,7 +3321,7 @@ void QtCanvas::drawShapePreview(QPainter& painter) const {
             break;
         }
         case QtToolType::DrawEllipse:
-            painter.drawEllipse(QRectF(start, current).normalized());
+            painter.drawEllipse(QRectF(this->shapeEffectiveControlModifier ? centeredStart() : start, current).normalized());
             break;
         case QtToolType::DrawArrow:
         case QtToolType::DrawDoubleArrow: {

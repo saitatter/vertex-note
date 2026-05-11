@@ -58,6 +58,7 @@ This audit compares GTK `Settings` keys from
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
 | `snapRecognizedShapesEnabled` | Implemented | `tools/snapRecognizedShapesEnabled`; applied to Qt shape recognizer finalization. |
+| `drawDirModsEnabled`, `drawDirModsRadius` | Partial / Qt-only equivalent | `tools/drawDirModsEnabled`, `tools/drawDirModsRadius`; applied to Qt rectangle, ellipse, and coordinate-system drag tools for shift/control emulation. |
 | `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled` | Partial / Qt-only equivalent | `tools/strokeFilter*`; Qt filters very short, fast strokes before finalization. GTK post-filter actions are not migrated. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
 | `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Implemented | `appearance/recolorMainView`, `appearance/recolorSidebarMiniatures`, `appearance/recolorLight`, `appearance/recolorDark`; applied to Qt canvas and page sidebar previews. |
@@ -79,7 +80,6 @@ This audit compares GTK `Settings` keys from
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
-| `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
 | `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |

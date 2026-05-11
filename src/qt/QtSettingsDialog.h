@@ -56,6 +56,8 @@ struct QtSettings {
     bool gridSnapDefault = false;
     bool rotationSnapDefault = false;
     double rotationSnapTolerance = 0.30;
+    bool drawDirModsEnabled = false;
+    int drawDirModsRadius = 50;
     double zoomStepPercent = 10.0;
     double zoomStepScrollPercent = 2.0;
     bool unlimitedScrolling = false;
@@ -161,6 +163,8 @@ private:
     QCheckBox* gridSnapCheck = nullptr;
     QCheckBox* rotationSnapCheck = nullptr;
     QDoubleSpinBox* rotationSnapToleranceSpin = nullptr;
+    QCheckBox* drawDirModsEnabledCheck = nullptr;
+    QSpinBox* drawDirModsRadiusSpin = nullptr;
     QDoubleSpinBox* zoomStepSpin = nullptr;
     QDoubleSpinBox* zoomStepScrollSpin = nullptr;
     QCheckBox* unlimitedScrollingCheck = nullptr;

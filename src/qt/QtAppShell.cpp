@@ -2688,6 +2688,10 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.rotationSnapTolerance =
             settings.value(QStringLiteral("general/rotationSnapTolerance"), this->currentSettings.rotationSnapTolerance)
                     .toDouble();
+    this->currentSettings.drawDirModsEnabled =
+            settings.value(QStringLiteral("tools/drawDirModsEnabled"), this->currentSettings.drawDirModsEnabled).toBool();
+    this->currentSettings.drawDirModsRadius =
+            settings.value(QStringLiteral("tools/drawDirModsRadius"), this->currentSettings.drawDirModsRadius).toInt();
     this->currentSettings.zoomStepPercent =
             settings.value(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent).toDouble();
     this->currentSettings.zoomStepScrollPercent =
@@ -3071,6 +3075,8 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
     settings.setValue(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault);
     settings.setValue(QStringLiteral("general/rotationSnapTolerance"), this->currentSettings.rotationSnapTolerance);
+    settings.setValue(QStringLiteral("tools/drawDirModsEnabled"), this->currentSettings.drawDirModsEnabled);
+    settings.setValue(QStringLiteral("tools/drawDirModsRadius"), this->currentSettings.drawDirModsRadius);
     settings.setValue(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent);
     settings.setValue(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent);
     settings.setValue(QStringLiteral("view/unlimitedScrolling"), this->currentSettings.unlimitedScrolling);
@@ -3522,6 +3528,8 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
                                       this->currentSettings.rotationSnapTolerance);
+    canvas->setDrawDirectionModifiers(this->currentSettings.drawDirModsEnabled,
+                                      this->currentSettings.drawDirModsRadius);
     canvas->setUnlimitedScrolling(this->currentSettings.unlimitedScrolling);
     canvas->setPageSpaceOptions(this->currentSettings.addHorizontalSpace,
                                 this->currentSettings.addHorizontalSpaceAmountLeft,

@@ -377,6 +377,16 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->rotationSnapToleranceSpin->setSuffix(QStringLiteral(" rad"));
     generalLayout->addRow(QStringLiteral("Rotation snap tolerance:"), this->rotationSnapToleranceSpin);
 
+    this->drawDirModsEnabledCheck = new QCheckBox(generalPage);
+    this->drawDirModsEnabledCheck->setChecked(current.drawDirModsEnabled);
+    generalLayout->addRow(QStringLiteral("Direction modifiers:"), this->drawDirModsEnabledCheck);
+
+    this->drawDirModsRadiusSpin = new QSpinBox(generalPage);
+    this->drawDirModsRadiusSpin->setRange(1, 500);
+    this->drawDirModsRadiusSpin->setValue(current.drawDirModsRadius);
+    this->drawDirModsRadiusSpin->setSuffix(QStringLiteral(" px"));
+    generalLayout->addRow(QStringLiteral("Direction modifier radius:"), this->drawDirModsRadiusSpin);
+
     this->zoomStepSpin = new QDoubleSpinBox(generalPage);
     this->zoomStepSpin->setRange(1.0, 100.0);
     this->zoomStepSpin->setSingleStep(1.0);
@@ -882,6 +892,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
             .rotationSnapDefault = this->rotationSnapCheck->isChecked(),
             .rotationSnapTolerance = this->rotationSnapToleranceSpin->value(),
+            .drawDirModsEnabled = this->drawDirModsEnabledCheck->isChecked(),
+            .drawDirModsRadius = this->drawDirModsRadiusSpin->value(),
             .zoomStepPercent = this->zoomStepSpin->value(),
             .zoomStepScrollPercent = this->zoomStepScrollSpin->value(),
             .unlimitedScrolling = this->unlimitedScrollingCheck->isChecked(),

@@ -65,6 +65,7 @@ public:
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
     void setViewInteractionOptions(double zoomStepPercent, double zoomStepScrollPercent, double rotationSnapTolerance);
+    void setDrawDirectionModifiers(bool enabled, int radiusPixels);
     void setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below);
     void setTouchDrawingEnabled(bool enabled);
     void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
@@ -248,6 +249,7 @@ private:
     // Shape drawing helpers
     void beginShapeAtScreen(const QPointF& screenPoint);
     void updateShapeAtScreen(const QPointF& screenPoint);
+    [[nodiscard]] auto applyShapeDirectionModifiers(const QPointF& pagePoint) -> QPointF;
     void addShapeClickAtScreen(const QPointF& screenPoint);
     void finalizeShape();
     void cancelShape();
@@ -355,6 +357,13 @@ private:
     std::optional<InstrumentStrokeState> activeInstrumentStroke;
     double shapeRecognizerMinSize = 40.0;
     bool snapRecognizedShapesEnabled = false;
+    bool drawDirectionModifiersEnabled = false;
+    int drawDirectionModifiersRadiusPixels = 50;
+    bool shapeDirectionModifiersFixed = false;
+    bool shapeDirectionModifierShift = false;
+    bool shapeDirectionModifierControl = false;
+    bool shapeEffectiveShiftModifier = false;
+    bool shapeEffectiveControlModifier = false;
     int laserPointerFadeOutMs = 1500;
     bool useSpacesForTab = false;
     int numberOfSpacesForTab = 4;
