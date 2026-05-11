@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string_view>
+#include <vector>
 
 #include <config-test.h>
 #include <gtest/gtest.h>
@@ -35,6 +36,16 @@ auto lastStroke(const vn::view::render::PageRenderSnapshot& snapshot)
         }
     }
     throw std::runtime_error("Expected a stroke drawable");
+}
+
+auto strokes(const vn::view::render::PageRenderSnapshot& snapshot) -> std::vector<vn::view::render::StrokeRenderModel> {
+    std::vector<vn::view::render::StrokeRenderModel> result;
+    for (const auto& drawable: snapshot.drawables) {
+        if (const auto* stroke = std::get_if<vn::view::render::StrokeRenderModel>(&drawable)) {
+            result.push_back(*stroke);
+        }
+    }
+    return result;
 }
 
 }  // namespace
@@ -76,6 +87,41 @@ TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifie
 
     EXPECT_TRUE(controller.redo());
     EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, verticalSpaceMovesElementsWithUndoRedo) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    ASSERT_TRUE(controller.beginStroke(PageIndex, 20.0, 20.0, 0.5, Colors::black, 1.0, StrokeTool::PEN, false));
+    ASSERT_TRUE(controller.updateStroke(120.0, 20.0, 0.5));
+    ASSERT_TRUE(controller.finalizeStroke());
+    ASSERT_TRUE(controller.beginStroke(PageIndex, 20.0, 100.0, 0.5, Colors::black, 1.0, StrokeTool::PEN, false));
+    ASSERT_TRUE(controller.updateStroke(120.0, 100.0, 0.5));
+    ASSERT_TRUE(controller.finalizeStroke());
+
+    ASSERT_TRUE(controller.beginVerticalSpace(PageIndex, 50.0, false));
+    EXPECT_TRUE(controller.updateVerticalSpace(75.0));
+    EXPECT_TRUE(controller.endVerticalSpace());
+
+    auto moved = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(2U, moved.size());
+    EXPECT_DOUBLE_EQ(20.0, moved[0].points.front().y);
+    EXPECT_DOUBLE_EQ(125.0, moved[1].points.front().y);
+
+    ASSERT_TRUE(controller.canUndo());
+    EXPECT_TRUE(controller.undo());
+    moved = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(2U, moved.size());
+    EXPECT_DOUBLE_EQ(20.0, moved[0].points.front().y);
+    EXPECT_DOUBLE_EQ(100.0, moved[1].points.front().y);
+
+    ASSERT_TRUE(controller.canRedo());
+    EXPECT_TRUE(controller.redo());
+    moved = strokes(controller.snapshotPages().front());
+    ASSERT_EQ(2U, moved.size());
+    EXPECT_DOUBLE_EQ(20.0, moved[0].points.front().y);
+    EXPECT_DOUBLE_EQ(125.0, moved[1].points.front().y);
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, pdfTextMarkersCreateHighlighterStrokesWithUndoRedo) {

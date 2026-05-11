@@ -2629,6 +2629,26 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth).toDouble();
     this->currentSettings.defaultPageHeight =
             settings.value(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight).toDouble();
+    this->currentSettings.addHorizontalSpace =
+            settings.value(QStringLiteral("page/addHorizontalSpace"), this->currentSettings.addHorizontalSpace).toBool();
+    this->currentSettings.addHorizontalSpaceAmountRight =
+            settings.value(QStringLiteral("page/addHorizontalSpaceAmountRight"),
+                           this->currentSettings.addHorizontalSpaceAmountRight)
+                    .toInt();
+    this->currentSettings.addHorizontalSpaceAmountLeft =
+            settings.value(QStringLiteral("page/addHorizontalSpaceAmountLeft"),
+                           this->currentSettings.addHorizontalSpaceAmountLeft)
+                    .toInt();
+    this->currentSettings.addVerticalSpace =
+            settings.value(QStringLiteral("page/addVerticalSpace"), this->currentSettings.addVerticalSpace).toBool();
+    this->currentSettings.addVerticalSpaceAmountAbove =
+            settings.value(QStringLiteral("page/addVerticalSpaceAmountAbove"),
+                           this->currentSettings.addVerticalSpaceAmountAbove)
+                    .toInt();
+    this->currentSettings.addVerticalSpaceAmountBelow =
+            settings.value(QStringLiteral("page/addVerticalSpaceAmountBelow"),
+                           this->currentSettings.addVerticalSpaceAmountBelow)
+                    .toInt();
     this->currentSettings.undoHistoryLimit =
             settings.value(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit).toInt();
     this->currentSettings.autosaveEnabled =
@@ -2971,6 +2991,16 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
     settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
+    settings.setValue(QStringLiteral("page/addHorizontalSpace"), this->currentSettings.addHorizontalSpace);
+    settings.setValue(QStringLiteral("page/addHorizontalSpaceAmountRight"),
+                      this->currentSettings.addHorizontalSpaceAmountRight);
+    settings.setValue(QStringLiteral("page/addHorizontalSpaceAmountLeft"),
+                      this->currentSettings.addHorizontalSpaceAmountLeft);
+    settings.setValue(QStringLiteral("page/addVerticalSpace"), this->currentSettings.addVerticalSpace);
+    settings.setValue(QStringLiteral("page/addVerticalSpaceAmountAbove"),
+                      this->currentSettings.addVerticalSpaceAmountAbove);
+    settings.setValue(QStringLiteral("page/addVerticalSpaceAmountBelow"),
+                      this->currentSettings.addVerticalSpaceAmountBelow);
     settings.setValue(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit);
     settings.setValue(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled);
     settings.setValue(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes);
@@ -3413,6 +3443,12 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
                                       this->currentSettings.rotationSnapTolerance);
+    canvas->setPageSpaceOptions(this->currentSettings.addHorizontalSpace,
+                                this->currentSettings.addHorizontalSpaceAmountLeft,
+                                this->currentSettings.addHorizontalSpaceAmountRight,
+                                this->currentSettings.addVerticalSpace,
+                                this->currentSettings.addVerticalSpaceAmountAbove,
+                                this->currentSettings.addVerticalSpaceAmountBelow);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
     canvas->setPointerButtonActions(this->currentSettings.buttonMatrix);
     canvas->setInputDeviceButtonProfiles(this->currentSettings.inputDeviceButtonProfiles);

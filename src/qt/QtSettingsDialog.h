@@ -42,6 +42,12 @@ struct QtSettings {
     bool autoloadMostRecent = false;
     bool automaticUpdateCheckEnabled = false;
     bool presentationModeDefault = false;
+    bool addHorizontalSpace = false;
+    int addHorizontalSpaceAmountRight = 150;
+    int addHorizontalSpaceAmountLeft = 150;
+    bool addVerticalSpace = false;
+    int addVerticalSpaceAmountAbove = 150;
+    int addVerticalSpaceAmountBelow = 150;
     bool geometrySnapDefault = true;
     bool gridSnapDefault = false;
     bool rotationSnapDefault = false;
@@ -117,6 +123,12 @@ private:
     QComboBox* eraserModeCombo = nullptr;
     QDoubleSpinBox* pageWidthSpin = nullptr;
     QDoubleSpinBox* pageHeightSpin = nullptr;
+    QCheckBox* addHorizontalSpaceCheck = nullptr;
+    QSpinBox* addHorizontalSpaceLeftSpin = nullptr;
+    QSpinBox* addHorizontalSpaceRightSpin = nullptr;
+    QCheckBox* addVerticalSpaceCheck = nullptr;
+    QSpinBox* addVerticalSpaceAboveSpin = nullptr;
+    QSpinBox* addVerticalSpaceBelowSpin = nullptr;
     QSpinBox* undoLimitSpin = nullptr;
     QCheckBox* autosaveEnabledCheck = nullptr;
     QSpinBox* autosaveTimeoutSpin = nullptr;

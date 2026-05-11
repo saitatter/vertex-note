@@ -229,6 +229,38 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->pageHeightSpin->setSuffix(QStringLiteral(" pt"));
     pageLayout->addRow(QStringLiteral("Default page height:"), this->pageHeightSpin);
 
+    this->addHorizontalSpaceCheck = new QCheckBox(pagePage);
+    this->addHorizontalSpaceCheck->setChecked(current.addHorizontalSpace);
+    pageLayout->addRow(QStringLiteral("Extra horizontal page space:"), this->addHorizontalSpaceCheck);
+
+    this->addHorizontalSpaceLeftSpin = new QSpinBox(pagePage);
+    this->addHorizontalSpaceLeftSpin->setRange(0, 5000);
+    this->addHorizontalSpaceLeftSpin->setValue(current.addHorizontalSpaceAmountLeft);
+    this->addHorizontalSpaceLeftSpin->setSuffix(QStringLiteral(" pt"));
+    pageLayout->addRow(QStringLiteral("Horizontal space left:"), this->addHorizontalSpaceLeftSpin);
+
+    this->addHorizontalSpaceRightSpin = new QSpinBox(pagePage);
+    this->addHorizontalSpaceRightSpin->setRange(0, 5000);
+    this->addHorizontalSpaceRightSpin->setValue(current.addHorizontalSpaceAmountRight);
+    this->addHorizontalSpaceRightSpin->setSuffix(QStringLiteral(" pt"));
+    pageLayout->addRow(QStringLiteral("Horizontal space right:"), this->addHorizontalSpaceRightSpin);
+
+    this->addVerticalSpaceCheck = new QCheckBox(pagePage);
+    this->addVerticalSpaceCheck->setChecked(current.addVerticalSpace);
+    pageLayout->addRow(QStringLiteral("Extra vertical page space:"), this->addVerticalSpaceCheck);
+
+    this->addVerticalSpaceAboveSpin = new QSpinBox(pagePage);
+    this->addVerticalSpaceAboveSpin->setRange(0, 5000);
+    this->addVerticalSpaceAboveSpin->setValue(current.addVerticalSpaceAmountAbove);
+    this->addVerticalSpaceAboveSpin->setSuffix(QStringLiteral(" pt"));
+    pageLayout->addRow(QStringLiteral("Vertical space above:"), this->addVerticalSpaceAboveSpin);
+
+    this->addVerticalSpaceBelowSpin = new QSpinBox(pagePage);
+    this->addVerticalSpaceBelowSpin->setRange(0, 5000);
+    this->addVerticalSpaceBelowSpin->setValue(current.addVerticalSpaceAmountBelow);
+    this->addVerticalSpaceBelowSpin->setSuffix(QStringLiteral(" pt"));
+    pageLayout->addRow(QStringLiteral("Vertical space below:"), this->addVerticalSpaceBelowSpin);
+
     pagePage->setLayout(pageLayout);
     tabs->addTab(pagePage, QStringLiteral("Page"));
 
@@ -691,6 +723,12 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .autoloadMostRecent = this->autoloadMostRecentCheck->isChecked(),
             .automaticUpdateCheckEnabled = this->automaticUpdateCheckEnabledCheck->isChecked(),
             .presentationModeDefault = this->presentationModeDefaultCheck->isChecked(),
+            .addHorizontalSpace = this->addHorizontalSpaceCheck->isChecked(),
+            .addHorizontalSpaceAmountRight = this->addHorizontalSpaceRightSpin->value(),
+            .addHorizontalSpaceAmountLeft = this->addHorizontalSpaceLeftSpin->value(),
+            .addVerticalSpace = this->addVerticalSpaceCheck->isChecked(),
+            .addVerticalSpaceAmountAbove = this->addVerticalSpaceAboveSpin->value(),
+            .addVerticalSpaceAmountBelow = this->addVerticalSpaceBelowSpin->value(),
             .geometrySnapDefault = this->geoSnapCheck->isChecked(),
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
             .rotationSnapDefault = this->rotationSnapCheck->isChecked(),

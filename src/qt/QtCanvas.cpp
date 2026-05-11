@@ -647,6 +647,14 @@ void QtCanvas::setViewInteractionOptions(double zoomStepPercent, double zoomStep
     this->rotationSnapTolerance = std::clamp(rotationSnapTolerance, 0.01, M_PI / 2.0);
 }
 
+void QtCanvas::setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below) {
+    this->extraPageSpaceLeft = horizontalEnabled ? std::max(0, left) : 0;
+    this->extraPageSpaceRight = horizontalEnabled ? std::max(0, right) : 0;
+    this->extraPageSpaceAbove = verticalEnabled ? std::max(0, above) : 0;
+    this->extraPageSpaceBelow = verticalEnabled ? std::max(0, below) : 0;
+    update();
+}
+
 void QtCanvas::setTouchDrawingEnabled(bool enabled) {
     if (!enabled && this->drawing) {
         finalizeActiveStroke();
@@ -771,6 +779,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawSelectionOverlay(painter);
     drawPdfTextSelectionOverlay(painter);
     drawRubberBand(painter);
+    drawVerticalSpacePreview(painter);
     drawShapePreview(painter);
     drawInstrumentOverlay(painter);
     drawEraserPreview(painter);
@@ -844,6 +853,11 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         }
         if (tool == QtToolType::PdfTextLinear || tool == QtToolType::PdfTextRect) {
             beginPdfTextSelectionAtScreen(event->position());
+            event->accept();
+            return;
+        }
+        if (tool == QtToolType::VerticalSpace) {
+            beginVerticalSpaceAtScreen(event->position(), event->modifiers().testFlag(Qt::ControlModifier));
             event->accept();
             return;
         }
@@ -965,6 +979,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->documentController && this->documentController->isVerticalSpacing()) {
+        finalizeVerticalSpace();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->shapeDrawing && !isMultiClickShapeTool()) {
         finalizeShape();
         event->accept();
@@ -1025,6 +1044,11 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
     if (this->pdfTextSelecting) {
         updatePdfTextSelectionAtScreen(event->position());
+        event->accept();
+        return;
+    }
+    if (this->documentController && this->documentController->isVerticalSpacing()) {
+        updateVerticalSpaceAtScreen(event->position());
         event->accept();
         return;
     }
@@ -1196,6 +1220,9 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         if (this->movingSelection) {
             cancelMoveSelection();
         }
+        if (this->documentController->isVerticalSpacing()) {
+            cancelVerticalSpace();
+        }
         this->documentController->clearElementSelection();
         this->documentController->clearInteractiveGeometryState();
         updateDebugOverlay(QStringLiteral("selection cleared"));
@@ -1283,7 +1310,8 @@ auto QtCanvas::documentSceneBounds() const -> QRectF {
     for (std::size_t i = 1; i < rects.size(); ++i) {
         bounds = bounds.united(rects[i]);
     }
-    return bounds.adjusted(-80.0, -80.0, 80.0, 80.0);
+    return bounds.adjusted(-80.0 - this->extraPageSpaceLeft, -80.0 - this->extraPageSpaceAbove,
+                           80.0 + this->extraPageSpaceRight, 80.0 + this->extraPageSpaceBelow);
 }
 
 void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,
@@ -1752,6 +1780,9 @@ void QtCanvas::setActiveTool(QtToolType tool) {
     }
     if (this->activeInstrumentStroke) {
         cancelInstrumentTool();
+    }
+    if (this->documentController && this->documentController->isVerticalSpacing()) {
+        cancelVerticalSpace();
     }
     this->movingInstrumentOverlay = false;
     this->currentToolState.activeTool = tool;
@@ -2668,6 +2699,107 @@ void QtCanvas::drawRubberBand(QPainter& painter) const {
     painter.setBrush(qColorFromColor(this->selectionColor, 30));
     painter.drawRect(bandRect);
 
+    painter.restore();
+}
+
+void QtCanvas::beginVerticalSpaceAtScreen(const QPointF& screenPoint, bool moveAbove) {
+    if (!this->documentController) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
+    const auto rects = pageRects();
+    if (!pageIdx || *pageIdx >= rects.size()) {
+        return;
+    }
+
+    const auto& pageRect = rects[*pageIdx];
+    const double pageY = scenePoint.y() - pageRect.y();
+    if (!this->documentController->beginVerticalSpace(*pageIdx, pageY, moveAbove)) {
+        Q_EMIT statusHintChanged(QStringLiteral("No elements to move"));
+        return;
+    }
+
+    this->verticalSpacePreview = VerticalSpacePreview{
+            .pageIndex = *pageIdx, .startY = pageY, .currentY = pageY, .moveAbove = moveAbove};
+    updateDebugOverlay(moveAbove ? QStringLiteral("vertical space above") : QStringLiteral("vertical space below"));
+    update();
+}
+
+void QtCanvas::updateVerticalSpaceAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->documentController->isVerticalSpacing() || !this->verticalSpacePreview) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto rects = pageRects();
+    if (this->verticalSpacePreview->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const auto& pageRect = rects[this->verticalSpacePreview->pageIndex];
+    double pageY = scenePoint.y() - pageRect.y();
+    pageY = std::clamp(pageY, 0.0, pageRect.height());
+    if (this->gridSnapEnabled && this->snapGridSize > 0.0) {
+        pageY = std::round(pageY / this->snapGridSize) * this->snapGridSize;
+    }
+
+    this->verticalSpacePreview->currentY = pageY;
+    if (this->documentController->updateVerticalSpace(pageY)) {
+        Q_EMIT statusHintChanged(
+                QStringLiteral("Vertical space %1 pt").arg(pageY - this->verticalSpacePreview->startY, 0, 'f', 1));
+    }
+    update();
+}
+
+void QtCanvas::finalizeVerticalSpace() {
+    if (!this->documentController) {
+        this->verticalSpacePreview.reset();
+        return;
+    }
+
+    const bool changed = this->documentController->endVerticalSpace();
+    this->verticalSpacePreview.reset();
+    update();
+    if (changed) {
+        Q_EMIT documentEdited();
+        Q_EMIT statusHintChanged(QStringLiteral("Vertical space inserted"));
+    }
+}
+
+void QtCanvas::cancelVerticalSpace() {
+    if (this->documentController) {
+        this->documentController->cancelVerticalSpace();
+    }
+    this->verticalSpacePreview.reset();
+    update();
+}
+
+void QtCanvas::drawVerticalSpacePreview(QPainter& painter) const {
+    if (!this->verticalSpacePreview) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (this->verticalSpacePreview->pageIndex >= rects.size()) {
+        return;
+    }
+
+    const auto& pageRect = rects[this->verticalSpacePreview->pageIndex];
+    const double startY = pageRect.y() + this->verticalSpacePreview->startY;
+    const double currentY = pageRect.y() + this->verticalSpacePreview->currentY;
+    const QRectF band(pageRect.x(), std::min(startY, currentY), pageRect.width(), std::abs(currentY - startY));
+
+    painter.save();
+    painter.setPen(QPen(QColor(30, 100, 220), 1.5 / this->zoomFactor, Qt::DashLine));
+    painter.setBrush(QColor(30, 100, 220, 40));
+    if (band.height() > 0.0) {
+        painter.drawRect(band);
+    }
+    painter.drawLine(QPointF(pageRect.x(), startY), QPointF(pageRect.right(), startY));
+    painter.setPen(QPen(QColor(30, 100, 220), 2.0 / this->zoomFactor));
+    painter.drawLine(QPointF(pageRect.x(), currentY), QPointF(pageRect.right(), currentY));
     painter.restore();
 }
 

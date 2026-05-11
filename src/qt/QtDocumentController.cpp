@@ -1860,6 +1860,102 @@ auto QtDocumentController::cancelMoveSelection() -> void {
 
 auto QtDocumentController::isMovingSelection() const -> bool { return this->moveState.has_value(); }
 
+auto QtDocumentController::beginVerticalSpace(std::size_t pageIndex, double pageY, bool moveAbove) -> bool {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return false;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        return false;
+    }
+
+    std::vector<const Element*> elements;
+    for (const auto* element: layer->getElementsView().clone()) {
+        if (!element) {
+            continue;
+        }
+        const bool selected = moveAbove ? element->getY() + element->getElementHeight() <= pageY : element->getY() >= pageY;
+        if (selected) {
+            elements.push_back(element);
+        }
+    }
+
+    if (elements.empty()) {
+        return false;
+    }
+
+    this->verticalSpaceState = QtVerticalSpaceState{
+            .startY = pageY, .currentDy = 0.0, .elements = std::move(elements), .pageIndex = pageIndex};
+    return true;
+}
+
+auto QtDocumentController::updateVerticalSpace(double pageY) -> bool {
+    if (!this->verticalSpaceState || !this->document) {
+        return false;
+    }
+
+    const double newDy = pageY - this->verticalSpaceState->startY;
+    const double deltaDy = newDy - this->verticalSpaceState->currentDy;
+    if (std::abs(deltaDy) < 1e-6) {
+        return false;
+    }
+
+    this->document->lock();
+    for (const auto* elem: this->verticalSpaceState->elements) {
+        auto* mutableElem = const_cast<Element*>(elem);
+        mutableElem->move(0.0, deltaDy);
+    }
+    this->document->unlock();
+
+    this->verticalSpaceState->currentDy = newDy;
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::endVerticalSpace() -> bool {
+    if (!this->verticalSpaceState) {
+        return false;
+    }
+
+    const double dy = this->verticalSpaceState->currentDy;
+    if (std::abs(dy) < 1e-6) {
+        this->verticalSpaceState.reset();
+        return false;
+    }
+
+    pushHistory(QtHistoryEntry{QtMoveHistoryEntry{.pageIndex = this->verticalSpaceState->pageIndex,
+                                                   .elements = this->verticalSpaceState->elements,
+                                                   .dx = 0.0,
+                                                   .dy = dy,
+                                                   .text = "Insert vertical space"}});
+    this->verticalSpaceState.reset();
+    return true;
+}
+
+auto QtDocumentController::cancelVerticalSpace() -> void {
+    if (!this->verticalSpaceState || !this->document) {
+        this->verticalSpaceState.reset();
+        return;
+    }
+
+    const double dy = this->verticalSpaceState->currentDy;
+    if (std::abs(dy) > 1e-6) {
+        this->document->lock();
+        for (const auto* elem: this->verticalSpaceState->elements) {
+            auto* mutableElem = const_cast<Element*>(elem);
+            mutableElem->move(0.0, -dy);
+        }
+        this->document->unlock();
+        rebuildPageSnapshots();
+    }
+
+    this->verticalSpaceState.reset();
+}
+
+auto QtDocumentController::isVerticalSpacing() const -> bool { return this->verticalSpaceState.has_value(); }
+
 // ---------------------------------------------------------------------------
 // Layer management
 // ---------------------------------------------------------------------------

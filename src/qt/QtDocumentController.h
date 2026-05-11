@@ -177,6 +177,13 @@ struct QtMoveState {
     std::size_t pageIndex = 0U;
 };
 
+struct QtVerticalSpaceState {
+    double startY = 0.0;
+    double currentDy = 0.0;
+    std::vector<const Element*> elements;
+    std::size_t pageIndex = 0U;
+};
+
 struct QtActiveStroke {
     std::size_t pageIndex = 0U;
     std::unique_ptr<Stroke> stroke;
@@ -346,6 +353,11 @@ public:
     auto endMoveSelection() -> bool;
     auto cancelMoveSelection() -> void;
     [[nodiscard]] auto isMovingSelection() const -> bool;
+    auto beginVerticalSpace(std::size_t pageIndex, double pageY, bool moveAbove) -> bool;
+    auto updateVerticalSpace(double pageY) -> bool;
+    auto endVerticalSpace() -> bool;
+    auto cancelVerticalSpace() -> void;
+    [[nodiscard]] auto isVerticalSpacing() const -> bool;
 
     // Layer management
     [[nodiscard]] auto layerCount(std::size_t pageIndex) const -> std::size_t;
@@ -467,6 +479,7 @@ private:
     std::optional<QtSegmentEraseHistoryEntry> pendingSegmentErase;
     std::optional<QtElementSelection> currentSelection;
     std::optional<QtMoveState> moveState;
+    std::optional<QtVerticalSpaceState> verticalSpaceState;
     std::deque<QtHistoryEntry> undoHistory;
     std::deque<QtHistoryEntry> redoHistory;
 };

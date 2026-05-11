@@ -65,6 +65,7 @@ public:
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
     void setViewInteractionOptions(double zoomStepPercent, double zoomStepScrollPercent, double rotationSnapTolerance);
+    void setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below);
     void setTouchDrawingEnabled(bool enabled);
     void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
     void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
@@ -223,6 +224,11 @@ private:
     void drawSelectionOverlay(QPainter& painter) const;
     void drawPdfTextSelectionOverlay(QPainter& painter) const;
     void drawRubberBand(QPainter& painter) const;
+    void beginVerticalSpaceAtScreen(const QPointF& screenPoint, bool moveAbove);
+    void updateVerticalSpaceAtScreen(const QPointF& screenPoint);
+    void finalizeVerticalSpace();
+    void cancelVerticalSpace();
+    void drawVerticalSpacePreview(QPainter& painter) const;
     void beginPdfTextSelectionAtScreen(const QPointF& screenPoint);
     void updatePdfTextSelectionAtScreen(const QPointF& screenPoint);
     void finalizePdfTextSelection();
@@ -275,6 +281,10 @@ private:
     double zoomStepFactor = 1.10;
     double zoomStepScrollFactor = 1.02;
     double rotationSnapTolerance = 0.30;
+    double extraPageSpaceLeft = 0.0;
+    double extraPageSpaceRight = 0.0;
+    double extraPageSpaceAbove = 0.0;
+    double extraPageSpaceBelow = 0.0;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix;
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
@@ -312,6 +322,13 @@ private:
     int activeTouchPointId = -1;
     QPointF rubberBandOrigin;
     QPointF rubberBandCurrent;
+    struct VerticalSpacePreview {
+        std::size_t pageIndex = 0U;
+        double startY = 0.0;
+        double currentY = 0.0;
+        bool moveAbove = false;
+    };
+    std::optional<VerticalSpacePreview> verticalSpacePreview;
     QPointF shapeStartScene;
     QPointF shapeCurrentScene;
     std::vector<QPointF> shapeClickPoints;  // For multi-click tools (polyline, arc)

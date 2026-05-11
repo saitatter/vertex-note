@@ -28,6 +28,7 @@ This audit compares GTK `Settings` keys from
 | `defaultPdfExportName` | Implemented | `pdf/defaultExportName`. |
 | `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup` | Implemented | `pdf/pageCacheSize`, `pdf/preloadPagesBefore`, `pdf/preloadPagesAfter`, `pdf/eagerPageCleanup`; applied to the Qt PDF background raster cache. |
 | `pageTemplate` | Partial | Qt persists default page width/height under `page/defaultWidth` and `page/defaultHeight`; background template presets exist in the Qt page template flow. |
+| `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Qt-only equivalent | `page/addHorizontalSpace*` and `page/addVerticalSpace*`; applied to Qt canvas scrollable page padding. The Vertical Space tool also supports click-drag insertion with undo/redo. |
 | `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`. |
 | `pluginEnabled`, `pluginDisabled` | Qt-only equivalent | Qt stores per-plugin enabled overrides under `plugins/enabled/<plugin-key>`. |
 | `latexSettings.globalTemplatePath` | Implemented | `latex/templatePath`. |
@@ -70,7 +71,6 @@ This audit compares GTK `Settings` keys from
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
 | `edgePanSpeed`, `edgePanMaxMult`, `displayDpi` | Unsupported | Qt does not yet have GTK's edge-pan loop or DPI override setting. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
-| `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Unsupported | Space insertion settings are not wired into Qt tools. |
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
@@ -87,7 +87,6 @@ This audit compares GTK `Settings` keys from
 
 ## Next Settings Work
 
-1. Add Qt-native implementations for vertical/horizontal space insertion settings.
-2. Add advanced Tools settings for stroke filtering and GTK's full stabilizer matrix.
-3. Add Qt edge-pan/unlimited-scroll behavior if the shell keeps GTK's selection-edge workflow.
-4. Add remaining advanced LaTeX/audio device selectors.
+1. Add advanced Tools settings for stroke filtering and GTK's full stabilizer matrix.
+2. Add Qt edge-pan/unlimited-scroll behavior if the shell keeps GTK's selection-edge workflow.
+3. Add remaining advanced LaTeX/audio device selectors.
