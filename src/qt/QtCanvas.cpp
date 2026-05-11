@@ -53,7 +53,6 @@ namespace {
 
 constexpr double MIN_ZOOM = 0.1;
 constexpr double MAX_ZOOM = 8.0;
-constexpr double ZOOM_STEP = 1.15;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
 constexpr double CM_TO_PT = 28.3464566929;
@@ -405,9 +404,9 @@ auto QtCanvas::sessionViewportState() const -> QtViewportState {
     return {.zoom = this->zoomFactor, .scrollX = this->scrollX, .scrollY = this->scrollY};
 }
 
-void QtCanvas::zoomIn() { zoomAroundScreenPoint(ZOOM_STEP, rect().center()); }
+void QtCanvas::zoomIn() { zoomAroundScreenPoint(this->zoomStepFactor, rect().center()); }
 
-void QtCanvas::zoomOut() { zoomAroundScreenPoint(1.0 / ZOOM_STEP, rect().center()); }
+void QtCanvas::zoomOut() { zoomAroundScreenPoint(1.0 / this->zoomStepFactor, rect().center()); }
 
 void QtCanvas::resetViewport() {
     fitPage();
@@ -639,6 +638,13 @@ void QtCanvas::setRecolorOptions(bool recolorMainView, Color light, Color dark) 
 void QtCanvas::setRotationSnapEnabled(bool enabled) {
     this->rotationSnapEnabled = enabled;
     update();
+}
+
+void QtCanvas::setViewInteractionOptions(double zoomStepPercent, double zoomStepScrollPercent,
+                                         double rotationSnapTolerance) {
+    this->zoomStepFactor = 1.0 + std::clamp(zoomStepPercent, 1.0, 100.0) / 100.0;
+    this->zoomStepScrollFactor = 1.0 + std::clamp(zoomStepScrollPercent, 1.0, 100.0) / 100.0;
+    this->rotationSnapTolerance = std::clamp(rotationSnapTolerance, 0.01, M_PI / 2.0);
 }
 
 void QtCanvas::setTouchDrawingEnabled(bool enabled) {
@@ -1056,7 +1062,7 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
          this->currentToolState.activeTool == QtToolType::Compass) &&
         this->instrumentOverlay.visible) {
         if (event->modifiers().testFlag(Qt::AltModifier)) {
-            const double factor = event->angleDelta().y() >= 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
+            const double factor = event->angleDelta().y() >= 0 ? this->zoomStepFactor : 1.0 / this->zoomStepFactor;
             this->instrumentOverlay.size =
                     std::clamp(this->instrumentOverlay.size * factor, INSTRUMENT_MIN_SIZE, INSTRUMENT_MAX_SIZE);
             update();
@@ -1072,7 +1078,8 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
         }
     }
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        const double factor = event->angleDelta().y() >= 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
+        const double factor =
+                event->angleDelta().y() >= 0 ? this->zoomStepScrollFactor : 1.0 / this->zoomStepScrollFactor;
         zoomAroundScreenPoint(factor, event->position());
         event->accept();
         return;
@@ -3226,6 +3233,9 @@ auto QtCanvas::applyRotationSnap(const QPointF& origin, const QPointF& point) co
 
     const double angle = std::atan2(delta.y(), delta.x());
     const double snappedAngle = std::round(angle / ROTATION_SNAP_STEP_RADIANS) * ROTATION_SNAP_STEP_RADIANS;
+    if (std::abs(angle - snappedAngle) > this->rotationSnapTolerance) {
+        return point;
+    }
     return QPointF(origin.x() + std::cos(snappedAngle) * length, origin.y() + std::sin(snappedAngle) * length);
 }
 

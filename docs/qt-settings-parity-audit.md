@@ -33,27 +33,31 @@ This audit compares GTK `Settings` keys from
 | `latexSettings.globalTemplatePath` | Implemented | `latex/templatePath`. |
 | `touchDrawing` | Implemented | `general/touchDrawing`. |
 | `snapRotation`, `vertexNoteGeometrySnapEnabled`, `vertexNoteGridSnapEnabled` | Implemented | `general/rotationSnap`, `general/geometrySnap`, `general/gridSnap`. |
+| `snapRotationTolerance` | Implemented | `general/rotationSnapTolerance`; applied to Qt stroke/shape rotation snapping. |
 | `snapGridTolerance`, `snapGridSize` | Implemented | `tools/snapGridTolerance`, `tools/snapGridSize`; applied to Qt geometry grid snapping. |
+| `zoomStep`, `zoomStepScroll` | Implemented | `view/zoomStepPercent`, `view/zoomStepScrollPercent`; applied to Qt zoom commands and Ctrl+wheel zoom. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
 | `stabilizerAveragingMethod`, `stabilizerBuffersize`, `stabilizerFinalizeStroke` | Partial / Qt-only equivalent | `tools/strokeStabilizerEnabled`, `tools/strokeStabilizerSamples`, `tools/strokeStabilizerStrength`, `tools/strokeStabilizerFinalizeStroke`; Qt applies a native moving-average stabilizer instead of reusing GTK `StrokeHandler`. |
-| `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt can persist eraser cursor hiding and active/right-button eraser cursor behavior. |
+| Custom data `deviceClasses`, `buttonConfig` | Qt-only equivalent | Qt discovers `QInputDevice`s, persists a global button matrix and per-device override matrices, and applies them for mouse/tablet/touch input. |
+| `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
 | `filepathShownInTitlebar`, `pageNumberShownInTitlebar` | Implemented | `appearance/showFilePathInTitlebar`, `appearance/showPageNumberInTitlebar`. |
 | `showPageShadow` | Implemented | `appearance/showPageShadow`; applied to the Qt page background renderer. |
-| `themeVariant` | Qt-only equivalent | `appearance/themeVariant`; Qt can apply System, Light, or Dark application palettes without sharing GTK theme storage. |
+| `themeVariant`, `iconTheme`, `useStockIcons` | Qt-only equivalent | `appearance/themeVariant`, `appearance/iconTheme`; Qt applies System, Light, Dark, Color icons, and Lucide icons without sharing GTK theme storage. |
 | `colorPalette` | Implemented | `appearance/colorPalettePath`; Qt loads `.gpl` palette files for toolbar quick colors and Lua `app.getColorPalette()`, falling back to the built-in palette on parse errors. |
 | `autosaveEnabled`, `autosaveTimeout` | Implemented | `general/autosaveEnabled`, `general/autosaveTimeoutMinutes`; autosaves dirty existing `.xopp`/`.xoj`/`.xopt` documents without prompting. |
+| `autoloadMostRecent` | Implemented | `general/autoloadMostRecent`; opens the first available recent document during Qt shell startup. |
+| `presentationMode` | Implemented | `view/presentationModeDefault`; Qt can start directly in presentation mode. |
+| `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
+| `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Implemented | `appearance/recolorMainView`, `appearance/recolorSidebarMiniatures`, `appearance/recolorLight`, `appearance/recolorDark`; applied to Qt canvas and page sidebar previews. |
+| `selectionBorderColor`, `selectionMarkerColor`, `activeSelectionColor` | Partial / Qt-only equivalent | `appearance/selectionColor`; Qt uses one selection accent color for selection, hover, handles, and geometry overlays. |
 | `defaultViewModeAttributes`, `fullscreenViewModeAttributes`, `presentationViewModeAttributes` | Partial | Qt persists the active chrome/layout pieces individually rather than serializing GTK view-mode strings. |
 
 ## Partial Coverage
 
 | GTK setting key(s) | Current Qt behavior | Gap |
 | --- | --- | --- |
-| Custom data `deviceClasses`, `buttonConfig` | Qt settings discovers current `QInputDevice`s, uses Qt tablet pointer kinds, maps physical eraser pointers to erasing, and persists right/middle button action policy. | No per-device class matrix or full GTK button action editor yet. |
-| `iconTheme`, `useStockIcons` | Qt uses bundled Qt icons and native Qt palette/theme defaults. | No user-selectable icon theme or stock-icon toggle in Qt settings. |
-| `presentationMode` | Qt has the `view.presentation` command. | Presentation state is not persisted as a settings default. |
-| `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt uses native file dialogs and recent documents. | Last dialog directories are not separately persisted. |
 | `latexSettings.defaultText`, `latexSettings.genCmd`, `latexSettings.*editor*`, `latexSettings.sourceView*`, `latexSettings.useExternalEditor`, `latexSettings.externalEditor*`, `latexSettings.temporaryFileExt`, `latexSettings.autoCheckDependencies` | Qt can render LaTeX using the template path. | Advanced LaTeX editor/generator settings are not exposed in Qt. |
 | `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Qt audio settings cover folder, sample rate, gain, seek step and uses the shared audio backend. | No Qt device selector or global disable toggle in settings. |
 | `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
@@ -63,17 +67,14 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
-| `edgePanSpeed`, `edgePanMaxMult`, `zoomStep`, `zoomStepScroll`, `displayDpi` | Unsupported | Qt uses hardcoded/current viewport behavior for now. |
+| `edgePanSpeed`, `edgePanMaxMult`, `displayDpi` | Unsupported | Qt does not yet have GTK's edge-pan loop or DPI override setting. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
-| `autoloadMostRecent` | Unsupported | Qt persists recent documents but does not auto-open the newest one. |
 | `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Unsupported | Space insertion settings are not wired into Qt tools. |
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
-| `snapRotationTolerance` | Unsupported | Rotation snapping exists, but the tolerance is not configurable yet. |
 | `vertexNoteAutomaticUpdateCheckEnabled` | Unsupported | Qt can check for updates manually, but no persisted automatic check setting. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
-| `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Unsupported | No Qt recolor mode. |
-| `selectionBorderColor`, `backgroundColor`, `selectionMarkerColor`, `activeSelectionColor` | Unsupported | Qt selection/theme colors are not user-configurable. |
+| `backgroundColor` | Unsupported | Qt still uses the canvas palette/background rather than a dedicated user setting. |
 | `pageRerenderThreshold` | Unsupported | Qt rendering cache policy is not fully settings-backed yet. |
 | `sizeUnit` | Unsupported | Qt numeric settings currently use fixed point/second units in labels. |
 | `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled`, `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | No Qt stroke filtering settings path yet. |
@@ -86,10 +87,7 @@ This audit compares GTK `Settings` keys from
 
 ## Next Settings Work
 
-1. Add a full Qt input-device editor for per-device classes and per-button
-   tool mappings.
-2. Add advanced Tools settings for rotation tolerance and stroke filtering.
-3. Add Appearance settings for icon theme, selection colors, and recolor mode.
-4. Wire the persisted PDF performance settings into a dedicated Qt PDF cache
-   layer once that layer has stable knobs to expose. ✓ Initial Qt raster cache
-   support now exists; future work can tune invalidation and telemetry.
+1. Add Qt-native implementations for vertical/horizontal space insertion settings.
+2. Add advanced Tools settings for stroke filtering and GTK's full stabilizer matrix.
+3. Add Qt edge-pan/unlimited-scroll behavior if the shell keeps GTK's selection-edge workflow.
+4. Add automatic update checks and remaining advanced LaTeX/audio device selectors.

@@ -124,6 +124,11 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
         QDialog(parent) {
     setWindowTitle(QStringLiteral("Preferences"));
     setMinimumWidth(380);
+    this->lastOpenPath = current.lastOpenPath;
+    this->lastSavePath = current.lastSavePath;
+    this->lastImagePath = current.lastImagePath;
+    this->lastPdfPath = current.lastPdfPath;
+    this->lastExportPath = current.lastExportPath;
 
     auto* mainLayout = new QVBoxLayout(this);
     auto* tabs = new QTabWidget(this);
@@ -246,6 +251,14 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->autosaveTimeoutSpin->setSuffix(QStringLiteral(" min"));
     generalLayout->addRow(QStringLiteral("Autosave interval:"), this->autosaveTimeoutSpin);
 
+    this->autoloadMostRecentCheck = new QCheckBox(generalPage);
+    this->autoloadMostRecentCheck->setChecked(current.autoloadMostRecent);
+    generalLayout->addRow(QStringLiteral("Autoload most recent document:"), this->autoloadMostRecentCheck);
+
+    this->presentationModeDefaultCheck = new QCheckBox(generalPage);
+    this->presentationModeDefaultCheck->setChecked(current.presentationModeDefault);
+    generalLayout->addRow(QStringLiteral("Start in presentation mode:"), this->presentationModeDefaultCheck);
+
     this->geoSnapCheck = new QCheckBox(generalPage);
     this->geoSnapCheck->setChecked(current.geometrySnapDefault);
     generalLayout->addRow(QStringLiteral("Geometry snap enabled:"), this->geoSnapCheck);
@@ -257,6 +270,30 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->rotationSnapCheck = new QCheckBox(generalPage);
     this->rotationSnapCheck->setChecked(current.rotationSnapDefault);
     generalLayout->addRow(QStringLiteral("Rotation snap enabled:"), this->rotationSnapCheck);
+
+    this->rotationSnapToleranceSpin = new QDoubleSpinBox(generalPage);
+    this->rotationSnapToleranceSpin->setRange(0.01, 1.57);
+    this->rotationSnapToleranceSpin->setSingleStep(0.05);
+    this->rotationSnapToleranceSpin->setDecimals(2);
+    this->rotationSnapToleranceSpin->setValue(current.rotationSnapTolerance);
+    this->rotationSnapToleranceSpin->setSuffix(QStringLiteral(" rad"));
+    generalLayout->addRow(QStringLiteral("Rotation snap tolerance:"), this->rotationSnapToleranceSpin);
+
+    this->zoomStepSpin = new QDoubleSpinBox(generalPage);
+    this->zoomStepSpin->setRange(1.0, 100.0);
+    this->zoomStepSpin->setSingleStep(1.0);
+    this->zoomStepSpin->setDecimals(1);
+    this->zoomStepSpin->setValue(current.zoomStepPercent);
+    this->zoomStepSpin->setSuffix(QStringLiteral("%"));
+    generalLayout->addRow(QStringLiteral("Zoom step:"), this->zoomStepSpin);
+
+    this->zoomStepScrollSpin = new QDoubleSpinBox(generalPage);
+    this->zoomStepScrollSpin->setRange(1.0, 100.0);
+    this->zoomStepScrollSpin->setSingleStep(1.0);
+    this->zoomStepScrollSpin->setDecimals(1);
+    this->zoomStepScrollSpin->setValue(current.zoomStepScrollPercent);
+    this->zoomStepScrollSpin->setSuffix(QStringLiteral("%"));
+    generalLayout->addRow(QStringLiteral("Wheel zoom step:"), this->zoomStepScrollSpin);
 
     this->touchDrawingCheck = new QCheckBox(generalPage);
     this->touchDrawingCheck->setChecked(current.touchDrawingDefault);
@@ -647,9 +684,14 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .undoHistoryLimit = this->undoLimitSpin->value(),
             .autosaveEnabled = this->autosaveEnabledCheck->isChecked(),
             .autosaveTimeoutMinutes = this->autosaveTimeoutSpin->value(),
+            .autoloadMostRecent = this->autoloadMostRecentCheck->isChecked(),
+            .presentationModeDefault = this->presentationModeDefaultCheck->isChecked(),
             .geometrySnapDefault = this->geoSnapCheck->isChecked(),
             .gridSnapDefault = this->gridSnapCheck->isChecked(),
             .rotationSnapDefault = this->rotationSnapCheck->isChecked(),
+            .rotationSnapTolerance = this->rotationSnapToleranceSpin->value(),
+            .zoomStepPercent = this->zoomStepSpin->value(),
+            .zoomStepScrollPercent = this->zoomStepScrollSpin->value(),
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
             .minimumPressure = this->minimumPressureSpin->value(),
             .pressureMultiplier = this->pressureMultiplierSpin->value(),
@@ -699,6 +741,11 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .pdfEagerPageCleanup = this->pdfEagerCleanupCheck->isChecked(),
             .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
+            .lastOpenPath = this->lastOpenPath,
+            .lastSavePath = this->lastSavePath,
+            .lastImagePath = this->lastImagePath,
+            .lastPdfPath = this->lastPdfPath,
+            .lastExportPath = this->lastExportPath,
             .audioSampleRate = this->audioSampleRateSpin->value(),
             .audioGain = this->audioGainSpin->value(),
             .defaultSeekTimeSeconds = this->defaultSeekTimeSpin->value(),

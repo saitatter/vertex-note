@@ -21,8 +21,10 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontComboBox>
 #include <QFontDialog>
 #include <QFormLayout>
@@ -81,6 +83,18 @@ auto lowerExtension(const std::filesystem::path& path) -> std::string {
     auto ext = path.extension().string();
     std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return ext;
+}
+
+auto joinFileDialogFilters(const std::vector<vn::ui::common::FileDialogFilter>& filters) -> QString {
+    QStringList items;
+    for (const auto& filter: filters) {
+        QStringList patterns;
+        for (const auto& pattern: filter.patterns) {
+            patterns << QString::fromStdString(pattern);
+        }
+        items << QString::fromStdString(filter.label) + " (" + patterns.join(' ') + ")";
+    }
+    return items.join(";;");
 }
 
 auto isAutosavableDocumentPath(const std::filesystem::path& path) -> bool {
@@ -625,8 +639,19 @@ QtAppShell::QtAppShell():
             floatingToolBar->restoreGeometry(this->persistedFloatingToolBarGeometries[index]);
         }
     }
-    this->window.canvas()->newBlankDocument();
-    this->window.canvas()->fitWidth();
+    bool openedMostRecent = false;
+    if (this->currentSettings.autoloadMostRecent) {
+        for (const auto& recentPath: this->recentFiles.recentFiles()) {
+            if (openPath(recentPath, true)) {
+                openedMostRecent = true;
+                break;
+            }
+        }
+    }
+    if (!openedMostRecent) {
+        this->window.canvas()->newBlankDocument();
+        this->window.canvas()->fitWidth();
+    }
     this->window.cascadeFloatingToolBars();
     this->window.menuBar()->setVisible(this->persistedShowMenubar);
     applySidebarVisibility(this->persistedShowSidebar);
@@ -665,6 +690,9 @@ auto QtAppShell::nativeMainWindowHandle() const -> void* {
 void QtAppShell::showMainWindow() {
     this->window.show();
     this->window.cascadeFloatingToolBars();
+    if (this->currentSettings.presentationModeDefault && !this->presentationMode) {
+        togglePresentationMode();
+    }
 }
 
 void QtAppShell::requestQuit() { QApplication::quit(); }
@@ -2601,12 +2629,25 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.autosaveTimeoutMinutes =
             settings.value(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes)
                     .toInt();
+    this->currentSettings.autoloadMostRecent =
+            settings.value(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent).toBool();
+    this->currentSettings.presentationModeDefault =
+            settings.value(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault)
+                    .toBool();
     this->currentSettings.geometrySnapDefault =
             settings.value(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault).toBool();
     this->currentSettings.gridSnapDefault =
             settings.value(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault).toBool();
     this->currentSettings.rotationSnapDefault =
             settings.value(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault).toBool();
+    this->currentSettings.rotationSnapTolerance =
+            settings.value(QStringLiteral("general/rotationSnapTolerance"), this->currentSettings.rotationSnapTolerance)
+                    .toDouble();
+    this->currentSettings.zoomStepPercent =
+            settings.value(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent).toDouble();
+    this->currentSettings.zoomStepScrollPercent =
+            settings.value(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent)
+                    .toDouble();
     this->currentSettings.touchDrawingDefault =
             settings.value(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault).toBool();
     this->currentSettings.minimumPressure =
@@ -2794,6 +2835,26 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder))
                     .toString()
                     .toStdString();
+    this->currentSettings.lastOpenPath =
+            settings.value(QStringLiteral("paths/lastOpen"), QString::fromStdString(this->currentSettings.lastOpenPath))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.lastSavePath =
+            settings.value(QStringLiteral("paths/lastSave"), QString::fromStdString(this->currentSettings.lastSavePath))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.lastImagePath =
+            settings.value(QStringLiteral("paths/lastImage"), QString::fromStdString(this->currentSettings.lastImagePath))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.lastPdfPath =
+            settings.value(QStringLiteral("paths/lastPdf"), QString::fromStdString(this->currentSettings.lastPdfPath))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.lastExportPath =
+            settings.value(QStringLiteral("paths/lastExport"), QString::fromStdString(this->currentSettings.lastExportPath))
+                    .toString()
+                    .toStdString();
     this->currentSettings.audioSampleRate =
             settings.value(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate).toDouble();
     this->currentSettings.audioGain =
@@ -2902,9 +2963,14 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/undoHistoryLimit"), this->currentSettings.undoHistoryLimit);
     settings.setValue(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled);
     settings.setValue(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes);
+    settings.setValue(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent);
+    settings.setValue(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault);
     settings.setValue(QStringLiteral("general/geometrySnap"), this->currentSettings.geometrySnapDefault);
     settings.setValue(QStringLiteral("general/gridSnap"), this->currentSettings.gridSnapDefault);
     settings.setValue(QStringLiteral("general/rotationSnap"), this->currentSettings.rotationSnapDefault);
+    settings.setValue(QStringLiteral("general/rotationSnapTolerance"), this->currentSettings.rotationSnapTolerance);
+    settings.setValue(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent);
+    settings.setValue(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent);
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("general/laserPointerFadeOutMs"), this->currentSettings.laserPointerFadeOutMs);
@@ -2983,6 +3049,11 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("view/layoutRtl"), canvas->isRightToLeftLayout());
     settings.setValue(QStringLiteral("view/layoutBtt"), canvas->isBottomToTopLayout());
     settings.setValue(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder));
+    settings.setValue(QStringLiteral("paths/lastOpen"), QString::fromStdString(this->currentSettings.lastOpenPath));
+    settings.setValue(QStringLiteral("paths/lastSave"), QString::fromStdString(this->currentSettings.lastSavePath));
+    settings.setValue(QStringLiteral("paths/lastImage"), QString::fromStdString(this->currentSettings.lastImagePath));
+    settings.setValue(QStringLiteral("paths/lastPdf"), QString::fromStdString(this->currentSettings.lastPdfPath));
+    settings.setValue(QStringLiteral("paths/lastExport"), QString::fromStdString(this->currentSettings.lastExportPath));
     settings.setValue(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate);
     settings.setValue(QStringLiteral("audio/gain"), this->currentSettings.audioGain);
     settings.setValue(QStringLiteral("audio/defaultSeekTimeSeconds"), this->currentSettings.defaultSeekTimeSeconds);
@@ -3102,6 +3173,7 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
                                                 sessionState->viewport.scrollY);
         this->suppressDirtyTracking = false;
         this->recentFiles.addRecentFile(path);
+        this->currentSettings.lastOpenPath = path.parent_path().string();
         rebuildRecentDocumentsMenu();
         savePersistentUiState();
         updateEditCommandStates();
@@ -3124,6 +3196,7 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
     this->window.canvas()->fitWidth();
     this->suppressDirtyTracking = false;
     this->recentFiles.addRecentFile(path);
+    this->currentSettings.lastOpenPath = path.parent_path().string();
     rebuildRecentDocumentsMenu();
     savePersistentUiState();
     updateEditCommandStates();
@@ -3136,19 +3209,24 @@ auto QtAppShell::openPath(const std::filesystem::path& path, bool fromRecentDocu
 }
 
 void QtAppShell::openSession() {
-    const auto path = this->dialogs.openDocument(SESSION_FILTERS);
-    if (!path) {
+    const QString filePath = QFileDialog::getOpenFileName(&this->window, QStringLiteral("Open Document"),
+                                                          dialogInitialDirectory(this->currentSettings.lastOpenPath),
+                                                          joinFileDialogFilters(SESSION_FILTERS));
+    if (filePath.isEmpty()) {
         return;
     }
-    openPath(*path, false);
+    rememberDialogPath(this->currentSettings.lastOpenPath, filePath);
+    openPath(std::filesystem::path(filePath.toStdWString()), false);
 }
 
 void QtAppShell::annotatePdf() {
     const QString filePath = QFileDialog::getOpenFileName(&this->window, QStringLiteral("Annotate PDF"),
-                                                          QString(), QStringLiteral("PDF Files (*.pdf)"));
+                                                          dialogInitialDirectory(this->currentSettings.lastPdfPath),
+                                                          QStringLiteral("PDF Files (*.pdf)"));
     if (filePath.isEmpty()) {
         return;
     }
+    rememberDialogPath(this->currentSettings.lastPdfPath, filePath);
 
     const auto attachAnswer =
             QMessageBox::question(&this->window, QStringLiteral("Annotate PDF"),
@@ -3182,23 +3260,30 @@ void QtAppShell::annotatePdf() {
 }
 
 void QtAppShell::saveSessionAs() {
-    const auto path = this->dialogs.saveDocument(this->session.currentPath().value_or(std::filesystem::path("session.vnsession")),
-                                                 SESSION_FILTERS);
-    if (!path) {
+    const auto suggestedPath = this->session.currentPath().value_or(std::filesystem::path("session.vnsession"));
+    QString initialPath = QString::fromStdWString(suggestedPath.wstring());
+    if (!this->currentSettings.lastSavePath.empty() && !suggestedPath.is_absolute()) {
+        initialPath = QDir(dialogInitialDirectory(this->currentSettings.lastSavePath)).filePath(initialPath);
+    }
+    const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Save Document"), initialPath,
+                                                          joinFileDialogFilters(SESSION_FILTERS));
+    if (filePath.isEmpty()) {
         return;
     }
+    rememberDialogPath(this->currentSettings.lastSavePath, filePath);
+    const auto path = std::filesystem::path(filePath.toStdWString());
 
     const QtSessionState sessionState{.viewport = this->window.canvas()->sessionViewportState(),
                                                   .linkedDocumentPath = this->documentController.sourcePath()};
-    if (!this->session.saveAs(*path, sessionState)) {
+    if (!this->session.saveAs(path, sessionState)) {
         this->dialogs.showError("Save Failed", "VertexNote could not save the Qt session file.");
         return;
     }
 
-    this->recentFiles.addRecentFile(*path);
+    this->recentFiles.addRecentFile(path);
     rebuildRecentDocumentsMenu();
     savePersistentUiState();
-    this->window.statusBar()->showMessage(QString::fromStdString("Saved " + path->filename().string()), 4000);
+    this->window.statusBar()->showMessage(QString::fromStdString("Saved " + path.filename().string()), 4000);
     updateWindowTitle();
 }
 
@@ -3258,6 +3343,9 @@ void QtAppShell::applyRuntimeSettings() {
                                        this->currentSettings.strokeStabilizerStrength,
                                        this->currentSettings.strokeStabilizerFinalizeStroke);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
+    canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
+                                      this->currentSettings.zoomStepScrollPercent,
+                                      this->currentSettings.rotationSnapTolerance);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
     canvas->setPointerButtonActions(this->currentSettings.buttonMatrix);
     canvas->setInputDeviceButtonProfiles(this->currentSettings.inputDeviceButtonProfiles);
@@ -3449,10 +3537,12 @@ void QtAppShell::exportPdf() {
     }
 
     const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Export PDF"),
-                                                          QString(), QStringLiteral("PDF Files (*.pdf)"));
+                                                          dialogInitialDirectory(this->currentSettings.lastExportPath),
+                                                          QStringLiteral("PDF Files (*.pdf)"));
     if (filePath.isEmpty()) {
         return;
     }
+    rememberDialogPath(this->currentSettings.lastExportPath, filePath);
 
     auto* renderer = this->window.canvas()->contentRenderer();
     if (!renderer) {
@@ -3476,10 +3566,12 @@ void QtAppShell::exportPng() {
     }
 
     const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Export PNG"),
-                                                          QString(), QStringLiteral("PNG Images (*.png)"));
+                                                          dialogInitialDirectory(this->currentSettings.lastExportPath),
+                                                          QStringLiteral("PNG Images (*.png)"));
     if (filePath.isEmpty()) {
         return;
     }
+    rememberDialogPath(this->currentSettings.lastExportPath, filePath);
 
     auto* renderer = this->window.canvas()->contentRenderer();
     if (!renderer) {
@@ -3578,10 +3670,12 @@ void QtAppShell::saveDocument() {
         savePath = *existingPath;
     } else {
         const QString filePath = QFileDialog::getSaveFileName(&this->window, QStringLiteral("Save Document"),
-                                                              QString(), QStringLiteral("VertexNote Files (*.xopp)"));
+                                                              dialogInitialDirectory(this->currentSettings.lastSavePath),
+                                                              QStringLiteral("VertexNote Files (*.xopp)"));
         if (filePath.isEmpty()) {
             return;
         }
+        rememberDialogPath(this->currentSettings.lastSavePath, filePath);
         savePath = filePath.toStdString();
     }
 
@@ -3708,11 +3802,13 @@ void QtAppShell::insertImage() {
     }
 
     const QString filePath =
-            QFileDialog::getOpenFileName(&this->window, QStringLiteral("Insert Image"), QString(),
+            QFileDialog::getOpenFileName(&this->window, QStringLiteral("Insert Image"),
+                                         dialogInitialDirectory(this->currentSettings.lastImagePath),
                                          QStringLiteral("Images (*.png *.jpg *.jpeg *.bmp *.gif *.svg)"));
     if (filePath.isEmpty()) {
         return;
     }
+    rememberDialogPath(this->currentSettings.lastImagePath, filePath);
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -5018,6 +5114,28 @@ void QtAppShell::configurePageTemplateDialog() {
     this->currentSettings.defaultPageHeight = heightSpin->value();
     savePersistentUiState();
     this->window.statusBar()->showMessage(QStringLiteral("Page template updated"), 3000);
+}
+
+auto QtAppShell::dialogInitialDirectory(const std::string& storedPath) const -> QString {
+    if (storedPath.empty()) {
+        return QString();
+    }
+    const QFileInfo info(QString::fromStdString(storedPath));
+    if (info.exists() && info.isDir()) {
+        return info.absoluteFilePath();
+    }
+    if (info.exists()) {
+        return info.absolutePath();
+    }
+    return QString();
+}
+
+void QtAppShell::rememberDialogPath(std::string& storedPath, const QString& filePath) {
+    const QFileInfo info(filePath);
+    const QString directory = info.isDir() ? info.absoluteFilePath() : info.absolutePath();
+    if (!directory.isEmpty()) {
+        storedPath = directory.toStdString();
+    }
 }
 
 // ---------------------------------------------------------------------------

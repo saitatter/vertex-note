@@ -182,6 +182,8 @@ private:
     void deleteLayer();
     void paperFormatDialog();
     void configurePageTemplateDialog();
+    [[nodiscard]] auto dialogInitialDirectory(const std::string& storedPath) const -> QString;
+    void rememberDialogPath(std::string& storedPath, const QString& filePath);
 
     // Edit extras
     void moveSelectionLayerUp();

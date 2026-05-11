@@ -64,6 +64,7 @@ public:
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
+    void setViewInteractionOptions(double zoomStepPercent, double zoomStepScrollPercent, double rotationSnapTolerance);
     void setTouchDrawingEnabled(bool enabled);
     void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
     void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
@@ -271,6 +272,9 @@ private:
     bool strokeStabilizerFinalizeStroke = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
+    double zoomStepFactor = 1.10;
+    double zoomStepScrollFactor = 1.02;
+    double rotationSnapTolerance = 0.30;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix;
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
