@@ -209,8 +209,8 @@ private:
     std::vector<QtPaletteColor> activeColorPalette;
     std::vector<ElementPtr> elementClipboard;
     QToolButton* selectionToolButton = nullptr;
-    QToolButton* strokeDrawingToolButton = nullptr;
-    QToolButton* vertexDrawingToolButton = nullptr;
+    std::vector<QToolButton*> strokeDrawingToolButtons;
+    std::vector<QToolButton*> vertexDrawingToolButtons;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;

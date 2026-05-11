@@ -1643,8 +1643,8 @@ void QtAppShell::rebuildToolbar() {
         floatingToolBar->clear();
     }
     this->selectionToolButton = nullptr;
-    this->strokeDrawingToolButton = nullptr;
-    this->vertexDrawingToolButton = nullptr;
+    this->strokeDrawingToolButtons.clear();
+    this->vertexDrawingToolButtons.clear();
     this->laserToolButton = nullptr;
     this->pdfToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
@@ -1946,38 +1946,36 @@ void QtAppShell::rebuildToolbar() {
         return this->selectionToolButton;
     };
     const auto ensureStrokeDrawingButton = [&]() -> QToolButton* {
-        if (!this->strokeDrawingToolButton) {
-            this->strokeDrawingToolButton = new QToolButton(&this->window);
-            this->strokeDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-            this->strokeDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-            this->strokeDrawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
-            this->strokeDrawingToolButton->setToolTip(QStringLiteral("Stroke drawing tools"));
-            auto* drawingMenu = new QMenu(this->strokeDrawingToolButton);
-            for (const auto& spec: STROKE_DRAWING_TOOL_SPECS) {
-                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
-                    drawingMenu->addAction(action);
-                }
+        auto* button = new QToolButton(&this->window);
+        button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+        button->setPopupMode(QToolButton::MenuButtonPopup);
+        button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
+        button->setToolTip(QStringLiteral("Stroke drawing tools"));
+        auto* drawingMenu = new QMenu(button);
+        for (const auto& spec: STROKE_DRAWING_TOOL_SPECS) {
+            if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                drawingMenu->addAction(action);
             }
-            this->strokeDrawingToolButton->setMenu(drawingMenu);
         }
-        return this->strokeDrawingToolButton;
+        button->setMenu(drawingMenu);
+        this->strokeDrawingToolButtons.push_back(button);
+        return button;
     };
     const auto ensureVertexDrawingButton = [&]() -> QToolButton* {
-        if (!this->vertexDrawingToolButton) {
-            this->vertexDrawingToolButton = new QToolButton(&this->window);
-            this->vertexDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-            this->vertexDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-            this->vertexDrawingToolButton->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
-            this->vertexDrawingToolButton->setToolTip(QStringLiteral("Vertex drawing tools"));
-            auto* drawingMenu = new QMenu(this->vertexDrawingToolButton);
-            for (const auto& spec: VERTEX_DRAWING_TOOL_SPECS) {
-                if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
-                    drawingMenu->addAction(action);
-                }
+        auto* button = new QToolButton(&this->window);
+        button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+        button->setPopupMode(QToolButton::MenuButtonPopup);
+        button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
+        button->setToolTip(QStringLiteral("Vertex drawing tools"));
+        auto* drawingMenu = new QMenu(button);
+        for (const auto& spec: VERTEX_DRAWING_TOOL_SPECS) {
+            if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
+                drawingMenu->addAction(action);
             }
-            this->vertexDrawingToolButton->setMenu(drawingMenu);
         }
-        return this->vertexDrawingToolButton;
+        button->setMenu(drawingMenu);
+        this->vertexDrawingToolButtons.push_back(button);
+        return button;
     };
     const auto ensureLaserButton = [&]() -> QToolButton* {
         if (!this->laserToolButton) {
@@ -2427,19 +2425,19 @@ void QtAppShell::syncToolbarWidgets() {
         }
     }
 
-    if (this->strokeDrawingToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), STROKE_DRAWING_TOOL_SPECS, toolState.activeTool)) {
-            this->strokeDrawingToolButton->setDefaultAction(action);
-            this->strokeDrawingToolButton->setMenu(this->strokeDrawingToolButton->menu());
-            this->strokeDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+    if (auto* action = findActionForTool(this->window.commandHost(), STROKE_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+        for (auto* button: this->strokeDrawingToolButtons) {
+            button->setDefaultAction(action);
+            button->setMenu(button->menu());
+            button->setPopupMode(QToolButton::MenuButtonPopup);
         }
     }
 
-    if (this->vertexDrawingToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), VERTEX_DRAWING_TOOL_SPECS, toolState.activeTool)) {
-            this->vertexDrawingToolButton->setDefaultAction(action);
-            this->vertexDrawingToolButton->setMenu(this->vertexDrawingToolButton->menu());
-            this->vertexDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+    if (auto* action = findActionForTool(this->window.commandHost(), VERTEX_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+        for (auto* button: this->vertexDrawingToolButtons) {
+            button->setDefaultAction(action);
+            button->setMenu(button->menu());
+            button->setPopupMode(QToolButton::MenuButtonPopup);
         }
     }
 
