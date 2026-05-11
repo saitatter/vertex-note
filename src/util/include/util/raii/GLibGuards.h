@@ -14,7 +14,7 @@
 #include <memory>
 #include <type_traits>
 
-#include <gtk/gtk.h>
+#include <glib.h>
 
 #include "util/NamespaceAliases.h"
 

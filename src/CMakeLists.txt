@@ -76,7 +76,7 @@ if (ENABLE_LEGACY_GTK_SHELL)
 
   add_dependencies(vertexnote-wrapper vertexnote-wrapper-resource)
   target_link_libraries(vertexnote-wrapper
-          PUBLIC vertexnote::defaults vertexnote::util vertexnote::external_modules)
+          PUBLIC vertexnote::defaults vertexnote::util vertexnote::external_common_modules vertexnote::external_gtk_modules)
   set_target_properties(vertexnote-wrapper PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
           OUTPUT_NAME "${VERTEX_NOTE_WRAPPER_BINARY_NAME}"
           MACOSX_BUNDLE $<IF:$<PLATFORM_ID:Darwin>,TRUE,${CMAKE_MACOSX_BUNDLE}>

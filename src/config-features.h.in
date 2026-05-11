@@ -17,6 +17,8 @@
 
 #cmakedefine ENABLE_GTK_SOURCEVIEW
 
+#cmakedefine ENABLE_LEGACY_GTK_SHELL
+
 #cmakedefine ENABLE_AUDIO
 
 #cmakedefine01 ENABLE_FLOAT_FROM_CHARS

@@ -14,11 +14,12 @@
 #include <utility>
 
 #include <glib-object.h>
-#include <gtk/gtk.h>
 
 #include "util/NamespaceAliases.h"
 
 #include "CLibrariesSPtr.h"
+
+typedef struct _GtkWidget GtkWidget;
 
 namespace xoj::util {
 

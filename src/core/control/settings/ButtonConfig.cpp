@@ -1,7 +1,11 @@
 #include "ButtonConfig.h"
 
+#include "config-features.h"
+
+#ifdef ENABLE_LEGACY_GTK_SHELL
 #include "control/Tool.h"         // for Tool
 #include "control/ToolHandler.h"  // for ToolHandler
+#endif
 
 ButtonConfig::ButtonConfig(ToolType action, Color color, ToolSize size, DrawingType drawingType, EraserType eraserMode,
                            StrokeType strokeType):
@@ -22,6 +26,7 @@ auto ButtonConfig::getDrawingType() const -> DrawingType { return this->drawingT
 auto ButtonConfig::getAction() const -> ToolType { return this->action; }
 
 void ButtonConfig::initButton(ToolHandler* toolHandler, Button button) const {
+#ifdef ENABLE_LEGACY_GTK_SHELL
     if (this->action == TOOL_NONE) {
         return;
     }
@@ -47,9 +52,14 @@ void ButtonConfig::initButton(ToolHandler* toolHandler, Button button) const {
     if (this->action == TOOL_ERASER && this->eraserMode != ERASER_TYPE_NONE) {
         toolHandler->setButtonEraserType(this->eraserMode, button);
     }
+#else
+    (void) toolHandler;
+    (void) button;
+#endif
 }
 
 void ButtonConfig::applyConfigToToolbarTool(ToolHandler* toolHandler) const {
+#ifdef ENABLE_LEGACY_GTK_SHELL
     if (this->action == TOOL_NONE) {
         return;
     }
@@ -74,9 +84,13 @@ void ButtonConfig::applyConfigToToolbarTool(ToolHandler* toolHandler) const {
     if (this->action == TOOL_ERASER && this->eraserMode != ERASER_TYPE_NONE) {
         toolHandler->setEraserType(this->eraserMode);
     }
+#else
+    (void) toolHandler;
+#endif
 }
 
 auto ButtonConfig::applyNoChangeSettings(ToolHandler* toolHandler, Button button) const -> bool {
+#ifdef ENABLE_LEGACY_GTK_SHELL
     if (this->action == TOOL_NONE) {
         return false;
     }
@@ -99,4 +113,9 @@ auto ButtonConfig::applyNoChangeSettings(ToolHandler* toolHandler, Button button
     }
 
     return true;
+#else
+    (void) toolHandler;
+    (void) button;
+    return false;
+#endif
 }

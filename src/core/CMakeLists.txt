@@ -22,8 +22,11 @@ target_compile_features(vertexnote-core PUBLIC cxx_std_20)
 target_link_libraries(vertexnote-core
         PRIVATE vertexnote::util
                 $<$<PLATFORM_ID:Windows>:winhttp>
-        PUBLIC vertexnote::defaults vertexnote::external_modules
+        PUBLIC vertexnote::defaults vertexnote::external_common_modules
         )
+if (ENABLE_LEGACY_GTK_SHELL)
+    target_link_libraries(vertexnote-core PUBLIC vertexnote::external_gtk_modules)
+endif ()
 target_include_directories(vertexnote-core PUBLIC ${vertexnote_include_dirs})
 add_library(xoj::core ALIAS vertexnote-core)
 add_library(vertexnote::core ALIAS vertexnote-core)

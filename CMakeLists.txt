@@ -155,26 +155,32 @@ endif()
 # other externals
 ##############################
 
-set(pkg-module-spec "")
-list(APPEND pkg-module-spec "glib-2.0 >= 2.32.0")
-list(APPEND pkg-module-spec "gtk+-3.0 >= 3.18.9")
-list(APPEND pkg-module-spec "poppler-glib >= 0.41.0")
+set(common-pkg-module-spec "")
+list(APPEND common-pkg-module-spec "glib-2.0 >= 2.32.0")
+list(APPEND common-pkg-module-spec "gthread-2.0 >= 2.4.0")
+list(APPEND common-pkg-module-spec "libxml-2.0 >= 2.0.0")
+list(APPEND common-pkg-module-spec "libzip >= 1.0.1")
+list(APPEND common-pkg-module-spec "librsvg-2.0 >= 2.46")
+list(APPEND common-pkg-module-spec "cairo >= 1.0.0")
+list(APPEND common-pkg-module-spec "gdk-3.0 >= 3.18.9")
+list(APPEND common-pkg-module-spec "gdk-pixbuf-2.0 >= 2.0.0")
+list(APPEND common-pkg-module-spec "poppler-glib >= 0.41.0")
 if (APPLE)
-  list(APPEND pkg-module-spec "poppler-cpp >= 0.41.0")
+  list(APPEND common-pkg-module-spec "poppler-cpp >= 0.41.0")
 endif (APPLE)
-list(APPEND pkg-module-spec "gthread-2.0 >= 2.4.0")
-list(APPEND pkg-module-spec "libxml-2.0 >= 2.0.0")
-list(APPEND pkg-module-spec "libzip >= 1.0.1")
-list(APPEND pkg-module-spec "librsvg-2.0 >= 2.46")
+
+set(gtk-pkg-module-spec "")
+list(APPEND gtk-pkg-module-spec "gtk+-3.0 >= 3.18.9")
 
 # Profiling
 option (ENABLE_PROFILING "Link with gperftools" OFF)
 if (ENABLE_PROFILING)
-  list(APPEND pkg-module-spec "libprofiler >= 2.5")
-  list(APPEND pkg-module-spec "libtcmalloc >= 2.5")
+  list(APPEND common-pkg-module-spec "libprofiler >= 2.5")
+  list(APPEND common-pkg-module-spec "libtcmalloc >= 2.5")
 endif (ENABLE_PROFILING)
 
-pkg_check_modules(ExternalModules REQUIRED IMPORTED_TARGET ${pkg-module-spec})
+pkg_check_modules(ExternalCommonModules REQUIRED IMPORTED_TARGET ${common-pkg-module-spec})
+pkg_check_modules(ExternalGtkModules REQUIRED IMPORTED_TARGET ${gtk-pkg-module-spec})
 
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
@@ -214,14 +220,6 @@ else ()
     message(STATUS "Disable VertexNote Plugins")
 endif ()
 
-option(ENABLE_GTK_SOURCEVIEW "Enable syntax highlighting in TeX editor" ON)
-if (ENABLE_GTK_SOURCEVIEW)
-    pkg_check_modules(GtkSourceView REQUIRED IMPORTED_TARGET "gtksourceview-4 >= 4.0.0")
-    message(STATUS "Enable GtkSourceView TeX syntax highlighting")
-else ()
-    message(STATUS "Disable GtkSourceView TeX syntax highlighting")
-endif ()
-
 option(ENABLE_LEGACY_GTK_SHELL
         "Build the legacy GTK3 shell entry points (deprecated; kept only as fallback while Qt migration completes)"
         ON)
@@ -233,6 +231,14 @@ if (ENABLE_LEGACY_GTK_SHELL)
 elseif (NOT ENABLE_QT_SHELL)
     message(FATAL_ERROR
             "At least one application shell must be enabled. Turn on ENABLE_QT_SHELL or ENABLE_LEGACY_GTK_SHELL.")
+endif ()
+
+option(ENABLE_GTK_SOURCEVIEW "Enable syntax highlighting in TeX editor" ON)
+if (ENABLE_GTK_SOURCEVIEW AND ENABLE_LEGACY_GTK_SHELL)
+    pkg_check_modules(GtkSourceView REQUIRED IMPORTED_TARGET "gtksourceview-4 >= 4.0.0")
+    message(STATUS "Enable GtkSourceView TeX syntax highlighting")
+else ()
+    message(STATUS "Disable GtkSourceView TeX syntax highlighting")
 endif ()
 
 if (ENABLE_QT_SHELL)
@@ -296,11 +302,10 @@ else()
     find_package(X11 COMPONENTS Xi Xext)
 endif ()
 
-add_library(external_modules INTERFACE)
-target_link_libraries(external_modules INTERFACE
-        PkgConfig::ExternalModules
+add_library(external_common_modules INTERFACE)
+target_link_libraries(external_common_modules INTERFACE
+        PkgConfig::ExternalCommonModules
         $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>
-        $<$<TARGET_EXISTS:PkgConfig::GtkSourceView>:PkgConfig::GtkSourceView>
         $<$<TARGET_EXISTS:PkgConfig::ExternalAudioModules>:PkgConfig::ExternalAudioModules>
         $<$<TARGET_EXISTS:X11::Xi>:X11::Xi>
         $<$<TARGET_EXISTS:X11::X11>:X11::X11>
@@ -310,13 +315,32 @@ target_link_libraries(external_modules INTERFACE
         Threads::Threads
         )
 
-target_compile_definitions(external_modules INTERFACE
+target_compile_definitions(external_common_modules INTERFACE
         GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_40
         GDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_18
         $<$<TARGET_EXISTS:X11::X11>:X11_ENABLED>
         )
-target_link_options(external_modules INTERFACE
+target_link_options(external_common_modules INTERFACE
         $<$<AND:$<NOT:$<PLATFORM_ID:Windows>>,$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>>:-rdynamic>
+        )
+add_library(xoj::external_common_modules ALIAS external_common_modules)
+add_library(vertexnote::external_common_modules ALIAS external_common_modules)
+
+add_library(external_gtk_modules INTERFACE)
+target_link_libraries(external_gtk_modules INTERFACE
+        PkgConfig::ExternalGtkModules
+        $<$<TARGET_EXISTS:PkgConfig::GtkSourceView>:PkgConfig::GtkSourceView>
+        )
+target_compile_definitions(external_gtk_modules INTERFACE
+        GDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_18
+        )
+add_library(xoj::external_gtk_modules ALIAS external_gtk_modules)
+add_library(vertexnote::external_gtk_modules ALIAS external_gtk_modules)
+
+add_library(external_modules INTERFACE)
+target_link_libraries(external_modules INTERFACE
+        vertexnote::external_common_modules
+        vertexnote::external_gtk_modules
         )
 add_library(xoj::external_modules ALIAS external_modules)
 add_library(vertexnote::external_modules ALIAS external_modules)

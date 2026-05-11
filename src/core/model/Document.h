@@ -22,7 +22,6 @@
 
 #include <cairo.h>    // for cairo_surface_t
 #include <glib.h>     // for gpointer, gsize
-#include <gtk/gtk.h>  // for GtkTreeModel, GtkTreeIter, GtkT...
 
 #include "pdf/base/PdfDocument.h"  // for PdfDocument
 #include "pdf/base/PdfPage.h"      // for PdfPagePtr
@@ -34,6 +33,9 @@
 
 class DocumentHandler;
 class PdfBookmarkIterator;
+typedef struct _GtkTreeIter GtkTreeIter;
+typedef struct _GtkTreeModel GtkTreeModel;
+typedef struct _GtkTreePath GtkTreePath;
 
 class Document {
 public:

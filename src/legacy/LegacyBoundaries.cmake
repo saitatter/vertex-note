@@ -13,13 +13,24 @@ endfunction()
 
 set(VERTEXNOTE_LEGACY_GTK_CORE_PATTERNS
         ".*/src/core/control/(Control|ClipboardHandler|AudioController|LatexController|PrintHandler|RecentManager|VertexNoteMain)\\.(cpp|h)$"
+        ".*/src/core/control/(ToolHandler|Tool)\\.(cpp|h)$"
+        ".*/src/core/control/(GeometryToolController|UndoRedoController)\\.(cpp|h)$"
+        ".*/src/core/control/(CompassController|SetsquareController|ScrollHandler|NavigationHistory|ExportHelper)\\.(cpp|h)$"
         ".*/src/core/control/DeviceListHelper\\.(cpp|h)$"
         ".*/src/core/control/PageBackgroundChangeController\\.cpp$"
-        ".*/src/core/control/tools/TextEditor\\.(cpp|h)$"
+        ".*/src/core/control/jobs/.*"
+        ".*/src/core/control/layer/LayerController\\.(cpp|h)$"
+        ".*/src/core/control/tools/.*Handler\\.(cpp|h)$"
+        ".*/src/core/control/tools/(EditSelection|EditSelectionContents|PdfElemSelection|Selector|TextEditor)\\.(cpp|h)$"
+        ".*/src/core/control/zoom/.*"
         ".*/src/core/control/actions/.*"
         ".*/src/core/gui/.*"
-        ".*/src/core/plugin/PluginController\\.(cpp|h)$"
-        ".*/src/core/plugin/luapi_application\\.h$"
+        ".*/src/core/model/(Compass|Setsquare)\\.(cpp|h)$"
+        ".*/src/core/pdf/base/(CairoPdfExport|HybridPdfExport|PdfExport|PdfExportFactory|QPdfExport)\\.(cpp|h)$"
+        ".*/src/core/plugin/.*"
+        ".*/src/core/undo/.*"
+        ".*/src/core/view/(background|overlays)/.*"
+        ".*/src/core/view/[^/]+\\.(cpp|h)$"
 )
 
 set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
@@ -38,7 +49,7 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
 )
 
 set(VERTEXNOTE_LEGACY_GTK_UTIL_PATTERNS
-        ".*/src/util/(AppMessageBox|GtkUtil|gtk4_helper)\\.(cpp|h)$"
+        ".*/src/util/(AppMessageBox|AppMessageBoxFallback|GtkUtil|gtk4_helper)\\.(cpp|h)$"
         ".*/src/util/include/util/(AppMessageBox|GtkUtil|gtk4_helper|PopupWindowWrapper)\\.h$"
         ".*/src/util/include/util/raii/(GObjectSPtr|GtkPaperSizeUPtr|GtkWindowUPtr)\\.h$"
 )

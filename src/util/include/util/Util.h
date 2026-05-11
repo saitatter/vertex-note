@@ -18,9 +18,9 @@
 #include <typeinfo>    // for typeid
 #include <utility>
 
-#include <cairo.h>    // for cairo_t
-#include <glib.h>     // for G_PRIORITY_DEFAULT_IDLE, gboolean, gchar, gint
-#include <gtk/gtk.h>  // for GtkWidget
+#include <cairo.h>   // for cairo_t
+#include <gdk/gdk.h> // for gdk_threads_add_idle_full
+#include <glib.h>    // for G_PRIORITY_DEFAULT_IDLE, gboolean, gchar, gint
 
 #include "config-features.h"
 #ifdef ENABLE_CPPTRACE
@@ -32,6 +32,7 @@
 #include "Point.h"
 
 class OutputStream;
+typedef struct _GtkWidget GtkWidget;
 
 namespace Util {
 
@@ -72,7 +73,9 @@ void execInUiThread(Fun&& callback, gint priority = G_PRIORITY_DEFAULT_IDLE) {
     }
 }
 
+#ifdef ENABLE_LEGACY_GTK_SHELL
 gboolean paintBackgroundWhite(GtkWidget* widget, cairo_t* cr, void* unused);
+#endif
 
 void cairo_set_dash_from_vector(cairo_t* cr, const std::vector<double>& dashes, double offset);
 

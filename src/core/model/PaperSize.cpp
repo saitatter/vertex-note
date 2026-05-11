@@ -1,10 +1,18 @@
 #include "PaperSize.h"
 
+#include <cmath>
+
+#ifdef ENABLE_LEGACY_GTK_SHELL
+#include <gtk/gtk.h>
+#endif
+
 static auto areDoublesEqual(double x, double y) -> bool { return std::abs(x - y) <= 0.01; }
 
+#ifdef ENABLE_LEGACY_GTK_SHELL
 PaperSize::PaperSize(const vn::util::GtkPaperSizeUPtr& gtkPaperSize):
         width(gtk_paper_size_get_width(gtkPaperSize.get(), GTK_UNIT_POINTS)),
         height(gtk_paper_size_get_height(gtkPaperSize.get(), GTK_UNIT_POINTS)) {}
+#endif
 
 PaperSize::PaperSize(const PageTemplateSettings& model): width(model.getPageWidth()), height(model.getPageHeight()) {}
 
