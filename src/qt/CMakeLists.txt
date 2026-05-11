@@ -23,6 +23,7 @@ set(vertexnote_qt_sources
         QtDialogService.cpp
         QtDocumentController.h
         QtDocumentController.cpp
+        QtDocumentControllerEraser.cpp
         QtDocumentControllerPdfText.cpp
         QtDocumentSession.h
         QtDocumentSession.cpp
