@@ -13,6 +13,7 @@ endfunction()
 
 set(VERTEXNOTE_LEGACY_GTK_CORE_PATTERNS
         ".*/src/core/control/(Control|ClipboardHandler|AudioController|LatexController|PrintHandler|RecentManager|VertexNoteMain)\\.(cpp|h)$"
+        ".*/src/core/control/DeviceListHelper\\.(cpp|h)$"
         ".*/src/core/control/PageBackgroundChangeController\\.cpp$"
         ".*/src/core/control/tools/TextEditor\\.(cpp|h)$"
         ".*/src/core/control/actions/.*"

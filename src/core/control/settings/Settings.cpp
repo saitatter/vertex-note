@@ -13,7 +13,7 @@
 #include <libxml/parser.h>     // for xmlKeepBlanksDefault
 #include <libxml/xmlstring.h>  // for xmlStrcmp, xmlChar
 
-#include "control/DeviceListHelper.h"               // for InputDevice
+#include "control/InputDevice.h"                    // for InputDevice
 #include "control/ToolEnums.h"                      // for ERASER_TYPE_NONE
 #include "control/settings/LatexSettings.h"         // for LatexSettings
 #include "control/settings/PageTemplateSettings.h"  // for PageTemplateSettings
