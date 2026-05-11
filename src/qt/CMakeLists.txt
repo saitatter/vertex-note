@@ -8,6 +8,7 @@ set(vertexnote_qt_sources
         QtBackgroundDialog.cpp
         QtCanvas.h
         QtCanvas.cpp
+        QtCanvasSelection.cpp
         QtCanvasLayout.h
         QtCanvasLayout.cpp
         QtColorPalette.h
