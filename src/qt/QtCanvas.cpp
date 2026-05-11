@@ -6,11 +6,14 @@
 
 #include "QtCanvas.h"
 
+#include "QtInputDeviceKey.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 #include <QCursor>
 #include <QDateTime>
@@ -610,6 +613,10 @@ void QtCanvas::setEraserCursorHidden(bool hidden) {
 
 void QtCanvas::setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix) { this->buttonMatrix = buttonMatrix; }
 
+void QtCanvas::setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles) {
+    this->inputDeviceButtonProfiles = std::move(profiles);
+}
+
 void QtCanvas::setPageShadowEnabled(bool enabled) {
     if (auto* renderer = dynamic_cast<vn::view::render::QtPreviewBackgroundRenderer*>(this->backgroundRenderer.get())) {
         renderer->setPageShadowEnabled(enabled);
@@ -801,7 +808,7 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
-    if (beginPointerAction(pointerActionForMouseButton(event->button()), event->position(), 0.5)) {
+    if (beginPointerAction(pointerActionForMouseButton(event->button(), event->device()), event->position(), 0.5)) {
         event->accept();
         return;
     }
@@ -902,7 +909,7 @@ void QtCanvas::mouseDoubleClickEvent(QMouseEvent* event) {
 
 void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     this->inputAdapter->handleMouseRelease(*event);
-    const auto pointerAction = pointerActionForMouseButton(event->button());
+    const auto pointerAction = pointerActionForMouseButton(event->button(), event->device());
     if (this->panning && (pointerAction == QtPointerButtonAction::Pan ||
                           (this->spaceHeld && event->button() == Qt::LeftButton))) {
         endPan();
@@ -1210,7 +1217,10 @@ void QtCanvas::keyReleaseEvent(QKeyEvent* event) {
 bool QtCanvas::event(QEvent* event) {
     if (event && (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate ||
                   event->type() == QEvent::TouchEnd)) {
-        this->inputAdapter->handleTouch(*static_cast<QTouchEvent*>(event));
+        auto* touchEvent = static_cast<QTouchEvent*>(event);
+        this->activeTouchAction = pointerActionForTouchDevice(touchEvent->device());
+        this->inputAdapter->handleTouch(*touchEvent);
+        this->activeTouchAction.reset();
     } else if (event && event->type() == QEvent::Leave) {
         clearGeometryHover();
         clearEraserPreview();
@@ -1575,35 +1585,56 @@ void QtCanvas::endPan() {
     }
 }
 
-auto QtCanvas::pointerActionForMouseButton(Qt::MouseButton button) const -> QtPointerButtonAction {
+auto QtCanvas::pointerButtonMatrixForDevice(const QInputDevice* device) const -> const QtPointerButtonMatrix& {
+    const QString key = qtInputDeviceKey(device);
+    if (key.isEmpty()) {
+        return this->buttonMatrix;
+    }
+
+    for (const auto& profile: this->inputDeviceButtonProfiles) {
+        if (profile.customButtonMatrix && QString::fromStdString(profile.key) == key) {
+            return profile.buttonMatrix;
+        }
+    }
+    return this->buttonMatrix;
+}
+
+auto QtCanvas::pointerActionForMouseButton(Qt::MouseButton button, const QInputDevice* device) const
+        -> QtPointerButtonAction {
+    const auto& matrix = pointerButtonMatrixForDevice(device);
     switch (button) {
         case Qt::LeftButton:
-            return this->buttonMatrix.mouseLeftAction;
+            return matrix.mouseLeftAction;
         case Qt::MiddleButton:
-            return this->buttonMatrix.mouseMiddleAction;
+            return matrix.mouseMiddleAction;
         case Qt::RightButton:
-            return this->buttonMatrix.mouseRightAction;
+            return matrix.mouseRightAction;
         case Qt::BackButton:
-            return this->buttonMatrix.mouseBackAction;
+            return matrix.mouseBackAction;
         case Qt::ForwardButton:
-            return this->buttonMatrix.mouseForwardAction;
+            return matrix.mouseForwardAction;
         default:
             return QtPointerButtonAction::None;
     }
 }
 
 auto QtCanvas::pointerActionForTabletEvent(const QTabletEvent& event) const -> QtPointerButtonAction {
+    const auto& matrix = pointerButtonMatrixForDevice(event.device());
     const auto* pointingDevice = event.pointingDevice();
     if (pointingDevice && pointingDevice->pointerType() == QPointingDevice::PointerType::Eraser) {
-        return this->buttonMatrix.eraserTipAction;
+        return matrix.eraserTipAction;
     }
     if (event.button() == Qt::RightButton || event.buttons().testFlag(Qt::RightButton)) {
-        return this->buttonMatrix.stylusButton1Action;
+        return matrix.stylusButton1Action;
     }
     if (event.button() == Qt::MiddleButton || event.buttons().testFlag(Qt::MiddleButton)) {
-        return this->buttonMatrix.stylusButton2Action;
+        return matrix.stylusButton2Action;
     }
     return QtPointerButtonAction::None;
+}
+
+auto QtCanvas::pointerActionForTouchDevice(const QInputDevice* device) const -> QtPointerButtonAction {
+    return pointerButtonMatrixForDevice(device).touchAction;
 }
 
 auto QtCanvas::beginPointerAction(QtPointerButtonAction action, const QPointF& screenPoint, double pressure) -> bool {
@@ -3199,7 +3230,7 @@ auto QtCanvas::applyRotationSnap(const QPointF& origin, const QPointF& point) co
 }
 
 void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
-    const auto touchAction = this->buttonMatrix.touchAction;
+    const auto touchAction = this->activeTouchAction.value_or(this->buttonMatrix.touchAction);
     if (!this->touchDrawingEnabled && touchAction == QtPointerButtonAction::None) {
         return;
     }

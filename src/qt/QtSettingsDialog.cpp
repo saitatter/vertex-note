@@ -6,6 +6,10 @@
 
 #include "QtSettingsDialog.h"
 
+#include <algorithm>
+#include <utility>
+
+#include <QAbstractItemView>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
@@ -23,7 +27,11 @@
 #include <QPointingDevice>
 #include <QSpinBox>
 #include <QTabWidget>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QVBoxLayout>
+
+#include "QtInputDeviceKey.h"
 
 namespace {
 
@@ -54,6 +62,59 @@ void populatePointerActionCombo(QComboBox* combo, QtPointerButtonAction current)
     combo->addItem(QStringLiteral("Eraser"), static_cast<int>(QtPointerButtonAction::Eraser));
     const int index = combo->findData(static_cast<int>(current));
     combo->setCurrentIndex(index >= 0 ? index : 0);
+}
+
+auto pointerActionCombo(QWidget* parent, QtPointerButtonAction current) -> QComboBox* {
+    auto* combo = new QComboBox(parent);
+    populatePointerActionCombo(combo, current);
+    return combo;
+}
+
+auto pointerActionFromCombo(const QComboBox* combo) -> QtPointerButtonAction {
+    return combo ? static_cast<QtPointerButtonAction>(combo->currentData().toInt()) : QtPointerButtonAction::None;
+}
+
+void addDeviceMatrixRow(QTableWidget* table, const QtInputDeviceButtonProfile& profile,
+                        const QtPointerButtonMatrix& fallbackMatrix) {
+    const int row = table->rowCount();
+    table->insertRow(row);
+
+    auto* deviceItem = new QTableWidgetItem(QString::fromStdString(profile.displayName));
+    deviceItem->setData(Qt::UserRole, QString::fromStdString(profile.key));
+    deviceItem->setFlags(deviceItem->flags() & ~Qt::ItemIsEditable);
+    table->setItem(row, 0, deviceItem);
+
+    auto* typeItem = new QTableWidgetItem(QString::fromStdString(profile.deviceType));
+    typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
+    table->setItem(row, 1, typeItem);
+
+    auto* customItem = new QTableWidgetItem();
+    customItem->setFlags((customItem->flags() | Qt::ItemIsUserCheckable) & ~Qt::ItemIsEditable);
+    customItem->setCheckState(profile.customButtonMatrix ? Qt::Checked : Qt::Unchecked);
+    table->setItem(row, 2, customItem);
+
+    const auto& matrix = profile.customButtonMatrix ? profile.buttonMatrix : fallbackMatrix;
+    table->setCellWidget(row, 3, pointerActionCombo(table, matrix.eraserTipAction));
+    table->setCellWidget(row, 4, pointerActionCombo(table, matrix.stylusButton1Action));
+    table->setCellWidget(row, 5, pointerActionCombo(table, matrix.stylusButton2Action));
+    table->setCellWidget(row, 6, pointerActionCombo(table, matrix.mouseLeftAction));
+    table->setCellWidget(row, 7, pointerActionCombo(table, matrix.mouseMiddleAction));
+    table->setCellWidget(row, 8, pointerActionCombo(table, matrix.mouseRightAction));
+    table->setCellWidget(row, 9, pointerActionCombo(table, matrix.mouseBackAction));
+    table->setCellWidget(row, 10, pointerActionCombo(table, matrix.mouseForwardAction));
+    table->setCellWidget(row, 11, pointerActionCombo(table, matrix.touchAction));
+}
+
+auto rowDeviceMatrix(const QTableWidget* table, int row) -> QtPointerButtonMatrix {
+    return {.eraserTipAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 3))),
+            .stylusButton1Action = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 4))),
+            .stylusButton2Action = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 5))),
+            .mouseLeftAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 6))),
+            .mouseMiddleAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 7))),
+            .mouseRightAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 8))),
+            .mouseBackAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 9))),
+            .mouseForwardAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 10))),
+            .touchAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 11)))};
 }
 
 }  // namespace
@@ -502,6 +563,43 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
         this->inputDeviceList->addItem(QStringLiteral("No Qt input devices reported yet"));
     }
     devicesLayout->addWidget(this->inputDeviceList);
+
+    devicesLayout->addWidget(new QLabel(QStringLiteral("Per-device button matrix:"), devicesPage));
+    this->inputDeviceMatrixTable = new QTableWidget(devicesPage);
+    this->inputDeviceMatrixTable->setColumnCount(12);
+    this->inputDeviceMatrixTable->setHorizontalHeaderLabels(
+            {QStringLiteral("Device"), QStringLiteral("Type"), QStringLiteral("Custom"), QStringLiteral("Eraser tip"),
+             QStringLiteral("Stylus 1"), QStringLiteral("Stylus 2"), QStringLiteral("Mouse left"),
+             QStringLiteral("Mouse middle"), QStringLiteral("Mouse right"), QStringLiteral("Mouse back"),
+             QStringLiteral("Mouse forward"), QStringLiteral("Touch")});
+    this->inputDeviceMatrixTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->inputDeviceMatrixTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    std::vector<QtInputDeviceButtonProfile> deviceProfiles = current.inputDeviceButtonProfiles;
+    for (const auto* device: devices) {
+        if (!device) {
+            continue;
+        }
+        const QString key = qtInputDeviceKey(device);
+        const auto existing =
+                std::find_if(deviceProfiles.begin(), deviceProfiles.end(),
+                             [&key](const QtInputDeviceButtonProfile& profile) {
+                                 return QString::fromStdString(profile.key) == key;
+                             });
+        if (existing == deviceProfiles.end()) {
+            deviceProfiles.push_back({.key = key.toStdString(),
+                                      .displayName = device->name().toStdString(),
+                                      .deviceType = qtInputDeviceTypeName(device).toStdString(),
+                                      .customButtonMatrix = false,
+                                      .buttonMatrix = current.buttonMatrix});
+        }
+    }
+
+    for (const auto& profile: deviceProfiles) {
+        addDeviceMatrixRow(this->inputDeviceMatrixTable, profile, current.buttonMatrix);
+    }
+    this->inputDeviceMatrixTable->resizeColumnsToContents();
+    devicesLayout->addWidget(this->inputDeviceMatrixTable, 1);
     devicesLayout->addStretch(1);
     devicesPage->setLayout(devicesLayout);
     tabs->addTab(devicesPage, QStringLiteral("Devices"));
@@ -518,6 +616,25 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
 }
 
 auto QtSettingsDialog::settings() const -> QtSettings {
+    std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
+    if (this->inputDeviceMatrixTable) {
+        inputDeviceButtonProfiles.reserve(static_cast<std::size_t>(this->inputDeviceMatrixTable->rowCount()));
+        for (int row = 0; row < this->inputDeviceMatrixTable->rowCount(); ++row) {
+            const auto* customItem = this->inputDeviceMatrixTable->item(row, 2);
+            if (!customItem || customItem->checkState() != Qt::Checked) {
+                continue;
+            }
+            const auto* deviceItem = this->inputDeviceMatrixTable->item(row, 0);
+            const auto* typeItem = this->inputDeviceMatrixTable->item(row, 1);
+            inputDeviceButtonProfiles.push_back(
+                    {.key = deviceItem ? deviceItem->data(Qt::UserRole).toString().toStdString() : std::string(),
+                     .displayName = deviceItem ? deviceItem->text().toStdString() : std::string(),
+                     .deviceType = typeItem ? typeItem->text().toStdString() : std::string(),
+                     .customButtonMatrix = true,
+                     .buttonMatrix = rowDeviceMatrix(this->inputDeviceMatrixTable, row)});
+        }
+    }
+
     return {
             .defaultPenWidth = this->penWidthSpin->value(),
             .defaultHighlighterWidth = this->highlighterWidthSpin->value(),
@@ -562,6 +679,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
                              .mouseForwardAction =
                                      static_cast<QtPointerButtonAction>(this->mouseForwardActionCombo->currentData().toInt()),
                              .touchAction = static_cast<QtPointerButtonAction>(this->touchActionCombo->currentData().toInt())},
+            .inputDeviceButtonProfiles = std::move(inputDeviceButtonProfiles),
             .showFilePathInTitlebar = this->showFilePathInTitlebarCheck->isChecked(),
             .showPageNumberInTitlebar = this->showPageNumberInTitlebarCheck->isChecked(),
             .showPageShadow = this->showPageShadowCheck->isChecked(),

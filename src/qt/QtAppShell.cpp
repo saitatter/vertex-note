@@ -206,6 +206,11 @@ auto isGtkParityProfileId(std::string_view profileId) -> bool { return profileId
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
 
+auto settingsPointerAction(QSettings& settings, const QString& key, QtPointerButtonAction fallback)
+        -> QtPointerButtonAction {
+    return static_cast<QtPointerButtonAction>(settings.value(key, static_cast<int>(fallback)).toInt());
+}
+
 auto lightPalette() -> QPalette {
     QPalette palette;
     palette.setColor(QPalette::Window, QColor(244, 244, 244));
@@ -2684,6 +2689,47 @@ void QtAppShell::loadPersistentUiState() {
                     settings.value(QStringLiteral("devices/buttonMatrix/touch"),
                                    static_cast<int>(this->currentSettings.buttonMatrix.touchAction))
                             .toInt());
+    this->currentSettings.inputDeviceButtonProfiles.clear();
+    const int inputDeviceProfileCount = settings.beginReadArray(QStringLiteral("devices/inputDeviceButtonProfiles"));
+    this->currentSettings.inputDeviceButtonProfiles.reserve(static_cast<std::size_t>(inputDeviceProfileCount));
+    for (int i = 0; i < inputDeviceProfileCount; ++i) {
+        settings.setArrayIndex(i);
+        QtInputDeviceButtonProfile profile;
+        profile.key = settings.value(QStringLiteral("key")).toString().toStdString();
+        profile.displayName = settings.value(QStringLiteral("displayName")).toString().toStdString();
+        profile.deviceType = settings.value(QStringLiteral("deviceType")).toString().toStdString();
+        profile.customButtonMatrix = settings.value(QStringLiteral("customButtonMatrix"), true).toBool();
+        profile.buttonMatrix.eraserTipAction =
+                settingsPointerAction(settings, QStringLiteral("eraserTip"),
+                                      this->currentSettings.buttonMatrix.eraserTipAction);
+        profile.buttonMatrix.stylusButton1Action =
+                settingsPointerAction(settings, QStringLiteral("stylusButton1"),
+                                      this->currentSettings.buttonMatrix.stylusButton1Action);
+        profile.buttonMatrix.stylusButton2Action =
+                settingsPointerAction(settings, QStringLiteral("stylusButton2"),
+                                      this->currentSettings.buttonMatrix.stylusButton2Action);
+        profile.buttonMatrix.mouseLeftAction =
+                settingsPointerAction(settings, QStringLiteral("mouseLeft"),
+                                      this->currentSettings.buttonMatrix.mouseLeftAction);
+        profile.buttonMatrix.mouseMiddleAction =
+                settingsPointerAction(settings, QStringLiteral("mouseMiddle"),
+                                      this->currentSettings.buttonMatrix.mouseMiddleAction);
+        profile.buttonMatrix.mouseRightAction =
+                settingsPointerAction(settings, QStringLiteral("mouseRight"),
+                                      this->currentSettings.buttonMatrix.mouseRightAction);
+        profile.buttonMatrix.mouseBackAction =
+                settingsPointerAction(settings, QStringLiteral("mouseBack"),
+                                      this->currentSettings.buttonMatrix.mouseBackAction);
+        profile.buttonMatrix.mouseForwardAction =
+                settingsPointerAction(settings, QStringLiteral("mouseForward"),
+                                      this->currentSettings.buttonMatrix.mouseForwardAction);
+        profile.buttonMatrix.touchAction =
+                settingsPointerAction(settings, QStringLiteral("touch"), this->currentSettings.buttonMatrix.touchAction);
+        if (!profile.key.empty()) {
+            this->currentSettings.inputDeviceButtonProfiles.push_back(std::move(profile));
+        }
+    }
+    settings.endArray();
     this->currentSettings.showFilePathInTitlebar =
             settings.value(QStringLiteral("appearance/showFilePathInTitlebar"),
                            this->currentSettings.showFilePathInTitlebar)
@@ -2881,6 +2927,26 @@ void QtAppShell::savePersistentUiState() const {
                       static_cast<int>(this->currentSettings.buttonMatrix.mouseForwardAction));
     settings.setValue(QStringLiteral("devices/buttonMatrix/touch"),
                       static_cast<int>(this->currentSettings.buttonMatrix.touchAction));
+    settings.beginWriteArray(QStringLiteral("devices/inputDeviceButtonProfiles"),
+                             static_cast<int>(this->currentSettings.inputDeviceButtonProfiles.size()));
+    for (int i = 0; i < static_cast<int>(this->currentSettings.inputDeviceButtonProfiles.size()); ++i) {
+        const auto& profile = this->currentSettings.inputDeviceButtonProfiles[static_cast<std::size_t>(i)];
+        settings.setArrayIndex(i);
+        settings.setValue(QStringLiteral("key"), QString::fromStdString(profile.key));
+        settings.setValue(QStringLiteral("displayName"), QString::fromStdString(profile.displayName));
+        settings.setValue(QStringLiteral("deviceType"), QString::fromStdString(profile.deviceType));
+        settings.setValue(QStringLiteral("customButtonMatrix"), profile.customButtonMatrix);
+        settings.setValue(QStringLiteral("eraserTip"), static_cast<int>(profile.buttonMatrix.eraserTipAction));
+        settings.setValue(QStringLiteral("stylusButton1"), static_cast<int>(profile.buttonMatrix.stylusButton1Action));
+        settings.setValue(QStringLiteral("stylusButton2"), static_cast<int>(profile.buttonMatrix.stylusButton2Action));
+        settings.setValue(QStringLiteral("mouseLeft"), static_cast<int>(profile.buttonMatrix.mouseLeftAction));
+        settings.setValue(QStringLiteral("mouseMiddle"), static_cast<int>(profile.buttonMatrix.mouseMiddleAction));
+        settings.setValue(QStringLiteral("mouseRight"), static_cast<int>(profile.buttonMatrix.mouseRightAction));
+        settings.setValue(QStringLiteral("mouseBack"), static_cast<int>(profile.buttonMatrix.mouseBackAction));
+        settings.setValue(QStringLiteral("mouseForward"), static_cast<int>(profile.buttonMatrix.mouseForwardAction));
+        settings.setValue(QStringLiteral("touch"), static_cast<int>(profile.buttonMatrix.touchAction));
+    }
+    settings.endArray();
     settings.setValue(QStringLiteral("appearance/showFilePathInTitlebar"),
                       this->currentSettings.showFilePathInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
@@ -3194,6 +3260,7 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
     canvas->setPointerButtonActions(this->currentSettings.buttonMatrix);
+    canvas->setInputDeviceButtonProfiles(this->currentSettings.inputDeviceButtonProfiles);
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
     canvas->setSelectionColor(this->currentSettings.selectionColor);
     canvas->setRecolorOptions(this->currentSettings.recolorMainView, this->currentSettings.recolorLight,
@@ -3231,6 +3298,7 @@ void QtAppShell::applyAppearanceSettings() {
                                 ? std::string("lucide")
                                 : std::string("color");
     gBundledIconTone = theme == QStringLiteral("dark") ? std::string("dark") : std::string("light");
+    this->window.layerPanel()->setIconAppearance(gBundledIconTheme, gBundledIconTone);
     updateWindowTitle();
     this->window.canvas()->update();
 }

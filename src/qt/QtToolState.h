@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "util/Color.h"
 
@@ -55,6 +56,14 @@ struct QtPointerButtonMatrix {
     QtPointerButtonAction mouseBackAction = QtPointerButtonAction::None;
     QtPointerButtonAction mouseForwardAction = QtPointerButtonAction::None;
     QtPointerButtonAction touchAction = QtPointerButtonAction::None;
+};
+
+struct QtInputDeviceButtonProfile {
+    std::string key;
+    std::string displayName;
+    std::string deviceType;
+    bool customButtonMatrix = false;
+    QtPointerButtonMatrix buttonMatrix{};
 };
 
 struct QtToolState {

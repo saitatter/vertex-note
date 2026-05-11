@@ -25,6 +25,7 @@
 
 class QTimer;
 class QString;
+class QInputDevice;
 
 class QtCanvas: public QWidget, public vn::ui::common::ICanvasHost, public vn::ui::input::IInputEventSink {
     Q_OBJECT
@@ -69,6 +70,7 @@ public:
     void setGridSnapOptions(double gridSize, double tolerance);
     void setEraserCursorHidden(bool hidden);
     void setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix);
+    void setInputDeviceButtonProfiles(std::vector<QtInputDeviceButtonProfile> profiles);
     void setPageShadowEnabled(bool enabled);
     void setSelectionColor(Color color);
     void setRecolorOptions(bool recolorMainView, Color light, Color dark);
@@ -172,8 +174,11 @@ private:
     void selectHoveredGeometry(bool additive = false);
     void beginPan(const QPointF& position);
     void endPan();
-    [[nodiscard]] auto pointerActionForMouseButton(Qt::MouseButton button) const -> QtPointerButtonAction;
+    [[nodiscard]] auto pointerButtonMatrixForDevice(const QInputDevice* device) const -> const QtPointerButtonMatrix&;
+    [[nodiscard]] auto pointerActionForMouseButton(Qt::MouseButton button, const QInputDevice* device) const
+            -> QtPointerButtonAction;
     [[nodiscard]] auto pointerActionForTabletEvent(const QTabletEvent& event) const -> QtPointerButtonAction;
+    [[nodiscard]] auto pointerActionForTouchDevice(const QInputDevice* device) const -> QtPointerButtonAction;
     [[nodiscard]] auto beginPointerAction(QtPointerButtonAction action, const QPointF& screenPoint, double pressure) -> bool;
     [[nodiscard]] auto releasePointerAction(QtPointerButtonAction action) -> bool;
     void setCursorForTool(QtToolType tool);
@@ -268,6 +273,7 @@ private:
     double snapGridSize = 14.17;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix;
+    std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     Color selectionColor{0, 120, 255, 255};
     bool recolorMainView = false;
     Color recolorLight{198, 208, 245, 255};
@@ -297,6 +303,7 @@ private:
     std::optional<StabilizerSample> lastRawStrokeSample;
     std::optional<StabilizerSample> lastEmittedStrokeSample;
     std::optional<std::size_t> eraserPreviewPageIndex;
+    std::optional<QtPointerButtonAction> activeTouchAction;
     QPointF eraserPreviewPagePoint;
     int activeTouchPointId = -1;
     QPointF rubberBandOrigin;

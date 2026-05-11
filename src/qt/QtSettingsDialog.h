@@ -20,6 +20,7 @@ class QCheckBox;
 class QComboBox;
 class QLineEdit;
 class QListWidget;
+class QTableWidget;
 class QPushButton;
 
 struct QtToolbarProfileOption {
@@ -55,6 +56,7 @@ struct QtSettings {
     int laserPointerFadeOutMs = 1500;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix{};
+    std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     bool showFilePathInTitlebar = false;
     bool showPageNumberInTitlebar = false;
     bool showPageShadow = true;
@@ -126,6 +128,7 @@ private:
     QComboBox* mouseForwardActionCombo = nullptr;
     QComboBox* touchActionCombo = nullptr;
     QListWidget* inputDeviceList = nullptr;
+    QTableWidget* inputDeviceMatrixTable = nullptr;
     QCheckBox* showFilePathInTitlebarCheck = nullptr;
     QCheckBox* showPageNumberInTitlebarCheck = nullptr;
     QCheckBox* showPageShadowCheck = nullptr;

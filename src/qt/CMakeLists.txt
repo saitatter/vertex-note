@@ -41,6 +41,7 @@ set(vertexnote_qt_sources
         QtRecentFilesService.h
         QtRecentFilesService.cpp
         QtToolState.h
+        QtInputDeviceKey.h
         QtUpdatePresentationService.h
         QtUpdatePresentationService.cpp
         QtInputAdapter.h

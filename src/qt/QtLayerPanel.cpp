@@ -6,6 +6,9 @@
 
 #include "QtLayerPanel.h"
 
+#include <array>
+#include <utility>
+
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -19,10 +22,21 @@
 
 namespace {
 
-auto bundledLayerIcon(std::string_view fileName) -> QIcon {
+auto bundledLayerIcon(std::string_view fileName, std::string_view iconTheme, std::string_view iconTone) -> QIcon {
     const auto tryPath = [&](const fs::path& path) -> QIcon { return QIcon(QString::fromStdString(path.string())); };
 
-    for (const auto& theme: {"iconsColor-dark", "iconsColor-light", "iconsLucide-light", "iconsLucide-dark"}) {
+    const std::string preferredFamily = iconTheme == "lucide" ? "iconsLucide" : "iconsColor";
+    const std::string fallbackFamily = iconTheme == "lucide" ? "iconsColor" : "iconsLucide";
+    const std::string preferredTone = iconTone == "dark" ? "dark" : "light";
+    const std::string fallbackTone = preferredTone == "dark" ? "light" : "dark";
+    const std::array<std::string, 4> themes = {{
+            preferredFamily + "-" + preferredTone,
+            preferredFamily + "-" + fallbackTone,
+            fallbackFamily + "-" + preferredTone,
+            fallbackFamily + "-" + fallbackTone,
+    }};
+
+    for (const auto& theme: themes) {
         for (const auto& sizeDir: {"24x24", "scalable"}) {
             const fs::path candidate =
                     fs::path(PROJECT_SOURCE_DIR) / "ui" / theme / "hicolor" / sizeDir / "actions" /
@@ -71,7 +85,6 @@ QtLayerPanel::QtLayerPanel(QWidget* parent): QDockWidget(QStringLiteral("Layers"
     this->addButton = new QToolButton(container);
     this->addButton->setToolTip(QStringLiteral("Add layer"));
     this->addButton->setAutoRaise(true);
-    this->addButton->setIcon(bundledLayerIcon("xopp-page-add.svg"));
     this->addButton->setIconSize(QSize(18, 18));
     this->addButton->setFixedSize(24, 24);
     buttonBar->addWidget(this->addButton);
@@ -79,7 +92,6 @@ QtLayerPanel::QtLayerPanel(QWidget* parent): QDockWidget(QStringLiteral("Layers"
     this->removeButton = new QToolButton(container);
     this->removeButton->setToolTip(QStringLiteral("Remove layer"));
     this->removeButton->setAutoRaise(true);
-    this->removeButton->setIcon(bundledLayerIcon("xopp-page-delete.svg"));
     this->removeButton->setIconSize(QSize(18, 18));
     this->removeButton->setFixedSize(24, 24);
     buttonBar->addWidget(this->removeButton);
@@ -112,6 +124,7 @@ QtLayerPanel::QtLayerPanel(QWidget* parent): QDockWidget(QStringLiteral("Layers"
     connect(this->removeButton, &QToolButton::clicked, this, &QtLayerPanel::onRemoveLayer);
     connect(this->upButton, &QToolButton::clicked, this, &QtLayerPanel::onMoveUp);
     connect(this->downButton, &QToolButton::clicked, this, &QtLayerPanel::onMoveDown);
+    setIconAppearance(this->iconTheme, this->iconTone);
 }
 
 void QtLayerPanel::setDocumentController(QtDocumentController* ctrl) {
@@ -125,6 +138,17 @@ void QtLayerPanel::setCurrentPage(std::size_t pageIndex) {
     }
     this->currentPageIndex = pageIndex;
     refresh();
+}
+
+void QtLayerPanel::setIconAppearance(std::string iconTheme, std::string iconTone) {
+    this->iconTheme = std::move(iconTheme);
+    this->iconTone = std::move(iconTone);
+    if (this->addButton) {
+        this->addButton->setIcon(bundledLayerIcon("xopp-page-add.svg", this->iconTheme, this->iconTone));
+    }
+    if (this->removeButton) {
+        this->removeButton->setIcon(bundledLayerIcon("xopp-page-delete.svg", this->iconTheme, this->iconTone));
+    }
 }
 
 void QtLayerPanel::refresh() {

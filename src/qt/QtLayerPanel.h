@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <string>
+
 #include <QDockWidget>
 
 class QListWidget;
@@ -21,6 +23,7 @@ public:
 
     void setDocumentController(QtDocumentController* controller);
     void setCurrentPage(std::size_t pageIndex);
+    void setIconAppearance(std::string iconTheme, std::string iconTone);
     void refresh();
 
 Q_SIGNALS:
@@ -42,5 +45,7 @@ private:
     QToolButton* downButton = nullptr;
     QtDocumentController* controller = nullptr;
     std::size_t currentPageIndex = 0U;
+    std::string iconTheme = "color";
+    std::string iconTone = "light";
     bool refreshing = false;
 };
