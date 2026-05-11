@@ -235,10 +235,11 @@ This is the current implementation plan after the Qt parity batch through
    - Add automated coverage for bundled plugin load/enable/reload behavior.
 
 3. **Settings parity v2**
-   - Split Toolbar into its own settings tab instead of keeping profile choice
-     in General plus a separate Customize Toolbar dialog.
-   - Add Device/Stylus/Button configuration as a Qt-native tab once there is a
-     clean backend; until then keep it explicit as unavailable in the Qt shell.
+   - ✓ Split Toolbar into its own settings tab instead of keeping profile
+     choice in General plus a separate Customize Toolbar dialog.
+   - ✓ Add Device/Stylus/Button configuration as a Qt-native tab placeholder
+     and keep it explicit as unavailable in the Qt shell until there is a clean
+     backend.
    - Audit every GTK settings key against `QtSettings` and mark: implemented,
      intentionally Qt-only, or unsupported.
 

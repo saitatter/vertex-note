@@ -131,7 +131,14 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->laserPointerFadeOutSpin->setSuffix(QStringLiteral(" ms"));
     generalLayout->addRow(QStringLiteral("Laser pointer fade-out:"), this->laserPointerFadeOutSpin);
 
-    this->toolbarProfileCombo = new QComboBox(generalPage);
+    generalPage->setLayout(generalLayout);
+    tabs->addTab(generalPage, QStringLiteral("General"));
+
+    // --- Toolbar tab ---
+    auto* toolbarPage = new QWidget(this);
+    auto* toolbarLayout = new QFormLayout(toolbarPage);
+
+    this->toolbarProfileCombo = new QComboBox(toolbarPage);
     int currentProfileIndex = -1;
     for (int profileIndex = 0; profileIndex < static_cast<int>(toolbarProfiles.size()); ++profileIndex) {
         const auto& profile = toolbarProfiles[static_cast<std::size_t>(profileIndex)];
@@ -144,10 +151,10 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     if (currentProfileIndex >= 0) {
         this->toolbarProfileCombo->setCurrentIndex(currentProfileIndex);
     }
-    generalLayout->addRow(QStringLiteral("Toolbar profile:"), this->toolbarProfileCombo);
+    toolbarLayout->addRow(QStringLiteral("Toolbar profile:"), this->toolbarProfileCombo);
 
-    generalPage->setLayout(generalLayout);
-    tabs->addTab(generalPage, QStringLiteral("General"));
+    toolbarPage->setLayout(toolbarLayout);
+    tabs->addTab(toolbarPage, QStringLiteral("Toolbar"));
 
     // --- PDF tab ---
     auto* pdfPage = new QWidget(this);
@@ -228,6 +235,18 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
 
     audioPage->setLayout(audioLayout);
     tabs->addTab(audioPage, QStringLiteral("Audio"));
+
+    // --- Devices tab ---
+    auto* devicesPage = new QWidget(this);
+    auto* devicesLayout = new QVBoxLayout(devicesPage);
+    auto* devicesUnavailableLabel =
+            new QLabel(QStringLiteral("Device, stylus, and button configuration is not available in the Qt shell yet."),
+                       devicesPage);
+    devicesUnavailableLabel->setWordWrap(true);
+    devicesLayout->addWidget(devicesUnavailableLabel);
+    devicesLayout->addStretch(1);
+    devicesPage->setLayout(devicesLayout);
+    tabs->addTab(devicesPage, QStringLiteral("Devices"));
 
     mainLayout->addWidget(tabs);
 
