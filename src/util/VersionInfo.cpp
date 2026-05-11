@@ -2,11 +2,11 @@
 
 #include <sstream>
 
-#include <glib.h>
+#include <QSysInfo>
+#include <QString>
 
 #include "config-git.h"
 #include "config.h"
-#include "util/raii/CStringWrapper.h"
 
 namespace xoj::util {
 std::string getVertexNoteVersion() {
@@ -18,25 +18,11 @@ std::string getVertexNoteVersion() {
 }
 
 std::string getOsInfo() {
-    auto osInfo = vn::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_NAME));
-    if (!osInfo) {
-        osInfo = vn::util::OwnedCString::assumeOwnership(g_get_os_info(G_OS_INFO_KEY_PRETTY_NAME));
+    const auto prettyName = QSysInfo::prettyProductName();
+    if (!prettyName.isEmpty()) {
+        return prettyName.toStdString();
     }
-    if (osInfo) {
-        vn::util::OwnedCString osVersion;
-        for (auto key: {G_OS_INFO_KEY_VERSION, G_OS_INFO_KEY_VERSION_ID, G_OS_INFO_KEY_VERSION_CODENAME}) {
-            osVersion = vn::util::OwnedCString::assumeOwnership(g_get_os_info(key));
-            if (osVersion) {
-                break;
-            }
-        }
-        if (osVersion) {
-            return std::string(osInfo.get()) + " " + osVersion.get();
-        } else {
-            return std::string(osInfo.get());
-        }
-    }
-    return std::string();
+    return QSysInfo::productType().toStdString() + " " + QSysInfo::productVersion().toStdString();
 }
 
 
@@ -47,7 +33,6 @@ std::string getVersionInfo() {
     str << getVertexNoteVersion() << std::endl;
 
     str << "├──shell: Qt" << std::endl;
-    str << "├──glib: " << glib_major_version << "." << glib_minor_version << "." << glib_micro_version << std::endl;
 
     str << "└──OS info: " << getOsInfo() << std::endl;
 
