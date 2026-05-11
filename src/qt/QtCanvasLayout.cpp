@@ -35,13 +35,19 @@ auto layoutQtCanvasPages(const std::vector<vn::view::render::PageRenderSnapshot>
     std::vector<double> columnWidths;
     std::vector<double> rowHeights;
     cells.reserve(pages.size());
+    const bool pairedPages = !fixedRows && options.vertical && spanCount == 2U;
+    const std::size_t pairOffset = pairedPages ? static_cast<std::size_t>(std::clamp(options.pairOffset, 0, 1)) : 0U;
     for (std::size_t index = 0; index < pages.size(); ++index) {
         const auto& page = pages[index];
         const double pageWidth = std::max(page.width, 1.0);
         const double pageHeight = std::max(page.height, 1.0);
         std::size_t row = 0U;
         std::size_t column = 0U;
-        if (fixedRows) {
+        if (pairedPages) {
+            const std::size_t pairedIndex = index + pairOffset;
+            column = pairedIndex % 2U;
+            row = pairedIndex / 2U;
+        } else if (fixedRows) {
             row = index % spanCount;
             column = index / spanCount;
         } else if (options.vertical) {
@@ -107,4 +113,3 @@ auto layoutQtCanvasPages(const std::vector<vn::view::render::PageRenderSnapshot>
     }
     return rects;
 }
-

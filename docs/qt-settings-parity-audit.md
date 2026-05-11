@@ -22,7 +22,7 @@ This audit compares GTK `Settings` keys from
 | `showToolbar`, `menubarVisible`, `showSidebar` | Implemented | `view/showToolbar`, `view/showMenubar`, `view/showSidebar`. |
 | `mainWndWidth`, `mainWndHeight`, `maximized` | Qt-only equivalent | `window/geometry`, `window/state`. |
 | `numColumns`, `numRows`, `viewFixedRows` | Implemented | `view/layoutColumnsRows`; positive = columns, negative = rows. |
-| `showPairedPages` | Implemented | `view/pairedPages`; also synchronized with 2 columns. |
+| `showPairedPages`, `numPairsOffset` | Implemented | `view/pairedPages`, `view/pairOffset`; paired pages are synchronized with 2 columns and can offset the first page by one slot. |
 | `layoutVertical`, `layoutRightToLeft`, `layoutBottomToTop` | Implemented | `view/verticalLayout`, `view/layoutRtl`, `view/layoutBtt`. |
 | `displayDpi` | Partial / Qt-only equivalent | `view/displayDpi`; exposed as Automatic/manual DPI and used by the Qt Lua plugin `app.getDisplayDpi()` API. Qt canvas zoom remains device-independent. |
 | `autoloadPdfXoj` | Implemented | `pdf/autoloadPdfXoj`. |
@@ -69,11 +69,6 @@ This audit compares GTK `Settings` keys from
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Implemented | `appearance/highlightPosition`, `appearance/cursorHighlight*`; Qt draws the same kind of cursor position halo on the canvas. |
 | `defaultViewModeAttributes`, `fullscreenViewModeAttributes`, `presentationViewModeAttributes` | Partial | Qt persists the active chrome/layout pieces individually rather than serializing GTK view-mode strings. |
 
-## Partial Coverage
-
-| GTK setting key(s) | Current Qt behavior | Gap |
-| --- | --- | --- |
-| `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
 ## Legacy GTK Or Unsupported
 
 | GTK setting key(s) | Status | Notes |
@@ -86,7 +81,6 @@ This audit compares GTK `Settings` keys from
 
 ## Next Settings Work
 
-1. Add `numPairsOffset` if Qt needs GTK's asymmetric paired-page first-page offset instead of the current 2-column shortcut.
-2. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
-3. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
-4. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.
+1. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
+2. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
+3. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.

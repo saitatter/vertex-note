@@ -175,6 +175,7 @@ private:
     void setLayoutBtt(bool btt);
     void setLayoutColumns(int columns);
     void setLayoutRows(int rows);
+    void setPairOffset(int offset);
     void syncLayoutSpanCommandStates();
 
     // Journal extras
@@ -239,6 +240,7 @@ private:
     bool persistedShowMenubar = true;
     bool persistedShowSidebar = true;
     bool persistedPairedPages = false;
+    int persistedPairOffset = 0;
     int persistedLayoutColumnsRows = 1;
     bool persistedVerticalLayout = true;
     bool persistedLayoutRtl = false;

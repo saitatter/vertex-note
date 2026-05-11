@@ -646,6 +646,7 @@ QtAppShell::QtAppShell():
     } else {
         this->window.canvas()->setLayoutColumns(std::max(1, this->persistedLayoutColumnsRows));
     }
+    this->window.canvas()->setPairOffset(this->persistedPairOffset);
     this->window.canvas()->setVerticalLayout(this->persistedVerticalLayout);
     this->window.canvas()->setRightToLeftLayout(this->persistedLayoutRtl);
     this->window.canvas()->setBottomToTopLayout(this->persistedLayoutBtt);
@@ -1005,6 +1006,16 @@ void QtAppShell::registerBootstrapCommands() {
                  .menu = "View>Layout>Rows",
                  .checkable = true},
                 [this, rows]() { setLayoutRows(rows); });
+    }
+    ch->addMenuSeparator("View>Layout");
+    for (int offset = 0; offset <= 1; ++offset) {
+        ch->registerCommand(
+                {.id = "view.pair-offset-" + std::to_string(offset),
+                 .text = "Pair Offset " + std::to_string(offset),
+                 .tooltip = "Offset paired pages before grouping",
+                 .menu = "View>Layout>Pair Offset",
+                 .checkable = true},
+                [this, offset]() { setPairOffset(offset); });
     }
 
     ch->addMenuSeparator("View");
@@ -3083,6 +3094,10 @@ void QtAppShell::loadPersistentUiState() {
     this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
     this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
     this->persistedPairedPages = settings.value(QStringLiteral("view/pairedPages"), false).toBool();
+    this->persistedPairOffset = settings.value(QStringLiteral("view/pairOffset"), 0).toInt();
+    if (this->persistedPairOffset < 0 || this->persistedPairOffset > 1) {
+        this->persistedPairOffset = 0;
+    }
     this->persistedLayoutColumnsRows =
             settings.value(QStringLiteral("view/layoutColumnsRows"), this->persistedPairedPages ? 2 : 1).toInt();
     if (this->persistedLayoutColumnsRows == 0 || std::abs(this->persistedLayoutColumnsRows) > 8) {
@@ -3124,6 +3139,7 @@ void QtAppShell::loadPersistentUiState() {
         this->persistedShowMenubar = true;
         this->persistedShowSidebar = true;
         this->persistedPairedPages = false;
+        this->persistedPairOffset = 0;
         this->persistedLayoutColumnsRows = 1;
         this->persistedVerticalLayout = true;
         this->persistedLayoutRtl = false;
@@ -3326,6 +3342,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("view/showMenubar"), showMenubar);
     settings.setValue(QStringLiteral("view/showSidebar"), showSidebar);
     settings.setValue(QStringLiteral("view/pairedPages"), canvas->isPairedPagesEnabled());
+    settings.setValue(QStringLiteral("view/pairOffset"), canvas->pairOffset());
     settings.setValue(QStringLiteral("view/layoutColumnsRows"), canvas->layoutColumnsRows());
     settings.setValue(QStringLiteral("view/verticalLayout"), canvas->isVerticalLayout());
     settings.setValue(QStringLiteral("view/layoutRtl"), canvas->isRightToLeftLayout());
@@ -5273,6 +5290,14 @@ void QtAppShell::setLayoutRows(int rows) {
     syncFooterWidgets();
 }
 
+void QtAppShell::setPairOffset(int offset) {
+    this->window.canvas()->setPairOffset(offset);
+    syncLayoutSpanCommandStates();
+    savePersistentUiState();
+    this->window.statusBar()->showMessage(QStringLiteral("Pair offset %1").arg(offset), 3000);
+    syncFooterWidgets();
+}
+
 void QtAppShell::syncLayoutSpanCommandStates() {
     const int value = this->window.canvas()->layoutColumnsRows();
     this->window.commandHost()->setCommandChecked("view.paired-pages", value == 2);
@@ -5281,6 +5306,10 @@ void QtAppShell::syncLayoutSpanCommandStates() {
     }
     for (int rows = 1; rows <= 8; ++rows) {
         this->window.commandHost()->setCommandChecked("view.rows-" + std::to_string(rows), value == -rows);
+    }
+    const int pairOffset = this->window.canvas()->pairOffset();
+    for (int offset = 0; offset <= 1; ++offset) {
+        this->window.commandHost()->setCommandChecked("view.pair-offset-" + std::to_string(offset), pairOffset == offset);
     }
 }
 

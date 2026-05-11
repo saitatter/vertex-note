@@ -58,6 +58,19 @@ TEST(VertexNoteQtCanvasLayout, laysOutFixedColumns) {
     expectRect(threeColumns[4], 240.0, 352.0, 130.0, 190.0);
 }
 
+TEST(VertexNoteQtCanvasLayout, appliesPairedPageOffset) {
+    const std::vector<vn::view::render::PageRenderSnapshot> pages = {
+            page(100.0, 200.0), page(120.0, 220.0), page(80.0, 180.0),
+    };
+
+    const auto rects = layoutQtCanvasPages(pages, {.span = 2, .pairOffset = 1});
+
+    ASSERT_EQ(rects.size(), 3U);
+    expectRect(rects[0], 260.0, 84.0, 100.0, 200.0);
+    expectRect(rects[1], 92.0, 332.0, 120.0, 220.0);
+    expectRect(rects[2], 260.0, 332.0, 80.0, 180.0);
+}
+
 TEST(VertexNoteQtCanvasLayout, laysOutFixedRows) {
     const std::vector<vn::view::render::PageRenderSnapshot> pages = {
             page(100.0, 200.0), page(120.0, 220.0), page(80.0, 180.0),

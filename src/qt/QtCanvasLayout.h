@@ -14,6 +14,7 @@
 
 struct QtCanvasLayoutOptions {
     int span = 1;
+    int pairOffset = 0;
     bool vertical = true;
     bool rightToLeft = false;
     bool bottomToTop = false;

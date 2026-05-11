@@ -450,6 +450,17 @@ void QtCanvas::setPairedPagesEnabled(bool enabled) {
 
 auto QtCanvas::isPairedPagesEnabled() const -> bool { return this->pairedPagesEnabled; }
 
+void QtCanvas::setPairOffset(int offset) {
+    offset = std::clamp(offset, 0, 1);
+    if (this->pairOffsetValue == offset) {
+        return;
+    }
+    this->pairOffsetValue = offset;
+    fitPage();
+}
+
+auto QtCanvas::pairOffset() const -> int { return this->pairOffsetValue; }
+
 void QtCanvas::setLayoutColumns(int columns) {
     columns = std::clamp(columns, 1, 8);
     if (this->layoutColumnsRowsValue == columns) {
@@ -1365,6 +1376,7 @@ auto QtCanvas::pageRects() const -> std::vector<QRectF> {
             this->documentController ? this->documentController->snapshotPages()
                                      : std::vector<vn::view::render::PageRenderSnapshot>{};
     return layoutQtCanvasPages(pages, {.span = this->layoutColumnsRowsValue,
+                                       .pairOffset = this->pairOffsetValue,
                                        .vertical = this->verticalLayoutEnabled,
                                        .rightToLeft = this->rightToLeftLayoutEnabled,
                                        .bottomToTop = this->bottomToTopLayoutEnabled});

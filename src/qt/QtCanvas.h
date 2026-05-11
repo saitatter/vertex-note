@@ -52,6 +52,8 @@ public:
     void panBy(double dx, double dy);
     void setPairedPagesEnabled(bool enabled);
     [[nodiscard]] auto isPairedPagesEnabled() const -> bool;
+    void setPairOffset(int offset);
+    [[nodiscard]] auto pairOffset() const -> int;
     void setLayoutColumns(int columns);
     void setLayoutRows(int rows);
     [[nodiscard]] auto layoutColumnsRows() const -> int;
@@ -324,6 +326,7 @@ private:
     Color recolorLight{198, 208, 245, 255};
     Color recolorDark{48, 52, 70, 255};
     bool pairedPagesEnabled = false;
+    int pairOffsetValue = 0;
     int layoutColumnsRowsValue = 1;
     bool verticalLayoutEnabled = true;
     bool rightToLeftLayoutEnabled = false;
