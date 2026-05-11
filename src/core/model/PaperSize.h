@@ -10,11 +10,6 @@
  */
 
 #include "control/settings/PageTemplateSettings.h"
-#include "config-features.h"
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "util/raii/GtkPaperSizeUPtr.h"
-#endif
 
 #pragma once
 
@@ -54,9 +49,6 @@ public:
     [[nodiscard]] auto orientation() const -> PaperOrientation;
 
     // Constructors
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    explicit PaperSize(const vn::util::GtkPaperSizeUPtr& gtkPaperSize);
-#endif
     explicit PaperSize(const PageTemplateSettings& model);
     PaperSize(double width, double height);
 };

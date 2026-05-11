@@ -1,7 +1,5 @@
 #include "util/PathUtil.h"
 
-#include "config-features.h"
-
 #include <algorithm>
 #include <cstdlib>      // for system
 #include <fstream>      // for ifstream, char_traits, basic_ist...
@@ -24,10 +22,6 @@
 #include "util/safe_casts.h"  // for as_signed
 #include "util/utf8_view.h"   // for utf8_view
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "util/AppMessageBox.h"  // for AppMessageBox
-#endif
-
 #include "config.h"  // for PROJECT_NAME
 
 #ifdef _WIN32
@@ -46,11 +40,7 @@ constexpr auto const* CONFIG_FOLDER_NAME = "vertex-note";
 constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "vertex-note";
 
 static void reportPathErrorToUser(const std::string& msg) {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    AppMessageBox::showErrorToUser(nullptr, msg);
-#else
     g_warning("%s", msg.c_str());
-#endif
 }
 
 static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const fs::path& legacyFolder) {
@@ -444,11 +434,7 @@ auto Util::ensureFolderExists(const fs::path& p) -> fs::path {
         fs::create_directories(p);
     } catch (const fs::filesystem_error& fe) {
         std::string msg = FS(_F("Could not create folder: {1}\nFailed with error: {2}") % p.u8string() % fe.what());
-#ifdef ENABLE_LEGACY_GTK_SHELL
-        Util::execInUiThread([msg = std::move(msg)]() { AppMessageBox::showErrorToUser(nullptr, msg); });
-#else
         reportPathErrorToUser(msg);
-#endif
     }
     return p;
 }

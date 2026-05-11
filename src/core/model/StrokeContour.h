@@ -15,7 +15,7 @@
 
 #include <cairo.h>
 
-#include "view/ViewNamespaceAliases.h"
+#include "view/render/ViewNamespaceAliases.h"
 
 class Point;
 

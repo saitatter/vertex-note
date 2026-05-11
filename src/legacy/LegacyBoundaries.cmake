@@ -51,7 +51,7 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
 set(VERTEXNOTE_LEGACY_GTK_UTIL_PATTERNS
         ".*/src/util/(AppMessageBox|AppMessageBoxFallback|GtkUtil|gtk4_helper|UtilGtk)\\.(cpp|h)$"
         ".*/src/util/include/util/(AppMessageBox|ColorGtk|GtkUtil|gtk4_helper|PopupWindowWrapper)\\.h$"
-        ".*/src/util/include/util/raii/(GObjectSPtr|GtkPaperSizeUPtr|GtkWindowUPtr)\\.h$"
+        ".*/src/util/include/util/raii/(GtkPaperSizeUPtr|GtkWindowUPtr)\\.h$"
 )
 
 set(VERTEXNOTE_LEGACY_RENDER_UTIL_PATTERNS

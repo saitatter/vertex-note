@@ -1,7 +1,5 @@
 #include "MetadataManager.h"
 
-#include "config-features.h"
-
 #include <algorithm>  // for sort
 #include <cstdlib>    // for strtoll, strtod
 #include <fstream>    // for operator<<, basic_ostream, basic_stringb...
@@ -16,21 +14,13 @@
 #include "util/serdesstream.h"
 #include "util/utf8_view.h"
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "util/AppMessageBox.h"  // for AppMessageBox
-#endif
-
 /**
  * Get directory to store metadata files to
  */
 static fs::path getMetadataDirectory() { return Util::getStateSubfolder("metadata"); }
 
 static void reportMetadataErrorToUser(const std::string& msg) {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    AppMessageBox::showErrorToUser(nullptr, msg);
-#else
     g_warning("%s", msg.c_str());
-#endif
 }
 
 /**

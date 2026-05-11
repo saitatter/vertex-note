@@ -5,74 +5,12 @@
 #include <cairo.h>
 #include <glib.h>
 
-#include "config-features.h"
 #include "config-git.h"
 #include "config.h"
 #include "util/raii/CStringWrapper.h"
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include <gtk/gtk.h>
-
-#ifdef GDK_WINDOWING_X11
-#include <gdk/gdkx.h>
-static bool isX11() { return GDK_IS_X11_DISPLAY(gdk_display_get_default()); }
-#else
-static bool isX11() { return false; }
-#endif
-
-#ifdef GDK_WINDOWING_WAYLAND
-#include <gdk/gdkwayland.h>
-static bool isWayland() { return GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default()); }
-#else
-static bool isWayland() { return false; }
-#endif
-
-#ifdef GDK_WINDOWING_QUARTZ
-#include <gdk/gdkquartz.h>
-static bool isQuartz() { return GDK_IS_QUARTZ_DISPLAY(gdk_display_get_default()); }
-#else
-static bool isQuartz() { return false; }
-#endif
-
-#ifdef GDK_WINDOWING_BROADWAY
-#include <gdk/gdkbroadway.h>
-static bool isBroadway() { return GDK_IS_BROADWAY_DISPLAY(gdk_display_get_default()); }
-#else
-static bool isBroadway() { return false; }
-#endif
-
-#ifdef GDK_WINDOWING_WIN32
-#include <gdk/gdkwin32.h>
-static bool isWin32() { return GDK_IS_WIN32_DISPLAY(gdk_display_get_default()); }
-#else
-static bool isWin32() { return false; }
-#endif
-#endif
-
 namespace xoj::util {
-const char* getGdkBackend() {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    if (gdk_display_get_default()) {
-        if (isX11()) {
-            return "X11";
-        } else if (isWayland()) {
-            return "Wayland";
-        } else if (isBroadway()) {
-            return "Broadway";
-        } else if (isQuartz()) {
-            return "Quartz";
-        } else if (isWin32()) {
-            return "Win32";
-        } else {
-            return "Unknown GDK backend!!";
-        }
-    } else {
-        return nullptr;
-    }
-#else
-    return nullptr;
-#endif
-}
+const char* getGdkBackend() { return nullptr; }
 
 std::string getVertexNoteVersion() {
     auto str = std::string(PROJECT_NAME) + " " + PROJECT_VERSION;
@@ -111,21 +49,9 @@ std::string getVersionInfo() {
 
     str << getVertexNoteVersion() << std::endl;
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    str << "├──libgtk: " << gtk_get_major_version() << "." << gtk_get_minor_version() << "." << gtk_get_micro_version()
-        << std::endl;
-#else
     str << "├──shell: Qt" << std::endl;
-#endif
     str << "├──glib: " << glib_major_version << "." << glib_minor_version << "." << glib_micro_version << std::endl;
     str << "├──cairo:  " << cairo_version_string() << std::endl;
-
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    if (const char* backend = getGdkBackend(); backend) {
-        str << "├──GDK backend: " << backend << std::endl;
-    }
-#endif
 
     str << "└──OS info: " << getOsInfo() << std::endl;
 

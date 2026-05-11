@@ -1,15 +1,9 @@
 #include "PageTypeHandler.h"
 
-#include "config-features.h"
-
 #include <algorithm>
 #include <string_view>
 #include <utility>
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "gui/GladeSearchpath.h"
-#include "util/AppMessageBox.h"
-#endif
 #include "util/PathUtil.h"
 #include "util/StringUtils.h"
 #include "util/i18n.h"
@@ -36,21 +30,8 @@ static void addFallbackPageTypes(std::vector<std::unique_ptr<PageTypeInfo>>& typ
 }
 
 PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    auto file = gladeSearchPath->findFile("", "pagetemplates.ini");
-
-    if (!parseIni(file) || this->types.size() < 5) {
-
-        std::string msg = FS(_F("Could not load pagetemplates.ini file"));
-        AppMessageBox::showErrorToUser(nullptr, msg);
-
-        // On failure load the hardcoded and predefined values
-        addFallbackPageTypes(types);
-    }
-#else
     (void) gladeSearchPath;
     addFallbackPageTypes(types);
-#endif
 
     // Special types
     addPageTypeInfo(_("With PDF background"), PageTypeFormat::Pdf, "", specialTypes);

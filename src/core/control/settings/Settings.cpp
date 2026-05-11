@@ -18,7 +18,6 @@
 #include "control/settings/LatexSettings.h"         // for LatexSettings
 #include "control/settings/PageTemplateSettings.h"  // for PageTemplateSettings
 #include "control/settings/SettingsEnums.h"         // for InputDeviceTypeOp...
-#include "gui/toolbarMenubar/model/ColorPalette.h"  // for Palette
 #include "model/FormatDefinitions.h"                // for FormatUnits, XOJ_...
 #include "util/Color.h"
 #include "util/PathUtil.h"  // for getConfigFile

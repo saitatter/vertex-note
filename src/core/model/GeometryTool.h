@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "view/ViewNamespaceAliases.h"
+#include "view/render/ViewNamespaceAliases.h"
 
 #include <cairo.h>  // for cairo_matrix_t
 

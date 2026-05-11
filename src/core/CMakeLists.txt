@@ -12,7 +12,7 @@ endif()
 set(vertexnote_include_dirs "${CMAKE_CURRENT_SOURCE_DIR}")
 
 vertexnote_match_legacy_sources(vertexnote_sources vertexnote_legacy_gtk_sources ${VERTEXNOTE_LEGACY_GTK_CORE_PATTERNS})
-if (NOT ENABLE_LEGACY_GTK_SHELL AND vertexnote_legacy_gtk_sources)
+if (vertexnote_legacy_gtk_sources)
     list(REMOVE_ITEM vertexnote_sources ${vertexnote_legacy_gtk_sources})
 endif ()
 
@@ -24,9 +24,6 @@ target_link_libraries(vertexnote-core
                 $<$<PLATFORM_ID:Windows>:winhttp>
         PUBLIC vertexnote::defaults vertexnote::external_common_modules
         )
-if (ENABLE_LEGACY_GTK_SHELL)
-    target_link_libraries(vertexnote-core PUBLIC vertexnote::external_gtk_modules)
-endif ()
 target_include_directories(vertexnote-core PUBLIC ${vertexnote_include_dirs})
 add_library(xoj::core ALIAS vertexnote-core)
 add_library(vertexnote::core ALIAS vertexnote-core)
@@ -43,9 +40,5 @@ endif ()
 
 list(LENGTH vertexnote_legacy_gtk_sources vertexnote_legacy_gtk_count)
 list(LENGTH vertexnote_legacy_render_sources vertexnote_legacy_render_count)
-if (ENABLE_LEGACY_GTK_SHELL)
-    message(STATUS "VertexNote legacy GTK core surface: ${vertexnote_legacy_gtk_count} files")
-else ()
-    message(STATUS "VertexNote legacy GTK core surface: ${vertexnote_legacy_gtk_count} files (excluded)")
-endif ()
+message(STATUS "VertexNote legacy GTK core surface: ${vertexnote_legacy_gtk_count} files (removed/excluded)")
 message(STATUS "VertexNote legacy Cairo core surface: ${vertexnote_legacy_render_count} files")

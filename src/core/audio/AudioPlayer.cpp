@@ -4,22 +4,8 @@
 #include "audio/DeviceInfo.h"                // for DeviceInfo
 #include "audio/PortAudioConsumer.h"         // for PortAudioConsumer
 #include "audio/VorbisProducer.h"            // for VorbisProducer
-#include "config-features.h"
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "control/Control.h"                 // for Control
-#include "control/actions/ActionDatabase.h"  // for ActionDatabase
-#include "gui/MainWindow.h"                  // for MainWindow
-#endif
 
 class Settings;
-
-AudioPlayer::AudioPlayer(Control& control, Settings& settings):
-        control(&control),
-        settings(settings),
-        audioQueue(std::make_unique<AudioQueue<float>>()),
-        portAudioConsumer(std::make_unique<PortAudioConsumer>(*this, *audioQueue)),
-        vorbisProducer(std::make_unique<VorbisProducer>(*audioQueue)) {}
 
 AudioPlayer::AudioPlayer(Settings& settings, std::function<void(bool playing, bool paused)> stateObserver):
         settings(settings),
@@ -74,16 +60,6 @@ auto AudioPlayer::play() -> bool {
 
 void AudioPlayer::disableAudioPlaybackButtons() {
     if (this->audioQueue->hasStreamEnded()) {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-        if (this->control) {
-            auto* actionDB = this->control->getActionDatabase();
-            actionDB->enableAction(Action::AUDIO_PAUSE_PLAYBACK, false);
-            actionDB->enableAction(Action::AUDIO_STOP_PLAYBACK, false);
-            actionDB->enableAction(Action::AUDIO_SEEK_FORWARDS, false);
-            actionDB->enableAction(Action::AUDIO_SEEK_BACKWARDS, false);
-            actionDB->setActionState(Action::AUDIO_PAUSE_PLAYBACK, false);
-        }
-#endif
         notifyPlaybackState(false, false);
     }
 }

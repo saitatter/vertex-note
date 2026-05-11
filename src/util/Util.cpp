@@ -1,7 +1,5 @@
 #include "util/Util.h"
 
-#include "config-features.h"
-
 #include <array>    // for array
 #include <cstdlib>  // for system
 #include <string>   // for allocator, string
@@ -12,10 +10,6 @@
 #include "util/OutputStream.h"       // for OutputStream
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/i18n.h"               // for FS, _F
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "util/AppMessageBox.h"  // for AppMessageBox
-#endif
 
 #if defined(_MSC_VER)
 #include <windows.h>
@@ -56,11 +50,7 @@ void Util::writeCoordinateString(OutputStream* out, double xVal, double yVal) {
 void Util::systemWithMessage(const char* command) {
     if (auto errc = std::system(command); errc != 0) {
         std::string msg = FS(_F("Error {1} executing system command: {2}") % errc % command);
-#ifdef ENABLE_LEGACY_GTK_SHELL
-        AppMessageBox::showErrorToUser(nullptr, msg);
-#else
         g_warning("%s", msg.c_str());
-#endif
     }
 }
 

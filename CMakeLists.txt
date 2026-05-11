@@ -169,9 +169,6 @@ if (APPLE)
   list(APPEND common-pkg-module-spec "poppler-cpp >= 0.41.0")
 endif (APPLE)
 
-set(gtk-pkg-module-spec "")
-list(APPEND gtk-pkg-module-spec "gtk+-3.0 >= 3.18.9")
-
 # Profiling
 option (ENABLE_PROFILING "Link with gperftools" OFF)
 if (ENABLE_PROFILING)
@@ -180,7 +177,6 @@ if (ENABLE_PROFILING)
 endif (ENABLE_PROFILING)
 
 pkg_check_modules(ExternalCommonModules REQUIRED IMPORTED_TARGET ${common-pkg-module-spec})
-pkg_check_modules(ExternalGtkModules REQUIRED IMPORTED_TARGET ${gtk-pkg-module-spec})
 
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
@@ -220,25 +216,9 @@ else ()
     message(STATUS "Disable VertexNote Plugins")
 endif ()
 
-option(ENABLE_LEGACY_GTK_SHELL
-        "Build the legacy GTK3 shell entry points (deprecated; kept only as fallback while Qt migration completes)"
-        ON)
-option(ENABLE_QT_SHELL "Build the Qt Widgets shell" OFF)
-if (ENABLE_LEGACY_GTK_SHELL)
-    message(DEPRECATION
-            "ENABLE_LEGACY_GTK_SHELL is deprecated. The Qt shell is the forward development path; "
-            "the GTK3 shell remains a fallback only during migration.")
-elseif (NOT ENABLE_QT_SHELL)
-    message(FATAL_ERROR
-            "At least one application shell must be enabled. Turn on ENABLE_QT_SHELL or ENABLE_LEGACY_GTK_SHELL.")
-endif ()
-
-option(ENABLE_GTK_SOURCEVIEW "Enable syntax highlighting in TeX editor" ON)
-if (ENABLE_GTK_SOURCEVIEW AND ENABLE_LEGACY_GTK_SHELL)
-    pkg_check_modules(GtkSourceView REQUIRED IMPORTED_TARGET "gtksourceview-4 >= 4.0.0")
-    message(STATUS "Enable GtkSourceView TeX syntax highlighting")
-else ()
-    message(STATUS "Disable GtkSourceView TeX syntax highlighting")
+option(ENABLE_QT_SHELL "Build the Qt Widgets shell" ON)
+if (NOT ENABLE_QT_SHELL)
+    message(FATAL_ERROR "The GTK shell has been removed; ENABLE_QT_SHELL must remain enabled.")
 endif ()
 
 if (ENABLE_QT_SHELL)
@@ -326,21 +306,9 @@ target_link_options(external_common_modules INTERFACE
 add_library(xoj::external_common_modules ALIAS external_common_modules)
 add_library(vertexnote::external_common_modules ALIAS external_common_modules)
 
-add_library(external_gtk_modules INTERFACE)
-target_link_libraries(external_gtk_modules INTERFACE
-        PkgConfig::ExternalGtkModules
-        $<$<TARGET_EXISTS:PkgConfig::GtkSourceView>:PkgConfig::GtkSourceView>
-        )
-target_compile_definitions(external_gtk_modules INTERFACE
-        GDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_18
-        )
-add_library(xoj::external_gtk_modules ALIAS external_gtk_modules)
-add_library(vertexnote::external_gtk_modules ALIAS external_gtk_modules)
-
 add_library(external_modules INTERFACE)
 target_link_libraries(external_modules INTERFACE
         vertexnote::external_common_modules
-        vertexnote::external_gtk_modules
         )
 add_library(xoj::external_modules ALIAS external_modules)
 add_library(vertexnote::external_modules ALIAS external_modules)

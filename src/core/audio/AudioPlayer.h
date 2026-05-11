@@ -19,7 +19,6 @@
 
 template <typename T>
 class AudioQueue;
-class Control;
 class DeviceInfo;
 class PortAudioConsumer;
 class Settings;
@@ -28,7 +27,6 @@ class VorbisProducer;
 
 class AudioPlayer final {
 public:
-    explicit AudioPlayer(Control& control, Settings& settings);
     explicit AudioPlayer(Settings& settings, std::function<void(bool playing, bool paused)> stateObserver = {});
     AudioPlayer(AudioPlayer const&) = delete;
     AudioPlayer(AudioPlayer&&) = delete;
@@ -51,7 +49,6 @@ public:
 private:
     void notifyPlaybackState(bool playing, bool paused);
 
-    Control* control = nullptr;
     Settings& settings;
     std::function<void(bool playing, bool paused)> stateObserver;
 

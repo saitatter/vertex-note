@@ -73,10 +73,6 @@ void execInUiThread(Fun&& callback, gint priority = G_PRIORITY_DEFAULT_IDLE) {
     }
 }
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-gboolean paintBackgroundWhite(GtkWidget* widget, cairo_t* cr, void* unused);
-#endif
-
 void cairo_set_dash_from_vector(cairo_t* cr, const std::vector<double>& dashes, double offset);
 
 /**

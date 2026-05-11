@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "view/ViewNamespaceAliases.h"
+#include "view/render/ViewNamespaceAliases.h"
 
 #include <memory>   // for unique_ptr
 #include <mutex>    // for mutex

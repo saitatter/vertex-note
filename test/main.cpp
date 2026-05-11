@@ -10,8 +10,6 @@
  */
 
 #include <config-test.h>
-#include <config-features.h>
-
 #include <clocale>
 #include <iostream>
 #include <locale>
@@ -20,16 +18,9 @@
 #include <glib.h>
 #include <gtest/gtest.h>
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include "control/VertexNoteMain.h"
-#endif
-
 namespace {
 
 void initTestLocalisation() {
-#ifdef ENABLE_LEGACY_GTK_SHELL
-    VertexNoteMain::initLocalisation();
-#else
     setlocale(LC_NUMERIC, "C");
     try {
         std::locale::global(std::locale(""));
@@ -37,7 +28,6 @@ void initTestLocalisation() {
         g_warning("VertexNote tests: System default locale could not be set: %s", e.what());
     }
     std::cout.imbue(std::locale());
-#endif
 }
 
 }  // namespace

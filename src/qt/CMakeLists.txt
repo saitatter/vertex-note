@@ -134,7 +134,3 @@ set_target_properties(vertexnote-qt-shell PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
         OUTPUT_NAME "vertex-note-qt-shell"
 )
-
-if (WIN32)
-    target_sources(vertexnote-qt-shell PRIVATE "${PROJECT_SOURCE_DIR}/src/exe/win32/console.cpp")
-endif ()
