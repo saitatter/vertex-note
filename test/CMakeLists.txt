@@ -76,6 +76,7 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/QtColorPalette.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtCommandHost.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPdfText.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtLuaPluginRuntime.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
