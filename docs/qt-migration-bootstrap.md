@@ -250,9 +250,9 @@ This is the current implementation plan after the Qt parity batch through
      text selection copy on documents with attached and external PDFs.
 
 5. **Plugin API compatibility audit**
-   - Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB`.
-   - Track each API as implemented, no-op compatibility, intentionally
-     unsupported, or GTK-only.
+   - ✓ Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB` in
+     `docs/qt-plugin-api-audit.md`.
+   - ✓ Track each API as implemented or unsupported in the Qt shell.
    - Keep no-op APIs documented so plugin authors are not surprised.
 
 6. **Chrome and interaction polish**
