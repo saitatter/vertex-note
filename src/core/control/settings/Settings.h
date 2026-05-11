@@ -20,7 +20,6 @@
 #include <utility>   // for pair
 #include <vector>    // for vector
 
-#include <glib.h>         // for gchar, gboolean, gint
 #include <libxml/tree.h>  // for xmlNodePtr, xmlDocPtr
 
 #include "control/tools/StrokeStabilizerEnum.h"  // for AveragingMethod, Pre...
@@ -118,10 +117,10 @@ private:
     void loadDefault();
     void parseItem(xmlDocPtr doc, xmlNodePtr cur);
 
-    static xmlNodePtr savePropertyDouble(const gchar* key, double value, xmlNodePtr parent);
-    static xmlNodePtr saveProperty(const gchar* key, int value, xmlNodePtr parent);
-    static xmlNodePtr savePropertyUnsigned(const gchar* key, unsigned int value, xmlNodePtr parent);
-    static xmlNodePtr saveProperty(const gchar* key, const gchar* value, xmlNodePtr parent);
+    static xmlNodePtr savePropertyDouble(const char* key, double value, xmlNodePtr parent);
+    static xmlNodePtr saveProperty(const char* key, int value, xmlNodePtr parent);
+    static xmlNodePtr savePropertyUnsigned(const char* key, unsigned int value, xmlNodePtr parent);
+    static xmlNodePtr saveProperty(const char* key, const char* value, xmlNodePtr parent);
 
     void saveData(xmlNodePtr root, const std::string& name, SElement& elem);
 
@@ -137,7 +136,7 @@ public:
     ViewModeId getActiveViewMode() const;
 
     bool isPressureSensitivity() const;
-    void setPressureSensitivity(gboolean presureSensitivity);
+    void setPressureSensitivity(bool presureSensitivity);
 
     /**
      * Input device pressure options
