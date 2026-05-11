@@ -16,6 +16,7 @@ target_compile_features(vertexnote-core PUBLIC cxx_std_20)
 target_link_libraries(vertexnote-core
         PRIVATE vertexnote::util
                 Qt6::Gui
+                Qt6::Network
                 $<$<PLATFORM_ID:Windows>:winhttp>
         PUBLIC vertexnote::defaults vertexnote::external_common_modules
         )

@@ -1,9 +1,9 @@
 #include "ReleaseFetcher.h"
 
 #include <array>
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <utility>
 
 #ifdef _WIN32
@@ -16,18 +16,16 @@
 #include <windows.h>
 #include <winhttp.h>
 #else
-#include <gio/gio.h>
-
-#include <charconv>
-#include <cctype>
-#include <optional>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QTimer>
+#include <QUrl>
 #endif
 
 namespace vn::update {
 namespace {
-
-constexpr auto GITHUB_API_HOST = "api.github.com";
-constexpr auto GITHUB_LATEST_RELEASE_PATH = "/repos/saitatter/vertex-note/releases/latest";
 
 #ifdef _WIN32
 
@@ -193,130 +191,43 @@ auto fetchWithWinHttp() -> std::string {
 
 #else
 
-auto lower(std::string_view value) -> std::string {
-    std::string result(value);
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return result;
-}
+auto fetchWithQtNetwork() -> std::string {
+    QNetworkAccessManager manager;
+    QNetworkRequest request(QUrl(QStringLiteral("https://api.github.com/repos/saitatter/vertex-note/releases/latest")));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("VertexNote"));
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
 
-auto decodeChunkedBody(std::string_view body) -> std::optional<std::string> {
-    std::string decoded;
-    std::size_t offset = 0;
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
 
-    while (offset < body.size()) {
-        const auto sizeEnd = body.find("\r\n", offset);
-        if (sizeEnd == std::string_view::npos) {
-            return std::nullopt;
-        }
+    QNetworkReply* reply = manager.get(request);
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeout.start(15000);
+    loop.exec();
 
-        auto sizeLine = body.substr(offset, sizeEnd - offset);
-        if (const auto extension = sizeLine.find(';'); extension != std::string_view::npos) {
-            sizeLine = sizeLine.substr(0, extension);
-        }
+    if (!timeout.isActive()) {
+        reply->abort();
+        reply->deleteLater();
+        throw std::runtime_error("GitHub release request timed out.");
+    }
+    timeout.stop();
 
-        std::size_t chunkSize = 0;
-        const auto* begin = sizeLine.data();
-        const auto* end = sizeLine.data() + sizeLine.size();
-        const auto [ptr, ec] = std::from_chars(begin, end, chunkSize, 16);
-        if (ec != std::errc{} || ptr != end) {
-            return std::nullopt;
-        }
+    const auto replyGuard = std::unique_ptr<QNetworkReply, void (*)(QNetworkReply*)>(
+            reply, [](QNetworkReply* guardedReply) { guardedReply->deleteLater(); });
 
-        offset = sizeEnd + 2;
-        if (chunkSize == 0) {
-            return decoded;
-        }
-        if (offset + chunkSize + 2 > body.size()) {
-            return std::nullopt;
-        }
-
-        decoded.append(body.substr(offset, chunkSize));
-        offset += chunkSize;
-        if (body.substr(offset, 2) != "\r\n") {
-            return std::nullopt;
-        }
-        offset += 2;
+    if (reply->error() != QNetworkReply::NoError) {
+        throw std::runtime_error(reply->errorString().toStdString());
     }
 
-    return std::nullopt;
-}
-
-auto fetchWithGioTls() -> std::string {
-    GError* error = nullptr;
-    auto* client = g_socket_client_new();
-    g_socket_client_set_tls(client, true);
-    g_socket_client_set_timeout(client, 15);
-
-    auto* connection = g_socket_client_connect_to_host(client, GITHUB_API_HOST, 443, nullptr, &error);
-    g_object_unref(client);
-    if (error) {
-        const std::string message = error->message;
-        g_error_free(error);
-        throw std::runtime_error(message);
-    }
-
-    auto* stream = G_IO_STREAM(connection);
-    auto* output = g_io_stream_get_output_stream(stream);
-    const std::string request = std::string{"GET "} + GITHUB_LATEST_RELEASE_PATH +
-                                " HTTP/1.1\r\n"
-                                "Host: " +
-                                GITHUB_API_HOST +
-                                "\r\n"
-                                "User-Agent: VertexNote\r\n"
-                                "Accept: application/vnd.github+json\r\n"
-                                "Connection: close\r\n\r\n";
-
-    gsize bytesWritten = 0;
-    if (!g_output_stream_write_all(output, request.data(), request.size(), &bytesWritten, nullptr, &error)) {
-        const std::string message = error ? error->message : "Could not write HTTP request.";
-        if (error) {
-            g_error_free(error);
-        }
-        g_object_unref(connection);
-        throw std::runtime_error(message);
-    }
-
-    std::string response;
-    auto* input = g_io_stream_get_input_stream(stream);
-    std::array<char, 4096> buffer{};
-    while (true) {
-        const auto read = g_input_stream_read(input, buffer.data(), buffer.size(), nullptr, &error);
-        if (read < 0) {
-            const std::string message = error ? error->message : "Could not read HTTP response.";
-            if (error) {
-                g_error_free(error);
-            }
-            g_object_unref(connection);
-            throw std::runtime_error(message);
-        }
-        if (read == 0) {
-            break;
-        }
-        response.append(buffer.data(), static_cast<std::size_t>(read));
-    }
-    g_object_unref(connection);
-
-    const auto headerEnd = response.find("\r\n\r\n");
-    if (headerEnd == std::string::npos) {
-        throw std::runtime_error("GitHub returned an invalid HTTP response.");
-    }
-
-    const auto headers = response.substr(0, headerEnd);
-    auto body = response.substr(headerEnd + 4);
-    if (headers.find(" 200 ") == std::string::npos) {
+    const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (statusCode != 200) {
         throw std::runtime_error("GitHub returned a non-success HTTP response.");
     }
 
-    if (lower(headers).find("transfer-encoding: chunked") != std::string::npos) {
-        auto decoded = decodeChunkedBody(body);
-        if (!decoded) {
-            throw std::runtime_error("GitHub returned a chunked response VertexNote could not decode.");
-        }
-        body = std::move(*decoded);
-    }
-
-    return body;
+    return reply->readAll().toStdString();
 }
 
 #endif
@@ -327,7 +238,7 @@ auto fetchLatestReleaseJson() -> std::string {
 #ifdef _WIN32
     return fetchWithWinHttp();
 #else
-    return fetchWithGioTls();
+    return fetchWithQtNetwork();
 #endif
 }
 
