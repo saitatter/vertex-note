@@ -8,8 +8,6 @@
 #include <string>
 #include <utility>
 
-#include <glib.h>
-
 #include "model/Element.h"
 #include "util/Color.h"
 #include "util/serializing/BinObjectEncoding.h"
@@ -207,9 +205,7 @@ TEST(VertexNoteGeometryElement, serializesClipboardGeometryState) {
 
     ObjectOutputStream out(new BinObjectEncoding);
     element.serialize(out);
-    auto* raw = out.stealData();
-    const std::string serialized(raw->str, raw->len);
-    g_string_free(raw, true);
+    const std::string serialized = out.stealData();
 
     ObjectInputStream in;
     ASSERT_TRUE(in.read(serialized.c_str(), serialized.size() + 1U));

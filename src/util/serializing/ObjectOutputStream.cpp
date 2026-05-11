@@ -73,4 +73,4 @@ void ObjectOutputStream::writeImage(const std::string_view& imgData) {
     this->encoder->addData(imgData.data(), len);
 }
 
-auto ObjectOutputStream::stealData() -> GString* { return this->encoder->stealData(); }
+auto ObjectOutputStream::stealData() -> std::string { return this->encoder->stealData(); }

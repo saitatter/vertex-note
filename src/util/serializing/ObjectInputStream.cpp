@@ -1,8 +1,10 @@
 #include "util/serializing/ObjectInputStream.h"
 
+#include <array>    // for array
 #include <cstdint>  // for uint32_t
+#include <cstdio>   // for snprintf
 
-#include <glib.h>  // for g_free, g_strdup_...
+#include <glib.h>  // for g_warning
 
 #include "util/PlaceholderString.h"                 // for PlaceholderString
 #include "util/i18n.h"                              // for FORMAT_STR, FS
@@ -192,9 +194,9 @@ auto ObjectInputStream::getType(char type) -> std::string {
     } else if (type == 'm') {
         ret = "Image";
     } else {
-        char* str = g_strdup_printf("Unknown type: %02hhx (%c)", type, type);
-        ret = str;
-        g_free(str);
+        std::array<char, 32> str{};
+        snprintf(str.data(), str.size(), "Unknown type: %02hhx (%c)", type, type);
+        ret = str.data();
     }
 
     return ret;

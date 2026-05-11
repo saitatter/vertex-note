@@ -19,73 +19,49 @@ template <typename T>
 std::string serializeDataVector(const std::vector<T>& data) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeData(data);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeImage(std::string_view imageData) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeImage(imageData);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeString(const std::string& str) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeString(str);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeSizeT(size_t x) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeSizeT(x);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeDouble(double x) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeDouble(x);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeInt(int x) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeInt(x);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeUInt(uint32_t x) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     outStream.writeUInt(x);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 std::string serializeStroke(Stroke& stroke) {
     ObjectOutputStream outStream(new BinObjectEncoding);
     stroke.serialize(outStream);
-    auto outStr = outStream.stealData();
-    auto resStr = std::string{outStr->str, outStr->len};
-    g_string_free(outStr, true);
-    return resStr;
+    return outStream.stealData();
 }
 
 template <typename T>
@@ -269,9 +245,7 @@ TEST(UtilObjectIOStream, testReadComplexObject) {
             outStream.writeDouble(-d);
             outStream.endObject();
 
-            auto gstr = outStream.stealData();
-            std::string str(gstr->str, gstr->len);
-            g_string_free(gstr, true);
+            std::string str = outStream.stealData();
 
             ObjectInputStream stream;
             EXPECT_TRUE(stream.read(&str[0], str.size() + 1));
