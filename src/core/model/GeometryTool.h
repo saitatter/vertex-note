@@ -13,8 +13,6 @@
 
 #include "view/render/ViewNamespaceAliases.h"
 
-#include <cairo.h>  // for cairo_matrix_t
-
 #include "model/OverlayBase.h"
 #include "model/Stroke.h"
 #include "util/DispatchPool.h"
@@ -66,8 +64,6 @@ public:
     double getRotation() const;
     const vn::util::Point<double>& getOrigin() const;
     void setOrigin(const vn::util::Point<double>& o);
-
-    cairo_matrix_t getMatrix() const;
 
     Stroke* getStroke() const;
     void setStroke(Stroke* s);

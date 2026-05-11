@@ -40,7 +40,7 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
         ".*/src/core/pdf/base/CairoPdfExport\\.(cpp|h)$"
         ".*/src/core/pdf/base/HybridPdfExport\\.cpp$"
         ".*/src/core/pdf/popplerapi/PopplerGlibPage\\.(cpp|h)$"
-        ".*/src/core/model/(GeometryTool|SplineSegment|Stroke|StrokeContour)\\.(cpp|h)$"
+        ".*/src/core/model/(SplineSegment|StrokeContour)\\.(cpp|h)$"
         ".*/src/core/model/TexImage\\.cpp$"
         ".*/src/core/model/eraser/.*"
 )
