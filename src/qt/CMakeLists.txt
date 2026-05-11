@@ -30,6 +30,7 @@ set(vertexnote_qt_sources
         QtDocumentControllerPages.cpp
         QtDocumentControllerPdfText.cpp
         QtDocumentControllerSelection.cpp
+        QtDocumentControllerShapes.cpp
         QtDocumentSession.h
         QtDocumentSession.cpp
         QtMainWindow.h
