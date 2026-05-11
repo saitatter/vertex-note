@@ -8,6 +8,8 @@
 
 #include <QDockWidget>
 
+#include "util/Color.h"
+
 class QListWidget;
 class QListWidgetItem;
 class QtDocumentController;
@@ -24,6 +26,7 @@ public:
 
     void setDocumentController(QtDocumentController* controller);
     void setContentRenderer(vn::view::render::PageContentRenderer* renderer);
+    void setRecolorOptions(bool enabled, Color light, Color dark);
     void setCurrentPage(std::size_t pageIndex);
     void refresh();
 
@@ -40,4 +43,7 @@ private:
     QtDocumentController* controller = nullptr;
     vn::view::render::PageContentRenderer* contentRenderer = nullptr;
     std::size_t currentPageIndex = 0U;
+    bool recolorEnabled = false;
+    Color recolorLight{198, 208, 245, 255};
+    Color recolorDark{48, 52, 70, 255};
 };

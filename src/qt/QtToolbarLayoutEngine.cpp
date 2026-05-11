@@ -130,3 +130,50 @@ auto QtToolbarLayoutEngine::expandTokenAliases(const std::vector<std::string>& t
     }
     return expanded;
 }
+
+auto QtToolbarLayoutEngine::normalizeQtDrawingFamilies(const std::vector<std::string>& tokens) -> std::vector<std::string> {
+    const auto isLegacyStrokeDrawingToken = [](const std::string& token) {
+        return token == "DRAW_RECTANGLE" || token == "DRAW_ELLIPSE" || token == "DRAW_ARROW" ||
+               token == "DRAW_DOUBLE_ARROW" || token == "DRAW_COORDINATE_SYSTEM" || token == "RULER" ||
+               token == "DRAW_SPLINE" || token == "SHAPE_RECOGNIZER";
+    };
+
+    const auto isLegacyVertexDrawingToken = [](const std::string& token) {
+        return token == "DRAW_CIRCLE" || token == "DRAW_ARC" || token == "DRAW_POLYLINE" ||
+               token == "DRAW_CONSTRUCTION_LINE" || token == "DRAW_CONSTRUCTION_CIRCLE";
+    };
+
+    bool hasStrokeFamily = false;
+    bool hasVertexFamily = false;
+    bool hasLegacyDrawing = false;
+    for (const auto& token: tokens) {
+        hasStrokeFamily = hasStrokeFamily || token == "DRAW_STROKE";
+        hasVertexFamily = hasVertexFamily || token == "DRAW_VERTEX";
+        hasLegacyDrawing = hasLegacyDrawing || isLegacyStrokeDrawingToken(token) || isLegacyVertexDrawingToken(token);
+    }
+
+    if (!hasLegacyDrawing) {
+        return tokens;
+    }
+
+    std::vector<std::string> normalized;
+    normalized.reserve(tokens.size() + 2U);
+    bool insertedFamily = false;
+    for (const auto& token: tokens) {
+        if (isLegacyStrokeDrawingToken(token) || isLegacyVertexDrawingToken(token)) {
+            if (!insertedFamily) {
+                if (!hasStrokeFamily) {
+                    normalized.emplace_back("DRAW_STROKE");
+                }
+                if (!hasVertexFamily) {
+                    normalized.emplace_back("DRAW_VERTEX");
+                }
+                insertedFamily = true;
+            }
+            continue;
+        }
+        normalized.push_back(token);
+    }
+
+    return normalized;
+}

@@ -42,3 +42,12 @@ TEST(VertexNoteQtToolbarLayoutEngine, expandsDrawAliasToStrokeAndVertexTokens) {
     EXPECT_EQ(expanded, expected);
 }
 
+TEST(VertexNoteQtToolbarLayoutEngine, normalizesLegacyDrawingButtonsToStrokeAndVertexFamilies) {
+    const std::vector<std::string> tokens = {
+            "PEN", "SEPARATOR", "DRAW_RECTANGLE", "DRAW_ELLIPSE", "SHAPE_RECOGNIZER", "HAND"};
+
+    const auto normalized = QtToolbarLayoutEngine::normalizeQtDrawingFamilies(tokens);
+
+    const std::vector<std::string> expected = {"PEN", "SEPARATOR", "DRAW_STROKE", "DRAW_VERTEX", "HAND"};
+    EXPECT_EQ(normalized, expected);
+}

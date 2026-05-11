@@ -28,4 +28,5 @@ public:
             -> std::optional<QtToolbarProfile>;
     [[nodiscard]] static auto loadProfiles(const fs::path& configPath) -> std::vector<QtToolbarProfile>;
     [[nodiscard]] static auto expandTokenAliases(const std::vector<std::string>& tokens) -> std::vector<std::string>;
+    [[nodiscard]] static auto normalizeQtDrawingFamilies(const std::vector<std::string>& tokens) -> std::vector<std::string>;
 };

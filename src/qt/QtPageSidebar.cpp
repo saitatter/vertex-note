@@ -24,6 +24,20 @@ namespace {
 constexpr int THUMB_WIDTH = 64;
 constexpr int THUMB_HEIGHT = 92;
 constexpr int THUMB_ITEM_WIDTH = 72;
+
+auto recolorDifference(Color light, Color dark) -> QColor {
+    return QColor(std::abs(static_cast<int>(dark.red) - static_cast<int>(light.red)),
+                  std::abs(static_cast<int>(dark.green) - static_cast<int>(light.green)),
+                  std::abs(static_cast<int>(dark.blue) - static_cast<int>(light.blue)));
+}
+
+auto recolorOffset(Color light, Color dark) -> QColor {
+    return QColor(std::min(light.red, dark.red), std::min(light.green, dark.green), std::min(light.blue, dark.blue));
+}
+
+auto recolorReference(Color light, Color dark) -> QColor {
+    return QColor(light.red < dark.red ? 255 : 0, light.green < dark.green ? 255 : 0, light.blue < dark.blue ? 255 : 0);
+}
 }  // namespace
 
 QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages"), parent) {
@@ -69,6 +83,13 @@ void QtPageSidebar::setDocumentController(QtDocumentController* ctrl) {
 
 void QtPageSidebar::setContentRenderer(vn::view::render::PageContentRenderer* renderer) {
     this->contentRenderer = renderer;
+}
+
+void QtPageSidebar::setRecolorOptions(bool enabled, Color light, Color dark) {
+    this->recolorEnabled = enabled;
+    this->recolorLight = light;
+    this->recolorDark = dark;
+    refresh();
 }
 
 void QtPageSidebar::setCurrentPage(std::size_t pageIndex) {
@@ -167,6 +188,17 @@ auto QtPageSidebar::renderThumbnail(std::size_t pageIndex) const -> QPixmap {
             .height = pageHeight,
     };
     this->contentRenderer->drawPage(page, renderRect, renderContext);
+
+    if (this->recolorEnabled) {
+        painter.resetTransform();
+        painter.setCompositionMode(QPainter::CompositionMode_Difference);
+        painter.fillRect(pixmap.rect(), recolorReference(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
+        painter.fillRect(pixmap.rect(), recolorDifference(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_Plus);
+        painter.fillRect(pixmap.rect(), recolorOffset(this->recolorLight, this->recolorDark));
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    }
 
     painter.end();
 

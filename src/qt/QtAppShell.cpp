@@ -1909,6 +1909,7 @@ void QtAppShell::rebuildToolbar() {
             this->strokeDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
             this->strokeDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
             this->strokeDrawingToolButton->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
+            this->strokeDrawingToolButton->setToolTip(QStringLiteral("Stroke drawing tools"));
             auto* drawingMenu = new QMenu(this->strokeDrawingToolButton);
             for (const auto& spec: STROKE_DRAWING_TOOL_SPECS) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
@@ -1925,6 +1926,7 @@ void QtAppShell::rebuildToolbar() {
             this->vertexDrawingToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
             this->vertexDrawingToolButton->setPopupMode(QToolButton::MenuButtonPopup);
             this->vertexDrawingToolButton->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
+            this->vertexDrawingToolButton->setToolTip(QStringLiteral("Vertex drawing tools"));
             auto* drawingMenu = new QMenu(this->vertexDrawingToolButton);
             for (const auto& spec: VERTEX_DRAWING_TOOL_SPECS) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
@@ -2320,6 +2322,7 @@ void QtAppShell::rebuildToolbar() {
 
     for (auto* group: toolbarTokenGroups) {
         *group = QtToolbarLayoutEngine::expandTokenAliases(*group);
+        *group = QtToolbarLayoutEngine::normalizeQtDrawingFamilies(*group);
         pruneRedundantFamilyTokens(*group);
     }
 
@@ -3195,6 +3198,8 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setSelectionColor(this->currentSettings.selectionColor);
     canvas->setRecolorOptions(this->currentSettings.recolorMainView, this->currentSettings.recolorLight,
                               this->currentSettings.recolorDark);
+    this->window.pageSidebar()->setRecolorOptions(this->currentSettings.recolorSidebarMiniatures,
+                                                  this->currentSettings.recolorLight, this->currentSettings.recolorDark);
     canvas->setGeometrySnapEnabled(this->currentSettings.geometrySnapDefault);
     canvas->setGridSnapEnabled(this->currentSettings.gridSnapDefault);
     canvas->setRotationSnapEnabled(this->currentSettings.rotationSnapDefault);
