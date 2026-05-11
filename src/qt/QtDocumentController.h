@@ -227,9 +227,11 @@ public:
 
     [[nodiscard]] auto hasDocument() const -> bool;
     [[nodiscard]] auto pageCount() const -> std::size_t;
+    [[nodiscard]] auto hasPdfBackgroundDocument() const -> bool;
     [[nodiscard]] auto snapshotPages() const -> const std::vector<vn::view::render::PageRenderSnapshot>&;
     void preparePdfRasterCache(const std::vector<std::size_t>& visiblePageIndices);
-    void setPdfCacheOptions(int pageCacheSize, int preloadPagesBefore, int preloadPagesAfter, bool eagerCleanup);
+    void setPdfCacheOptions(int pageCacheSize, int preloadPagesBefore, int preloadPagesAfter, bool eagerCleanup,
+                            double pageRerenderThreshold = 5.0);
     [[nodiscard]] auto sourcePath() const -> const std::optional<std::filesystem::path>&;
     [[nodiscard]] auto titleText() const -> std::string;
     [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
@@ -466,6 +468,7 @@ private:
     int pdfPreloadPagesBefore = 1;
     int pdfPreloadPagesAfter = 1;
     bool pdfEagerPageCleanup = false;
+    double pdfPageRerenderThreshold = 5.0;
     std::optional<QtGeometryHit> hoveredGeometryHit;
     std::optional<QtGeometryHit> selectedGeometryHit;
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;

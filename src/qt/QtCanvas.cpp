@@ -696,6 +696,13 @@ void QtCanvas::setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ign
     this->strokeFilterSuccessiveTimeMs = std::clamp(successiveTimeMs, 0, 5000);
 }
 
+void QtCanvas::setEmptyLastPageAppendMode(std::string mode) {
+    if (mode != "onDrawOfLastPage" && mode != "onScrollOfLastPage") {
+        mode = "disabled";
+    }
+    this->emptyLastPageAppendMode = std::move(mode);
+}
+
 auto QtCanvas::isRotationSnapEnabled() const -> bool { return this->rotationSnapEnabled; }
 
 auto QtCanvas::isTouchDrawingEnabled() const -> bool { return this->touchDrawingEnabled; }
@@ -1300,7 +1307,8 @@ void QtCanvas::emitViewportUpdate(bool edited) {
                                      .arg(this->zoomFactor * 100.0, 0, 'f', 0)
                                      .arg(this->scrollX, 0, 'f', 1)
                                      .arg(this->scrollY, 0, 'f', 1));
-    if (edited) {
+    const bool appendedPage = maybeAppendEmptyLastPageOnScroll();
+    if (edited || appendedPage) {
         Q_EMIT documentEdited();
     }
 }
@@ -2133,6 +2141,10 @@ void QtCanvas::finalizeActiveStroke() {
     }
 
     const auto tool = this->currentToolState.activeTool;
+    std::optional<std::size_t> activePageIndex;
+    if (const auto* active = this->documentController->activeStroke()) {
+        activePageIndex = active->pageIndex;
+    }
     bool added = false;
     if (tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter) {
         maybeFinalizeStabilizedStroke();
@@ -2166,6 +2178,9 @@ void QtCanvas::finalizeActiveStroke() {
     this->lastEmittedStrokeSample.reset();
     update();
     if (added) {
+        if (activePageIndex) {
+            maybeAppendEmptyLastPageOnDraw(*activePageIndex, added);
+        }
         Q_EMIT documentEdited();
     }
 }
@@ -2198,6 +2213,37 @@ auto QtCanvas::shouldFilterActiveStroke(qint64 nowMs) -> bool {
     const double lengthMm = lengthPoints * millimetersPerPoint;
     const qint64 durationMs = this->activeStrokeStartedMs > 0 ? nowMs - this->activeStrokeStartedMs : 0;
     return durationMs <= this->strokeFilterIgnoreTimeMs && lengthMm <= this->strokeFilterIgnoreLengthMm;
+}
+
+void QtCanvas::maybeAppendEmptyLastPageOnDraw(std::size_t pageIndex, bool strokeAdded) {
+    if (!strokeAdded || this->emptyLastPageAppendMode != "onDrawOfLastPage" || !this->documentController ||
+        this->documentController->hasPdfBackgroundDocument()) {
+        return;
+    }
+    const auto count = this->documentController->pageCount();
+    if (count > 0U && pageIndex + 1U == count) {
+        this->documentController->addPageAfter(pageIndex);
+    }
+}
+
+auto QtCanvas::maybeAppendEmptyLastPageOnScroll() -> bool {
+    if (this->emptyLastPageAppendMode != "onScrollOfLastPage" || !this->documentController ||
+        this->documentController->hasPdfBackgroundDocument()) {
+        return false;
+    }
+    const auto count = this->documentController->pageCount();
+    if (count == 0U || currentPageIndex() + 1U != count) {
+        return false;
+    }
+
+    const QRectF bounds = documentSceneBounds();
+    const double visibleBottom = (this->scrollY + height() / std::max(0.001, this->zoomFactor)) * this->zoomFactor;
+    const double documentBottom = bounds.bottom() * this->zoomFactor;
+    if (std::abs(documentBottom - visibleBottom) < 5.0) {
+        this->documentController->addPageAfter(count - 1U);
+        return true;
+    }
+    return false;
 }
 
 void QtCanvas::cancelActiveStroke() {

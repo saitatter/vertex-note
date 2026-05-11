@@ -26,9 +26,10 @@ This audit compares GTK `Settings` keys from
 | `layoutVertical`, `layoutRightToLeft`, `layoutBottomToTop` | Implemented | `view/verticalLayout`, `view/layoutRtl`, `view/layoutBtt`. |
 | `autoloadPdfXoj` | Implemented | `pdf/autoloadPdfXoj`. |
 | `defaultPdfExportName` | Implemented | `pdf/defaultExportName`. |
-| `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup` | Implemented | `pdf/pageCacheSize`, `pdf/preloadPagesBefore`, `pdf/preloadPagesAfter`, `pdf/eagerPageCleanup`; applied to the Qt PDF background raster cache. |
+| `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup`, `pageRerenderThreshold` | Implemented | `pdf/pageCacheSize`, `pdf/preloadPagesBefore`, `pdf/preloadPagesAfter`, `pdf/eagerPageCleanup`, `pdf/pageRerenderThreshold`; applied to the Qt PDF background raster cache. |
 | `pageTemplate` | Partial | Qt persists default page width/height under `page/defaultWidth` and `page/defaultHeight`; background template presets exist in the Qt page template flow. |
 | `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Qt-only equivalent | `page/addHorizontalSpace*` and `page/addVerticalSpace*`; applied to Qt canvas scrollable page padding. The Vertical Space tool also supports click-drag insertion with undo/redo. |
+| `emptyLastPageAppend` | Implemented | `page/emptyLastPageAppend`; Qt appends a blank page on draw/scroll at the last page when no PDF is attached. |
 | `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`. |
 | `pluginEnabled`, `pluginDisabled` | Qt-only equivalent | Qt stores per-plugin enabled overrides under `plugins/enabled/<plugin-key>`. |
 | `latexSettings.globalTemplatePath` | Implemented | `latex/templatePath`. |
@@ -69,7 +70,6 @@ This audit compares GTK `Settings` keys from
 | `latexSettings.defaultText`, `latexSettings.genCmd`, `latexSettings.*editor*`, `latexSettings.sourceView*`, `latexSettings.useExternalEditor`, `latexSettings.externalEditor*`, `latexSettings.temporaryFileExt`, `latexSettings.autoCheckDependencies` | Qt can render LaTeX using the template path. | Advanced LaTeX editor/generator settings are not exposed in Qt. |
 | `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Qt audio settings cover folder, sample rate, gain, seek step and uses the shared audio backend. | No Qt device selector or global disable toggle in settings. |
 | `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
-| `emptyLastPageAppend` | Qt can add/append pages manually. | No automatic last-page append policy setting. |
 ## Legacy GTK Or Unsupported
 
 | GTK setting key(s) | Status | Notes |
@@ -80,7 +80,6 @@ This audit compares GTK `Settings` keys from
 | `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
-| `pageRerenderThreshold` | Unsupported | Qt rendering cache policy is not fully settings-backed yet. |
 | `sizeUnit` | Unsupported | Qt numeric settings currently use fixed point/second units in labels. |
 | `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |

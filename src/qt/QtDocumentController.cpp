@@ -119,6 +119,16 @@ auto QtDocumentController::pageCount() const -> std::size_t {
     return count;
 }
 
+auto QtDocumentController::hasPdfBackgroundDocument() const -> bool {
+    if (!this->document) {
+        return false;
+    }
+    this->document->lock_shared();
+    const bool hasPdf = this->document->getPdfPageCount() > 0U;
+    this->document->unlock_shared();
+    return hasPdf;
+}
+
 auto QtDocumentController::snapshotPages() const -> const std::vector<vn::view::render::PageRenderSnapshot>& {
     return this->pageSnapshots;
 }
@@ -179,11 +189,12 @@ void QtDocumentController::preparePdfRasterCache(const std::vector<std::size_t>&
 }
 
 void QtDocumentController::setPdfCacheOptions(int pageCacheSize, int preloadPagesBefore, int preloadPagesAfter,
-                                              bool eagerCleanup) {
+                                              bool eagerCleanup, double pageRerenderThreshold) {
     this->pdfPageCacheSize = std::clamp(pageCacheSize, 1, 500);
     this->pdfPreloadPagesBefore = std::clamp(preloadPagesBefore, 0, 50);
     this->pdfPreloadPagesAfter = std::clamp(preloadPagesAfter, 0, 50);
     this->pdfEagerPageCleanup = eagerCleanup;
+    this->pdfPageRerenderThreshold = std::clamp(pageRerenderThreshold, 0.0, 100.0);
     prunePdfRasterCache();
 }
 
@@ -621,8 +632,16 @@ void QtDocumentController::rebuildPageSnapshots() {
 
 auto QtDocumentController::cachedPdfRaster(std::size_t pdfPageNumber, double pageWidth, double pageHeight)
         -> vn::util::RasterImageData {
-    const auto sameSize = [pageWidth, pageHeight](const QtPdfRasterCacheEntry& entry) {
-        return std::abs(entry.pageWidth - pageWidth) < 0.5 && std::abs(entry.pageHeight - pageHeight) < 0.5;
+    const auto percentChange = [](double oldValue, double newValue) {
+        const double average = (std::abs(oldValue) + std::abs(newValue)) / 2.0;
+        return average <= std::numeric_limits<double>::epsilon() ? 0.0 : std::abs(oldValue - newValue) * 100.0 / average;
+    };
+    const auto sameSize = [this, pageWidth, pageHeight, percentChange](const QtPdfRasterCacheEntry& entry) {
+        if (std::abs(entry.pageWidth - pageWidth) < 0.5 && std::abs(entry.pageHeight - pageHeight) < 0.5) {
+            return true;
+        }
+        return std::max(percentChange(entry.pageWidth, pageWidth), percentChange(entry.pageHeight, pageHeight)) <=
+               this->pdfPageRerenderThreshold;
     };
     for (auto& entry: this->pdfRasterCache) {
         if (entry.pdfPageNumber == pdfPageNumber && sameSize(entry)) {

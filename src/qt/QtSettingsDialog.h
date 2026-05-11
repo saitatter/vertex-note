@@ -99,6 +99,8 @@ struct QtSettings {
     int pdfPreloadPagesBefore = 1;
     int pdfPreloadPagesAfter = 1;
     bool pdfEagerPageCleanup = false;
+    double pdfPageRerenderThreshold = 5.0;
+    std::string emptyLastPageAppend = "disabled";
     std::string latexTemplatePath;
     std::string audioFolder;
     std::string lastOpenPath;
@@ -200,6 +202,8 @@ private:
     QSpinBox* pdfPreloadBeforeSpin = nullptr;
     QSpinBox* pdfPreloadAfterSpin = nullptr;
     QCheckBox* pdfEagerCleanupCheck = nullptr;
+    QDoubleSpinBox* pdfPageRerenderThresholdSpin = nullptr;
+    QComboBox* emptyLastPageAppendCombo = nullptr;
     QLineEdit* latexTemplatePathEdit = nullptr;
     QLineEdit* audioFolderEdit = nullptr;
     QDoubleSpinBox* audioSampleRateSpin = nullptr;

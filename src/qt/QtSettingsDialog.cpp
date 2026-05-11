@@ -581,6 +581,23 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->pdfEagerCleanupCheck = new QCheckBox(pdfPage);
     this->pdfEagerCleanupCheck->setChecked(current.pdfEagerPageCleanup);
     pdfLayout->addRow(QStringLiteral("Eager PDF cleanup:"), this->pdfEagerCleanupCheck);
+    this->pdfPageRerenderThresholdSpin = new QDoubleSpinBox(pdfPage);
+    this->pdfPageRerenderThresholdSpin->setRange(0.0, 100.0);
+    this->pdfPageRerenderThresholdSpin->setDecimals(1);
+    this->pdfPageRerenderThresholdSpin->setSingleStep(0.5);
+    this->pdfPageRerenderThresholdSpin->setValue(current.pdfPageRerenderThreshold);
+    this->pdfPageRerenderThresholdSpin->setSuffix(QStringLiteral("%"));
+    pdfLayout->addRow(QStringLiteral("PDF rerender threshold:"), this->pdfPageRerenderThresholdSpin);
+    this->emptyLastPageAppendCombo = new QComboBox(pdfPage);
+    this->emptyLastPageAppendCombo->addItem(QStringLiteral("Disabled"), QStringLiteral("disabled"));
+    this->emptyLastPageAppendCombo->addItem(QStringLiteral("When drawing on last page"),
+                                            QStringLiteral("onDrawOfLastPage"));
+    this->emptyLastPageAppendCombo->addItem(QStringLiteral("When scrolling to end"),
+                                            QStringLiteral("onScrollOfLastPage"));
+    const int appendIndex =
+            this->emptyLastPageAppendCombo->findData(QString::fromStdString(current.emptyLastPageAppend));
+    this->emptyLastPageAppendCombo->setCurrentIndex(appendIndex >= 0 ? appendIndex : 0);
+    pdfLayout->addRow(QStringLiteral("Empty last page append:"), this->emptyLastPageAppendCombo);
     pdfPage->setLayout(pdfLayout);
     tabs->addTab(pdfPage, QStringLiteral("PDF"));
 
@@ -870,6 +887,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .pdfPreloadPagesBefore = this->pdfPreloadBeforeSpin->value(),
             .pdfPreloadPagesAfter = this->pdfPreloadAfterSpin->value(),
             .pdfEagerPageCleanup = this->pdfEagerCleanupCheck->isChecked(),
+            .pdfPageRerenderThreshold = this->pdfPageRerenderThresholdSpin->value(),
+            .emptyLastPageAppend = this->emptyLastPageAppendCombo->currentData().toString().toStdString(),
             .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
             .lastOpenPath = this->lastOpenPath,

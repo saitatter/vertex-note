@@ -2894,6 +2894,15 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("pdf/preloadPagesAfter"), this->currentSettings.pdfPreloadPagesAfter).toInt();
     this->currentSettings.pdfEagerPageCleanup =
             settings.value(QStringLiteral("pdf/eagerPageCleanup"), this->currentSettings.pdfEagerPageCleanup).toBool();
+    this->currentSettings.pdfPageRerenderThreshold =
+            settings.value(QStringLiteral("pdf/pageRerenderThreshold"),
+                           this->currentSettings.pdfPageRerenderThreshold)
+                    .toDouble();
+    this->currentSettings.emptyLastPageAppend =
+            settings.value(QStringLiteral("page/emptyLastPageAppend"),
+                           QString::fromStdString(this->currentSettings.emptyLastPageAppend))
+                    .toString()
+                    .toStdString();
     this->currentSettings.latexTemplatePath =
             settings.value(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath))
                     .toString()
@@ -3132,6 +3141,10 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("pdf/preloadPagesBefore"), this->currentSettings.pdfPreloadPagesBefore);
     settings.setValue(QStringLiteral("pdf/preloadPagesAfter"), this->currentSettings.pdfPreloadPagesAfter);
     settings.setValue(QStringLiteral("pdf/eagerPageCleanup"), this->currentSettings.pdfEagerPageCleanup);
+    settings.setValue(QStringLiteral("pdf/pageRerenderThreshold"),
+                      this->currentSettings.pdfPageRerenderThreshold);
+    settings.setValue(QStringLiteral("page/emptyLastPageAppend"),
+                      QString::fromStdString(this->currentSettings.emptyLastPageAppend));
     settings.setValue(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath));
     settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
@@ -3527,10 +3540,12 @@ void QtAppShell::applyRuntimeSettings() {
                                    this->currentSettings.strokeFilterIgnoreTime,
                                    this->currentSettings.strokeFilterIgnoreLength,
                                    this->currentSettings.strokeFilterSuccessiveTime);
+    canvas->setEmptyLastPageAppendMode(this->currentSettings.emptyLastPageAppend);
     this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
                                                 this->currentSettings.pdfPreloadPagesBefore,
                                                 this->currentSettings.pdfPreloadPagesAfter,
-                                                this->currentSettings.pdfEagerPageCleanup);
+                                                this->currentSettings.pdfEagerPageCleanup,
+                                                this->currentSettings.pdfPageRerenderThreshold);
     applyAppearanceSettings();
     reloadColorPalette();
 }
