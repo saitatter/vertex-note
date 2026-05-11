@@ -26,8 +26,6 @@
 #include <cpptrace/cpptrace.hpp>
 #endif
 
-#include "util/glib_casts.h"
-
 #include "Point.h"
 
 class OutputStream;
@@ -67,7 +65,8 @@ void execInUiThread(Fun&& callback, gint priority = G_PRIORITY_DEFAULT_IDLE) {
             (*fun)();
             return G_SOURCE_REMOVE;
         };
-        g_idle_add_full(priority, fn, new auto(std::forward<Fun>(callback)), &xoj::util::destroy_cb<Fun>);
+        constexpr auto destroy = +[](gpointer data) { delete static_cast<Fun*>(data); };
+        g_idle_add_full(priority, fn, new auto(std::forward<Fun>(callback)), destroy);
     }
 }
 
