@@ -4,6 +4,7 @@ set(vertexnote_qt_sources
         QtAudioController.cpp
         QtAppShell.h
         QtAppShell.cpp
+        QtAppShellCommandGroups.cpp
         QtAppShellCommands.cpp
         QtAppShellDialogs.cpp
         QtAppShellDocumentIo.cpp

@@ -54,6 +54,13 @@ public:
 
 private:
     void registerBootstrapCommands();
+    void registerFileCommands();
+    void registerEditCommands();
+    void registerViewCommands();
+    void registerNavigationCommands();
+    void registerJournalCommands();
+    void registerToolCommands();
+    void registerHelpCommands();
     void wireWindowState();
     void rebuildToolbar();
     void rebuildRecentDocumentsMenu();
