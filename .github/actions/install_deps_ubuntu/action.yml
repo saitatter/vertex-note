@@ -28,8 +28,8 @@ runs:
           g++${{ steps.gcc.outputs.gcc_postfix }}
           cmake ninja-build
           qt6-base-dev
-          libpoppler-glib-dev
           libpoppler-cpp-dev
+          libpoppler-private-dev
           portaudio19-dev
           libsndfile1-dev
           liblua5.4-dev

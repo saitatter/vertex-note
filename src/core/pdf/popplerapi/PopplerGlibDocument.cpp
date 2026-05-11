@@ -2,11 +2,15 @@
 
 #include <limits>
 #include <memory>    // for make_shared, unique_ptr
+#include <optional>
 
-#include <poppler-document.h>  // for poppler_document_get_page
+#include <Object.h>
+#include <Outline.h>
+#include <PDFDoc.h>
+#include <Stream.h>
+#include <goo/GooString.h>
 #include <poppler/cpp/poppler-document.h>
 
-#include "util/PathUtil.h"  // for toUri
 #include "util/StringUtils.h"
 
 #include "PopplerGlibPage.h"                  // for PopplerGlibPage
@@ -35,6 +39,30 @@ auto makeDocumentFromData(const std::shared_ptr<std::string>& data, const std::s
                                                                std::string{}, password));
 }
 
+auto makePassword(const std::string& password) -> std::optional<GooString> {
+    if (password.empty()) {
+        return std::nullopt;
+    }
+    return GooString(password);
+}
+
+auto makeLinkDocumentFromFile(const fs::path& file, const std::string& password) -> std::shared_ptr<PDFDoc> {
+    const auto fileName = file.generic_u8string();
+    auto doc = std::make_shared<PDFDoc>(std::make_unique<GooString>(std::string{char_cast(fileName)}),
+                                        std::optional<GooString>{}, makePassword(password));
+    return doc->isOk() ? doc : nullptr;
+}
+
+auto makeLinkDocumentFromData(const std::shared_ptr<std::string>& data, const std::string& password)
+        -> std::shared_ptr<PDFDoc> {
+    if (!data) {
+        return nullptr;
+    }
+    auto stream = std::make_unique<MemStream>(data->data(), 0, static_cast<Goffset>(data->size()), Object::null());
+    auto doc = std::make_shared<PDFDoc>(std::move(stream), std::optional<GooString>{}, makePassword(password));
+    return doc->isOk() ? doc : nullptr;
+}
+
 }  // namespace
 
 using std::string;
@@ -44,31 +72,15 @@ PopplerGlibDocument::PopplerGlibDocument() = default;
 PopplerGlibDocument::PopplerGlibDocument(const PopplerGlibDocument& doc):
         linkDocument(doc.linkDocument),
         documentData(doc.documentData),
-        document(doc.document) {
-    if (linkDocument) {
-        g_object_ref(linkDocument);
-    }
-}
+        document(doc.document) {}
 
-PopplerGlibDocument::~PopplerGlibDocument() {
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
-}
+PopplerGlibDocument::~PopplerGlibDocument() = default;
 
 void PopplerGlibDocument::assign(PdfDocumentInterface* doc) {
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-    }
-
     const auto* popplerDoc = dynamic_cast<PopplerGlibDocument*>(doc);
     linkDocument = popplerDoc->linkDocument;
     documentData = popplerDoc->documentData;
     document = popplerDoc->document;
-    if (linkDocument) {
-        g_object_ref(linkDocument);
-    }
 }
 
 auto PopplerGlibDocument::equals(PdfDocumentInterface* doc) const -> bool {
@@ -87,64 +99,40 @@ auto PopplerGlibDocument::save(fs::path const& file, GError** error) const -> bo
 }
 
 auto PopplerGlibDocument::load(fs::path const& file, string password, GError** error) -> bool {
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
+    (void) error;
+    linkDocument.reset();
     document.reset();
     documentData.reset();
 
     document = makeDocumentFromFile(file, password);
     if (!document) {
-        (void) error;
         return false;
     }
 
-    auto uri = Util::toUri(file);
-    if (uri) {
-        GError* sidecarError = nullptr;
-        linkDocument = poppler_document_new_from_file(uri->c_str(), password.c_str(), &sidecarError);
-        if (sidecarError) {
-            g_error_free(sidecarError);
-        }
-    }
-
+    linkDocument = makeLinkDocumentFromFile(file, password);
     return true;
 }
 
 auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string password, GError** error) -> bool {
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
+    (void) error;
+    linkDocument.reset();
     document.reset();
     documentData = std::make_shared<std::string>(*data);
 
     document = makeDocumentFromData(documentData, password);
     if (!document) {
         documentData.reset();
-        (void) error;
         return false;
     }
 
-    GBytes* bytes = g_bytes_new_static(documentData->data(), documentData->size());
-    GError* sidecarError = nullptr;
-    linkDocument = poppler_document_new_from_bytes(bytes, password.c_str(), &sidecarError);
-    g_bytes_unref(bytes);
-    if (sidecarError) {
-        g_error_free(sidecarError);
-    }
-
+    linkDocument = makeLinkDocumentFromData(documentData, password);
     return true;
 }
 
 auto PopplerGlibDocument::isLoaded() const -> bool { return this->document != nullptr; }
 
 void PopplerGlibDocument::reset() {
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
+    linkDocument.reset();
     documentData.reset();
     document.reset();
 }
@@ -154,12 +142,8 @@ auto PopplerGlibDocument::getPage(size_t page) const -> PdfPagePtr {
         return nullptr;
     }
 
-    PopplerPage* linkPage = linkDocument ? poppler_document_get_page(linkDocument, int(page)) : nullptr;
     PdfPagePtr pageptr =
-            std::make_shared<PopplerGlibPage>(static_cast<int>(page), document, linkPage, linkDocument);
-    if (linkPage) {
-        g_object_unref(linkPage);
-    }
+            std::make_shared<PopplerGlibPage>(static_cast<int>(page), document, linkDocument);
 
     return pageptr;
 }
@@ -177,11 +161,15 @@ auto PopplerGlibDocument::getContentsIter() const -> PdfBookmarkIterator* {
         return nullptr;
     }
 
-    PopplerIndexIter* iter = poppler_index_iter_new(linkDocument);
-
-    if (iter == nullptr) {
+    auto* outline = linkDocument->getOutline();
+    if (!outline) {
         return nullptr;
     }
 
-    return new PopplerGlibPageBookmarkIterator(iter, linkDocument);
+    const auto* items = outline->getItems();
+    if (!items || items->empty()) {
+        return nullptr;
+    }
+
+    return new PopplerGlibPageBookmarkIterator(items, linkDocument);
 }

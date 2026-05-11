@@ -1,49 +1,85 @@
 #include "PopplerGlibPageBookmarkIterator.h"
 
-#include <poppler-action.h>    // for poppler_action_free
-#include <poppler-document.h>  // for poppler_index_iter_free
+#include <string>
+#include <utility>
 
-#include "pdf/popplerapi/PopplerGlibAction.h"  // for PopplerGlibAction
+#include <Outline.h>
+#include <UTF.h>
+
+#include "pdf/popplerapi/PopplerGlibAction.h"
 
 class PdfAction;
 
-PopplerGlibPageBookmarkIterator::PopplerGlibPageBookmarkIterator(PopplerIndexIter* iter, PopplerDocument* document):
-        iter(iter), document(document) {
-    g_object_ref(document);
-}
+namespace {
 
-PopplerGlibPageBookmarkIterator::~PopplerGlibPageBookmarkIterator() {
-    poppler_index_iter_free(iter);
-    iter = nullptr;
-
-    if (document) {
-        g_object_unref(document);
-        document = nullptr;
+auto outlineTitleToUtf8(const std::vector<Unicode>& title) -> std::string {
+    std::string utf16;
+    utf16.reserve(title.size() * 2U);
+    for (const auto codepoint: title) {
+        if (codepoint <= 0xffffU) {
+            utf16.push_back(static_cast<char>((codepoint >> 8U) & 0xffU));
+            utf16.push_back(static_cast<char>(codepoint & 0xffU));
+        } else if (codepoint <= 0x10ffffU) {
+            const auto value = codepoint - 0x10000U;
+            const auto high = static_cast<unsigned int>(0xd800U + ((value >> 10U) & 0x3ffU));
+            const auto low = static_cast<unsigned int>(0xdc00U + (value & 0x3ffU));
+            utf16.push_back(static_cast<char>((high >> 8U) & 0xffU));
+            utf16.push_back(static_cast<char>(high & 0xffU));
+            utf16.push_back(static_cast<char>((low >> 8U) & 0xffU));
+            utf16.push_back(static_cast<char>(low & 0xffU));
+        }
     }
+    prependUnicodeByteOrderMark(utf16);
+    return TextStringToUtf8(utf16);
 }
 
-auto PopplerGlibPageBookmarkIterator::next() -> bool { return poppler_index_iter_next(iter); }
+}  // namespace
 
-auto PopplerGlibPageBookmarkIterator::isOpen() -> bool { return poppler_index_iter_is_open(iter); }
+PopplerGlibPageBookmarkIterator::PopplerGlibPageBookmarkIterator(const std::vector<OutlineItem*>* items,
+                                                                 std::shared_ptr<PDFDoc> document):
+        items(items), document(std::move(document)) {}
+
+PopplerGlibPageBookmarkIterator::~PopplerGlibPageBookmarkIterator() = default;
+
+auto PopplerGlibPageBookmarkIterator::current() const -> OutlineItem* {
+    if (!items || index >= items->size()) {
+        return nullptr;
+    }
+    return (*items)[index];
+}
+
+auto PopplerGlibPageBookmarkIterator::next() -> bool {
+    if (!items || index + 1U >= items->size()) {
+        return false;
+    }
+    ++index;
+    return true;
+}
+
+auto PopplerGlibPageBookmarkIterator::isOpen() -> bool {
+    auto* item = current();
+    return item ? item->isOpen() : false;
+}
 
 auto PopplerGlibPageBookmarkIterator::getChildIter() -> PdfBookmarkIterator* {
-    PopplerIndexIter* child = poppler_index_iter_get_child(iter);
-    if (child == nullptr) {
+    auto* item = current();
+    if (!item || !item->hasKids()) {
         return nullptr;
     }
 
-    return new PopplerGlibPageBookmarkIterator(child, document);
+    const auto* children = item->getKids();
+    if (!children || children->empty()) {
+        return nullptr;
+    }
+
+    return new PopplerGlibPageBookmarkIterator(children, document);
 }
 
 auto PopplerGlibPageBookmarkIterator::getAction() -> PdfAction* {
-    PopplerAction* action = poppler_index_iter_get_action(iter);
-
-    if (action == nullptr) {
+    auto* item = current();
+    if (!item || !item->getAction()) {
         return nullptr;
     }
 
-    PdfAction* result = new PopplerGlibAction(action, document);
-    poppler_action_free(action);  // PdfAction does not own action.
-
-    return result;
+    return new PopplerGlibAction(item->getAction(), document, outlineTitleToUtf8(item->getTitle()));
 }

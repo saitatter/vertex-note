@@ -7,9 +7,10 @@
 #include <optional>
 #include <sstream>  // for operator<<, ostringstream, bas...
 
-#include <glib.h>          // for g_list_next
-#include <poppler-page.h>  // for PopplerLinkMapping
-#include <poppler.h>       // for PopplerRectangle, g_object_ref
+#include <Annot.h>
+#include <Link.h>
+#include <PDFDoc.h>
+#include <PDFRectangle.h>
 #include <poppler/cpp/poppler-global.h>
 #include <poppler/cpp/poppler-image.h>
 #include <poppler/cpp/poppler-page-renderer.h>
@@ -51,67 +52,27 @@ auto intersects(const PdfRectangle& selection, const poppler::rectf& rect) -> bo
 
 }  // namespace
 
-PopplerGlibPage::PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, PopplerPage* linkPage,
-                                 PopplerDocument* linkDocument):
+PopplerGlibPage::PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc,
+                                 std::shared_ptr<PDFDoc> linkDocument):
         pageIndex(pageIndex),
         document(std::move(doc)),
-        linkPage(linkPage),
-        linkDocument(linkDocument) {
-    if (this->linkPage != nullptr) {
-        g_object_ref(this->linkPage);
-    }
-    if (this->linkDocument != nullptr) {
-        g_object_ref(this->linkDocument);
-    }
-}
+        linkDocument(std::move(linkDocument)) {}
 
 PopplerGlibPage::PopplerGlibPage(const PopplerGlibPage& other):
         pageIndex(other.pageIndex),
         document(other.document),
-        linkPage(other.linkPage),
-        linkDocument(other.linkDocument) {
-    if (linkPage != nullptr) {
-        g_object_ref(linkPage);
-    }
-    if (linkDocument != nullptr) {
-        g_object_ref(linkDocument);
-    }
-}
+        linkDocument(other.linkDocument) {}
 
-PopplerGlibPage::~PopplerGlibPage() {
-    if (linkPage) {
-        g_object_unref(linkPage);
-        linkPage = nullptr;
-    }
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
-}
+PopplerGlibPage::~PopplerGlibPage() = default;
 
 PopplerGlibPage& PopplerGlibPage::operator=(const PopplerGlibPage& other) {
     if (&other == this) {
         return *this;
     }
-    if (linkPage) {
-        g_object_unref(linkPage);
-        linkPage = nullptr;
-    }
-    if (linkDocument) {
-        g_object_unref(linkDocument);
-        linkDocument = nullptr;
-    }
 
     pageIndex = other.pageIndex;
     document = other.document;
-    linkPage = other.linkPage;
     linkDocument = other.linkDocument;
-    if (linkPage != nullptr) {
-        g_object_ref(linkPage);
-    }
-    if (linkDocument != nullptr) {
-        g_object_ref(linkDocument);
-    }
 
     return *this;
 }
@@ -250,21 +211,23 @@ auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSel
 
 auto PopplerGlibPage::getLinks() -> std::vector<Link> {
     std::vector<Link> results;
-    if (!linkPage || !linkDocument) {
+    if (!linkDocument || pageIndex < 0) {
         return results;
     }
     const double height = getHeight();
 
-    GList* links = poppler_page_get_link_mapping(this->linkPage);
-    for (GList* l = links; l != NULL; l = g_list_next(l)) {
-        const auto& link = *static_cast<PopplerLinkMapping*>(l->data);
-
-        if (link.action) {
-            PdfRectangle rect{link.area.x1, height - link.area.y2, link.area.x2, height - link.area.y1};
-            results.emplace_back(Link{rect, std::make_unique<PopplerGlibAction>(link.action, linkDocument)});
-        }
+    const auto links = linkDocument->getLinks(pageIndex + 1);
+    if (!links) {
+        return results;
     }
-    poppler_page_free_link_mapping(links);
+    for (const auto& link: links->getLinks()) {
+        if (!link || !link->getAction()) {
+            continue;
+        }
+        const auto& area = link->getRect();
+        PdfRectangle rect{area.x1, height - area.y2, area.x2, height - area.y1};
+        results.emplace_back(Link{rect, std::make_unique<PopplerGlibAction>(link->getAction(), linkDocument)});
+    }
 
     return results;
 }

@@ -6,8 +6,7 @@
 #include <sstream>      // for ostringstream
 #include <string_view>  // for string_view
 
-#include <glib.h>     // for GError, gchar, g_error_free
-#include <poppler.h>  // for g_object_unref
+#include <glib.h>  // for GError, gchar, g_error_free
 
 #include "control/settings/LatexSettings.h"  // for LatexSettings
 #include "util/PathUtil.h"                   // for getLongPath

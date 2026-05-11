@@ -1,47 +1,50 @@
 #include "PopplerGlibAction.h"
 
-#include <algorithm>  // for min
-#include <cstddef>    // for size_t
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <utility>
 
-#include <glib.h>              // for g_warning, gchar
-#include <poppler-action.h>    // for poppler_dest_free, PopplerActi...
-#include <poppler-document.h>  // for poppler_document_find_dest
-#include <poppler-page.h>      // for poppler_page_get_size
+#include <Link.h>
+#include <PDFDoc.h>
+#include <goo/GooString.h>
 
-#include "model/LinkDestination.h"     // for LinkDestination
-#include "util/Util.h"                 // for npos
-#include "util/raii/CLibrariesSPtr.h"  // for ref
+#include "model/LinkDestination.h"
+#include "util/Util.h"
 
-using std::string;
-
-PopplerGlibAction::PopplerGlibAction(PopplerAction* action, PopplerDocument* document):
-        document(document, vn::util::ref) {
-    if (gchar* title_cstr = reinterpret_cast<PopplerActionAny*>(action)->title) {
-        title = std::string{title_cstr};
-    }
-
+PopplerGlibAction::PopplerGlibAction(const LinkAction* action, std::shared_ptr<PDFDoc> document, std::string title):
+        document(std::move(document)), title(std::move(title)) {
     destination = getDestination(action);
 }
 
 PopplerGlibAction::~PopplerGlibAction() = default;
 
-auto PopplerGlibAction::getDestination(PopplerAction* action) -> std::shared_ptr<const LinkDestination> {
+auto PopplerGlibAction::getDestination(const LinkAction* action) -> std::shared_ptr<const LinkDestination> {
     auto dest = std::make_shared<LinkDestination>();
     dest->setName(getTitle());
 
-    if (action->type == POPPLER_ACTION_URI && action->uri.uri) {
-        dest->setURI(std::string{action->uri.uri});
-    } else if (action->type == POPPLER_ACTION_GOTO_DEST) {
-        auto* actionDest = reinterpret_cast<PopplerActionGotoDest*>(action);
-        PopplerDest* pDest = actionDest->dest;
+    if (!action || !action->isOk()) {
+        return dest;
+    }
 
-        if (pDest == nullptr) {
-            return dest;
+    switch (action->getKind()) {
+        case actionURI: {
+            const auto* uriAction = static_cast<const LinkURI*>(action);
+            dest->setURI(uriAction->getURI());
+            break;
         }
-
-        linkFromDest(*dest, pDest);
-    } else {
-        // Every other action is currently unsupported.
+        case actionGoTo: {
+            const auto* goToAction = static_cast<const LinkGoTo*>(action);
+            if (const auto* target = goToAction->getDest()) {
+                linkFromDest(*dest, target);
+            } else if (document && goToAction->getNamedDest()) {
+                const auto namedDest = document->findDest(goToAction->getNamedDest());
+                linkFromDest(*dest, namedDest.get());
+            }
+            break;
+        }
+        default:
+            break;
     }
 
     return dest;
@@ -49,52 +52,37 @@ auto PopplerGlibAction::getDestination(PopplerAction* action) -> std::shared_ptr
 
 auto PopplerGlibAction::getDestination() -> std::shared_ptr<const LinkDestination> { return destination; }
 
-void PopplerGlibAction::linkFromDest(LinkDestination& link, PopplerDest* pDest) {
-    switch (pDest->type) {
-        case POPPLER_DEST_UNKNOWN:
-            g_warning("PDF Contains unknown link destination");
-            break;
-        case POPPLER_DEST_XYZ: {
-            PopplerPage* page = poppler_document_get_page(document.get(), pDest->page_num - 1);
-            if (page == nullptr) {
-                return;
-            }
-
-            double pageWidth = 0;
-            double pageHeight = 0;
-            poppler_page_get_size(page, &pageWidth, &pageHeight);
-
-            if (pDest->left != 0) {
-                link.setChangeLeft(pDest->left);
-            } else if (pDest->right != 0) {
-                link.setChangeLeft(pageWidth - pDest->right);
-            }
-
-            if (pDest->top != 0) {
-                link.setChangeTop(pageHeight - std::min(pageHeight, pDest->top));
-            } else if (pDest->bottom != 0) {
-                link.setChangeTop(pageHeight - std::min(pageHeight, pageHeight - pDest->bottom));
-            }
-
-            if (pDest->zoom != 0) {
-                link.setChangeZoom(pDest->zoom);
-            }
-            g_object_unref(page);
-        } break;
-        case POPPLER_DEST_NAMED: {
-            PopplerDest* pDest2 = poppler_document_find_dest(document.get(), pDest->named_dest);
-            if (pDest2 != nullptr) {
-                linkFromDest(link, pDest2);
-                poppler_dest_free(pDest2);
-                return;
-            }
-        } break;
-
-        default:
-            break;
+void PopplerGlibAction::linkFromDest(LinkDestination& link, const LinkDest* dest) {
+    if (!document || !dest || !dest->isOk()) {
+        return;
     }
 
-    link.setPdfPage(pDest->page_num > 0 ? static_cast<size_t>(pDest->page_num - 1) : npos);
+    const int pageNumber = dest->isPageRef() ? document->findPage(dest->getPageRef()) : dest->getPageNum();
+    if (pageNumber <= 0) {
+        link.setPdfPage(npos);
+        return;
+    }
+
+    const double pageWidth = document->getPageCropWidth(pageNumber);
+    const double pageHeight = document->getPageCropHeight(pageNumber);
+
+    if (dest->getChangeLeft()) {
+        link.setChangeLeft(dest->getLeft());
+    } else if (dest->getRight() != 0.0) {
+        link.setChangeLeft(pageWidth - dest->getRight());
+    }
+
+    if (dest->getChangeTop()) {
+        link.setChangeTop(pageHeight - std::min(pageHeight, dest->getTop()));
+    } else if (dest->getBottom() != 0.0) {
+        link.setChangeTop(pageHeight - std::min(pageHeight, pageHeight - dest->getBottom()));
+    }
+
+    if (dest->getChangeZoom()) {
+        link.setChangeZoom(dest->getZoom());
+    }
+
+    link.setPdfPage(static_cast<std::size_t>(pageNumber - 1));
 }
 
 auto PopplerGlibAction::getTitle() -> std::string { return title; }

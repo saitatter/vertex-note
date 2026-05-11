@@ -11,16 +11,20 @@
 
 #pragma once
 
-#include <poppler.h>  // for PopplerDocument, Popple...
+#include <cstddef>
+#include <memory>
+#include <vector>
 
 #include "pdf/base/PdfBookmarkIterator.h"  // for PdfBookmarkIterator
 
+class OutlineItem;
+class PDFDoc;
 class PdfAction;
 
 
 class PopplerGlibPageBookmarkIterator: public PdfBookmarkIterator {
 public:
-    PopplerGlibPageBookmarkIterator(PopplerIndexIter* iter, PopplerDocument* document);
+    PopplerGlibPageBookmarkIterator(const std::vector<OutlineItem*>* items, std::shared_ptr<PDFDoc> document);
     ~PopplerGlibPageBookmarkIterator() override;
 
 public:
@@ -30,6 +34,10 @@ public:
     PdfAction* getAction() override;
 
 private:
-    PopplerIndexIter* iter;
-    PopplerDocument* document;
+    [[nodiscard]] auto current() const -> OutlineItem*;
+
+private:
+    const std::vector<OutlineItem*>* items = nullptr;
+    std::shared_ptr<PDFDoc> document;
+    std::size_t index = 0;
 };

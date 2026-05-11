@@ -15,16 +15,16 @@
 #include <string>  // for string
 #include <vector>  // for vector
 
-#include <poppler.h>  // for PopplerDocument, PopplerPage
 #include <poppler/cpp/poppler-document.h>
 
 #include "pdf/base/PdfPage.h"  // for PdfRectangle (ptr only), XojPdfP...
 
 
+class PDFDoc;
+
 class PopplerGlibPage: public PdfPage {
 public:
-    PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, PopplerPage* linkPage,
-                    PopplerDocument* linkDocument);
+    PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, std::shared_ptr<PDFDoc> linkDocument);
     PopplerGlibPage(const PopplerGlibPage& other);
     virtual ~PopplerGlibPage();
     PopplerGlibPage& operator=(const PopplerGlibPage& other);
@@ -54,6 +54,5 @@ private:
 private:
     int pageIndex = -1;
     std::shared_ptr<poppler::document> document;
-    PopplerPage* linkPage = nullptr;
-    PopplerDocument* linkDocument = nullptr;
+    std::shared_ptr<PDFDoc> linkDocument;
 };

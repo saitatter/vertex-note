@@ -15,8 +15,7 @@
 #include <memory>
 #include <string>  // for string
 
-#include <glib.h>     // for GError
-#include <poppler.h>  // for PopplerDocument
+#include <glib.h>  // for GError
 #include <poppler/cpp/poppler-document.h>
 
 #include "pdf/base/PdfDocumentInterface.h"  // for PdfDocumentInterface
@@ -25,6 +24,7 @@
 #include "filesystem.h"  // for path
 
 class PdfBookmarkIterator;
+class PDFDoc;
 
 class PopplerGlibDocument: public PdfDocumentInterface {
 public:
@@ -48,7 +48,7 @@ public:
     PdfBookmarkIterator* getContentsIter() const override;
 
 private:
-    PopplerDocument* linkDocument = nullptr;
+    std::shared_ptr<PDFDoc> linkDocument;
     std::shared_ptr<std::string> documentData;
     std::shared_ptr<poppler::document> document;
 };
