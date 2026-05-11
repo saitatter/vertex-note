@@ -77,6 +77,7 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/QtCommandHost.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerEraser.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerHistory.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerLayers.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPageBackground.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPages.cpp"
