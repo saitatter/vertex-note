@@ -2,10 +2,12 @@
 
 #include <algorithm>      // for copy
 #include <array>          // for array
+#include <chrono>         // for steady_clock
 #include <cmath>          // for isnan
 #include <cstddef>        // for byte
 #include <cstdlib>        // for atoi, size_t
 #include <cstring>        // for strcmp, strlen
+#include <fstream>        // for ofstream
 #include <iterator>       // for back_inserter
 #include <memory>         // for make_unique, make_shared...
 #include <optional>       // for optional
@@ -18,11 +20,9 @@
 #include <utility>        // for move, forward, exchange
 #include <vector>         // for vector
 
-#include <gio/gio.h>     // for g_file_get_path, g_fil...
-#include <glib.h>        // for g_message...
-#include <glibconfig.h>  // for gssize...
-#include <zip.h>         // for zip_file_t, zip_fopen,...
-#include <zipconf.h>     // for zip_int64_t, zip_uint64_t
+#include <glib.h>     // for g_message...
+#include <zip.h>      // for zip_file_t, zip_fopen,...
+#include <zipconf.h>  // for zip_int64_t, zip_uint64_t
 
 #include "control/xojfile/XmlParser.h"  // for XmlParser
 #include "model/BackgroundImage.h"      // for BackgroundImage
@@ -46,7 +46,6 @@
 #include "util/i18n.h"                  // for _F, FS, _
 #include "util/raii/CLibrariesSPtr.h"   // for adopt
 #include "util/raii/GLibGuards.h"       // for GErrorGuard
-#include "util/raii/GObjectSPtr.h"      // for GObjectSPtr
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
@@ -61,6 +60,25 @@ constexpr size_t MAX_MIMETYPE_LENGTH = 25;
 struct zip_file_deleter {
     void operator()(zip_file_t* ptr) noexcept { zip_fclose(ptr); }
 };
+
+auto makeAudioTempPath() -> fs::path {
+    std::error_code error;
+    const auto tempDirectory = fs::temp_directory_path(error);
+    if (error) {
+        return {};
+    }
+
+    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    for (auto attempt = 0; attempt < 1000; ++attempt) {
+        auto candidate = tempDirectory;
+        candidate /= "xournal_audio_" + std::to_string(timestamp) + "_" + std::to_string(attempt) + ".tmp";
+        if (!fs::exists(candidate, error) && !error) {
+            return candidate;
+        }
+        error.clear();
+    }
+    return {};
+}
 }  // namespace
 
 using zip_file_wrapper = std::unique_ptr<zip_file_t, zip_file_deleter>;
@@ -144,16 +162,18 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
         return;
     }
 
-    // Extract audio to temporary file
-    GFileIOStream* fileStream = nullptr;
-    const vn::util::GObjectSPtr<GFile> tmpFile(g_file_new_tmp("xournal_audio_XXXXXX.tmp", &fileStream, nullptr),
-                                                vn::util::adopt);
-    if (!tmpFile) {
+    const auto tmpPath = makeAudioTempPath();
+    if (tmpPath.empty()) {
         logError(_("Unable to create temporary file for audio attachment"));
         return;
     }
 
-    GOutputStream* outputStream = g_io_stream_get_output_stream(G_IO_STREAM(fileStream));
+    std::ofstream output(tmpPath, std::ios::binary | std::ios::trunc);
+    if (!output) {
+        logError(FS(_F("Could not open attachment: {1}. Error message: Could not create temporary file") %
+                    filename.u8string()));
+        return;
+    }
 
     auto data = std::make_unique<std::array<std::byte, 1024>>();
     zip_int64_t readBytes = 0;
@@ -165,9 +185,8 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
             return;
         }
 
-        const gboolean writeSuccessful = g_output_stream_write_all(outputStream, data->data(), static_cast<gsize>(read),
-                                                                   nullptr, nullptr, nullptr);
-        if (!writeSuccessful) {
+        output.write(reinterpret_cast<const char*>(data->data()), static_cast<std::streamsize>(read));
+        if (!output) {
             logError(FS(_F("Could not open attachment: {1}. Error message: Could not write temporary file") %
                         filename.u8string()));
             return;
@@ -176,8 +195,13 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
         readBytes += read;
     }
 
-    // Map the filename to the extracted temporary file path
-    const char* tmpPath = g_file_peek_path(tmpFile.get());
+    output.close();
+    if (!output) {
+        logError(FS(_F("Could not open attachment: {1}. Error message: Could not close temporary file") %
+                    filename.u8string()));
+        return;
+    }
+
     this->audioFiles[filename] = tmpPath;
 }
 
