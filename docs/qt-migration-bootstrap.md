@@ -295,19 +295,18 @@ latest Qt parity commits.
      `docs/qt-legacy-boundary-audit.md`.
    - Continue extracting UI-neutral services when new Qt behavior would
      otherwise need GTK control code.
-   - Keep configure reporting zero legacy GTK/render files.
+   - Keep removed GTK/render sources out of active CMake targets.
 
 ## GTK/Legacy Render Deprecation Order
 
 The shell migration now follows this order:
 
 1. Officially deprecate the GTK shell and stop treating it as the primary UI.
-2. Isolate the remaining legacy GTK/render paths into explicit boundaries
-   (`legacy/gtk`, `legacy/render`). The build now tracks these surfaces through
-   `src/legacy/LegacyBoundaries.cmake` and reports their size during configure.
+2. Remove the temporary legacy GTK/render boundary tracking once the reported
+   surfaces reach zero.
 3. Make the Qt shell the only active application shell. This is now true for
    local development workflows (`configure/build/test/run/all` target Qt).
-4. Keep legacy GTK/render boundary counts at zero.
+4. Keep removed GTK/render code out of active targets and tooling.
 
 ### Legacy-only build targets
 
