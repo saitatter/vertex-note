@@ -459,31 +459,33 @@ QtAppShell::QtAppShell():
                 std::filesystem::create_directories(directory);
                 return exporter.exportAllPagesPng(directory, pages, 2.0, errorMessage);
             });
-    this->luaPlugins.configureToolAccess([this](uint32_t rgb, const std::string& tool, bool selection) {
-        const Color color(rgb | 0xff000000U);
-        auto& toolState = this->window.canvas()->toolState();
-        auto normalizedTool = tool;
-        std::ranges::transform(normalizedTool, normalizedTool.begin(),
-                               [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-        if (normalizedTool == "highlighter") {
-            toolState.highlighterColor = color;
-        } else if (normalizedTool == "pen") {
-            toolState.penColor = color;
-        } else if (normalizedTool.empty()) {
-            if (toolState.activeTool == QtToolType::Highlighter ||
-                toolState.activeTool == QtToolType::LaserPointerHighlighter) {
-                toolState.highlighterColor = color;
-            } else {
-                toolState.penColor = color;
-            }
-        }
-        if (selection && this->documentController.colorSelectedElements(color)) {
-            markSessionDirty();
-        }
-        this->window.toolPalette()->syncFromToolState(toolState);
-        syncToolbarWidgets();
-        this->window.canvas()->update();
-    });
+    this->luaPlugins.configureToolAccess(
+            [this](uint32_t rgb, const std::string& tool, bool selection) {
+                const Color color(rgb | 0xff000000U);
+                auto& toolState = this->window.canvas()->toolState();
+                auto normalizedTool = tool;
+                std::ranges::transform(normalizedTool, normalizedTool.begin(),
+                                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+                if (normalizedTool == "highlighter") {
+                    toolState.highlighterColor = color;
+                } else if (normalizedTool == "pen") {
+                    toolState.penColor = color;
+                } else if (normalizedTool.empty()) {
+                    if (toolState.activeTool == QtToolType::Highlighter ||
+                        toolState.activeTool == QtToolType::LaserPointerHighlighter) {
+                        toolState.highlighterColor = color;
+                    } else {
+                        toolState.penColor = color;
+                    }
+                }
+                if (selection && this->documentController.colorSelectedElements(color)) {
+                    markSessionDirty();
+                }
+                this->window.toolPalette()->syncFromToolState(toolState);
+                syncToolbarWidgets();
+                this->window.canvas()->update();
+            },
+            [this]() { return this->window.canvas()->toolState(); });
     this->luaPlugins.configureViewAccess(
             [this]() { return this->window.canvas()->zoom(); },
             [this](double zoom) {

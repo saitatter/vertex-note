@@ -581,6 +581,113 @@ void luaPushFont(lua_State* lua, const std::pair<std::string, double>& font) {
     luaSetNumberField(lua, "size", font.second);
 }
 
+auto luaColorValue(Color color) -> lua_Integer {
+    return static_cast<lua_Integer>(static_cast<uint32_t>(color) & 0x00ffffffU);
+}
+
+auto luaToolConstant(QtToolType tool) -> int {
+    switch (tool) {
+        case QtToolType::Pen:
+        case QtToolType::DrawLine: return 1;
+        case QtToolType::Eraser: return 2;
+        case QtToolType::Highlighter: return 3;
+        case QtToolType::Text: return 4;
+        case QtToolType::SelectRect: return 6;
+        case QtToolType::SelectRegion: return 7;
+        case QtToolType::SelectMultiLayerRect: return 8;
+        case QtToolType::SelectMultiLayerRegion: return 9;
+        case QtToolType::SelectObject: return 10;
+        case QtToolType::VerticalSpace: return 12;
+        case QtToolType::Hand: return 13;
+        case QtToolType::DrawRectangle: return 14;
+        case QtToolType::DrawEllipse: return 15;
+        case QtToolType::DrawArrow: return 16;
+        case QtToolType::DrawDoubleArrow: return 17;
+        case QtToolType::DrawCoordinateSystem: return 18;
+        case QtToolType::DrawSpline: return 20;
+        case QtToolType::PdfTextLinear: return 21;
+        case QtToolType::PdfTextRect: return 22;
+        case QtToolType::LaserPointerPen: return 23;
+        case QtToolType::LaserPointerHighlighter: return 24;
+        case QtToolType::Setsquare:
+        case QtToolType::Compass:
+        case QtToolType::DrawCircle:
+        case QtToolType::ShapeRecognizer:
+        case QtToolType::DrawArc:
+        case QtToolType::DrawPolyline:
+        case QtToolType::DrawConstructionLine:
+        case QtToolType::DrawConstructionCircle:
+            return 1;
+    }
+    return 1;
+}
+
+auto luaToolTypeName(QtToolType tool) -> std::string {
+    switch (tool) {
+        case QtToolType::Hand: return "hand";
+        case QtToolType::LaserPointerHighlighter:
+        case QtToolType::Highlighter: return "highlighter";
+        case QtToolType::Eraser: return "eraser";
+        case QtToolType::Text: return "text";
+        case QtToolType::PdfTextLinear:
+        case QtToolType::PdfTextRect:
+        case QtToolType::SelectRect:
+        case QtToolType::SelectRegion:
+        case QtToolType::SelectMultiLayerRect:
+        case QtToolType::SelectMultiLayerRegion:
+        case QtToolType::SelectObject:
+            return "select";
+        case QtToolType::VerticalSpace: return "verticalSpace";
+        default: return "pen";
+    }
+}
+
+auto luaDrawingTypeName(QtToolType tool) -> std::string {
+    switch (tool) {
+        case QtToolType::DrawLine: return "line";
+        case QtToolType::DrawRectangle: return "rectangle";
+        case QtToolType::DrawCircle: return "circle";
+        case QtToolType::DrawEllipse: return "ellipse";
+        case QtToolType::DrawArrow: return "arrow";
+        case QtToolType::DrawDoubleArrow: return "doubleArrow";
+        case QtToolType::DrawCoordinateSystem: return "coordinateSystem";
+        case QtToolType::DrawSpline: return "spline";
+        case QtToolType::ShapeRecognizer: return "shapeRecognizer";
+        case QtToolType::DrawArc: return "arc";
+        case QtToolType::DrawPolyline: return "polyline";
+        case QtToolType::DrawConstructionLine: return "constructionLine";
+        case QtToolType::DrawConstructionCircle: return "constructionCircle";
+        default: return "none";
+    }
+}
+
+auto luaActiveToolWidth(const QtToolState& state) -> double {
+    switch (state.activeTool) {
+        case QtToolType::Highlighter:
+        case QtToolType::LaserPointerHighlighter: return state.highlighterWidth;
+        case QtToolType::Eraser: return state.eraserWidth;
+        default: return state.penWidth;
+    }
+}
+
+auto luaActiveToolColor(const QtToolState& state) -> Color {
+    return state.activeTool == QtToolType::Highlighter || state.activeTool == QtToolType::LaserPointerHighlighter
+                   ? state.highlighterColor
+                   : state.penColor;
+}
+
+auto luaActiveToolFillEnabled(const QtToolState& state) -> bool {
+    return state.activeTool == QtToolType::Highlighter || state.activeTool == QtToolType::LaserPointerHighlighter
+                   ? state.highlighterFillEnabled
+                   : state.fillEnabled;
+}
+
+void luaPushSize(lua_State* lua, std::string name, double value) {
+    lua_createtable(lua, 0, 2);
+    luaSetStringField(lua, "name", name);
+    luaSetNumberField(lua, "value", value);
+}
+
 auto strokeToolFromLua(std::string_view tool) -> StrokeTool::Value {
     if (tool == "highlighter") {
         return StrokeTool::HIGHLIGHTER;
@@ -1437,6 +1544,60 @@ auto luaChangeToolColor(lua_State* lua) -> int {
     return 0;
 }
 
+auto luaGetToolInfo(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto tool = luaOptionalString(lua, 1, "active");
+    const auto state = plugin->runtime->currentToolState();
+    lua_createtable(lua, 0, 8);
+
+    if (tool == "text") {
+        luaPushFont(lua, {state.fontName, state.fontSize});
+        lua_setfield(lua, -2, "font");
+        luaSetIntegerField(lua, "color", luaColorValue(state.penColor));
+        return 1;
+    }
+    if (tool == "eraser") {
+        luaSetStringField(lua, "type", state.eraserMode == QtEraserMode::Segment ? "segment" : "standard");
+        luaPushSize(lua, "custom", state.eraserWidth);
+        lua_setfield(lua, -2, "size");
+        return 1;
+    }
+    if (tool == "highlighter") {
+        luaPushSize(lua, "custom", state.highlighterWidth);
+        lua_setfield(lua, -2, "size");
+        luaSetIntegerField(lua, "color", luaColorValue(state.highlighterColor));
+        luaSetBoolField(lua, "filled", state.highlighterFillEnabled);
+        luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+        luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+        return 1;
+    }
+    if (tool == "pen") {
+        luaPushSize(lua, "custom", state.penWidth);
+        lua_setfield(lua, -2, "size");
+        luaSetIntegerField(lua, "color", luaColorValue(state.penColor));
+        luaSetBoolField(lua, "filled", state.fillEnabled);
+        luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+        luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+        luaSetStringField(lua, "lineStyle", state.penLineStyle);
+        return 1;
+    }
+
+    luaSetStringField(lua, "type", luaToolTypeName(state.activeTool));
+    luaPushSize(lua, "custom", luaActiveToolWidth(state));
+    lua_setfield(lua, -2, "size");
+    luaSetIntegerField(lua, "color", luaColorValue(luaActiveToolColor(state)));
+    luaSetBoolField(lua, "filled", luaActiveToolFillEnabled(state));
+    luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+    luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+    luaSetStringField(lua, "lineStyle", state.penLineStyle);
+    luaSetNumberField(lua, "thickness", luaActiveToolWidth(state));
+    return 1;
+}
+
 auto luaGetColorPalette(lua_State* lua) -> int {
     lua_settop(lua, 0);
     struct Entry {
@@ -1682,6 +1843,30 @@ auto luaGetActionState(lua_State* lua) -> int {
         lua_pushnumber(lua, plugin->runtime->currentZoom());
         return 1;
     }
+    if (action == "select-tool") {
+        lua_pushinteger(lua, luaToolConstant(plugin->runtime->currentToolState().activeTool));
+        return 1;
+    }
+    if (action == "tool-color") {
+        lua_pushinteger(lua, luaColorValue(luaActiveToolColor(plugin->runtime->currentToolState())));
+        return 1;
+    }
+    if (action == "tool-pen-line-style") {
+        lua_pushstring(lua, plugin->runtime->currentToolState().penLineStyle.c_str());
+        return 1;
+    }
+    if (action == "tool-size") {
+        lua_pushnumber(lua, luaActiveToolWidth(plugin->runtime->currentToolState()));
+        return 1;
+    }
+    if (action == "tool-fill") {
+        lua_pushboolean(lua, luaActiveToolFillEnabled(plugin->runtime->currentToolState()) ? 1 : 0);
+        return 1;
+    }
+    if (action == "tool-fill-opacity") {
+        lua_pushinteger(lua, static_cast<lua_Integer>(plugin->runtime->currentToolState().fillOpacity));
+        return 1;
+    }
     if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {
         lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-grid-snap") ? 1 : 0);
         return 1;
@@ -1912,6 +2097,7 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"fileDialogOpen", luaFileDialogOpen},
         {"openFile", luaOpenFile},
         {"changeToolColor", luaChangeToolColor},
+        {"getToolInfo", luaGetToolInfo},
         {"fileDialogSave", luaFileDialogSave},
         {"glib_rename", luaGlibRename},
         {"export", luaExport},
@@ -2074,8 +2260,10 @@ void QtLuaPluginRuntime::configureExportAccess(
 }
 
 void QtLuaPluginRuntime::configureToolAccess(
-        std::function<void(uint32_t, const std::string&, bool)> toolColorChanger) {
+        std::function<void(uint32_t, const std::string&, bool)> toolColorChanger,
+        std::function<QtToolState()> toolStateProvider) {
     this->toolColorChanger = std::move(toolColorChanger);
+    this->toolStateProvider = std::move(toolStateProvider);
 }
 
 void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvider,
@@ -2203,6 +2391,10 @@ void QtLuaPluginRuntime::changeToolColor(uint32_t rgb, const std::string& tool, 
     if (this->toolColorChanger) {
         this->toolColorChanger(rgb, tool, selection);
     }
+}
+
+auto QtLuaPluginRuntime::currentToolState() const -> QtToolState {
+    return this->toolStateProvider ? this->toolStateProvider() : QtToolState{};
 }
 
 auto QtLuaPluginRuntime::currentZoom() const -> double { return this->zoomProvider ? this->zoomProvider() : 1.0; }

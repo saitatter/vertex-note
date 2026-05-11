@@ -228,7 +228,7 @@ This is the current implementation plan after the Qt parity batch through
      same configuration as the Qt shell.
 
 2. **Plugin runtime parity hardening**
-   - Expand `getActionState` for more GTK action-state values:
+   - ✓ Expand `getActionState` for more GTK action-state values:
      current tool, current tool colour, pen line style, fill, sizes.
    - Decide whether to support more legacy file/document APIs beyond the safe
      `openFile` bridge already implemented.

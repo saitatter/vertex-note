@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "QtToolState.h"
 #include "ui/common/IPluginUiBridge.h"
 
 class QtDocumentController;
@@ -50,7 +51,8 @@ public:
                                  std::function<void()> refreshUi, std::function<void()> markDirty);
     void configureExportAccess(std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
                                std::function<bool(const std::filesystem::path&, std::string*)> pngExporter);
-    void configureToolAccess(std::function<void(uint32_t, const std::string&, bool)> toolColorChanger);
+    void configureToolAccess(std::function<void(uint32_t, const std::string&, bool)> toolColorChanger,
+                             std::function<QtToolState()> toolStateProvider = {});
     void configureViewAccess(std::function<double()> zoomProvider, std::function<void(double)> zoomSetter,
                              std::function<int()> layoutSpanProvider);
     void configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
@@ -67,6 +69,7 @@ public:
     [[nodiscard]] auto exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     [[nodiscard]] auto exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     void changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const;
+    [[nodiscard]] auto currentToolState() const -> QtToolState;
     [[nodiscard]] auto currentZoom() const -> double;
     void setZoom(double zoom) const;
     [[nodiscard]] auto currentLayoutSpan() const -> int;
@@ -90,6 +93,7 @@ private:
     std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter;
     std::function<bool(const std::filesystem::path&, std::string*)> pngExporter;
     std::function<void(uint32_t, const std::string&, bool)> toolColorChanger;
+    std::function<QtToolState()> toolStateProvider;
     std::function<double()> zoomProvider;
     std::function<void(double)> zoomSetter;
     std::function<int()> layoutSpanProvider;
