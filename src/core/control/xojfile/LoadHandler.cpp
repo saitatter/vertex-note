@@ -221,11 +221,9 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
     if (this->isGzFile || !attach) {
         const fs::path fileToLoad = getAbsoluteFilepath(filename, attach);
 
-        vn::util::GErrorGuard error{};
-        img.loadFile(fileToLoad, vn::util::out_ptr(error));
-
-        if (error) {
-            logError(FS(_F("Could not read image: {1}. Error message: {2}") % fileToLoad.u8string() % error->message));
+        std::string errorMessage;
+        if (!img.loadFile(fileToLoad, &errorMessage)) {
+            logError(FS(_F("Could not read image: {1}. Error message: {2}") % fileToLoad.u8string() % errorMessage));
         }
     } else {
         // The image is stored in an attachment inside the zip archive
@@ -233,10 +231,9 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
         if (!readResult) {
             return;
         }
-        vn::util::GErrorGuard error{};
-        img.loadFile(*readResult, filename, vn::util::out_ptr(error));
-        if (error) {
-            logError(FS(_F("Could not read image: {1}. Error message: {2}") % filename.u8string() % error->message));
+        std::string errorMessage;
+        if (!img.loadFile(*readResult, filename, &errorMessage)) {
+            logError(FS(_F("Could not read image: {1}. Error message: {2}") % filename.u8string() % errorMessage));
         }
     }
     img.setAttach(attach);

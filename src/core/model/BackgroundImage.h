@@ -15,8 +15,6 @@
 #include <string>
 #include <string_view>
 
-#include <glib.h>  // for GError
-
 #include "filesystem.h"  // for path
 #include "util/RasterImageData.h"
 
@@ -25,8 +23,9 @@ struct BackgroundImage {
 
     void free();
 
-    void loadFile(fs::path const& filepath, GError** error);
-    void loadFile(std::string_view bytes, fs::path const& filepath, GError** error);
+    [[nodiscard]] auto loadFile(fs::path const& filepath, std::string* errorMessage = nullptr) -> bool;
+    [[nodiscard]] auto loadFile(std::string_view bytes, fs::path const& filepath,
+                                std::string* errorMessage = nullptr) -> bool;
 
     int getCloneId() const;
     void setCloneId(int id);

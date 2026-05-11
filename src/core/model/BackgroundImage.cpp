@@ -28,17 +28,13 @@
 
 namespace {
 
-auto backgroundImageErrorQuark() -> GQuark {
-    return g_quark_from_static_string("vertex-note-background-image");
-}
-
-void setLoadError(GError** error, const QString& message) {
-    if (error) {
-        g_set_error_literal(error, backgroundImageErrorQuark(), 1, message.toUtf8().constData());
+void setLoadError(std::string* errorMessage, const QString& message) {
+    if (errorMessage) {
+        *errorMessage = message.toStdString();
     }
 }
 
-auto loadImageFromBytes(std::string_view bytes, GError** error) -> QImage {
+auto loadImageFromBytes(std::string_view bytes, std::string* errorMessage) -> QImage {
     QImageReader reader;
     QByteArray data(bytes.data(), static_cast<qsizetype>(bytes.size()));
     QBuffer buffer(&data);
@@ -47,7 +43,7 @@ auto loadImageFromBytes(std::string_view bytes, GError** error) -> QImage {
     reader.setAutoTransform(true);
     QImage image = reader.read();
     if (image.isNull()) {
-        setLoadError(error, reader.errorString());
+        setLoadError(errorMessage, reader.errorString());
     }
     return image;
 }
@@ -55,18 +51,18 @@ auto loadImageFromBytes(std::string_view bytes, GError** error) -> QImage {
 }  // namespace
 
 struct BackgroundImage::Content {
-    Content(fs::path path, GError** error):
+    Content(fs::path path, std::string* errorMessage):
             path(std::move(path)) {
         QImageReader reader(QString::fromUtf8(Util::toGFilename(this->path).c_str()));
         reader.setAutoTransform(true);
         this->image = reader.read();
         if (this->image.isNull()) {
-            setLoadError(error, reader.errorString());
+            setLoadError(errorMessage, reader.errorString());
         }
     }
 
-    Content(std::string_view bytes, fs::path path, GError** error): path(std::move(path)) {
-        this->image = loadImageFromBytes(bytes, error);
+    Content(std::string_view bytes, fs::path path, std::string* errorMessage): path(std::move(path)) {
+        this->image = loadImageFromBytes(bytes, errorMessage);
     }
 
     ~Content() = default;
@@ -84,12 +80,14 @@ struct BackgroundImage::Content {
 
 void BackgroundImage::free() { this->img.reset(); }
 
-void BackgroundImage::loadFile(fs::path const& path, GError** error) {
-    this->img = std::make_shared<Content>(path, error);
+auto BackgroundImage::loadFile(fs::path const& path, std::string* errorMessage) -> bool {
+    this->img = std::make_shared<Content>(path, errorMessage);
+    return hasLoadedImage();
 }
 
-void BackgroundImage::loadFile(std::string_view bytes, fs::path const& path, GError** error) {
-    this->img = std::make_shared<Content>(bytes, path, error);
+auto BackgroundImage::loadFile(std::string_view bytes, fs::path const& path, std::string* errorMessage) -> bool {
+    this->img = std::make_shared<Content>(bytes, path, errorMessage);
+    return hasLoadedImage();
 }
 
 auto BackgroundImage::getCloneId() const -> int { return this->img ? this->img->pageId : -1; }
@@ -136,7 +134,7 @@ auto BackgroundImage::renderPreviewRaster() const -> xoj::util::RasterImageData 
     const QImage rgba = this->img->image.convertToFormat(QImage::Format_RGBA8888);
     const int width = rgba.width();
     const int height = rgba.height();
-    const int rowstride = rgba.bytesPerLine();
+    const int rowstride = static_cast<int>(rgba.bytesPerLine());
     const auto* sourcePixels = rgba.constBits();
     if (!sourcePixels || width <= 0 || height <= 0 || rowstride <= 0) {
         return {};
