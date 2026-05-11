@@ -26,6 +26,8 @@ set(vertexnote_qt_sources
         QtAppShellStatus.cpp
         QtAppShellToolbar.cpp
         QtAppShellToolbarSync.cpp
+        QtAppShellToolbarTokens.cpp
+        QtAppShellToolbarWidgets.cpp
         QtAppShellToolCommands.cpp
         QtAppShellUpdateActions.cpp
         QtAppShellViewActions.cpp

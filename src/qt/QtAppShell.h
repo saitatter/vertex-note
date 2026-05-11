@@ -6,6 +6,12 @@
 
 #pragma once
 
+#include <filesystem>
+#include <initializer_list>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include <QByteArray>
 
 #include "QtAudioController.h"
@@ -30,6 +36,7 @@ class QDoubleSpinBox;
 class QFontComboBox;
 class QSpinBox;
 class QAction;
+class QToolBar;
 class QToolButton;
 class QTimer;
 
@@ -63,6 +70,28 @@ private:
     void registerHelpCommands();
     void wireWindowState();
     void rebuildToolbar();
+    void resetToolbarWidgetState();
+    void loadActiveToolbarProfile();
+    void configureToolbarChrome();
+    [[nodiscard]] auto toolbarItemsFor(std::string_view key, std::initializer_list<std::string_view> fallback) const
+            -> std::vector<std::string>;
+    void addToolbarToken(QToolBar* toolbar, std::string_view rawToken);
+    void addToolbarCommand(QToolBar* toolbar, std::string_view commandId);
+    void addGenericSizeToolbarAction(QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex);
+    void addFillToolbarAction(QToolBar* toolbar);
+    void addStretchToolbarSpacer(QToolBar* toolbar);
+    [[nodiscard]] auto ensureSelectionToolButton() -> QToolButton*;
+    [[nodiscard]] auto createStrokeDrawingToolButton() -> QToolButton*;
+    [[nodiscard]] auto createVertexDrawingToolButton() -> QToolButton*;
+    [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
+    [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
+    void ensureFontToolbarWidgets();
+    [[nodiscard]] auto ensureFillOpacityWidget() -> QSpinBox*;
+    [[nodiscard]] auto makeToolbarColorButton(int colorIndex) -> QToolButton*;
+    [[nodiscard]] auto ensureToolbarColorSelectButton() -> QToolButton*;
+    [[nodiscard]] auto currentToolbarStrokeColor() const -> Color;
+    [[nodiscard]] auto toolbarColorAt(int colorIndex) const -> Color;
+    void applyToolbarColor(Color color);
     void rebuildRecentDocumentsMenu();
     void loadPersistentUiState();
     void savePersistentUiState() const;
