@@ -10,6 +10,7 @@ set(vertexnote_qt_sources
         QtAppShellDocumentIo.cpp
         QtAppShellEditing.cpp
         QtAppShellNavigation.cpp
+        QtAppShellPersistentState.cpp
         QtAppShellSettings.cpp
         QtAppShellStatus.cpp
         QtAppShellToolbar.cpp
