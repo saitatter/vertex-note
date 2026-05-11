@@ -6,7 +6,7 @@
 #include <QImageReader>
 #include <QIODevice>
 
-#include <glib.h>  // for g_base64_encode, g_free, gchar, g_e...
+#include <stdexcept>  // for runtime_error
 
 #include "control/xml/XmlNode.h"  // for XmlNode
 #include "util/OutputStream.h"    // for OutputStream
@@ -45,11 +45,11 @@ void XmlImageNode::writeOut(OutputStream* out) {
     out->write(">");
 
     if (this->pngData.empty()) {
-        g_error("XmlImageNode::writeOut(); image data is empty");
+        throw std::runtime_error("XmlImageNode::writeOut(); image data is empty");
     } else {
-        gchar* base64_str = g_base64_encode(reinterpret_cast<const guchar*>(this->pngData.data()), this->pngData.size());
-        out->write(base64_str);
-        g_free(base64_str);
+        const QByteArray bytes = QByteArray::fromRawData(this->pngData.data(), static_cast<qsizetype>(this->pngData.size()));
+        const QByteArray base64 = bytes.toBase64();
+        out->write(std::string_view(base64.constData(), static_cast<std::size_t>(base64.size())));
     }
 
     out->write("</");

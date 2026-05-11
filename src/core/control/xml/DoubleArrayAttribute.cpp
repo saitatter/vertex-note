@@ -1,32 +1,40 @@
 #include "DoubleArrayAttribute.h"
 
 #include <algorithm>  // for for_each
+#include <array>      // for array
+#include <charconv>   // for chars_format, to_chars
 #include <iterator>   // for begin, end
+#include <stdexcept>  // for runtime_error
 #include <string>     // for allocator, string
+#include <string_view>  // for string_view
 #include <utility>    // for move
-
-#include <glib.h>  // for g_ascii_formatd, G_ASCII_DTOSTR_B...
 
 #include "control/xml/Attribute.h"  // for XMLAttribute
 #include "util/OutputStream.h"      // for OutputStream
-#include "util/Util.h"              // for PRECISION_FORMAT_STRING
 
 DoubleArrayAttribute::DoubleArrayAttribute(const char8_t* name, std::vector<double>&& values):
         XMLAttribute(name), values(std::move(values)) {}
 
 DoubleArrayAttribute::~DoubleArrayAttribute() = default;
 
+namespace {
+void writeDouble(OutputStream* out, double value) {
+    std::array<char, 64> str{};
+    const auto [end, ec] = std::to_chars(str.data(), str.data() + str.size(), value, std::chars_format::general, 8);
+    if (ec != std::errc{}) {
+        throw std::runtime_error("Could not format XML double array attribute");
+    }
+    out->write(std::string_view(str.data(), static_cast<std::size_t>(end - str.data())));
+}
+}  // namespace
+
 void DoubleArrayAttribute::writeOut(OutputStream* out) {
     if (!this->values.empty()) {
-        char str[G_ASCII_DTOSTR_BUF_SIZE];
-        // g_ascii_ version uses C locale always.
-        g_ascii_formatd(str, G_ASCII_DTOSTR_BUF_SIZE, Util::PRECISION_FORMAT_STRING, this->values[0]);
-        out->write(str);
+        writeDouble(out, this->values[0]);
 
         std::for_each(std::begin(this->values) + 1, std::end(this->values), [&](auto& x) {
-            g_ascii_formatd(str, G_ASCII_DTOSTR_BUF_SIZE, Util::PRECISION_FORMAT_STRING, x);
             out->write(" ");
-            out->write(str);
+            writeDouble(out, x);
         });
     }
 }

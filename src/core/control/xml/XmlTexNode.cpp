@@ -1,6 +1,6 @@
 #include "XmlTexNode.h"
 
-#include <glib.h>  // for g_base64_encode, g_free, gchar, guchar
+#include <QByteArray>
 
 #include "control/xml/XmlNode.h"  // for XmlNode
 #include "util/OutputStream.h"    // for OutputStream
@@ -18,10 +18,10 @@ void XmlTexNode::writeOut(OutputStream* out) {
 
     out->write(">");
 
-    gchar* base64_str =
-            g_base64_encode(reinterpret_cast<const guchar*>(this->binaryData.c_str()), this->binaryData.length());
-    out->write(base64_str);
-    g_free(base64_str);
+    const QByteArray bytes =
+            QByteArray::fromRawData(this->binaryData.data(), static_cast<qsizetype>(this->binaryData.size()));
+    const QByteArray base64 = bytes.toBase64();
+    out->write(std::string_view(base64.constData(), static_cast<std::size_t>(base64.size())));
 
     out->write("</");
     out->write(tag);
