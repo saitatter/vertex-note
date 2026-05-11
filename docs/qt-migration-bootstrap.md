@@ -157,8 +157,8 @@ also sets `-DENABLE_LEGACY_GTK_SHELL=OFF`.
 
 ## Active Qt UI/UX Parity Plan
 
-This is the current implementation plan after the Qt parity batch through
-`f534e9626 feat: fill Qt Lua plugin API gaps`.
+This is the current implementation plan after the Qt parity batch through the
+latest Qt parity commits.
 
 ### Completed in this batch
 
@@ -186,8 +186,8 @@ This is the current implementation plan after the Qt parity batch through
      choice.
    - `Journal > Append New PDF Pages` appends missing pages from the attached
      PDF and reports no-PDF/no-new-pages/success status.
-   - PDF text marker opacity is present as a disabled Qt action with tooltip
-     until marker annotation support exists.
+   - PDF text marker opacity is enabled and can create Qt highlighter strokes
+     from an active PDF text selection.
 
 5. ✓ Paper/page template parity v1.
    - Paper format, paper background, and page template dialogs are wired to the
@@ -220,6 +220,8 @@ This is the current implementation plan after the Qt parity batch through
      pure `QtCanvasLayout` helper used by `QtCanvas`.
    - Qt plugin UI bridge coverage exercises toolbar placeholder
      register/update/remove behavior offscreen.
+   - PDF controller coverage exercises attached/external PDF loading, append
+     missing PDF pages, PDF text selection, and PDF text marker undo/redo.
 
 ### Remaining work
 
@@ -247,10 +249,13 @@ This is the current implementation plan after the Qt parity batch through
      `docs/qt-settings-parity-audit.md`.
 
 4. **PDF annotation parity v2**
-   - Implement real PDF text marker/highlight annotation behavior, then enable
+   - ✓ Implement real PDF text marker/highlight annotation behavior and enable
      `tool.select-pdf-text-marker-opacity`.
-   - Add manual and automated checks for annotate PDF, append PDF pages, and PDF
-     text selection copy on documents with attached and external PDFs.
+   - ✓ Add automated checks for annotate PDF, append PDF pages, and PDF text
+     selection copy on documents with attached and external PDFs.
+   - Add manual smoke coverage for the Qt menu/dialog flows: `File > Annotate
+     PDF...`, `Journal > Append New PDF Pages`, PDF text select/copy, and
+     highlight-selected-PDF-text.
 
 5. **Plugin API compatibility audit**
    - ✓ Compare `plugins/luapi_application.def.lua` with `QT_APP_LIB` in

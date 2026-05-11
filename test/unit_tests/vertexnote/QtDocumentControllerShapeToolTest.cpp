@@ -1,12 +1,21 @@
 #include <array>
+#include <filesystem>
 #include <stdexcept>
+#include <string_view>
 
+#include <config-test.h>
 #include <gtest/gtest.h>
 
 #include "qt/QtDocumentController.h"
 #include "view/render/Renderers.h"
 
 namespace {
+
+auto testFile(const char8_t* relativePath) -> std::filesystem::path { return std::filesystem::path(GET_TESTFILE(relativePath)); }
+
+auto sourceFile(const char8_t* relativePath) -> std::filesystem::path {
+    return std::filesystem::path(std::u8string(PROJECT_SOURCE_DIR)) / std::filesystem::path(relativePath);
+}
 
 auto strokeCount(const vn::view::render::PageRenderSnapshot& snapshot) -> std::size_t {
     std::size_t count = 0;
@@ -100,6 +109,64 @@ TEST(VertexNoteQtDocumentControllerShapeTools, pdfTextMarkersCreateHighlighterSt
     ASSERT_TRUE(controller.canRedo());
     EXPECT_TRUE(controller.redo());
     EXPECT_EQ(2U, strokeCount(controller.snapshotPages().front()));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, loadsAttachedAndExternalPdfDocumentsAsBackgroundPages) {
+    for (const bool attachToDocument: {false, true}) {
+        SCOPED_TRACE(attachToDocument ? "attached PDF" : "external PDF");
+        QtDocumentController controller;
+        std::string error;
+
+        ASSERT_TRUE(controller.loadPdfAsDocument(testFile(u8"cjk/测试.pdf"), attachToDocument, &error)) << error;
+        ASSERT_EQ(2U, controller.pageCount());
+
+        const auto& pages = controller.snapshotPages();
+        ASSERT_EQ(2U, pages.size());
+        EXPECT_EQ(PageTypeFormat::Pdf, pages[0].background.backgroundFormat);
+        EXPECT_EQ(0U, pages[0].background.pdfPageNumber);
+        EXPECT_EQ(PageTypeFormat::Pdf, pages[1].background.backgroundFormat);
+        EXPECT_EQ(1U, pages[1].background.pdfPageNumber);
+    }
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, appendNewPdfPagesAddsMissingBackgroundPages) {
+    QtDocumentController controller;
+    std::string error;
+
+    ASSERT_TRUE(controller.loadPdfAsDocument(testFile(u8"cjk/测试.pdf"), false, &error)) << error;
+    ASSERT_EQ(2U, controller.pageCount());
+
+    controller.deletePage(1U);
+    ASSERT_EQ(1U, controller.pageCount());
+
+    EXPECT_EQ(1, controller.appendNewPdfPages());
+    ASSERT_EQ(2U, controller.pageCount());
+    const auto& pages = controller.snapshotPages();
+    ASSERT_EQ(2U, pages.size());
+    EXPECT_EQ(PageTypeFormat::Pdf, pages[1].background.backgroundFormat);
+    EXPECT_EQ(1U, pages[1].background.pdfPageNumber);
+
+    EXPECT_EQ(0, controller.appendNewPdfPages());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, selectsPdfTextForAttachedAndExternalPdfDocuments) {
+    for (const bool attachToDocument: {false, true}) {
+        SCOPED_TRACE(attachToDocument ? "attached PDF" : "external PDF");
+        QtDocumentController controller;
+        std::string error;
+
+        ASSERT_TRUE(controller.loadPdfAsDocument(sourceFile(u8"development/documentation/README-Eraser-and-padded-box.pdf"),
+                                                attachToDocument, &error))
+                << error;
+        ASSERT_TRUE(controller.beginPdfTextSelection(0U, 0.0, 0.0, PdfPageSelectionStyle::Area));
+        ASSERT_TRUE(controller.updatePdfTextSelection(10000.0, 10000.0));
+
+        const auto selectedText = controller.finalizePdfTextSelection();
+        EXPECT_NE(std::string::npos, selectedText.find("Eraser"));
+        ASSERT_TRUE(controller.pdfTextSelection().has_value());
+        EXPECT_TRUE(controller.pdfTextSelection()->finalized);
+        EXPECT_FALSE(controller.pdfTextSelection()->previewRects.empty());
+    }
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyInstrumentStrokesForQtShell) {
