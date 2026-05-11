@@ -257,11 +257,13 @@ latest Qt parity commits.
      right/middle button and eraser cursor policy settings.
    - ✓ Add advanced pressure and grid snap settings: minimum pressure, pressure
      multiplier, pressure guessing, grid size, and grid tolerance.
+   - ✓ Add Qt-native stroke stabilizer settings and moving-average stroke
+     smoothing without depending on GTK `StrokeHandler`.
    - ✓ Add appearance settings for titlebar file/page display and page shadow.
    - ✓ Add appearance theme variant and `.gpl` colour palette settings; Qt uses
      the loaded palette for quick colours and Lua `app.getColorPalette()`.
-   - ✓ Add persisted PDF performance/cache knobs. They are stored in Qt settings
-     now; wiring them to a dedicated Qt PDF cache remains future cache-layer work.
+   - ✓ Add persisted PDF performance/cache knobs and wire them to the Qt PDF
+     background raster cache with visible-page preloading and LRU pruning.
 
 5. **PDF annotation parity v2**
    - ✓ Implement real PDF text marker/highlight annotation behavior and enable

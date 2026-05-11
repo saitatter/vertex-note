@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <deque>
 #include <memory>
@@ -220,6 +221,8 @@ public:
     [[nodiscard]] auto hasDocument() const -> bool;
     [[nodiscard]] auto pageCount() const -> std::size_t;
     [[nodiscard]] auto snapshotPages() const -> const std::vector<vn::view::render::PageRenderSnapshot>&;
+    void preparePdfRasterCache(const std::vector<std::size_t>& visiblePageIndices);
+    void setPdfCacheOptions(int pageCacheSize, int preloadPagesBefore, int preloadPagesAfter, bool eagerCleanup);
     [[nodiscard]] auto sourcePath() const -> const std::optional<std::filesystem::path>&;
     [[nodiscard]] auto titleText() const -> std::string;
     [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
@@ -417,6 +420,10 @@ private:
     static auto isPdfPath(const std::filesystem::path& path) -> bool;
     static auto normalizeExtension(const std::filesystem::path& path) -> std::string;
     void rebuildPageSnapshots();
+    [[nodiscard]] auto cachedPdfRaster(std::size_t pdfPageNumber, double pageWidth, double pageHeight)
+            -> vn::util::RasterImageData;
+    void prunePdfRasterCache();
+    void clearPdfRasterCache();
     void clearGeometryHistory();
     void pushGeometryHistory(QtGeometryHistoryEntry entry);
     [[nodiscard]] auto applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState) -> bool;
@@ -434,6 +441,19 @@ private:
     std::unique_ptr<Document> document;
     std::optional<std::filesystem::path> loadedPath;
     std::vector<vn::view::render::PageRenderSnapshot> pageSnapshots;
+    struct QtPdfRasterCacheEntry {
+        std::size_t pdfPageNumber = 0U;
+        double pageWidth = 0.0;
+        double pageHeight = 0.0;
+        std::uint64_t lastUsed = 0U;
+        vn::util::RasterImageData raster;
+    };
+    std::vector<QtPdfRasterCacheEntry> pdfRasterCache;
+    std::uint64_t pdfRasterUseCounter = 0U;
+    int pdfPageCacheSize = 10;
+    int pdfPreloadPagesBefore = 1;
+    int pdfPreloadPagesAfter = 1;
+    bool pdfEagerPageCleanup = false;
     std::optional<QtGeometryHit> hoveredGeometryHit;
     std::optional<QtGeometryHit> selectedGeometryHit;
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;

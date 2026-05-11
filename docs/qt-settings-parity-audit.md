@@ -26,6 +26,7 @@ This audit compares GTK `Settings` keys from
 | `layoutVertical`, `layoutRightToLeft`, `layoutBottomToTop` | Implemented | `view/verticalLayout`, `view/layoutRtl`, `view/layoutBtt`. |
 | `autoloadPdfXoj` | Implemented | `pdf/autoloadPdfXoj`. |
 | `defaultPdfExportName` | Implemented | `pdf/defaultExportName`. |
+| `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup` | Implemented | `pdf/pageCacheSize`, `pdf/preloadPagesBefore`, `pdf/preloadPagesAfter`, `pdf/eagerPageCleanup`; applied to the Qt PDF background raster cache. |
 | `pageTemplate` | Partial | Qt persists default page width/height under `page/defaultWidth` and `page/defaultHeight`; background template presets exist in the Qt page template flow. |
 | `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`. |
 | `pluginEnabled`, `pluginDisabled` | Qt-only equivalent | Qt stores per-plugin enabled overrides under `plugins/enabled/<plugin-key>`. |
@@ -34,6 +35,7 @@ This audit compares GTK `Settings` keys from
 | `snapRotation`, `vertexNoteGeometrySnapEnabled`, `vertexNoteGridSnapEnabled` | Implemented | `general/rotationSnap`, `general/geometrySnap`, `general/gridSnap`. |
 | `snapGridTolerance`, `snapGridSize` | Implemented | `tools/snapGridTolerance`, `tools/snapGridSize`; applied to Qt geometry grid snapping. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
+| `stabilizerAveragingMethod`, `stabilizerBuffersize`, `stabilizerFinalizeStroke` | Partial / Qt-only equivalent | `tools/strokeStabilizerEnabled`, `tools/strokeStabilizerSamples`, `tools/strokeStabilizerStrength`, `tools/strokeStabilizerFinalizeStroke`; Qt applies a native moving-average stabilizer instead of reusing GTK `StrokeHandler`. |
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt can persist eraser cursor hiding and active/right-button eraser cursor behavior. |
 | `filepathShownInTitlebar`, `pageNumberShownInTitlebar` | Implemented | `appearance/showFilePathInTitlebar`, `appearance/showPageNumberInTitlebar`. |
 | `showPageShadow` | Implemented | `appearance/showPageShadow`; applied to the Qt page background renderer. |
@@ -56,8 +58,6 @@ This audit compares GTK `Settings` keys from
 | `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Qt audio settings cover folder, sample rate, gain, seek step and uses the shared audio backend. | No Qt device selector or global disable toggle in settings. |
 | `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
 | `emptyLastPageAppend` | Qt can add/append pages manually. | No automatic last-page append policy setting. |
-| `pdfPageCacheSize`, `preloadPagesBefore`, `preloadPagesAfter`, `eagerPageCleanup` | Qt persists these PDF performance settings in the PDF tab. | They are not wired to a dedicated Qt PDF cache layer yet. |
-
 ## Legacy GTK Or Unsupported
 
 | GTK setting key(s) | Status | Notes |
@@ -81,15 +81,15 @@ This audit compares GTK `Settings` keys from
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `preferredLocale` | Unsupported | Qt shell does not expose localization selection yet. |
 | `useSpacesForTab`, `numberOfSpacesForTab` | Unsupported | Text editor tab behavior is not user-configurable in Qt. |
-| `stabilizerAveragingMethod`, `stabilizerPreprocessor`, `stabilizerBuffersize`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection`, `stabilizerFinalizeStroke` | Unsupported | Stroke stabilizer settings are not surfaced in Qt. |
+| `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 | `font` | Partial | Qt text tool has current font state, but no persisted full GTK default font model. |
 
 ## Next Settings Work
 
 1. Add a full Qt input-device editor for per-device classes and per-button
    tool mappings.
-2. Add advanced Tools settings for rotation tolerance, stroke filtering, and
-   stabilizer controls.
+2. Add advanced Tools settings for rotation tolerance and stroke filtering.
 3. Add Appearance settings for icon theme, selection colors, and recolor mode.
 4. Wire the persisted PDF performance settings into a dedicated Qt PDF cache
-   layer once that layer has stable knobs to expose.
+   layer once that layer has stable knobs to expose. ✓ Initial Qt raster cache
+   support now exists; future work can tune invalidation and telemetry.

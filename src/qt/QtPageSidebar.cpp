@@ -132,6 +132,7 @@ auto QtPageSidebar::renderThumbnail(std::size_t pageIndex) const -> QPixmap {
         return blank;
     }
 
+    this->controller->preparePdfRasterCache({pageIndex});
     const auto& pages = this->controller->snapshotPages();
     if (pageIndex >= pages.size()) {
         QPixmap blank(THUMB_WIDTH, THUMB_HEIGHT);

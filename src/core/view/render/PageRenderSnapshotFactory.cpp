@@ -24,7 +24,7 @@
 
 namespace vn::view::render {
 
-auto buildPageRenderSnapshots(Document& document) -> std::vector<PageRenderSnapshot> {
+auto buildPageRenderSnapshots(Document& document, PageRenderSnapshotOptions options) -> std::vector<PageRenderSnapshot> {
     std::vector<PageRenderSnapshot> snapshots;
 
     document.lock_shared();
@@ -37,7 +37,7 @@ auto buildPageRenderSnapshots(Document& document) -> std::vector<PageRenderSnaps
         }
 
         auto background = PageBackgroundRenderModelFactory::fromPage(page);
-        if (background.backgroundFormat == PageTypeFormat::Pdf) {
+        if (background.backgroundFormat == PageTypeFormat::Pdf && options.renderPdfBackgrounds) {
             background.rasterContent =
                     createPdfPagePreviewRaster(document, page->getPdfPageNr(), page->getWidth(), page->getHeight());
         } else if (background.backgroundFormat == PageTypeFormat::Image) {

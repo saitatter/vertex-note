@@ -12,6 +12,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <unordered_set>
 #include <utility>
 
 #include "control/shaperecognizer/ShapeRecognizer.h"
@@ -37,6 +38,7 @@
 #include "vertexnote/snapping/ISnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 #include "vertexnote/snapping/SnapEngine.h"
+#include "view/render/PageRasterPreviewFactory.h"
 
 QtDocumentController::QtDocumentController() { newBlankDocument(); }
 
@@ -46,6 +48,7 @@ void QtDocumentController::newBlankDocument() {
     this->document->addPage(std::make_shared<NotePage>(595.0, 842.0));
     this->document->unlock();
     this->loadedPath.reset();
+    clearPdfRasterCache();
     clearGeometryHistory();
     clearInteractiveGeometryState();
     this->activePdfTextSelection.reset();
@@ -62,6 +65,7 @@ auto QtDocumentController::loadFrom(const std::filesystem::path& path, std::stri
         auto loaded = loader.loadDocument(path);
         this->document = std::move(loaded);
         this->loadedPath = path;
+        clearPdfRasterCache();
         clearGeometryHistory();
         clearInteractiveGeometryState();
         this->activePdfTextSelection.reset();
@@ -88,6 +92,7 @@ auto QtDocumentController::loadPdfAsDocument(const std::filesystem::path& path, 
         loaded->setFilepath(path);
         this->document = std::move(loaded);
         this->loadedPath = path;
+        clearPdfRasterCache();
         clearHistory();
         clearGeometryHistory();
         clearInteractiveGeometryState();
@@ -116,6 +121,70 @@ auto QtDocumentController::pageCount() const -> std::size_t {
 
 auto QtDocumentController::snapshotPages() const -> const std::vector<vn::view::render::PageRenderSnapshot>& {
     return this->pageSnapshots;
+}
+
+void QtDocumentController::preparePdfRasterCache(const std::vector<std::size_t>& visiblePageIndices) {
+    if (!this->document || visiblePageIndices.empty() || this->pageSnapshots.empty()) {
+        return;
+    }
+
+    std::unordered_set<std::size_t> wantedPageIndices;
+    for (const auto pageIndex: visiblePageIndices) {
+        const auto first = pageIndex >= static_cast<std::size_t>(this->pdfPreloadPagesBefore)
+                                   ? pageIndex - static_cast<std::size_t>(this->pdfPreloadPagesBefore)
+                                   : 0U;
+        const auto last = std::min(this->pageSnapshots.size() - 1U,
+                                   pageIndex + static_cast<std::size_t>(std::max(0, this->pdfPreloadPagesAfter)));
+        for (std::size_t index = first; index <= last; ++index) {
+            wantedPageIndices.insert(index);
+        }
+    }
+
+    for (const auto pageIndex: wantedPageIndices) {
+        if (pageIndex >= this->pageSnapshots.size()) {
+            continue;
+        }
+        auto& snapshot = this->pageSnapshots[pageIndex];
+        auto& background = snapshot.background;
+        if (background.backgroundFormat != PageTypeFormat::Pdf) {
+            continue;
+        }
+        background.rasterContent =
+                cachedPdfRaster(background.pdfPageNumber, background.pageWidth, background.pageHeight);
+    }
+
+    if (this->pdfEagerPageCleanup) {
+        std::unordered_set<std::size_t> wantedPdfPages;
+        for (const auto pageIndex: wantedPageIndices) {
+            if (pageIndex < this->pageSnapshots.size() &&
+                this->pageSnapshots[pageIndex].background.backgroundFormat == PageTypeFormat::Pdf) {
+                wantedPdfPages.insert(this->pageSnapshots[pageIndex].background.pdfPageNumber);
+            }
+        }
+        this->pdfRasterCache.erase(
+                std::remove_if(this->pdfRasterCache.begin(), this->pdfRasterCache.end(),
+                               [&wantedPdfPages](const QtPdfRasterCacheEntry& entry) {
+                                   return !wantedPdfPages.contains(entry.pdfPageNumber);
+                               }),
+                this->pdfRasterCache.end());
+        for (auto& snapshot: this->pageSnapshots) {
+            if (snapshot.background.backgroundFormat == PageTypeFormat::Pdf &&
+                !wantedPdfPages.contains(snapshot.background.pdfPageNumber)) {
+                snapshot.background.rasterContent = {};
+            }
+        }
+    }
+
+    prunePdfRasterCache();
+}
+
+void QtDocumentController::setPdfCacheOptions(int pageCacheSize, int preloadPagesBefore, int preloadPagesAfter,
+                                              bool eagerCleanup) {
+    this->pdfPageCacheSize = std::clamp(pageCacheSize, 1, 500);
+    this->pdfPreloadPagesBefore = std::clamp(preloadPagesBefore, 0, 50);
+    this->pdfPreloadPagesAfter = std::clamp(preloadPagesAfter, 0, 50);
+    this->pdfEagerPageCleanup = eagerCleanup;
+    prunePdfRasterCache();
 }
 
 auto QtDocumentController::sourcePath() const -> const std::optional<std::filesystem::path>& {
@@ -546,7 +615,50 @@ void QtDocumentController::rebuildPageSnapshots() {
     if (!this->document) {
         return;
     }
-    this->pageSnapshots = vn::view::render::buildPageRenderSnapshots(*this->document);
+    this->pageSnapshots = vn::view::render::buildPageRenderSnapshots(
+            *this->document, {.renderPdfBackgrounds = false});
+}
+
+auto QtDocumentController::cachedPdfRaster(std::size_t pdfPageNumber, double pageWidth, double pageHeight)
+        -> vn::util::RasterImageData {
+    const auto sameSize = [pageWidth, pageHeight](const QtPdfRasterCacheEntry& entry) {
+        return std::abs(entry.pageWidth - pageWidth) < 0.5 && std::abs(entry.pageHeight - pageHeight) < 0.5;
+    };
+    for (auto& entry: this->pdfRasterCache) {
+        if (entry.pdfPageNumber == pdfPageNumber && sameSize(entry)) {
+            entry.lastUsed = ++this->pdfRasterUseCounter;
+            return entry.raster;
+        }
+    }
+
+    auto raster = vn::view::render::createPdfPagePreviewRaster(*this->document, pdfPageNumber, pageWidth, pageHeight);
+    if (raster.empty()) {
+        return raster;
+    }
+
+    this->pdfRasterCache.push_back(QtPdfRasterCacheEntry{.pdfPageNumber = pdfPageNumber,
+                                                         .pageWidth = pageWidth,
+                                                         .pageHeight = pageHeight,
+                                                         .lastUsed = ++this->pdfRasterUseCounter,
+                                                         .raster = raster});
+    prunePdfRasterCache();
+    return raster;
+}
+
+void QtDocumentController::prunePdfRasterCache() {
+    const auto maxSize = static_cast<std::size_t>(std::clamp(this->pdfPageCacheSize, 1, 500));
+    if (this->pdfRasterCache.size() <= maxSize) {
+        return;
+    }
+    std::ranges::sort(this->pdfRasterCache, [](const auto& lhs, const auto& rhs) {
+        return lhs.lastUsed > rhs.lastUsed;
+    });
+    this->pdfRasterCache.resize(maxSize);
+}
+
+void QtDocumentController::clearPdfRasterCache() {
+    this->pdfRasterCache.clear();
+    this->pdfRasterUseCounter = 0U;
 }
 
 void QtDocumentController::clearGeometryHistory() {

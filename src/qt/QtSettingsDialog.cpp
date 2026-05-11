@@ -80,6 +80,26 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->pressureGuessingCheck->setChecked(current.pressureGuessing);
     toolsLayout->addRow(QStringLiteral("Guess pressure if missing:"), this->pressureGuessingCheck);
 
+    this->strokeStabilizerEnabledCheck = new QCheckBox(toolsPage);
+    this->strokeStabilizerEnabledCheck->setChecked(current.strokeStabilizerEnabled);
+    toolsLayout->addRow(QStringLiteral("Stroke stabilizer:"), this->strokeStabilizerEnabledCheck);
+
+    this->strokeStabilizerSamplesSpin = new QSpinBox(toolsPage);
+    this->strokeStabilizerSamplesSpin->setRange(2, 64);
+    this->strokeStabilizerSamplesSpin->setValue(current.strokeStabilizerSamples);
+    toolsLayout->addRow(QStringLiteral("Stabilizer samples:"), this->strokeStabilizerSamplesSpin);
+
+    this->strokeStabilizerStrengthSpin = new QDoubleSpinBox(toolsPage);
+    this->strokeStabilizerStrengthSpin->setRange(0.0, 1.0);
+    this->strokeStabilizerStrengthSpin->setSingleStep(0.05);
+    this->strokeStabilizerStrengthSpin->setDecimals(2);
+    this->strokeStabilizerStrengthSpin->setValue(current.strokeStabilizerStrength);
+    toolsLayout->addRow(QStringLiteral("Stabilizer strength:"), this->strokeStabilizerStrengthSpin);
+
+    this->strokeStabilizerFinalizeCheck = new QCheckBox(toolsPage);
+    this->strokeStabilizerFinalizeCheck->setChecked(current.strokeStabilizerFinalizeStroke);
+    toolsLayout->addRow(QStringLiteral("Stabilizer catches final point:"), this->strokeStabilizerFinalizeCheck);
+
     this->eraserModeCombo = new QComboBox(toolsPage);
     this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::Standard));
     this->eraserModeCombo->addItem(QStringLiteral("Segment"), static_cast<int>(QtEraserMode::Segment));
@@ -416,6 +436,10 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .minimumPressure = this->minimumPressureSpin->value(),
             .pressureMultiplier = this->pressureMultiplierSpin->value(),
             .pressureGuessing = this->pressureGuessingCheck->isChecked(),
+            .strokeStabilizerEnabled = this->strokeStabilizerEnabledCheck->isChecked(),
+            .strokeStabilizerSamples = this->strokeStabilizerSamplesSpin->value(),
+            .strokeStabilizerStrength = this->strokeStabilizerStrengthSpin->value(),
+            .strokeStabilizerFinalizeStroke = this->strokeStabilizerFinalizeCheck->isChecked(),
             .snapGridTolerance = this->snapGridToleranceSpin->value(),
             .snapGridSize = this->snapGridSizeSpin->value(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),

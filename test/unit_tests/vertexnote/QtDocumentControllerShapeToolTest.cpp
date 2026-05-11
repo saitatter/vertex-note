@@ -129,6 +129,24 @@ TEST(VertexNoteQtDocumentControllerShapeTools, loadsAttachedAndExternalPdfDocume
     }
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, preparesPdfBackgroundRastersThroughQtCache) {
+    QtDocumentController controller;
+    std::string error;
+
+    ASSERT_TRUE(controller.loadPdfAsDocument(testFile(u8"cjk/测试.pdf"), false, &error)) << error;
+    ASSERT_EQ(2U, controller.snapshotPages().size());
+    EXPECT_TRUE(controller.snapshotPages()[0].background.rasterContent.empty());
+
+    controller.setPdfCacheOptions(1, 0, 0, true);
+    controller.preparePdfRasterCache({0U});
+    EXPECT_FALSE(controller.snapshotPages()[0].background.rasterContent.empty());
+    EXPECT_TRUE(controller.snapshotPages()[1].background.rasterContent.empty());
+
+    controller.preparePdfRasterCache({1U});
+    EXPECT_TRUE(controller.snapshotPages()[0].background.rasterContent.empty());
+    EXPECT_FALSE(controller.snapshotPages()[1].background.rasterContent.empty());
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, appendNewPdfPagesAddsMissingBackgroundPages) {
     QtDocumentController controller;
     std::string error;

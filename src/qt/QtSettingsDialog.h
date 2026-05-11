@@ -43,6 +43,10 @@ struct QtSettings {
     double minimumPressure = 0.05;
     double pressureMultiplier = 1.0;
     bool pressureGuessing = false;
+    bool strokeStabilizerEnabled = false;
+    int strokeStabilizerSamples = 6;
+    double strokeStabilizerStrength = 0.65;
+    bool strokeStabilizerFinalizeStroke = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     double strokeRecognizerMinSize = 40.0;
@@ -86,6 +90,10 @@ private:
     QDoubleSpinBox* minimumPressureSpin = nullptr;
     QDoubleSpinBox* pressureMultiplierSpin = nullptr;
     QCheckBox* pressureGuessingCheck = nullptr;
+    QCheckBox* strokeStabilizerEnabledCheck = nullptr;
+    QSpinBox* strokeStabilizerSamplesSpin = nullptr;
+    QDoubleSpinBox* strokeStabilizerStrengthSpin = nullptr;
+    QCheckBox* strokeStabilizerFinalizeCheck = nullptr;
     QComboBox* eraserModeCombo = nullptr;
     QDoubleSpinBox* pageWidthSpin = nullptr;
     QDoubleSpinBox* pageHeightSpin = nullptr;

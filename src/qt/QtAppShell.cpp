@@ -2593,6 +2593,21 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("tools/pressureMultiplier"), this->currentSettings.pressureMultiplier).toDouble();
     this->currentSettings.pressureGuessing =
             settings.value(QStringLiteral("tools/pressureGuessing"), this->currentSettings.pressureGuessing).toBool();
+    this->currentSettings.strokeStabilizerEnabled =
+            settings.value(QStringLiteral("tools/strokeStabilizerEnabled"),
+                           this->currentSettings.strokeStabilizerEnabled)
+                    .toBool();
+    this->currentSettings.strokeStabilizerSamples =
+            settings.value(QStringLiteral("tools/strokeStabilizerSamples"), this->currentSettings.strokeStabilizerSamples)
+                    .toInt();
+    this->currentSettings.strokeStabilizerStrength =
+            settings.value(QStringLiteral("tools/strokeStabilizerStrength"),
+                           this->currentSettings.strokeStabilizerStrength)
+                    .toDouble();
+    this->currentSettings.strokeStabilizerFinalizeStroke =
+            settings.value(QStringLiteral("tools/strokeStabilizerFinalizeStroke"),
+                           this->currentSettings.strokeStabilizerFinalizeStroke)
+                    .toBool();
     this->currentSettings.snapGridTolerance =
             settings.value(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance).toDouble();
     this->currentSettings.snapGridSize =
@@ -2753,6 +2768,11 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/minimumPressure"), this->currentSettings.minimumPressure);
     settings.setValue(QStringLiteral("tools/pressureMultiplier"), this->currentSettings.pressureMultiplier);
     settings.setValue(QStringLiteral("tools/pressureGuessing"), this->currentSettings.pressureGuessing);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerEnabled"), this->currentSettings.strokeStabilizerEnabled);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerSamples"), this->currentSettings.strokeStabilizerSamples);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerStrength"), this->currentSettings.strokeStabilizerStrength);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerFinalizeStroke"),
+                      this->currentSettings.strokeStabilizerFinalizeStroke);
     settings.setValue(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance);
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
@@ -3066,6 +3086,10 @@ void QtAppShell::applyRuntimeSettings() {
 
     canvas->setPressureOptions(this->currentSettings.minimumPressure, this->currentSettings.pressureMultiplier,
                                this->currentSettings.pressureGuessing);
+    canvas->setStrokeStabilizerOptions(this->currentSettings.strokeStabilizerEnabled,
+                                       this->currentSettings.strokeStabilizerSamples,
+                                       this->currentSettings.strokeStabilizerStrength,
+                                       this->currentSettings.strokeStabilizerFinalizeStroke);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
     canvas->setEraserCursorHidden(this->currentSettings.eraserCursorHidden);
     canvas->setPointerButtonActions(this->currentSettings.rightButtonAction, this->currentSettings.middleButtonAction);
@@ -3076,6 +3100,10 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
     canvas->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
     canvas->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
+                                                this->currentSettings.pdfPreloadPagesBefore,
+                                                this->currentSettings.pdfPreloadPagesAfter,
+                                                this->currentSettings.pdfEagerPageCleanup);
     applyAppearanceSettings();
     reloadColorPalette();
 }

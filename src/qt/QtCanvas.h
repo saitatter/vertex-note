@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include <QWidget>
@@ -64,6 +65,7 @@ public:
     void setRotationSnapEnabled(bool enabled);
     void setTouchDrawingEnabled(bool enabled);
     void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
+    void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
     void setGridSnapOptions(double gridSize, double tolerance);
     void setEraserCursorHidden(bool hidden);
     void setPointerButtonActions(QtPointerButtonAction rightButtonAction, QtPointerButtonAction middleButtonAction);
@@ -173,6 +175,9 @@ private:
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
     [[nodiscard]] auto adjustedPressure(double pressure) const -> double;
+    [[nodiscard]] auto stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double>;
+    void resetStrokeStabilizer(const QPointF& pagePoint, double pressure);
+    void maybeFinalizeStabilizedStroke();
     void finalizeActiveStroke();
     void cancelActiveStroke();
     void drawActiveStroke(QPainter& painter) const;
@@ -249,6 +254,10 @@ private:
     double minimumPressure = 0.05;
     double pressureMultiplier = 1.0;
     bool pressureGuessing = false;
+    bool strokeStabilizerEnabled = false;
+    int strokeStabilizerSamples = 6;
+    double strokeStabilizerStrength = 0.65;
+    bool strokeStabilizerFinalizeStroke = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     bool eraserCursorHidden = true;
@@ -271,6 +280,13 @@ private:
     bool movingInstrumentOverlay = false;
     bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
+    struct StabilizerSample {
+        QPointF point;
+        double pressure = 0.5;
+    };
+    std::vector<StabilizerSample> strokeStabilizerSamplesBuffer;
+    std::optional<StabilizerSample> lastRawStrokeSample;
+    std::optional<StabilizerSample> lastEmittedStrokeSample;
     std::optional<std::size_t> eraserPreviewPageIndex;
     QPointF eraserPreviewPagePoint;
     int activeTouchPointId = -1;

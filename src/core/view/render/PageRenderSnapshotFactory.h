@@ -14,6 +14,11 @@ class Document;
 
 namespace vn::view::render {
 
-[[nodiscard]] auto buildPageRenderSnapshots(Document& document) -> std::vector<PageRenderSnapshot>;
+struct PageRenderSnapshotOptions {
+    bool renderPdfBackgrounds = true;
+};
+
+[[nodiscard]] auto buildPageRenderSnapshots(Document& document, PageRenderSnapshotOptions options = {})
+        -> std::vector<PageRenderSnapshot>;
 
 }  // namespace vn::view::render

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <type_traits>
 
 #include <QCursor>
@@ -571,6 +572,13 @@ void QtCanvas::setPressureOptions(double minimumPressure, double pressureMultipl
     this->pressureGuessing = pressureGuessing;
 }
 
+void QtCanvas::setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke) {
+    this->strokeStabilizerEnabled = enabled;
+    this->strokeStabilizerSamples = std::clamp(samples, 2, 64);
+    this->strokeStabilizerStrength = std::clamp(strength, 0.0, 1.0);
+    this->strokeStabilizerFinalizeStroke = finalizeStroke;
+}
+
 void QtCanvas::setGridSnapOptions(double gridSize, double tolerance) {
     this->snapGridSize = std::clamp(gridSize, 1.0, 500.0);
     this->snapGridTolerance = std::clamp(tolerance, 0.01, 10.0);
@@ -691,12 +699,28 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     painter.setTransform(viewTransform);
 
     painter.setRenderHint(QPainter::Antialiasing, true);
+    const auto rects = pageRects();
+    const auto currentPage = currentPageIndex();
+    const QRectF visibleScene(this->scrollX, this->scrollY, width() / this->zoomFactor, height() / this->zoomFactor);
+    std::vector<std::size_t> visiblePageIndices;
+    for (std::size_t index = 0; index < rects.size(); ++index) {
+        if (rects[index].intersects(visibleScene)) {
+            visiblePageIndices.push_back(index);
+        }
+    }
+    if (visiblePageIndices.empty() && currentPage < rects.size()) {
+        visiblePageIndices.push_back(currentPage);
+    }
+    if (this->documentController) {
+        this->documentController->preparePdfRasterCache(visiblePageIndices);
+    }
     const auto pages =
             this->documentController ? this->documentController->snapshotPages()
                                      : std::vector<vn::view::render::PageRenderSnapshot>{};
-    const auto rects = pageRects();
-    const auto currentPage = currentPageIndex();
     for (std::size_t index = 0; index < rects.size(); ++index) {
+        if (std::ranges::find(visiblePageIndices, index) == visiblePageIndices.end()) {
+            continue;
+        }
         drawPageContents(painter, rects[index],
                          index < pages.size() ? pages[index] : vn::view::render::PageRenderSnapshot{}, index,
                          index == currentPage);
@@ -1643,6 +1667,8 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
     const QRectF& pageRect = rects[*pageIdx];
     const double pageX = scenePoint.x() - pageRect.x();
     const double pageY = scenePoint.y() - pageRect.y();
+    const double inputPressure = adjustedPressure(pressure);
+    resetStrokeStabilizer(QPointF(pageX, pageY), inputPressure);
 
     Color color;
     double width;
@@ -1660,7 +1686,7 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
         return;
     }
 
-    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, adjustedPressure(pressure), color, width, toolType,
+    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, inputPressure, color, width, toolType,
                                                this->currentToolState.pressureSensitive,
                                                this->currentToolState.penLineStyle,
                                                this->currentToolState.fillEnabled
@@ -1688,10 +1714,10 @@ void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure)
 
     const QPointF scenePoint = screenToScene(screenPoint);
     const QRectF& pageRect = rects[active->pageIndex];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
+    const QPointF pagePoint(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y());
+    const auto [pagePointForStroke, pressureForStroke] = stabilizedStrokePoint(pagePoint, adjustedPressure(pressure));
 
-    if (this->documentController->updateStroke(pageX, pageY, adjustedPressure(pressure))) {
+    if (this->documentController->updateStroke(pagePointForStroke.x(), pagePointForStroke.y(), pressureForStroke)) {
         update();
     }
 }
@@ -1709,6 +1735,68 @@ auto QtCanvas::adjustedPressure(double pressure) const -> double {
     return std::clamp(normalized * this->pressureMultiplier, 0.01, 4.0);
 }
 
+auto QtCanvas::stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double> {
+    const StabilizerSample raw{.point = pagePoint, .pressure = pressure};
+    this->lastRawStrokeSample = raw;
+    if (!this->strokeStabilizerEnabled || this->strokeStabilizerStrength <= 0.0) {
+        this->lastEmittedStrokeSample = raw;
+        return {raw.point, raw.pressure};
+    }
+
+    this->strokeStabilizerSamplesBuffer.push_back(raw);
+    const auto maxSamples = static_cast<std::size_t>(std::max(2, this->strokeStabilizerSamples));
+    if (this->strokeStabilizerSamplesBuffer.size() > maxSamples) {
+        this->strokeStabilizerSamplesBuffer.erase(this->strokeStabilizerSamplesBuffer.begin(),
+                                                  this->strokeStabilizerSamplesBuffer.end() -
+                                                          static_cast<std::ptrdiff_t>(maxSamples));
+    }
+
+    QPointF averaged;
+    double averagedPressure = 0.0;
+    double weightSum = 0.0;
+    double weight = 1.0;
+    for (auto it = this->strokeStabilizerSamplesBuffer.rbegin(); it != this->strokeStabilizerSamplesBuffer.rend(); ++it) {
+        averaged += it->point * weight;
+        averagedPressure += it->pressure * weight;
+        weightSum += weight;
+        weight *= 0.82;
+    }
+    averaged /= weightSum;
+    averagedPressure /= weightSum;
+
+    const double strength = std::clamp(this->strokeStabilizerStrength, 0.0, 1.0);
+    const StabilizerSample emitted{
+            .point = raw.point * (1.0 - strength) + averaged * strength,
+            .pressure = raw.pressure * (1.0 - strength) + averagedPressure * strength,
+    };
+    this->lastEmittedStrokeSample = emitted;
+    return {emitted.point, emitted.pressure};
+}
+
+void QtCanvas::resetStrokeStabilizer(const QPointF& pagePoint, double pressure) {
+    const StabilizerSample sample{.point = pagePoint, .pressure = pressure};
+    this->strokeStabilizerSamplesBuffer.clear();
+    this->strokeStabilizerSamplesBuffer.push_back(sample);
+    this->lastRawStrokeSample = sample;
+    this->lastEmittedStrokeSample = sample;
+}
+
+void QtCanvas::maybeFinalizeStabilizedStroke() {
+    if (!this->documentController || !this->strokeStabilizerEnabled || !this->strokeStabilizerFinalizeStroke ||
+        !this->lastRawStrokeSample || !this->lastEmittedStrokeSample) {
+        return;
+    }
+
+    const auto raw = *this->lastRawStrokeSample;
+    const auto emitted = *this->lastEmittedStrokeSample;
+    const bool samePoint = std::abs(raw.point.x() - emitted.point.x()) < 0.01 &&
+                           std::abs(raw.point.y() - emitted.point.y()) < 0.01;
+    const bool samePressure = std::abs(raw.pressure - emitted.pressure) < 0.001;
+    if (!samePoint || !samePressure) {
+        this->documentController->updateStroke(raw.point.x(), raw.point.y(), raw.pressure);
+    }
+}
+
 void QtCanvas::finalizeActiveStroke() {
     if (!this->documentController || !this->drawing) {
         return;
@@ -1717,6 +1805,7 @@ void QtCanvas::finalizeActiveStroke() {
     const auto tool = this->currentToolState.activeTool;
     bool added = false;
     if (tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter) {
+        maybeFinalizeStabilizedStroke();
         if (const auto* active = this->documentController->activeStroke(); active && active->stroke) {
             this->laserOverlayStrokes.push_back({.pageIndex = active->pageIndex,
                                                  .model = vn::view::render::StrokeRenderModelFactory::fromStroke(*active->stroke),
@@ -1727,11 +1816,15 @@ void QtCanvas::finalizeActiveStroke() {
         }
         this->documentController->cancelStroke();
     } else {
+        maybeFinalizeStabilizedStroke();
         added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
                                                          this->shapeRecognizerMinSize, this->gridSnapEnabled);
     }
     this->drawing = false;
     this->activeTouchPointId = -1;
+    this->strokeStabilizerSamplesBuffer.clear();
+    this->lastRawStrokeSample.reset();
+    this->lastEmittedStrokeSample.reset();
     update();
     if (added) {
         Q_EMIT documentEdited();
@@ -1744,6 +1837,9 @@ void QtCanvas::cancelActiveStroke() {
     }
     this->drawing = false;
     this->activeTouchPointId = -1;
+    this->strokeStabilizerSamplesBuffer.clear();
+    this->lastRawStrokeSample.reset();
+    this->lastEmittedStrokeSample.reset();
     update();
 }
 
