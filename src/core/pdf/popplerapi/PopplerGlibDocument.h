@@ -15,7 +15,6 @@
 #include <memory>
 #include <string>  // for string
 
-#include <glib.h>  // for GError
 #include <poppler/cpp/poppler-document.h>
 
 #include "pdf/base/PdfDocumentInterface.h"  // for PdfDocumentInterface
@@ -37,9 +36,9 @@ public:
     bool equals(PdfDocumentInterface* doc) const override;
 
 public:
-    bool save(fs::path const& filepath, GError** error) const override;
-    bool load(fs::path const& filepath, std::string password, GError** error) override;
-    bool load(std::unique_ptr<std::string> data, std::string password, GError** error) override;
+    bool save(fs::path const& filepath, std::string* errorMessage) const override;
+    bool load(fs::path const& filepath, std::string password, std::string* errorMessage) override;
+    bool load(std::unique_ptr<std::string> data, std::string password, std::string* errorMessage) override;
     bool isLoaded() const override;
     void reset() override;
 

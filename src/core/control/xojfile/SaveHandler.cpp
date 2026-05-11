@@ -268,19 +268,17 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
                 filepath += ".xopp.bg.pdf";
                 background->setAttrib(vn::xml_attrs::FILENAME_STR, "bg.pdf");
 
-                GError* error = nullptr;
+                std::string errorMessage;
                 if (!exists(filepath)) {
-                    doc->getPdfDocument().save(filepath, &error);
+                    doc->getPdfDocument().save(filepath, &errorMessage);
                 }
 
-                if (error) {
+                if (!errorMessage.empty()) {
                     if (!this->errorMessage.empty()) {
                         this->errorMessage += "\n";
                     }
                     this->errorMessage +=
-                            FS(_F("Could not write background \"{1}\", {2}") % filepath.u8string() % error->message);
-
-                    g_error_free(error);
+                            FS(_F("Could not write background \"{1}\", {2}") % filepath.u8string() % errorMessage);
                 }
             } else {
                 // "absolute" just means path. For backward compatibility, it is hard to change the word

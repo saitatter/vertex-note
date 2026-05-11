@@ -17,8 +17,6 @@
 #include <string>
 #include <vector>
 
-#include <glib.h>  // for GError, gpointer, gsize
-
 #include "PdfDocumentInterface.h"  // for PdfDocumentInterface
 #include "PdfPage.h"               // for PdfPagePtr
 #include "filesystem.h"               // for path
@@ -39,9 +37,9 @@ public:
     bool equals(PdfDocumentInterface* doc) const override;
 
 public:
-    bool save(fs::path const& file, GError** error) const override;
-    bool load(fs::path const& file, std::string password, GError** error) override;
-    bool load(std::unique_ptr<std::string> data, std::string password, GError** error) override;
+    bool save(fs::path const& file, std::string* errorMessage = nullptr) const override;
+    bool load(fs::path const& file, std::string password, std::string* errorMessage = nullptr) override;
+    bool load(std::unique_ptr<std::string> data, std::string password, std::string* errorMessage = nullptr) override;
     bool isLoaded() const override;
     void reset() override;
 

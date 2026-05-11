@@ -209,26 +209,20 @@ void Document::setPdfAttributes(const fs::path& filename, bool attachToDocument)
 
 auto Document::readPdf(const fs::path& filename, bool initPages, bool attachToDocument,
                        std::unique_ptr<std::string> data) -> bool {
-    GError* popplerError = nullptr;
+    std::string pdfError;
 
     lock();
 
     if (data != nullptr) {
-        if (!pdfDocument.load(std::move(data), password, &popplerError)) {
-            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % popplerError->message);
-            g_error_free(popplerError);
+        if (!pdfDocument.load(std::move(data), password, &pdfError)) {
+            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % pdfError);
             unlock();
 
             return false;
         }
     } else {
-        if (!pdfDocument.load(filename, password, &popplerError)) {
-            if (popplerError) {
-                lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % popplerError->message);
-                g_error_free(popplerError);
-            } else {
-                lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % "");
-            }
+        if (!pdfDocument.load(filename, password, &pdfError)) {
+            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % pdfError);
             unlock();
             return false;
         }

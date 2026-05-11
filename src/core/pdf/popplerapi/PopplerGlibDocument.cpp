@@ -3,6 +3,7 @@
 #include <limits>
 #include <memory>    // for make_shared, unique_ptr
 #include <optional>
+#include <utility>
 
 #include <Object.h>
 #include <Outline.h>
@@ -63,6 +64,12 @@ auto makeLinkDocumentFromData(const std::shared_ptr<std::string>& data, const st
     return doc->isOk() ? doc : nullptr;
 }
 
+void setErrorMessage(std::string* errorMessage, std::string message) {
+    if (errorMessage) {
+        *errorMessage = std::move(message);
+    }
+}
+
 }  // namespace
 
 using std::string;
@@ -88,24 +95,28 @@ auto PopplerGlibDocument::equals(PdfDocumentInterface* doc) const -> bool {
            linkDocument == (dynamic_cast<PopplerGlibDocument*>(doc))->linkDocument;
 }
 
-auto PopplerGlibDocument::save(fs::path const& file, GError** error) const -> bool {
+auto PopplerGlibDocument::save(fs::path const& file, std::string* errorMessage) const -> bool {
     if (document == nullptr) {
+        setErrorMessage(errorMessage, "Document not loaded.");
         return false;
     }
 
-    (void) error;
     const auto fileName = file.generic_u8string();
-    return document->save(std::string{char_cast(fileName)});
+    if (!document->save(std::string{char_cast(fileName)})) {
+        setErrorMessage(errorMessage, "Could not save PDF document.");
+        return false;
+    }
+    return true;
 }
 
-auto PopplerGlibDocument::load(fs::path const& file, string password, GError** error) -> bool {
-    (void) error;
+auto PopplerGlibDocument::load(fs::path const& file, string password, std::string* errorMessage) -> bool {
     linkDocument.reset();
     document.reset();
     documentData.reset();
 
     document = makeDocumentFromFile(file, password);
     if (!document) {
+        setErrorMessage(errorMessage, "Could not load PDF document.");
         return false;
     }
 
@@ -113,8 +124,7 @@ auto PopplerGlibDocument::load(fs::path const& file, string password, GError** e
     return true;
 }
 
-auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string password, GError** error) -> bool {
-    (void) error;
+auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string password, std::string* errorMessage) -> bool {
     linkDocument.reset();
     document.reset();
     documentData = std::make_shared<std::string>(*data);
@@ -122,6 +132,7 @@ auto PopplerGlibDocument::load(std::unique_ptr<std::string> data, string passwor
     document = makeDocumentFromData(documentData, password);
     if (!document) {
         documentData.reset();
+        setErrorMessage(errorMessage, "Could not load PDF document.");
         return false;
     }
 
