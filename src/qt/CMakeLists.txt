@@ -47,6 +47,8 @@ set(vertexnote_qt_sources
         QtUpdatePresentationService.cpp
         QtInputAdapter.h
         QtInputAdapter.cpp
+        QtIconResources.h
+        QtIconResources.cpp
         QtLayerPanel.h
         QtLayerPanel.cpp
         QtPageContentRenderer.h
