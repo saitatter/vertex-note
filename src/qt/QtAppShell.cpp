@@ -11,6 +11,7 @@
 #include <cctype>
 #include <cmath>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -482,6 +483,40 @@ QtAppShell::QtAppShell():
         this->window.toolPalette()->syncFromToolState(toolState);
         syncToolbarWidgets();
         this->window.canvas()->update();
+    });
+    this->luaPlugins.configureViewAccess(
+            [this]() { return this->window.canvas()->zoom(); },
+            [this](double zoom) {
+                this->window.canvas()->setZoom(zoom);
+                updateStatusBarLabels();
+            },
+            [this]() { return this->window.canvas()->layoutColumnsRows(); });
+    this->luaPlugins.configureFontAccess(
+            [this]() {
+                const auto& toolState = this->window.canvas()->toolState();
+                return std::pair<std::string, double>{toolState.fontName, toolState.fontSize};
+            },
+            [this](std::string name, double size) {
+                auto& toolState = this->window.canvas()->toolState();
+                toolState.fontName = std::move(name);
+                toolState.fontSize = size;
+                this->window.toolPalette()->syncFromToolState(toolState);
+                syncToolbarWidgets();
+                this->window.canvas()->update();
+            });
+    this->luaPlugins.configureFileAccess([this](const std::filesystem::path& path, int pageIndex) {
+        if (!openPath(path, false)) {
+            return false;
+        }
+        if (pageIndex >= 0 && this->documentController.pageCount() > 0U) {
+            const auto wantedPage =
+                    std::min<std::size_t>(static_cast<std::size_t>(pageIndex), this->documentController.pageCount() - 1U);
+            goToPage(wantedPage);
+            this->window.pageSidebar()->setCurrentPage(wantedPage);
+            this->window.layerPanel()->setCurrentPage(wantedPage);
+            updateStatusBarLabels();
+        }
+        return true;
     });
     this->luaPlugins.loadEnabledPlugins();
     this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);

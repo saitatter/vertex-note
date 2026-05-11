@@ -93,6 +93,8 @@ public:
     void scrollToPage(std::size_t pageIndex);
     void fitWidth();
     void zoomToActualSize();
+    [[nodiscard]] auto zoom() const -> double;
+    void setZoom(double zoom);
 
     // Content renderer (shared for sidebar thumbnails / export)
     [[nodiscard]] auto contentRenderer() const -> vn::view::render::PageContentRenderer*;

@@ -11,6 +11,8 @@
 #include <memory>
 #include <cstdint>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "ui/common/IPluginUiBridge.h"
@@ -49,6 +51,11 @@ public:
     void configureExportAccess(std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
                                std::function<bool(const std::filesystem::path&, std::string*)> pngExporter);
     void configureToolAccess(std::function<void(uint32_t, const std::string&, bool)> toolColorChanger);
+    void configureViewAccess(std::function<double()> zoomProvider, std::function<void(double)> zoomSetter,
+                             std::function<int()> layoutSpanProvider);
+    void configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
+                             std::function<void(std::string, double)> fontSetter);
+    void configureFileAccess(std::function<bool(const std::filesystem::path&, int)> fileOpener);
     void saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states);
     [[nodiscard]] auto statuses() const -> std::vector<PluginStatus>;
     [[nodiscard]] auto parentWidget() const -> QWidget*;
@@ -60,6 +67,13 @@ public:
     [[nodiscard]] auto exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     [[nodiscard]] auto exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     void changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const;
+    [[nodiscard]] auto currentZoom() const -> double;
+    void setZoom(double zoom) const;
+    [[nodiscard]] auto currentLayoutSpan() const -> int;
+    [[nodiscard]] auto currentFont() const -> std::pair<std::string, double>;
+    void setFont(std::string name, double size) const;
+    [[nodiscard]] auto openFile(const std::filesystem::path& path, int pageIndex) const -> bool;
+    [[nodiscard]] auto commandChecked(std::string_view commandId) const -> bool;
 
 public:
     struct Plugin;
@@ -76,5 +90,11 @@ private:
     std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter;
     std::function<bool(const std::filesystem::path&, std::string*)> pngExporter;
     std::function<void(uint32_t, const std::string&, bool)> toolColorChanger;
+    std::function<double()> zoomProvider;
+    std::function<void(double)> zoomSetter;
+    std::function<int()> layoutSpanProvider;
+    std::function<std::pair<std::string, double>()> fontProvider;
+    std::function<void(std::string, double)> fontSetter;
+    std::function<bool(const std::filesystem::path&, int)> fileOpener;
     std::vector<std::unique_ptr<Plugin>> plugins;
 };

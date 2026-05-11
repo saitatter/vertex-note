@@ -2067,6 +2067,19 @@ void QtDocumentController::setPageBackgroundType(std::size_t pageIndex, PageType
     rebuildPageSnapshots();
 }
 
+void QtDocumentController::setPageBackgroundName(std::size_t pageIndex, const std::string& name) {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return;
+    }
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (page) {
+        page->setBackgroundName(name);
+    }
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
 auto QtDocumentController::changePagePdfBackground(std::size_t pageIndex, ptrdiff_t pageNumber, bool relative,
                                                    std::string* errorMessage) -> bool {
     const auto setError = [errorMessage](std::string message) {

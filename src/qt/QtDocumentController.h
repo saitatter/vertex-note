@@ -353,6 +353,7 @@ public:
     // Page background
     void setPageBackgroundColor(std::size_t pageIndex, Color color);
     void setPageBackgroundType(std::size_t pageIndex, PageTypeFormat format);
+    void setPageBackgroundName(std::size_t pageIndex, const std::string& name);
     [[nodiscard]] auto changePagePdfBackground(std::size_t pageIndex, ptrdiff_t pageNumber, bool relative,
                                                std::string* errorMessage = nullptr) -> bool;
     [[nodiscard]] auto canResizePage(std::size_t pageIndex) const -> bool;

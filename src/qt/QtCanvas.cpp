@@ -546,6 +546,13 @@ void QtCanvas::zoomToActualSize() {
     emitViewportUpdate();
 }
 
+auto QtCanvas::zoom() const -> double { return this->zoomFactor; }
+
+void QtCanvas::setZoom(double zoom) {
+    this->zoomFactor = clampZoom(zoom);
+    emitViewportUpdate();
+}
+
 void QtCanvas::setGeometrySnapEnabled(bool enabled) {
     this->geometrySnapEnabled = enabled;
     update();

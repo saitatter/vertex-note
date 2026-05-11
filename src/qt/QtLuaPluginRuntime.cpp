@@ -20,9 +20,12 @@
 #include <unordered_map>
 #include <utility>
 
-#include <QMessageBox>
 #include <QFileDialog>
+#include <QFontDatabase>
+#include <QGuiApplication>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QScreen>
 #include <QSettings>
 #include <QString>
 #include <QStringList>
@@ -34,10 +37,12 @@
 #include "control/pagetype/PageTypeHandler.h"
 #include "filesystem.h"
 #include "model/Document.h"
+#include "model/Font.h"
 #include "model/Image.h"
 #include "model/NotePage.h"
 #include "model/Stroke.h"
 #include "model/StrokeStyle.h"
+#include "model/Text.h"
 #include "QtDocumentController.h"
 #include "ui/common/ICommandHost.h"
 #include "util/PathUtil.h"
@@ -506,6 +511,46 @@ auto luaReadDoubleArray(lua_State* lua, int index) -> std::vector<double> {
     return result;
 }
 
+auto luaReadStringArray(lua_State* lua, int index) -> std::vector<std::string> {
+    std::vector<std::string> result;
+    if (lua_istable(lua, index) != 1) {
+        return result;
+    }
+    const auto count = lua_rawlen(lua, index);
+    result.reserve(count);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, index, static_cast<lua_Integer>(i));
+        if (lua_isstring(lua, -1) == 1) {
+            result.emplace_back(lua_tostring(lua, -1));
+        }
+        lua_pop(lua, 1);
+    }
+    return result;
+}
+
+auto qtFileFilterFromPatterns(const std::vector<std::string>& patterns) -> QString {
+    if (patterns.empty()) {
+        return QStringLiteral("All Files (*)");
+    }
+
+    QStringList qtPatterns;
+    for (const auto& pattern: patterns) {
+        if (!pattern.empty()) {
+            qtPatterns.push_back(QString::fromStdString(pattern));
+        }
+    }
+    if (qtPatterns.empty()) {
+        return QStringLiteral("All Files (*)");
+    }
+    return QStringLiteral("Supported Files (%1);;All Files (*)").arg(qtPatterns.join(QChar(' ')));
+}
+
+void luaPushFont(lua_State* lua, const std::pair<std::string, double>& font) {
+    lua_newtable(lua);
+    luaSetStringField(lua, "name", font.first);
+    luaSetNumberField(lua, "size", font.second);
+}
+
 auto strokeToolFromLua(std::string_view tool) -> StrokeTool::Value {
     if (tool == "highlighter") {
         return StrokeTool::HIGHLIGHTER;
@@ -604,10 +649,6 @@ auto luaRegisterUi(lua_State* lua) -> int {
     lua_pushinteger(lua, menuId);
     lua_settable(lua, -3);
     return 1;
-}
-
-auto luaUnsupported(lua_State* lua) -> int {
-    return luaL_error(lua, "This VertexNote plugin API is not available in the Qt shell yet");
 }
 
 auto luaOpenDialog(lua_State* lua) -> int {
@@ -1184,6 +1225,141 @@ auto luaAddImages(lua_State* lua) -> int {
     return 1;
 }
 
+auto luaGetTexts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_TEXT,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int textIndex = 1;
+    for (const auto& ref: refs) {
+        auto* text = dynamic_cast<const Text*>(ref.element);
+        if (!text) {
+            continue;
+        }
+
+        lua_pushinteger(lua, textIndex++);
+        lua_newtable(lua);
+        luaSetStringField(lua, "text", text->getText());
+        luaPushFont(lua, {text->getFontName(), text->getFontSize()});
+        lua_setfield(lua, -2, "font");
+        luaSetIntegerField(lua, "color",
+                           static_cast<lua_Integer>(static_cast<uint32_t>(text->getColor()) & 0x00ffffffU));
+        luaSetNumberField(lua, "x", text->getX());
+        luaSetNumberField(lua, "y", text->getY());
+        luaSetNumberField(lua, "width", text->getElementWidth());
+        luaSetNumberField(lua, "height", text->getElementHeight());
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(text)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddTexts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "texts");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing text table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto defaultFont = plugin->runtime->currentFont();
+    const auto textCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= textCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "text");
+        if (lua_isstring(lua, -1) != 1) {
+            return luaL_error(lua, "Missing text");
+        }
+        auto content = std::string(lua_tostring(lua, -1));
+        lua_pop(lua, 1);
+
+        auto fontName = defaultFont.first.empty() ? std::string("Sans") : defaultFont.first;
+        auto fontSize = defaultFont.second > 0.0 ? defaultFont.second : 12.0;
+        lua_getfield(lua, -1, "font");
+        if (lua_istable(lua, -1) == 1) {
+            lua_getfield(lua, -1, "name");
+            if (lua_isstring(lua, -1) == 1) {
+                fontName = lua_tostring(lua, -1);
+            }
+            lua_pop(lua, 1);
+            lua_getfield(lua, -1, "size");
+            if (lua_isnumber(lua, -1) == 1) {
+                fontSize = lua_tonumber(lua, -1);
+            }
+            lua_pop(lua, 1);
+        } else if (lua_isnil(lua, -1) != 1) {
+            return luaL_error(lua, "'font' value must be a table");
+        }
+        lua_pop(lua, 1);
+
+        lua_getfield(lua, -1, "x");
+        if (lua_isnumber(lua, -1) != 1) {
+            return luaL_error(lua, "Missing X-Coordinate");
+        }
+        const double x = lua_tonumber(lua, -1);
+        lua_pop(lua, 1);
+
+        lua_getfield(lua, -1, "y");
+        if (lua_isnumber(lua, -1) != 1) {
+            return luaL_error(lua, "Missing Y-Coordinate");
+        }
+        const double y = lua_tonumber(lua, -1);
+        lua_pop(lua, 1);
+
+        auto text = std::make_unique<Text>();
+        text->setText(std::move(content));
+        text->setFont(NoteFont(fontName, fontSize));
+        text->setX(x);
+        text->setY(y);
+        lua_getfield(lua, -1, "color");
+        text->setColor(luaOptionalRgbColor(lua, -1, Colors::black));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        if (lua_isnumber(lua, -1) == 1) {
+            text->setWidth(lua_tonumber(lua, -1));
+        }
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "height");
+        if (lua_isnumber(lua, -1) == 1) {
+            text->setHeight(lua_tonumber(lua, -1));
+        }
+        lua_pop(lua, 1);
+
+        const auto* ptr = controller->insertTextElement(plugin->runtime->currentDocumentPageIndex(), std::move(text));
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
 auto luaClearSelection(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     auto* controller = documentControllerFromLua(lua);
@@ -1228,6 +1404,279 @@ auto luaChangeToolColor(lua_State* lua) -> int {
     lua_pop(lua, 1);
 
     plugin->runtime->changeToolColor(rgb, tool, selection);
+    return 0;
+}
+
+auto luaGetColorPalette(lua_State* lua) -> int {
+    lua_settop(lua, 0);
+    struct Entry {
+        const char* name;
+        uint32_t color;
+    };
+    constexpr Entry PALETTE[] = {
+            {"black", 0x000000U}, {"green", 0x008000U}, {"lightblue", 0x00c0ffU}, {"lightgreen", 0x00ff80U},
+            {"blue", 0x0000ffU},  {"gray", 0x808080U},  {"red", 0xff0000U},       {"magenta", 0xff00ffU},
+            {"orange", 0xff8000U}, {"yellow", 0xffff00U}, {"white", 0xffffffU},
+    };
+
+    lua_newtable(lua);
+    int index = 1;
+    for (const auto& entry: PALETTE) {
+        lua_pushinteger(lua, index++);
+        lua_newtable(lua);
+        luaSetStringField(lua, "name", entry.name);
+        luaSetIntegerField(lua, "color", static_cast<lua_Integer>(entry.color));
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaGetFolder(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    lua_settop(lua, 1);
+    const auto type = luaOptionalString(lua, 1);
+    std::filesystem::path path;
+    if (type == "config") {
+        path = Util::getConfigSubfolder("plugin-settings");
+    } else if (type == "state") {
+        path = Util::getStateSubfolder("plugin-state");
+    } else if (type == "data") {
+        path = Util::getDataSubfolder("plugin-data");
+    } else {
+        return luaL_error(lua, "Unsupported folder type '%s'", type.c_str());
+    }
+    path /= plugin->name;
+    Util::ensureFolderExists(path);
+    lua_pushstring(lua, path.string().c_str());
+    return 1;
+}
+
+auto luaGetDisplayDpi(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    QScreen* screen = plugin && plugin->runtime && plugin->runtime->parentWidget()
+                              ? plugin->runtime->parentWidget()->screen()
+                              : QGuiApplication::primaryScreen();
+    lua_pushinteger(lua, static_cast<lua_Integer>(std::lround(screen ? screen->logicalDotsPerInch() : 96.0)));
+    return 1;
+}
+
+auto luaGetZoom(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    lua_pushnumber(lua, plugin && plugin->runtime ? plugin->runtime->currentZoom() : 1.0);
+    return 1;
+}
+
+auto luaSetZoom(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->setZoom(luaL_checknumber(lua, 1));
+    return 0;
+}
+
+auto luaSetBackgroundName(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    controller->setPageBackgroundName(plugin->runtime->currentDocumentPageIndex(), luaL_checkstring(lua, 1));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetFonts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto current = plugin && plugin->runtime ? plugin->runtime->currentFont().first : std::string();
+    const auto families = QFontDatabase::families();
+
+    lua_newtable(lua);
+    lua_newtable(lua);
+    int currentIndex = -1;
+    for (int i = 0; i < families.size(); ++i) {
+        const auto family = families.at(i).toStdString();
+        lua_pushstring(lua, family.c_str());
+        lua_rawseti(lua, -2, i + 1);
+        if (currentIndex < 0 && family == current) {
+            currentIndex = i + 1;
+        }
+    }
+    lua_setfield(lua, -2, "families");
+    if (currentIndex > 0) {
+        lua_pushinteger(lua, currentIndex);
+    } else {
+        lua_pushnil(lua);
+    }
+    lua_setfield(lua, -2, "current");
+    return 1;
+}
+
+auto luaGetFont(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    luaPushFont(lua, plugin && plugin->runtime ? plugin->runtime->currentFont() : std::pair<std::string, double>{"Sans", 12.0});
+    return 1;
+}
+
+auto luaSetFont(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    if (lua_gettop(lua) < 1) {
+        return luaL_error(lua, "setFont requires one argument");
+    }
+
+    auto [name, size] = plugin->runtime->currentFont();
+    if (name.empty()) {
+        name = "Sans";
+    }
+    if (size <= 0.0) {
+        size = 12.0;
+    }
+
+    if (lua_isstring(lua, 1) == 1) {
+        const NoteFont font(lua_tostring(lua, 1));
+        name = font.getName();
+        size = font.getSize();
+    } else if (lua_istable(lua, 1) == 1) {
+        lua_getfield(lua, 1, "name");
+        if (lua_isstring(lua, -1) == 1) {
+            name = lua_tostring(lua, -1);
+        }
+        lua_pop(lua, 1);
+        lua_getfield(lua, 1, "size");
+        if (lua_isnumber(lua, -1) == 1) {
+            size = lua_tonumber(lua, -1);
+        }
+        lua_pop(lua, 1);
+    } else {
+        return luaL_error(lua, "setFont requires a string or table");
+    }
+    if (name.empty() || size <= 0.0) {
+        return luaL_error(lua, "Invalid font specification");
+    }
+    plugin->runtime->setFont(std::move(name), size);
+    return 0;
+}
+
+auto luaSaveAs(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto suggested = luaOptionalString(lua, 1, "Untitled");
+    const auto filename = QFileDialog::getSaveFileName(plugin->runtime->parentWidget(), QStringLiteral("Save File"),
+                                                       QString::fromStdString(suggested));
+    if (filename.isEmpty()) {
+        return 0;
+    }
+    lua_pushstring(lua, filename.toStdString().c_str());
+    return 1;
+}
+
+auto luaGetFilePath(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto patterns = luaReadStringArray(lua, 1);
+    const auto filename = QFileDialog::getOpenFileName(plugin->runtime->parentWidget(), QStringLiteral("Open File"),
+                                                       QString(), qtFileFilterFromPatterns(patterns));
+    if (filename.isEmpty()) {
+        return 0;
+    }
+    lua_pushstring(lua, filename.toStdString().c_str());
+    return 1;
+}
+
+auto luaFileDialogOpen(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto callback = luaOptionalString(lua, 1);
+    if (callback.empty()) {
+        return luaL_error(lua, "Missing file dialog callback");
+    }
+    const auto patterns = luaReadStringArray(lua, 2);
+    const auto filename = QFileDialog::getOpenFileName(plugin->runtime->parentWidget(), QStringLiteral("Open File"),
+                                                       QString(), qtFileFilterFromPatterns(patterns));
+    plugin->callFunctionWithString(callback, filename.toStdString());
+    return 0;
+}
+
+auto luaOpenFile(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto path = std::filesystem::path(luaL_checkstring(lua, 1));
+    const auto pageNumber = static_cast<int>(luaL_optinteger(lua, 2, 1));
+    lua_pushboolean(lua, plugin->runtime->openFile(path, std::max(0, pageNumber - 1)) ? 1 : 0);
+    return 1;
+}
+
+auto luaGetActionState(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    const auto action = luaOptionalString(lua, 1);
+    if (action == "set-layout-vertical") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-vertical") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-layout-right-to-left") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-rtl") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-layout-bottom-to-top") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-btt") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-columns-or-rows") {
+        lua_pushinteger(lua, static_cast<lua_Integer>(plugin->runtime->currentLayoutSpan()));
+        return 1;
+    }
+    if (action == "zoom") {
+        lua_pushnumber(lua, plugin->runtime->currentZoom());
+        return 1;
+    }
+    if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-grid-snap") ? 1 : 0);
+        return 1;
+    }
+    if (action == "vertexnote-geometry-snapping") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-geometry-snap") ? 1 : 0);
+        return 1;
+    }
+    if (action == "rotation-snapping") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-rotation-snap") ? 1 : 0);
+        return 1;
+    }
+    return luaL_error(lua, "This VertexNote plugin action state is not available in the Qt shell yet: %s",
+                      action.c_str());
+}
+
+auto luaRegisterPlaceholder(lua_State* lua) -> int {
+    luaL_checkstring(lua, 1);
+    luaL_checkstring(lua, 2);
+    return 0;
+}
+
+auto luaSetPlaceholderValue(lua_State* lua) -> int {
+    luaL_checkstring(lua, 1);
+    luaL_checkstring(lua, 2);
     return 0;
 }
 
@@ -1409,8 +1858,23 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"addStrokes", luaAddStrokes},
         {"getImages", luaGetImages},
         {"addImages", luaAddImages},
+        {"getTexts", luaGetTexts},
+        {"addTexts", luaAddTexts},
         {"clearSelection", luaClearSelection},
         {"addToSelection", luaAddToSelection},
+        {"getColorPalette", luaGetColorPalette},
+        {"getFolder", luaGetFolder},
+        {"getDisplayDpi", luaGetDisplayDpi},
+        {"getZoom", luaGetZoom},
+        {"setZoom", luaSetZoom},
+        {"setBackgroundName", luaSetBackgroundName},
+        {"getFonts", luaGetFonts},
+        {"getFont", luaGetFont},
+        {"setFont", luaSetFont},
+        {"saveAs", luaSaveAs},
+        {"getFilePath", luaGetFilePath},
+        {"fileDialogOpen", luaFileDialogOpen},
+        {"openFile", luaOpenFile},
         {"changeToolColor", luaChangeToolColor},
         {"fileDialogSave", luaFileDialogSave},
         {"glib_rename", luaGlibRename},
@@ -1418,8 +1882,9 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"refreshPage", luaRefreshPage},
         {"changeActionState", luaChangeActionState},
         {"activateAction", luaActivateAction},
-        {"getActionState", luaUnsupported},
-        {"registerPlaceholder", luaUnsupported},
+        {"getActionState", luaGetActionState},
+        {"registerPlaceholder", luaRegisterPlaceholder},
+        {"setPlaceholderValue", luaSetPlaceholderValue},
         {nullptr, nullptr},
 };
 
@@ -1577,6 +2042,24 @@ void QtLuaPluginRuntime::configureToolAccess(
     this->toolColorChanger = std::move(toolColorChanger);
 }
 
+void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvider,
+                                             std::function<void(double)> zoomSetter,
+                                             std::function<int()> layoutSpanProvider) {
+    this->zoomProvider = std::move(zoomProvider);
+    this->zoomSetter = std::move(zoomSetter);
+    this->layoutSpanProvider = std::move(layoutSpanProvider);
+}
+
+void QtLuaPluginRuntime::configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
+                                             std::function<void(std::string, double)> fontSetter) {
+    this->fontProvider = std::move(fontProvider);
+    this->fontSetter = std::move(fontSetter);
+}
+
+void QtLuaPluginRuntime::configureFileAccess(std::function<bool(const std::filesystem::path&, int)> fileOpener) {
+    this->fileOpener = std::move(fileOpener);
+}
+
 void QtLuaPluginRuntime::loadEnabledPlugins() {
     for (const auto& plugin: this->plugins) {
         for (const auto& actionId: plugin->actionIds) {
@@ -1679,6 +2162,36 @@ void QtLuaPluginRuntime::changeToolColor(uint32_t rgb, const std::string& tool, 
     if (this->toolColorChanger) {
         this->toolColorChanger(rgb, tool, selection);
     }
+}
+
+auto QtLuaPluginRuntime::currentZoom() const -> double { return this->zoomProvider ? this->zoomProvider() : 1.0; }
+
+void QtLuaPluginRuntime::setZoom(double zoom) const {
+    if (this->zoomSetter) {
+        this->zoomSetter(zoom);
+    }
+}
+
+auto QtLuaPluginRuntime::currentLayoutSpan() const -> int {
+    return this->layoutSpanProvider ? this->layoutSpanProvider() : 1;
+}
+
+auto QtLuaPluginRuntime::currentFont() const -> std::pair<std::string, double> {
+    return this->fontProvider ? this->fontProvider() : std::pair<std::string, double>{"Sans", 12.0};
+}
+
+void QtLuaPluginRuntime::setFont(std::string name, double size) const {
+    if (this->fontSetter) {
+        this->fontSetter(std::move(name), size);
+    }
+}
+
+auto QtLuaPluginRuntime::openFile(const std::filesystem::path& path, int pageIndex) const -> bool {
+    return this->fileOpener ? this->fileOpener(path, pageIndex) : false;
+}
+
+auto QtLuaPluginRuntime::commandChecked(std::string_view commandId) const -> bool {
+    return this->commandHost && this->commandHost->hasCommand(commandId) && this->commandHost->isCommandChecked(commandId);
 }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {
