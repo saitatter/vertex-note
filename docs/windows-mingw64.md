@@ -51,7 +51,7 @@ full unit suite on the Qt shell path:
 ## Manual Equivalent
 
 ```powershell
-& C:\msys64\usr\bin\bash.exe -lc "export MSYSTEM=MINGW64; export PATH=/mingw64/bin:/usr/bin:`$PATH; export XDG_DATA_DIRS=/mingw64/share:/usr/local/share:/usr/share; cd /c/Users/andrvoicu/Desktop/repos/vertex-note && cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DENABLE_LEGACY_GTK_SHELL=OFF -DCMAKE_PREFIX_PATH=/mingw64"
+& C:\msys64\usr\bin\bash.exe -lc "export MSYSTEM=MINGW64; export PATH=/mingw64/bin:/usr/bin:`$PATH; export XDG_DATA_DIRS=/mingw64/share:/usr/local/share:/usr/share; cd /c/Users/andrvoicu/Desktop/repos/vertex-note && cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DCMAKE_PREFIX_PATH=/mingw64"
 & C:\msys64\usr\bin\bash.exe -lc "export MSYSTEM=MINGW64; export PATH=/mingw64/bin:/usr/bin:`$PATH; export XDG_DATA_DIRS=/mingw64/share:/usr/local/share:/usr/share; cd /c/Users/andrvoicu/Desktop/repos/vertex-note && cmake --build build/mingw64-qt --target vertexnote-qt-shell"
 & C:\msys64\usr\bin\bash.exe -lc "export MSYSTEM=MINGW64; export PATH=/mingw64/bin:/usr/bin:`$PATH; export XDG_DATA_DIRS=/mingw64/share:/usr/local/share:/usr/share; cd /c/Users/andrvoicu/Desktop/repos/vertex-note && cmake --build build/mingw64-qt --target test-units && ./build/mingw64-qt/test/test-units.exe"
 ```

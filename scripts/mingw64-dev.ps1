@@ -26,7 +26,7 @@ function Invoke-Mingw64 {
 }
 
 function Configure-VertexNoteQt {
-    Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DENABLE_LEGACY_GTK_SHELL=OFF -DCMAKE_PREFIX_PATH=/mingw64"
+    Invoke-Mingw64 "cmake -S . -B build/mingw64-qt -G Ninja -DENABLE_GTEST=ON -DDOWNLOAD_GTEST=ON -DENABLE_QT_SHELL=ON -DCMAKE_PREFIX_PATH=/mingw64"
 }
 
 function Build-VertexNoteQt {
