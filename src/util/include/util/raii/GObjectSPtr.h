@@ -19,8 +19,6 @@
 
 #include "CLibrariesSPtr.h"
 
-typedef struct _GtkWidget GtkWidget;
-
 namespace xoj::util {
 
 inline namespace raii {
@@ -44,8 +42,6 @@ public:
 
 template <typename GlibClass>
 using GObjectSPtr = CLibrariesSPtr<GlibClass, raii::specialization::GObjectHandler<GlibClass>>;
-
-using WidgetSPtr = GObjectSPtr<GtkWidget>;
 
 };  // namespace raii
 };  // namespace xoj::util

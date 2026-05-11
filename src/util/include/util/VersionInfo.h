@@ -13,9 +13,6 @@
 #include <string>
 
 namespace xoj::util {
-/// Get the running GDK backend (or nullptr if none)
-const char* getGdkBackend();
-
 /// Get a string "VertexNote a.b.c + commit info"
 std::string getVertexNoteVersion();
 

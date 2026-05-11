@@ -14,13 +14,11 @@
 #include <memory>  // for shared_ptr
 #include <string>
 
-#include <gio/gio.h>                // for GInputStream
-#include <glib.h>                   // for GError
+#include <gio/gio.h>   // for GInputStream
+#include <glib.h>      // for GError
 
 #include "filesystem.h"  // for path
 #include "util/RasterImageData.h"
-
-typedef struct _GdkPixbuf GdkPixbuf;
 
 struct BackgroundImage {
     friend bool operator==(const BackgroundImage& lhs, const BackgroundImage& rhs) = default;
@@ -41,6 +39,7 @@ struct BackgroundImage {
     void setAttach(bool attach);
 
     [[nodiscard]] auto renderPreviewRaster() const -> xoj::util::RasterImageData;
+    [[nodiscard]] auto hasLoadedImage() const -> bool;
 
     bool isEmpty() const;
 
@@ -49,10 +48,7 @@ private:
 
     std::shared_ptr<Content> img;
 
-    friend GdkPixbuf* getBackgroundImagePixbuf(BackgroundImage& image);
-    friend const GdkPixbuf* getBackgroundImagePixbuf(const BackgroundImage& image);
+    friend bool saveBackgroundImagePng(const BackgroundImage& image, const fs::path& path);
 };
 
-GdkPixbuf* getBackgroundImagePixbuf(BackgroundImage& image);
-const GdkPixbuf* getBackgroundImagePixbuf(const BackgroundImage& image);
 bool saveBackgroundImagePng(const BackgroundImage& image, const fs::path& path);

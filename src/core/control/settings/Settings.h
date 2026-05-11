@@ -20,7 +20,6 @@
 #include <utility>   // for pair
 #include <vector>    // for vector
 
-#include <gdk/gdk.h>      // for GdkInputSource, GdkD...
 #include <glib.h>         // for gchar, gboolean, gint
 #include <libxml/tree.h>  // for xmlNodePtr, xmlDocPtr
 
@@ -47,6 +46,7 @@ constexpr unsigned int MAX_SPACES_FOR_TAB = 8U;
 
 class ButtonConfig;
 class InputDevice;
+enum class InputDeviceSource;
 class PageTemplateSettings;
 
 class SAttribute {
@@ -468,11 +468,9 @@ public:
 
     void loadDeviceClasses();
     void saveDeviceClasses();
-    void setDeviceClassForDevice(GdkDevice* device, InputDeviceTypeOption deviceClass);
-    void setDeviceClassForDevice(const std::string& deviceName, GdkInputSource deviceSource,
+    void setDeviceClassForDevice(const std::string& deviceName, InputDeviceSource deviceSource,
                                  InputDeviceTypeOption deviceClass);
-    InputDeviceTypeOption getDeviceClassForDevice(GdkDevice* device) const;
-    InputDeviceTypeOption getDeviceClassForDevice(const std::string& deviceName, GdkInputSource deviceSource) const;
+    InputDeviceTypeOption getDeviceClassForDevice(const std::string& deviceName, InputDeviceSource deviceSource) const;
     std::vector<InputDevice> getKnownInputDevices() const;
 
     /**
@@ -1163,7 +1161,7 @@ private:
 
     bool inputSystemDrawOutsideWindow{};
 
-    std::map<std::string, std::pair<InputDeviceTypeOption, GdkInputSource>> inputDeviceClasses = {};
+    std::map<std::string, std::pair<InputDeviceTypeOption, InputDeviceSource>> inputDeviceClasses = {};
 
     /**
      * "Transaction" running, do not save until the end is reached

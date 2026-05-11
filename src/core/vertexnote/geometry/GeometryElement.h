@@ -39,7 +39,6 @@ public:
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;
     void rotate(double x0, double y0, double th) override;
     [[nodiscard]] auto intersectsArea(double x, double y, double width, double height) const -> bool override;
-    [[nodiscard]] auto intersectsArea(const GdkRectangle* src) const -> bool override;
     [[nodiscard]] auto distanceTo(double x, double y) const -> double override;
     [[nodiscard]] auto clone() const -> ElementPtr override;
     void serialize(ObjectOutputStream& out) const override;

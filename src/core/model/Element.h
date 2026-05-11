@@ -15,8 +15,6 @@
 #include <memory>   // for unique_ptr
 #include <vector>   // for vector
 
-#include <gdk/gdk.h>  // for GdkRectangle
-
 #include "util/Color.h"                     // for Color
 #include "util/Rectangle.h"                 // for Rectangle
 #include "util/serializing/Serializable.h"  // for Serializable
@@ -68,7 +66,6 @@ public:
 
     vn::util::Rectangle<double> boundingRect() const;
 
-    virtual bool intersectsArea(const GdkRectangle* src) const;
     virtual bool intersectsArea(double x, double y, double width, double height) const;
     /// Returns the distance between the element "as drawn" and the point (x,y)
     virtual double distanceTo(double x, double y) const;

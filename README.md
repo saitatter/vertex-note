@@ -5,7 +5,6 @@
 [![Issues](https://img.shields.io/github/issues/saitatter/vertex-note)](https://github.com/saitatter/vertex-note/issues)
 ![Made with C++](https://img.shields.io/badge/Made%20with-C%2B%2B-00599C?logo=cplusplus&logoColor=white)
 ![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)
-![GTK3 Legacy](https://img.shields.io/badge/GTK-3%20Legacy-4A90D9?logo=gtk&logoColor=white)
 ![Cairo Legacy](https://img.shields.io/badge/Rendering-Cairo%20Legacy-8A2BE2)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -29,7 +28,7 @@ VertexNote is a long-term fork of **Xournal++**. The goal is not to replace Xour
 
 ## 🧭 Current Status
 
-VertexNote has a working geometry system and a Qt Widgets shell that is now the forward development path. The inherited GTK3 shell remains available as a legacy fallback while the migration is completed.
+VertexNote has a working geometry system and a Qt Widgets shell. The inherited GTK3 shell has been removed; remaining legacy work is limited to Cairo/Poppler-era rendering, preview, and export paths.
 
 | Area | Status |
 |------|--------|
@@ -42,8 +41,8 @@ VertexNote has a working geometry system and a Qt Widgets shell that is now the 
 | Click-based shape tools | ✅ Done |
 | Geometry constraints | ✅ Done (6 kinds) |
 | Object-based rendering | ✅ Done |
-| Qt Widgets shell | ✅ Done (forward path) |
-| Legacy GTK3 shell | ⚠️ Deprecated fallback |
+| Qt Widgets shell | ✅ Done |
+| Legacy GTK3 shell | ✅ Removed |
 | `.xopp` extension metadata | 🚧 Planned |
 | 3D wireframe layer | 🧪 Future |
 
@@ -97,15 +96,6 @@ The current recommended Windows path is **MSYS2 MinGW64**.
 .\scripts\mingw64-dev.ps1
 ```
 
-### Legacy GTK shell
-
-- `.\scripts\mingw64-dev.ps1 configure-gtk`
-- `.\scripts\mingw64-dev.ps1 build-gtk`
-- `.\scripts\mingw64-dev.ps1 all-gtk`
-- `.\scripts\mingw64-dev.ps1 run-gtk`
-
-The GTK3 shell is deprecated and kept only as a fallback while Cairo/GTK-specific paths are being isolated.
-
 ### Qt shell
 
 Requires `mingw-w64-x86_64-qt6-base` and `mingw-w64-x86_64-qt6-printsupport`.
@@ -114,8 +104,6 @@ Requires `mingw-w64-x86_64-qt6-base` and `mingw-w64-x86_64-qt6-printsupport`.
 - `.\scripts\mingw64-dev.ps1 build`
 - `.\scripts\mingw64-dev.ps1 test`
 - `.\scripts\mingw64-dev.ps1 run`
-
-For active shell work, prefer the Qt path.
 
 See [docs/windows-mingw64.md](docs/windows-mingw64.md) for the full setup and manual commands.
 
@@ -169,7 +157,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-GTK3, Cairo, Poppler, CMake, and platform-specific dependencies are still required for the legacy shell and several migration-era rendering/export paths. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
+Cairo, Poppler, CMake, Qt6, and platform-specific dependencies are still required for several migration-era rendering/export paths. Until VertexNote has dedicated build docs, use the upstream Xournal++ setup guides as the baseline:
 
 - Linux setup: `linux-setup/`
 - macOS setup: `mac-setup/`

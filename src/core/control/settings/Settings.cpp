@@ -228,7 +228,7 @@ void Settings::loadDefault() {
 
 #ifdef _WIN32
     // This option should be on on Windows:
-    // GTK (at least until 3.24.49) only creates GDK_BUTTON_PRESS events on mouse-events or stylus-down-events
+    // Historical default: press events were only generated for mouse or stylus-down events.
     this->inputSystemTPCButton = true;
 #else
     this->inputSystemTPCButton = false;
@@ -765,7 +765,7 @@ void Settings::loadDeviceClasses() {
             // This extra class is no longer handled differently from Mouse. Merge them.
             devClass = InputDeviceTypeOption::Mouse;
         }
-        inputDeviceClasses.emplace(device.first, std::make_pair(devClass, static_cast<GdkInputSource>(deviceSource)));
+        inputDeviceClasses.emplace(device.first, std::make_pair(devClass, static_cast<InputDeviceSource>(deviceSource)));
     }
 }
 
@@ -932,10 +932,10 @@ void Settings::saveDeviceClasses() {
     for (auto& device: inputDeviceClasses) {
         const std::string& name = device.first;
         InputDeviceTypeOption& deviceClass = device.second.first;
-        GdkInputSource& source = device.second.second;
+        InputDeviceSource& source = device.second.second;
         SElement& e = s.child(name);
         e.setInt("deviceClass", static_cast<int>(deviceClass));
-        e.setInt("deviceSource", source);
+        e.setInt("deviceSource", static_cast<int>(source));
     }
 }
 
@@ -2422,11 +2422,7 @@ void Settings::setInputSystemDrawOutsideWindowEnabled(bool drawOutsideWindowEnab
 
 auto Settings::getInputSystemDrawOutsideWindowEnabled() const -> bool { return this->inputSystemDrawOutsideWindow; }
 
-void Settings::setDeviceClassForDevice(GdkDevice* device, InputDeviceTypeOption deviceClass) {
-    this->setDeviceClassForDevice(gdk_device_get_name(device), gdk_device_get_source(device), deviceClass);
-}
-
-void Settings::setDeviceClassForDevice(const string& deviceName, GdkInputSource deviceSource,
+void Settings::setDeviceClassForDevice(const string& deviceName, InputDeviceSource deviceSource,
                                        InputDeviceTypeOption deviceClass) {
     auto it = inputDeviceClasses.find(deviceName);
     if (it != inputDeviceClasses.end()) {
@@ -2441,17 +2437,13 @@ auto Settings::getKnownInputDevices() const -> std::vector<InputDevice> {
     std::vector<InputDevice> inputDevices;
     for (auto pair: inputDeviceClasses) {
         const std::string& name = pair.first;
-        GdkInputSource& source = pair.second.second;
+        InputDeviceSource& source = pair.second.second;
         inputDevices.emplace_back(name, source);
     }
     return inputDevices;
 }
 
-auto Settings::getDeviceClassForDevice(GdkDevice* device) const -> InputDeviceTypeOption {
-    return this->getDeviceClassForDevice(gdk_device_get_name(device), gdk_device_get_source(device));
-}
-
-auto Settings::getDeviceClassForDevice(const string& deviceName, GdkInputSource deviceSource) const
+auto Settings::getDeviceClassForDevice(const string& deviceName, InputDeviceSource deviceSource) const
         -> InputDeviceTypeOption {
     auto search = inputDeviceClasses.find(deviceName);
     if (search != inputDeviceClasses.end()) {
@@ -2461,31 +2453,25 @@ auto Settings::getDeviceClassForDevice(const string& deviceName, GdkInputSource 
 
     InputDeviceTypeOption deviceType = InputDeviceTypeOption::Disabled;
     switch (deviceSource) {
-        case GDK_SOURCE_CURSOR:
-#if (GDK_MAJOR_VERSION >= 3 && GDK_MINOR_VERSION >= 22)
-        case GDK_SOURCE_TABLET_PAD:
-#endif
-        case GDK_SOURCE_KEYBOARD:
+        case InputDeviceSource::Cursor:
+        case InputDeviceSource::TabletPad:
+        case InputDeviceSource::Keyboard:
             deviceType = InputDeviceTypeOption::Disabled;
             break;
-        case GDK_SOURCE_MOUSE:
-        case GDK_SOURCE_TOUCHPAD:
-#if (GDK_MAJOR_VERSION >= 3 && GDK_MINOR_VERSION >= 22)
-        case GDK_SOURCE_TRACKPOINT:
-#endif
+        case InputDeviceSource::Mouse:
+        case InputDeviceSource::Touchpad:
+        case InputDeviceSource::Trackpoint:
             deviceType = InputDeviceTypeOption::Mouse;
             break;
-        case GDK_SOURCE_PEN:
+        case InputDeviceSource::Pen:
             deviceType = InputDeviceTypeOption::Pen;
             break;
-        case GDK_SOURCE_ERASER:
+        case InputDeviceSource::Eraser:
             deviceType = InputDeviceTypeOption::Eraser;
             break;
-        case GDK_SOURCE_TOUCHSCREEN:
+        case InputDeviceSource::Touchscreen:
             deviceType = InputDeviceTypeOption::Touchscreen;
             break;
-        default:
-            deviceType = InputDeviceTypeOption::Disabled;
     }
     return deviceType;
 }

@@ -17,8 +17,6 @@
 #include <string_view>  // for string_view
 #include <utility>      // for pair, make_pair
 
-#include <cairo.h>  // for cairo_surface_t, cairo_status_t
-
 #include "Element.h"  // for Element
 
 class ObjectInputStream;
@@ -32,7 +30,7 @@ public:
     Image& operator=(const Image&) = delete;
     Image(Image&&) = delete;
     Image& operator=(Image&&) = delete;
-    virtual ~Image();
+    ~Image() override = default;
 
 public:
     void setWidth(double width);
@@ -44,12 +42,9 @@ public:
     /// Set the image data by moving the data.
     void setImage(std::string&& data);
 
-    /// The image is rendered lazily by default; call this method to render it.
+    /// The image metadata is decoded lazily by default; call this method to validate it.
     /// Returns std::nullopt on success, an error message on failure
     std::optional<std::string> renderBuffer() const;
-
-    /// Returns the internal surface that contains the rendered image data.
-    cairo_surface_t* getImage() const;
 
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;
     void rotate(double x0, double y0, double th) override;
@@ -81,11 +76,9 @@ private:
     void calcSize() const override;
 
 private:
-    /// Temporary surface used as a render buffer.
-    mutable cairo_surface_t* image = nullptr;
-
     mutable std::pair<int, int> imageSize = {-1, -1};
     mutable std::string imageFormatName;
+    mutable bool imageMetadataLoaded = false;
 
     std::string data;
 };

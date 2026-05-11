@@ -27,8 +27,7 @@ void QtPreviewTextRenderer::draw(const TextRenderModel& text, RenderContext& con
         return;
     }
 
-    // Pango uses absolute size (fontSize is in device units, not typographic points).
-    // Qt's setPixelSize gives equivalent results.
+    // Text model font sizes are stored in document/device units; Qt pixel sizing preserves that behavior.
     QFont font(QString::fromStdString(text.fontName));
     font.setPixelSize(static_cast<int>(text.fontSize));
 

@@ -13,24 +13,33 @@
 
 #include <string>
 
-#include <gdk/gdk.h>
+enum class InputDeviceSource {
+    Mouse = 0,
+    Pen = 1,
+    Eraser = 2,
+    Cursor = 3,
+    Keyboard = 4,
+    Touchscreen = 5,
+    Touchpad = 6,
+    Trackpoint = 7,
+    TabletPad = 8,
+};
 
 class InputDevice {
 public:
     InputDevice();
-    explicit InputDevice(GdkDevice* device);
-    explicit InputDevice(std::string name, GdkInputSource source);
+    explicit InputDevice(std::string name, InputDeviceSource source);
     ~InputDevice() = default;
 
 public:
     std::string getType() const;
     std::string getName() const;
-    GdkInputSource getSource() const;
-    void updateType(GdkInputSource newSource);
+    InputDeviceSource getSource() const;
+    void updateType(InputDeviceSource newSource);
 
     bool operator==(const InputDevice& inputDevice) const;
 
 private:
     std::string name;
-    GdkInputSource source{GDK_SOURCE_MOUSE};
+    InputDeviceSource source{InputDeviceSource::Mouse};
 };

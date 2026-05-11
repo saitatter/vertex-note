@@ -515,7 +515,7 @@ TEST(ControlLoadHandler, testImageZipped) {
 }
 
 TEST(ControlLoadHandler, imageLoadJpeg) {
-    // check loading of arbitrary image format (up to whatever is supported by GdkPixbuf)
+    // check loading of arbitrary image format (up to whatever is supported by the Qt image codecs)
     auto doc = loadTestDocument(GET_TESTFILE(u8"packaged_xopp/imgAttachment/doc_with_jpg.xopp"));
     ASSERT_TRUE(doc) << "doc should not be null";
 

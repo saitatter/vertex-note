@@ -244,10 +244,6 @@ auto GeometryElement::intersectsArea(double x, double y, double width, double he
     return false;
 }
 
-auto GeometryElement::intersectsArea(const GdkRectangle* src) const -> bool {
-    return intersectsArea(src->x, src->y, src->width, src->height);
-}
-
 auto GeometryElement::distanceTo(double x, double y) const -> double {
     double distance = std::numeric_limits<double>::max();
 

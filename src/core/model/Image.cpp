@@ -1,18 +1,22 @@
 #include "Image.h"
 
+#include <algorithm>
 #include <cmath>      // for sqrt
 #include <memory>
 #include <utility>  // for move, pair
 
-#include <cairo.h>    // for cairo_surface_destroy
-#include <gdk/gdk.h>  // for gdk_cairo_set_sourc...
-#include <glib.h>     // for guchar
+#include <QBuffer>
+#include <QByteArray>
+#include <QImage>
+#include <QImageReader>
+#include <QIODevice>
+#include <QSize>
+#include <QString>
 
 #include "model/Element.h"   // for Element, ELEMENT_IMAGE
 #include "util/Assert.h"     // for xoj_assert
 #include "util/Rectangle.h"  // for Rectangle
 #include "util/i18n.h"
-#include "util/raii/GObjectSPtr.h"  // for GObjectSPtr
 #include "util/safe_casts.h"
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
@@ -20,13 +24,6 @@
 using vn::util::Rectangle;
 
 Image::Image(): Element(ELEMENT_IMAGE) {}
-
-Image::~Image() {
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
-}
 
 auto Image::clone() const -> ElementPtr {
     auto img = std::make_unique<Image>();
@@ -38,9 +35,9 @@ auto Image::clone() const -> ElementPtr {
     img->height = this->height;
     img->data = this->data;
 
-    img->image = this->image ? cairo_surface_reference(this->image) : nullptr;
     img->imageSize = this->imageSize;
     img->imageFormatName = this->imageFormatName;
+    img->imageMetadataLoaded = this->imageMetadataLoaded;
     img->snappedBounds = this->snappedBounds;
     img->sizeCalculated = this->sizeCalculated;
 
@@ -60,95 +57,51 @@ void Image::setHeight(double height) {
 void Image::setImage(std::string_view data) { setImage(std::string(data)); }
 
 void Image::setImage(std::string&& data) {
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
     this->data = std::move(data);
     this->imageSize = NOSIZE;
     this->imageFormatName.clear();
+    this->imageMetadataLoaded = false;
 }
 
 auto Image::renderBuffer() const -> std::optional<std::string> {
     xoj_assert_message(data.length() > 0, "image has no data, cannot render it!");
-    if (this->image) {
-        // Already rendered
+    if (this->imageMetadataLoaded) {
         return std::nullopt;
     }
-    vn::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), vn::util::adopt);
-    g_signal_connect(loader.get(), "size-prepared",
-                     G_CALLBACK(+[](GdkPixbufLoader* self, gint width, gint height, gpointer) {
-                         static constexpr uint64_t MAX_SIZE =
-                                 1 << 25;  ///< Max number of pixels: 32M = more than enough for A4 in 72pp
-                         if (width <= 0 || height <= 0) {
-                             g_warning("Image::renderBuffer(): non-positive width/height");
-                             return;
-                         }
-                         if (static_cast<uint64_t>(width) * static_cast<uint64_t>(height) > MAX_SIZE) {
-                             double ratio = static_cast<double>(width) / static_cast<double>(height);
-                             gint maxHeight = floor_cast<gint>(std::sqrt(MAX_SIZE / ratio));
-                             gint maxWidth = floor_cast<gint>(maxHeight * ratio);
-                             g_warning("Trying to open an image too big %d x %d. Resizing it to %d x %d", width, height,
-                                       maxWidth, maxHeight);
-                             gdk_pixbuf_loader_set_size(self, maxHeight, maxWidth);
-                         }
-                     }),
-                     nullptr);
-    GError* err = nullptr;
-    bool success = gdk_pixbuf_loader_write(loader.get(), reinterpret_cast<const guchar*>(this->data.c_str()),
-                                           this->data.length(), &err);
-    if (!success) {
-        if (err != nullptr) {
-            std::string msg = std::string(_("Failed to load image")) + "\n" + _("Error: ") + err->message;
-            g_free(err);
-            return msg;
-        } else {
-            return std::string(_("Failed to load image")) + "\n" + _("Unrecoverable error");
-        }
-    }
-    success = gdk_pixbuf_loader_close(loader.get(), &err);
-    if (!success) {
-        if (err != nullptr) {
-            std::string msg = std::string(_("Failed to close image stream")) + "\n" + _("Error: ") + err->message;
-            g_free(err);
-            return msg;
-        } else {
-            return std::string(_("Failed to close image stream")) + "\n" + _("Unrecoverable error");
-        }
+
+    QByteArray bytes = QByteArray::fromRawData(this->data.data(), static_cast<qsizetype>(this->data.size()));
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::ReadOnly);
+
+    QImageReader reader(&buffer);
+    reader.setAutoTransform(true);
+
+    if (!reader.canRead()) {
+        return std::string(_("Failed to load image")) + "\n" + _("Error: ") + reader.errorString().toStdString();
     }
 
-    GdkPixbuf* tmp = gdk_pixbuf_loader_get_pixbuf(loader.get());
-    xoj_assert(tmp != nullptr);
-    vn::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(tmp), vn::util::adopt);
-
-    if (auto* format = gdk_pixbuf_loader_get_format(loader.get())) {
-        gchar* formatName = gdk_pixbuf_format_get_name(format);
-        this->imageFormatName = formatName ? formatName : "";
-        g_free(formatName);
+    if (const auto format = reader.format(); !format.isEmpty()) {
+        this->imageFormatName = QString::fromLatin1(format).toStdString();
     }
 
-    this->imageSize = {gdk_pixbuf_get_width(pixbuf.get()), gdk_pixbuf_get_height(pixbuf.get())};
+    static constexpr uint64_t MAX_SIZE = 1ULL << 25;  // 32M pixels, enough for A4 at 72pp.
+    const QSize originalSize = reader.size();
+    if (originalSize.width() > 0 && originalSize.height() > 0 &&
+        static_cast<uint64_t>(originalSize.width()) * static_cast<uint64_t>(originalSize.height()) > MAX_SIZE) {
+        const double ratio = static_cast<double>(originalSize.width()) / static_cast<double>(originalSize.height());
+        const int maxHeight = floor_cast<int>(std::sqrt(MAX_SIZE / ratio));
+        const int maxWidth = floor_cast<int>(maxHeight * ratio);
+        reader.setScaledSize(QSize(std::max(1, maxWidth), std::max(1, maxHeight)));
+    }
 
-    // TODO: pass in window once this code is refactored into ImageView
-    this->image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, this->imageSize.first, this->imageSize.second);
-    g_assert(this->image != nullptr);
+    const QImage decoded = reader.read();
+    if (decoded.isNull()) {
+        return std::string(_("Failed to load image")) + "\n" + _("Error: ") + reader.errorString().toStdString();
+    }
 
-    // Paint the pixbuf on to the surface
-    // NOTE: we do this manually instead of using gdk_cairo_surface_create_from_pixbuf
-    // since this does not work in CLI mode.
-    cairo_t* cr = cairo_create(this->image);
-    gdk_cairo_set_source_pixbuf(cr, pixbuf.get(), 0, 0);
-    cairo_paint(cr);
-    cairo_destroy(cr);
+    this->imageSize = {decoded.width(), decoded.height()};
+    this->imageMetadataLoaded = true;
     return std::nullopt;
-}
-
-auto Image::getImage() const -> cairo_surface_t* {
-    if (auto opt = renderBuffer(); opt.has_value()) {
-        // An error occurred
-        g_warning("%s", opt->c_str());
-    }
-    return this->image;
 }
 
 void Image::scale(double x0, double y0, double fx, double fy, double rotation,
@@ -188,14 +141,10 @@ void Image::readSerialized(ObjectInputStream& in) {
     this->width = in.readDouble();
     this->height = in.readDouble();
 
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
-
     this->data = in.readImage();
     this->imageSize = NOSIZE;
     this->imageFormatName.clear();
+    this->imageMetadataLoaded = false;
 
     in.endObject();
     this->calcSize();
@@ -215,7 +164,7 @@ size_t Image::getRawDataLength() const { return this->data.size(); }
 std::pair<int, int> Image::getImageSize() const { return this->imageSize; }
 
 const std::string& Image::getImageFormatName() const {
-    if (this->imageFormatName.empty() && hasData()) {
+    if (!this->imageMetadataLoaded && hasData()) {
         (void) renderBuffer();
     }
     return this->imageFormatName;

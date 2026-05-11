@@ -6,38 +6,34 @@
 
 InputDevice::InputDevice() = default;
 
-InputDevice::InputDevice(GdkDevice* device): name(gdk_device_get_name(device)), source(gdk_device_get_source(device)) {}
-
-InputDevice::InputDevice(std::string name, GdkInputSource source): name(std::move(name)), source(source) {}
+InputDevice::InputDevice(std::string name, InputDeviceSource source): name(std::move(name)), source(source) {}
 
 auto InputDevice::getName() const -> std::string { return this->name; }
 
-auto InputDevice::getSource() const -> GdkInputSource { return this->source; }
+auto InputDevice::getSource() const -> InputDeviceSource { return this->source; }
 
-void InputDevice::updateType(GdkInputSource newSource) { this->source = newSource; }
+void InputDevice::updateType(InputDeviceSource newSource) { this->source = newSource; }
 
 auto InputDevice::getType() const -> std::string {
     switch (source) {
-        case GDK_SOURCE_MOUSE:
+        case InputDeviceSource::Mouse:
             return _("mouse");
-        case GDK_SOURCE_PEN:
+        case InputDeviceSource::Pen:
             return _("pen");
-        case GDK_SOURCE_ERASER:
+        case InputDeviceSource::Eraser:
             return _("eraser");
-        case GDK_SOURCE_CURSOR:
+        case InputDeviceSource::Cursor:
             return _("cursor");
-        case GDK_SOURCE_KEYBOARD:
+        case InputDeviceSource::Keyboard:
             return _("keyboard");
-        case GDK_SOURCE_TOUCHSCREEN:
+        case InputDeviceSource::Touchscreen:
             return _("touchscreen");
-        case GDK_SOURCE_TOUCHPAD:
+        case InputDeviceSource::Touchpad:
             return _("touchpad");
-#if (GDK_MAJOR_VERSION >= 3 && GDK_MINOR_VERSION >= 22)
-        case GDK_SOURCE_TRACKPOINT:
+        case InputDeviceSource::Trackpoint:
             return _("trackpoint");
-        case GDK_SOURCE_TABLET_PAD:
+        case InputDeviceSource::TabletPad:
             return _("tablet pad");
-#endif
     }
 
     return "";

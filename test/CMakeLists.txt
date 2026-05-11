@@ -118,8 +118,6 @@ gtest_discover_tests(test-units
   DISCOVERY_TIMEOUT 30
   PROPERTIES
     ENVIRONMENT "${TEST_ENV_VARS}"
-  $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
-    DEPENDS create-gdk-pixbuf-loader-cache>
 )
 ###############################################################################
 # Define benchmarks: gtest-like app with benchmark units - not added to CTest or the `test` target

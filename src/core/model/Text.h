@@ -14,10 +14,7 @@
 #include <string>  // for string
 #include <vector>
 
-#include <pango/pango.h>
-
 #include "model/Element.h"
-#include "util/raii/GObjectSPtr.h"
 
 #include "AudioElement.h"  // for AudioElement
 #include "Font.h"          // for NoteFont
@@ -47,9 +44,6 @@ public:
 
     void setInEditing(bool inEditing);
     bool isInEditing() const;
-
-    vn::util::GObjectSPtr<PangoLayout> createPangoLayout() const;
-    void updatePangoFont(PangoLayout* layout) const;
 
     void scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) override;
     void rotate(double x0, double y0, double th) override;

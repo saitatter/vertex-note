@@ -202,7 +202,7 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             auto* image = new XmlImageNode(TAG_NAMES[TagType::IMAGE]);
             layer->addChild(image);
 
-            image->setImage(i->getImage());
+            image->setImage(std::string_view(reinterpret_cast<const char*>(i->getRawData()), i->getRawDataLength()));
 
             image->setAttrib(vn::xml_attrs::LEFT_POS_STR, i->getX());
             image->setAttrib(vn::xml_attrs::TOP_POS_STR, i->getY());
@@ -301,7 +301,7 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
             char* filename = g_strdup_printf("%i", cloneId);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);
             g_free(filename);
-        } else if (p->getBackgroundImage().isAttached() && getBackgroundImagePixbuf(p->getBackgroundImage())) {
+        } else if (p->getBackgroundImage().isAttached() && p->getBackgroundImage().hasLoadedImage()) {
             char* filename = g_strdup_printf("bg_%d.png", this->attachBgId++);
             background->setAttrib(vn::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);

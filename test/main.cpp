@@ -17,6 +17,7 @@
 
 #include <glib.h>
 #include <gtest/gtest.h>
+#include <QApplication>
 
 namespace {
 
@@ -42,6 +43,10 @@ public:
 
 int main(int argc, char* argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+    }
+    QApplication app(argc, argv);
     // gtest takes ownership of the TestEnvironment ptr - we don't delete it.
     ::testing::AddGlobalTestEnvironment(new TestEnvironment);
     return RUN_ALL_TESTS();

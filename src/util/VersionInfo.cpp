@@ -10,8 +10,6 @@
 #include "util/raii/CStringWrapper.h"
 
 namespace xoj::util {
-const char* getGdkBackend() { return nullptr; }
-
 std::string getVertexNoteVersion() {
     auto str = std::string(PROJECT_NAME) + " " + PROJECT_VERSION;
     if (!std::string(GIT_COMMIT_ID).empty()) {

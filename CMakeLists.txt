@@ -58,7 +58,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # enable clang tidy to use correct include
 set_directory_properties(PROPERTIES EP_BASE "${PROJECT_BINARY_DIR}/external")
 
 add_definitions(-D_USE_MATH_DEFINES)
-add_definitions(-DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED)
 
 include(CheckCXXCompilerFlag)
 if (CMAKE_GENERATOR STREQUAL "Ninja")
@@ -162,8 +161,6 @@ list(APPEND common-pkg-module-spec "libxml-2.0 >= 2.0.0")
 list(APPEND common-pkg-module-spec "libzip >= 1.0.1")
 list(APPEND common-pkg-module-spec "librsvg-2.0 >= 2.46")
 list(APPEND common-pkg-module-spec "cairo >= 1.0.0")
-list(APPEND common-pkg-module-spec "gdk-3.0 >= 3.18.9")
-list(APPEND common-pkg-module-spec "gdk-pixbuf-2.0 >= 2.0.0")
 list(APPEND common-pkg-module-spec "poppler-glib >= 0.41.0")
 if (APPLE)
   list(APPEND common-pkg-module-spec "poppler-cpp >= 0.41.0")
@@ -222,7 +219,7 @@ if (NOT ENABLE_QT_SHELL)
 endif ()
 
 if (ENABLE_QT_SHELL)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport)
+    find_package(Qt6 REQUIRED COMPONENTS Gui Widgets PrintSupport)
     message(STATUS "Enable Qt Widgets shell")
 else ()
     message(STATUS "Disable Qt Widgets shell")
@@ -297,7 +294,6 @@ target_link_libraries(external_common_modules INTERFACE
 
 target_compile_definitions(external_common_modules INTERFACE
         GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_40
-        GDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_18
         $<$<TARGET_EXISTS:X11::X11>:X11_ENABLED>
         )
 target_link_options(external_common_modules INTERFACE
@@ -330,7 +326,6 @@ add_compile_definitions(G_LOG_DOMAIN="vertexnote")
 # Debug options
 option(DEBUG_INPUT "Input debugging, e.g. eraser events etc" OFF)
 option(DEBUG_INPUT_PRINT_ALL_MOTION_EVENTS "Input debugging, print all motion events" OFF)
-option(DEBUG_INPUT_GDK_PRINT_EVENTS "Input debugging, print all GDK events" OFF)
 option(DEBUG_RECOGNIZER "Shape recognizer debug: output score etc" OFF)
 option(DEBUG_SCHEDULER "Scheduler debug: show jobs etc" OFF)
 option(DEBUG_SHOW_ELEMENT_BOUNDS "Draw a surrounding border to all elements" OFF)
@@ -353,7 +348,7 @@ option(DEV_ENABLE_GCOV "Build with gcov support" OFF) # Enabel gcov support – 
 
 mark_as_advanced(FORCE
         DEV_TOOLBAR_CONFIG DEV_SETTINGS_XML_FILE DEV_PRINT_CONFIG_FILE DEV_METADATA_FILE
-        DEV_ENABLE_GCOV DEV_CHECK_GTK3_COMPAT
+        DEV_ENABLE_GCOV
         )
 
 configure_file(
@@ -500,7 +495,7 @@ set(CPACK_DEBIAN_PACKAGE_RELEASE 2)
 set(CPACK_DEBIAN_PACKAGE_VERSION "${CPACK_PROJECT_VERSION}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "libglib2.0-0 (>= 2.32), libgtk-3-0 (>= 3.18), libpoppler-glib8 (>= 0.41.0), libxml2 (>= 2.0.0), libportaudiocpp0 (>= 12), libsndfile1 (>= 1.0.25), liblua5.3-0 | liblua5.4-0, libzip4 (>= 1.0.1) | libzip5, zlib1g, libc6, qpdf (>= 10.6.0), libgtksourceview-4-0")
+        "libglib2.0-0 (>= 2.32), libcairo2 (>= 1.0), libpoppler-glib8 (>= 0.41.0), libxml2 (>= 2.0.0), libportaudiocpp0 (>= 12), libsndfile1 (>= 1.0.25), liblua5.3-0 | liblua5.4-0, libzip4 (>= 1.0.1) | libzip5, zlib1g, libc6, qpdf (>= 10.6.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "texlive-base, texlive-latex-extra")  # Latex tool
 # Use debian's arch scheme; we only care about x86/amd64 for now but feel free to add more
 if (${PACKAGE_ARCH} STREQUAL "x86_64")

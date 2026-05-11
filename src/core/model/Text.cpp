@@ -1,10 +1,16 @@
 #include "Text.h"
 
+#include <algorithm>
+#include <cmath>
 #include <memory>
 #include <utility>  // for move
 
+#include <QFont>
+#include <QFontMetricsF>
+#include <QString>
+#include <QStringList>
+
 #include <glib.h>  // for g_warning
-#include <pango/pangocairo.h>
 
 #include "model/AudioElement.h"   // for AudioElement
 #include "model/Element.h"        // for ELEMENT_TEXT, Eleme...
@@ -12,12 +18,42 @@
 #include "pdf/base/PdfPage.h"  // for PdfRectangle
 #include "util/Rectangle.h"       // for Rectangle
 #include "util/Stacktrace.h"      // for Stacktrace
-#include "util/StringUtils.h"
-#include "util/raii/GObjectSPtr.h"
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
 using vn::util::Rectangle;
+
+namespace {
+
+auto fontForText(const Text& text) -> QFont {
+    QFont font(QString::fromStdString(text.getFontName()));
+    font.setPixelSize(std::max(1, static_cast<int>(std::round(text.getFontSize()))));
+    return font;
+}
+
+auto lineStartFor(const QString& text, int position) -> int {
+    const int previousBreak = static_cast<int>(text.lastIndexOf(QChar('\n'), std::max(0, position - 1)));
+    return previousBreak < 0 ? 0 : previousBreak + 1;
+}
+
+auto lineIndexFor(const QString& text, int position) -> int {
+    int line = 0;
+    for (int i = 0; i < position && i < text.size(); ++i) {
+        if (text.at(i) == QChar('\n')) {
+            ++line;
+        }
+    }
+    return line;
+}
+
+auto advanceFor(const QFontMetricsF& metrics, const QString& text, int start, int length) -> double {
+    if (length <= 0) {
+        return 0.0;
+    }
+    return metrics.horizontalAdvance(text.mid(start, length));
+}
+
+}  // namespace
 
 Text::Text(): AudioElement(ELEMENT_TEXT) {
     this->font.setName("Sans");
@@ -65,13 +101,17 @@ void Text::setText(std::string text) {
 }
 
 void Text::calcSize() const {
-    auto layout = createPangoLayout();
-    pango_layout_set_text(layout.get(), this->text.c_str(), static_cast<int>(this->text.length()));
-    int w = 0;
-    int h = 0;
-    pango_layout_get_size(layout.get(), &w, &h);
-    this->width = (static_cast<double>(w)) / PANGO_SCALE;
-    this->height = (static_cast<double>(h)) / PANGO_SCALE;
+    const QString content = QString::fromStdString(this->text);
+    const QFontMetricsF metrics(fontForText(*this));
+
+    const auto lines = content.split(QChar('\n'), Qt::KeepEmptyParts);
+    double maxWidth = 0.0;
+    for (const auto& line: lines) {
+        maxWidth = std::max(maxWidth, metrics.horizontalAdvance(line));
+    }
+
+    this->width = maxWidth;
+    this->height = static_cast<double>(std::max<qsizetype>(1, lines.size())) * metrics.height();
     this->updateSnapping();
 }
 
@@ -86,29 +126,6 @@ void Text::setHeight(double height) {
 }
 
 void Text::setInEditing(bool inEditing) { this->inEditing = inEditing; }
-
-auto Text::createPangoLayout() const -> vn::util::GObjectSPtr<PangoLayout> {
-    vn::util::GObjectSPtr<PangoContext> c(pango_font_map_create_context(pango_cairo_font_map_get_default()),
-                                           vn::util::adopt);
-    pango_context_set_round_glyph_positions(c.get(), false);  // Avoid weird glyph positioning on small fonts
-    vn::util::GObjectSPtr<PangoLayout> layout(pango_layout_new(c.get()), vn::util::adopt);
-
-#if PANGO_VERSION_CHECK(1, 48, 5)  // see https://gitlab.gnome.org/GNOME/pango/-/issues/499
-    pango_layout_set_line_spacing(layout.get(), 1.0);
-#endif
-
-    updatePangoFont(layout.get());
-
-    return layout;
-}
-
-void Text::updatePangoFont(PangoLayout* layout) const {
-    PangoFontDescription* desc = pango_font_description_from_string(this->getFontName().c_str());
-    pango_font_description_set_absolute_size(desc, this->getFontSize() * PANGO_SCALE);
-
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
-}
 
 void Text::scale(double x0, double y0, double fx, double fy, double rotation,
                  bool) {  // line width scaling option is not used
@@ -166,31 +183,30 @@ void Text::updateSnapping() const {
 }
 
 auto Text::findText(const std::string& search) const -> std::vector<PdfRectangle> {
-    size_t patternLength = search.length();
-    if (patternLength == 0) {
+    const QString content = QString::fromStdString(this->text);
+    const QString pattern = QString::fromStdString(search);
+    if (pattern.isEmpty()) {
         return {};
     }
 
-    auto layout = this->createPangoLayout();
-    pango_layout_set_text(layout.get(), this->text.c_str(), static_cast<int>(this->text.length()));
-
-
-    std::string text = StringUtils::toLowerCase(this->text);
-
-    std::string pattern = StringUtils::toLowerCase(search);
-
+    const QString lowerText = content.toLower();
+    const QString lowerPattern = pattern.toLower();
+    const QFontMetricsF metrics(fontForText(*this));
     std::vector<PdfRectangle> list;
 
-    for (size_t pos = text.find(pattern); pos != std::string::npos; pos = text.find(pattern, pos + 1)) {
-        PdfRectangle mark;
-        PangoRectangle rect = {0};
-        pango_layout_index_to_pos(layout.get(), static_cast<int>(pos), &rect);
-        mark.x1 = (static_cast<double>(rect.x)) / PANGO_SCALE + this->getX();
-        mark.y1 = (static_cast<double>(rect.y)) / PANGO_SCALE + this->getY();
+    for (int pos = static_cast<int>(lowerText.indexOf(lowerPattern)); pos >= 0;
+         pos = static_cast<int>(lowerText.indexOf(lowerPattern, pos + 1))) {
+        const int endPos = pos + static_cast<int>(lowerPattern.size());
+        const int startLine = lineIndexFor(content, pos);
+        const int endLine = lineIndexFor(content, std::max(pos, endPos - 1));
+        const int startLineStart = lineStartFor(content, pos);
+        const int endLineStart = lineStartFor(content, std::max(pos, endPos - 1));
 
-        pango_layout_index_to_pos(layout.get(), static_cast<int>(pos + patternLength - 1), &rect);
-        mark.x2 = (static_cast<double>(rect.x) + rect.width) / PANGO_SCALE + this->getX();
-        mark.y2 = (static_cast<double>(rect.y) + rect.height) / PANGO_SCALE + this->getY();
+        PdfRectangle mark;
+        mark.x1 = advanceFor(metrics, content, startLineStart, pos - startLineStart) + this->getX();
+        mark.y1 = static_cast<double>(startLine) * metrics.height() + this->getY();
+        mark.x2 = advanceFor(metrics, content, endLineStart, endPos - endLineStart) + this->getX();
+        mark.y2 = (static_cast<double>(endLine) + 1.0) * metrics.height() + this->getY();
 
         list.push_back(mark);
     }
