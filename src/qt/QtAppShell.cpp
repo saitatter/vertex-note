@@ -2888,6 +2888,16 @@ void QtAppShell::updateEditCommandStates() {
     this->window.commandHost()->setCommandEnabled("edit.undo-geometry", this->window.canvas()->canUndo());
     this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedo());
     const auto currentPage = this->window.canvas()->currentPageIndex();
+    const bool hasDocument = this->documentController.hasDocument();
+    const auto pageCount = this->documentController.pageCount();
+    this->window.commandHost()->setCommandEnabled("page.add-before", hasDocument);
+    this->window.commandHost()->setCommandEnabled("page.add", hasDocument);
+    this->window.commandHost()->setCommandEnabled("page.add-end", hasDocument);
+    this->window.commandHost()->setCommandEnabled("page.duplicate", hasDocument && pageCount > 0U);
+    this->window.commandHost()->setCommandEnabled("page.move-up", hasDocument && currentPage > 0U);
+    this->window.commandHost()->setCommandEnabled("page.move-down", hasDocument && currentPage + 1U < pageCount);
+    this->window.commandHost()->setCommandEnabled("page.delete", hasDocument && pageCount > 1U);
+    this->window.commandHost()->setCommandEnabled("journal.append-new-pdf-pages", hasDocument);
     this->window.commandHost()->setCommandEnabled("page.format", this->documentController.canResizePage(currentPage));
     this->window.commandHost()->setCommandEnabled("edit.move-selection-layer-up",
                                                   this->documentController.canMoveSelectionToAdjacentLayer(+1));
@@ -3182,6 +3192,7 @@ void QtAppShell::addPage() {
     this->documentController.addPageAfter(pageCount > 0 ? pageCount - 1 : 0);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page added"), 3000);
 }
@@ -3201,6 +3212,7 @@ void QtAppShell::deletePage() {
     this->documentController.deletePage(pageCount - 1);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page deleted"), 3000);
 }
@@ -3219,6 +3231,7 @@ void QtAppShell::duplicatePage() {
     this->documentController.duplicatePage(pageCount - 1);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page duplicated"), 3000);
 }
@@ -3900,6 +3913,7 @@ void QtAppShell::addPageBefore() {
     this->documentController.addPageBefore(pageIndex);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page added before"), 3000);
 }
@@ -3917,6 +3931,7 @@ void QtAppShell::movePageUp() {
     this->window.canvas()->scrollToPage(pageIndex - 1);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page moved up"), 3000);
 }
@@ -3934,6 +3949,7 @@ void QtAppShell::movePageDown() {
     this->window.canvas()->scrollToPage(pageIndex + 1);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page moved down"), 3000);
 }
@@ -4380,6 +4396,7 @@ void QtAppShell::addPageAtEnd() {
     this->documentController.addPageAfter(pageCount > 0 ? pageCount - 1 : 0);
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Page added at end"), 3000);
 }
@@ -4398,6 +4415,7 @@ void QtAppShell::appendNewPdfPages() {
     this->window.canvas()->update();
     this->window.pageSidebar()->refresh();
     syncFooterWidgets();
+    updateEditCommandStates();
     markSessionDirty();
     this->window.statusBar()->showMessage(QStringLiteral("Appended %1 PDF page%2")
                                                   .arg(inserted)
