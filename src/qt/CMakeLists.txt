@@ -14,10 +14,12 @@ set(vertexnote_qt_sources
         QtAppShellEditing.cpp
         QtAppShellFileCommands.cpp
         QtAppShellHelpCommands.cpp
+        QtAppShellInsertActions.cpp
         QtAppShellJournalCommands.cpp
         QtAppShellNavigationCommands.cpp
         QtAppShellNavigation.cpp
         QtAppShellPageActions.cpp
+        QtAppShellPdfActions.cpp
         QtAppShellPersistentStateLoad.cpp
         QtAppShellPersistentStateSave.cpp
         QtAppShellSettings.cpp
@@ -25,6 +27,7 @@ set(vertexnote_qt_sources
         QtAppShellToolbar.cpp
         QtAppShellToolbarSync.cpp
         QtAppShellToolCommands.cpp
+        QtAppShellUpdateActions.cpp
         QtAppShellViewActions.cpp
         QtAppShellViewCommands.cpp
         QtAppShellWindowState.cpp
