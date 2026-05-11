@@ -57,9 +57,11 @@ file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
 )
 
 if (NOT ENABLE_QT_SHELL)
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtCanvasLayoutTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtPreviewStrokeRendererTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtRecentFilesServiceTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtToolbarLayoutEngineTest\\.cpp$")
 endif ()
 
 # Define test-units target
@@ -69,9 +71,11 @@ target_compile_features(test-units PRIVATE cxx_std_20)
 target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 if (ENABLE_QT_SHELL)
   target_sources(test-units PRIVATE
+    "${PROJECT_SOURCE_DIR}/src/qt/QtCanvasLayout.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtRecentFilesService.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtToolbarLayoutEngine.cpp"
   )
   target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
   target_link_libraries(test-units Qt6::Widgets)

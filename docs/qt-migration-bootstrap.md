@@ -212,14 +212,14 @@ This is the current implementation plan after the Qt parity batch through
      page/layer state, strokes/images/texts, PDF helpers, export, file dialogs,
      folders, fonts, zoom, action state, and tool colour changes.
 
+9. ✓ Qt parity unit coverage v1.
+   - Toolbar parsing covers `DRAW`, `DRAW_STROKE`, and `DRAW_VERTEX`.
+   - Canvas layout coverage exercises 1/2/3 columns and 1/2 rows through a
+     pure `QtCanvasLayout` helper used by `QtCanvas`.
+
 ### Remaining work
 
 1. **Qt UI tests for the parity batch**
-   - Add unit coverage for toolbar token parsing:
-     `DRAW`, `DRAW_STROKE`, `DRAW_VERTEX`.
-   - Add test coverage for `QtCanvas` page layout spans:
-     1/2/3 columns and 1/2 rows. `pageRects()` is currently private, so this
-     either needs a small test seam or coverage through a public viewport helper.
    - Add a small Lua runtime smoke test if the test target can link Lua in the
      same configuration as the Qt shell.
 

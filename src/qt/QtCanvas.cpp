@@ -34,6 +34,7 @@
 #include <QTimer>
 #include <QWheelEvent>
 
+#include "QtCanvasLayout.h"
 #include "QtPreviewBackgroundRenderer.h"
 #include "QtPreviewGeometryRenderer.h"
 #include "QtPreviewImageRenderer.h"
@@ -48,9 +49,6 @@ namespace {
 constexpr double MIN_ZOOM = 0.1;
 constexpr double MAX_ZOOM = 8.0;
 constexpr double ZOOM_STEP = 1.15;
-constexpr double PAGE_STACK_X = 92.0;
-constexpr double PAGE_STACK_Y = 84.0;
-constexpr double PAGE_STACK_GAP = 48.0;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
 constexpr double CM_TO_PT = 28.3464566929;
@@ -1135,95 +1133,13 @@ void QtCanvas::zoomAroundScreenPoint(double factor, const QPointF& screenPoint) 
 }
 
 auto QtCanvas::pageRects() const -> std::vector<QRectF> {
-    std::vector<QRectF> rects;
     const auto pages =
             this->documentController ? this->documentController->snapshotPages()
                                      : std::vector<vn::view::render::PageRenderSnapshot>{};
-    if (pages.empty()) {
-        rects.emplace_back(PAGE_STACK_X, PAGE_STACK_Y, 1100.0, 1500.0);
-        return rects;
-    }
-
-    rects.reserve(pages.size());
-
-    const int spanValue = this->layoutColumnsRowsValue == 0 ? 1 : this->layoutColumnsRowsValue;
-    const std::size_t spanCount = static_cast<std::size_t>(std::clamp(std::abs(spanValue), 1, 8));
-    const bool fixedRows = spanValue < 0;
-    std::vector<std::pair<std::size_t, std::size_t>> cells;
-    std::vector<double> columnWidths;
-    std::vector<double> rowHeights;
-    cells.reserve(pages.size());
-    for (std::size_t index = 0; index < pages.size(); ++index) {
-        const auto& page = pages[index];
-        const double pageWidth = std::max(page.width, 1.0);
-        const double pageHeight = std::max(page.height, 1.0);
-        std::size_t row = 0U;
-        std::size_t column = 0U;
-        if (fixedRows) {
-            row = index % spanCount;
-            column = index / spanCount;
-        } else if (this->verticalLayoutEnabled) {
-            column = index % spanCount;
-            row = index / spanCount;
-        } else {
-            row = index % spanCount;
-            column = index / spanCount;
-        }
-
-        if (column >= columnWidths.size()) {
-            columnWidths.resize(column + 1U, 0.0);
-        }
-        if (row >= rowHeights.size()) {
-            rowHeights.resize(row + 1U, 0.0);
-        }
-        columnWidths[column] = std::max(columnWidths[column], pageWidth);
-        rowHeights[row] = std::max(rowHeights[row], pageHeight);
-        cells.emplace_back(row, column);
-    }
-
-    std::vector<double> columnOffsets(columnWidths.size(), PAGE_STACK_X);
-    for (std::size_t index = 1; index < columnOffsets.size(); ++index) {
-        columnOffsets[index] = columnOffsets[index - 1U] + columnWidths[index - 1U] + PAGE_STACK_GAP;
-    }
-    std::vector<double> rowOffsets(rowHeights.size(), PAGE_STACK_Y);
-    for (std::size_t index = 1; index < rowOffsets.size(); ++index) {
-        rowOffsets[index] = rowOffsets[index - 1U] + rowHeights[index - 1U] + PAGE_STACK_GAP;
-    }
-
-    for (std::size_t index = 0; index < pages.size(); ++index) {
-        const auto& page = pages[index];
-        const double pageWidth = std::max(page.width, 1.0);
-        const double pageHeight = std::max(page.height, 1.0);
-        const auto [row, column] = cells[index];
-
-        double x = PAGE_STACK_X;
-        double y = PAGE_STACK_Y;
-        if (this->verticalLayoutEnabled) {
-            x = columnOffsets[column];
-            y = rowOffsets[row];
-        } else {
-            x = rowOffsets[row];
-            y = columnOffsets[column];
-        }
-
-        rects.emplace_back(x, y, pageWidth, pageHeight);
-    }
-
-    if (this->rightToLeftLayoutEnabled || this->bottomToTopLayoutEnabled) {
-        QRectF bounds = rects.front();
-        for (std::size_t index = 1; index < rects.size(); ++index) {
-            bounds = bounds.united(rects[index]);
-        }
-        for (auto& rect: rects) {
-            if (this->rightToLeftLayoutEnabled) {
-                rect.moveLeft(bounds.right() - (rect.left() - bounds.left()) - rect.width());
-            }
-            if (this->bottomToTopLayoutEnabled) {
-                rect.moveTop(bounds.bottom() - (rect.top() - bounds.top()) - rect.height());
-            }
-        }
-    }
-    return rects;
+    return layoutQtCanvasPages(pages, {.span = this->layoutColumnsRowsValue,
+                                       .vertical = this->verticalLayoutEnabled,
+                                       .rightToLeft = this->rightToLeftLayoutEnabled,
+                                       .bottomToTop = this->bottomToTopLayoutEnabled});
 }
 
 auto QtCanvas::documentSceneBounds() const -> QRectF {

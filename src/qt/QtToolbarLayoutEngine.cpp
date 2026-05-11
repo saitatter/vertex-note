@@ -116,3 +116,17 @@ auto QtToolbarLayoutEngine::loadProfiles(const fs::path& configPath) -> std::vec
 
     return profiles;
 }
+
+auto QtToolbarLayoutEngine::expandTokenAliases(const std::vector<std::string>& tokens) -> std::vector<std::string> {
+    std::vector<std::string> expanded;
+    expanded.reserve(tokens.size());
+    for (const auto& token: tokens) {
+        if (token == "DRAW") {
+            expanded.emplace_back("DRAW_STROKE");
+            expanded.emplace_back("DRAW_VERTEX");
+            continue;
+        }
+        expanded.push_back(token);
+    }
+    return expanded;
+}

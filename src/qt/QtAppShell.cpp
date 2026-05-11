@@ -2231,6 +2231,7 @@ void QtAppShell::rebuildToolbar() {
     };
 
     for (auto* group: toolbarTokenGroups) {
+        *group = QtToolbarLayoutEngine::expandTokenAliases(*group);
         pruneRedundantFamilyTokens(*group);
     }
 
