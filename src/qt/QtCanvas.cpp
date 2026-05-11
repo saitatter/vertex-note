@@ -636,6 +636,16 @@ void QtCanvas::setCanvasBackgroundColor(Color color) {
     update();
 }
 
+void QtCanvas::setCursorHighlightOptions(bool enabled, Color fillColor, Color borderColor, int radiusPixels,
+                                         int borderWidthPixels) {
+    this->cursorHighlightEnabled = enabled;
+    this->cursorHighlightFill = fillColor;
+    this->cursorHighlightBorder = borderColor;
+    this->cursorHighlightRadiusPixels = std::clamp(radiusPixels, 1, 500);
+    this->cursorHighlightBorderWidthPixels = std::clamp(borderWidthPixels, 0, 50);
+    update();
+}
+
 void QtCanvas::setRecolorOptions(bool recolorMainView, Color light, Color dark) {
     this->recolorMainView = recolorMainView;
     this->recolorLight = light;
@@ -700,11 +710,14 @@ void QtCanvas::setUnlimitedScrolling(bool enabled) {
     emitViewportUpdate(false);
 }
 
-void QtCanvas::setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs) {
+void QtCanvas::setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs,
+                                      bool doActionOnFiltered, bool trySelectOnFiltered) {
     this->strokeFilterEnabled = enabled;
     this->strokeFilterIgnoreTimeMs = std::clamp(ignoreTimeMs, 0, 5000);
     this->strokeFilterIgnoreLengthMm = std::clamp(ignoreLengthMm, 0.0, 100.0);
     this->strokeFilterSuccessiveTimeMs = std::clamp(successiveTimeMs, 0, 5000);
+    this->doActionOnStrokeFiltered = doActionOnFiltered;
+    this->trySelectOnStrokeFiltered = trySelectOnFiltered;
 }
 
 void QtCanvas::setEmptyLastPageAppendMode(std::string mode) {
@@ -831,6 +844,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawShapePreview(painter);
     drawInstrumentOverlay(painter);
     drawEraserPreview(painter);
+    drawCursorHighlight(painter);
 
     if (this->recolorMainView) {
         painter.resetTransform();
@@ -1054,6 +1068,8 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
+    this->lastCursorScreenPosition = event->position();
+    this->cursorHighlightVisible = true;
     this->inputAdapter->handleMouseMove(*event);
     updateEraserPreviewAtScreen(event->position());
     if (this->panning) {
@@ -1160,6 +1176,8 @@ void QtCanvas::wheelEvent(QWheelEvent* event) {
 }
 
 void QtCanvas::tabletEvent(QTabletEvent* event) {
+    this->lastCursorScreenPosition = event->position();
+    this->cursorHighlightVisible = true;
     this->inputAdapter->handleTablet(*event);
     const auto tool = this->currentToolState.activeTool;
     const auto pointerAction = pointerActionForTabletEvent(*event);
@@ -1302,6 +1320,8 @@ bool QtCanvas::event(QEvent* event) {
     } else if (event && event->type() == QEvent::Leave) {
         clearGeometryHover();
         clearEraserPreview();
+        this->cursorHighlightVisible = false;
+        update();
     }
     return QWidget::event(event);
 }
@@ -2203,9 +2223,20 @@ void QtCanvas::finalizeActiveStroke() {
         maybeFinalizeStabilizedStroke();
         const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
         if (shouldFilterActiveStroke(nowMs)) {
+            if (this->trySelectOnStrokeFiltered) {
+                if (const auto* active = this->documentController->activeStroke();
+                    active && active->stroke && active->stroke->getPointCount() > 0U) {
+                    const auto point = active->stroke->getPoint(active->stroke->getPointCount() - 1U);
+                    this->documentController->selectElementAt(active->pageIndex, point.x, point.y,
+                                                              10.0 / std::max(0.001, this->zoomFactor));
+                    Q_EMIT selectionStateChanged();
+                }
+            }
             this->lastFilteredStrokeMs = nowMs;
             this->documentController->cancelStroke();
-            Q_EMIT statusHintChanged(QStringLiteral("Stroke filtered"));
+            Q_EMIT statusHintChanged(this->doActionOnStrokeFiltered
+                                             ? QStringLiteral("Stroke filtered; legacy floating toolbox unavailable")
+                                             : QStringLiteral("Stroke filtered"));
         } else {
             added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
                                                              this->shapeRecognizerMinSize,
@@ -2904,6 +2935,23 @@ void QtCanvas::drawSelectionOverlay(QPainter& painter) const {
         painter.drawRect(QRectF(corner.x() - handleSize / 2.0, corner.y() - handleSize / 2.0, handleSize, handleSize));
     }
 
+    painter.restore();
+}
+
+void QtCanvas::drawCursorHighlight(QPainter& painter) const {
+    if (!this->cursorHighlightEnabled || !this->cursorHighlightVisible) {
+        return;
+    }
+
+    painter.save();
+    const QPointF scenePoint = screenToScene(this->lastCursorScreenPosition);
+    const double radius = static_cast<double>(this->cursorHighlightRadiusPixels) / std::max(0.001, this->zoomFactor);
+    const double borderWidth =
+            static_cast<double>(this->cursorHighlightBorderWidthPixels) / std::max(0.001, this->zoomFactor);
+    painter.setBrush(qColorFromColor(this->cursorHighlightFill));
+    painter.setPen(borderWidth > 0.0 ? QPen(qColorFromColor(this->cursorHighlightBorder), borderWidth)
+                                     : Qt::NoPen);
+    painter.drawEllipse(scenePoint, radius, radius);
     painter.restore();
 }
 

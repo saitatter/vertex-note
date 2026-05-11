@@ -89,6 +89,8 @@ struct QtSettings {
     int strokeFilterIgnoreTime = 150;
     double strokeFilterIgnoreLength = 1.0;
     int strokeFilterSuccessiveTime = 500;
+    bool doActionOnStrokeFiltered = false;
+    bool trySelectOnStrokeFiltered = false;
     bool eraserCursorHidden = true;
     QtPointerButtonMatrix buttonMatrix{};
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
@@ -99,6 +101,11 @@ struct QtSettings {
     std::string iconTheme = "color";
     Color selectionColor{0, 120, 255, 255};
     Color backgroundColor = Colors::xopp_gainsboro02;
+    bool highlightPosition = false;
+    Color cursorHighlightColor{255, 255, 0, 90};
+    Color cursorHighlightBorderColor{255, 0, 0, 180};
+    int cursorHighlightRadius = 30;
+    int cursorHighlightBorderWidth = 2;
     bool recolorMainView = false;
     bool recolorSidebarMiniatures = false;
     Color recolorLight{198, 208, 245, 255};
@@ -209,6 +216,8 @@ private:
     QSpinBox* strokeFilterIgnoreTimeSpin = nullptr;
     QDoubleSpinBox* strokeFilterIgnoreLengthSpin = nullptr;
     QSpinBox* strokeFilterSuccessiveTimeSpin = nullptr;
+    QCheckBox* doActionOnStrokeFilteredCheck = nullptr;
+    QCheckBox* trySelectOnStrokeFilteredCheck = nullptr;
     QCheckBox* eraserCursorHiddenCheck = nullptr;
     QComboBox* eraserTipActionCombo = nullptr;
     QComboBox* stylusButton1ActionCombo = nullptr;
@@ -228,6 +237,11 @@ private:
     QComboBox* iconThemeCombo = nullptr;
     QPushButton* selectionColorButton = nullptr;
     QPushButton* backgroundColorButton = nullptr;
+    QCheckBox* highlightPositionCheck = nullptr;
+    QPushButton* cursorHighlightColorButton = nullptr;
+    QPushButton* cursorHighlightBorderColorButton = nullptr;
+    QSpinBox* cursorHighlightRadiusSpin = nullptr;
+    QSpinBox* cursorHighlightBorderWidthSpin = nullptr;
     QCheckBox* recolorMainViewCheck = nullptr;
     QCheckBox* recolorSidebarCheck = nullptr;
     QPushButton* recolorLightButton = nullptr;
@@ -266,6 +280,8 @@ private:
     QComboBox* toolbarProfileCombo = nullptr;
     QColor selectionColor;
     QColor backgroundColor;
+    QColor cursorHighlightColor;
+    QColor cursorHighlightBorderColor;
     QColor recolorLightColor;
     QColor recolorDarkColor;
     std::string lastOpenPath;

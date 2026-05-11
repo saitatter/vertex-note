@@ -60,12 +60,13 @@ This audit compares GTK `Settings` keys from
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
 | `snapRecognizedShapesEnabled` | Implemented | `tools/snapRecognizedShapesEnabled`; applied to Qt shape recognizer finalization. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Partial / Qt-only equivalent | `tools/drawDirModsEnabled`, `tools/drawDirModsRadius`; applied to Qt rectangle, ellipse, and coordinate-system drag tools for shift/control emulation. |
-| `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled` | Partial / Qt-only equivalent | `tools/strokeFilter*`; Qt filters very short, fast strokes before finalization. GTK post-filter actions are not migrated. |
+| `strokeFilterIgnoreTime`, `strokeFilterIgnoreLength`, `strokeFilterSuccessiveTime`, `strokeFilterEnabled`, `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Partial / Qt-only equivalent | `tools/strokeFilter*`, `tools/doActionOnStrokeFiltered`, `tools/trySelectOnStrokeFiltered`; Qt filters very short, fast strokes and can try selecting under the filtered stroke endpoint. The legacy floating toolbox action is stored but not shown in Qt. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
 | `recolor.enabled`, `recolor.sidebar`, `recolor.dark`, `recolor.light` | Implemented | `appearance/recolorMainView`, `appearance/recolorSidebarMiniatures`, `appearance/recolorLight`, `appearance/recolorDark`; applied to Qt canvas and page sidebar previews. |
 | `backgroundColor` | Implemented | `appearance/backgroundColor`; applied to the Qt canvas/document background outside page bounds. |
 | `useSpacesForTab`, `numberOfSpacesForTab` | Implemented | `tools/useSpacesForTab`, `tools/numberOfSpacesForTab`; applied to the Qt text editor overlay. |
 | `selectionBorderColor`, `selectionMarkerColor`, `activeSelectionColor` | Partial / Qt-only equivalent | `appearance/selectionColor`; Qt uses one selection accent color for selection, hover, handles, and geometry overlays. |
+| `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Implemented | `appearance/highlightPosition`, `appearance/cursorHighlight*`; Qt draws the same kind of cursor position halo on the canvas. |
 | `defaultViewModeAttributes`, `fullscreenViewModeAttributes`, `presentationViewModeAttributes` | Partial | Qt persists the active chrome/layout pieces individually rather than serializing GTK view-mode strings. |
 
 ## Partial Coverage
@@ -79,8 +80,6 @@ This audit compares GTK `Settings` keys from
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
-| `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
-| `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |

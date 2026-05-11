@@ -2785,6 +2785,14 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("tools/strokeFilterSuccessiveTime"),
                            this->currentSettings.strokeFilterSuccessiveTime)
                     .toInt();
+    this->currentSettings.doActionOnStrokeFiltered =
+            settings.value(QStringLiteral("tools/doActionOnStrokeFiltered"),
+                           this->currentSettings.doActionOnStrokeFiltered)
+                    .toBool();
+    this->currentSettings.trySelectOnStrokeFiltered =
+            settings.value(QStringLiteral("tools/trySelectOnStrokeFiltered"),
+                           this->currentSettings.trySelectOnStrokeFiltered)
+                    .toBool();
     this->currentSettings.eraserCursorHidden =
             settings.value(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden).toBool();
     this->currentSettings.buttonMatrix.eraserTipAction =
@@ -2901,6 +2909,27 @@ void QtAppShell::loadPersistentUiState() {
             Color(settings.value(QStringLiteral("appearance/backgroundColor"),
                                  static_cast<uint>(static_cast<uint32_t>(this->currentSettings.backgroundColor)))
                           .toUInt());
+    this->currentSettings.highlightPosition =
+            settings.value(QStringLiteral("appearance/highlightPosition"),
+                           this->currentSettings.highlightPosition)
+                    .toBool();
+    this->currentSettings.cursorHighlightColor =
+            Color(settings.value(QStringLiteral("appearance/cursorHighlightColor"),
+                                 static_cast<uint>(static_cast<uint32_t>(this->currentSettings.cursorHighlightColor)))
+                          .toUInt());
+    this->currentSettings.cursorHighlightBorderColor =
+            Color(settings.value(QStringLiteral("appearance/cursorHighlightBorderColor"),
+                                 static_cast<uint>(
+                                         static_cast<uint32_t>(this->currentSettings.cursorHighlightBorderColor)))
+                          .toUInt());
+    this->currentSettings.cursorHighlightRadius =
+            settings.value(QStringLiteral("appearance/cursorHighlightRadius"),
+                           this->currentSettings.cursorHighlightRadius)
+                    .toInt();
+    this->currentSettings.cursorHighlightBorderWidth =
+            settings.value(QStringLiteral("appearance/cursorHighlightBorderWidth"),
+                           this->currentSettings.cursorHighlightBorderWidth)
+                    .toInt();
     this->currentSettings.recolorMainView =
             settings.value(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView).toBool();
     this->currentSettings.recolorSidebarMiniatures =
@@ -3188,6 +3217,10 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/strokeFilterIgnoreLength"), this->currentSettings.strokeFilterIgnoreLength);
     settings.setValue(QStringLiteral("tools/strokeFilterSuccessiveTime"),
                       this->currentSettings.strokeFilterSuccessiveTime);
+    settings.setValue(QStringLiteral("tools/doActionOnStrokeFiltered"),
+                      this->currentSettings.doActionOnStrokeFiltered);
+    settings.setValue(QStringLiteral("tools/trySelectOnStrokeFiltered"),
+                      this->currentSettings.trySelectOnStrokeFiltered);
     settings.setValue(QStringLiteral("devices/eraserCursorHidden"), this->currentSettings.eraserCursorHidden);
     settings.setValue(QStringLiteral("devices/buttonMatrix/eraserTip"),
                       static_cast<int>(this->currentSettings.buttonMatrix.eraserTipAction));
@@ -3238,6 +3271,15 @@ void QtAppShell::savePersistentUiState() const {
                       static_cast<uint>(static_cast<uint32_t>(this->currentSettings.selectionColor)));
     settings.setValue(QStringLiteral("appearance/backgroundColor"),
                       static_cast<uint>(static_cast<uint32_t>(this->currentSettings.backgroundColor)));
+    settings.setValue(QStringLiteral("appearance/highlightPosition"), this->currentSettings.highlightPosition);
+    settings.setValue(QStringLiteral("appearance/cursorHighlightColor"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.cursorHighlightColor)));
+    settings.setValue(QStringLiteral("appearance/cursorHighlightBorderColor"),
+                      static_cast<uint>(static_cast<uint32_t>(this->currentSettings.cursorHighlightBorderColor)));
+    settings.setValue(QStringLiteral("appearance/cursorHighlightRadius"),
+                      this->currentSettings.cursorHighlightRadius);
+    settings.setValue(QStringLiteral("appearance/cursorHighlightBorderWidth"),
+                      this->currentSettings.cursorHighlightBorderWidth);
     settings.setValue(QStringLiteral("appearance/recolorMainView"), this->currentSettings.recolorMainView);
     settings.setValue(QStringLiteral("appearance/recolorSidebarMiniatures"),
                       this->currentSettings.recolorSidebarMiniatures);
@@ -3660,6 +3702,11 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
     canvas->setSelectionColor(this->currentSettings.selectionColor);
     canvas->setCanvasBackgroundColor(this->currentSettings.backgroundColor);
+    canvas->setCursorHighlightOptions(this->currentSettings.highlightPosition,
+                                      this->currentSettings.cursorHighlightColor,
+                                      this->currentSettings.cursorHighlightBorderColor,
+                                      this->currentSettings.cursorHighlightRadius,
+                                      this->currentSettings.cursorHighlightBorderWidth);
     canvas->setRecolorOptions(this->currentSettings.recolorMainView, this->currentSettings.recolorLight,
                               this->currentSettings.recolorDark);
     this->window.pageSidebar()->setRecolorOptions(this->currentSettings.recolorSidebarMiniatures,
@@ -3677,7 +3724,9 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setStrokeFilterOptions(this->currentSettings.strokeFilterEnabled,
                                    this->currentSettings.strokeFilterIgnoreTime,
                                    this->currentSettings.strokeFilterIgnoreLength,
-                                   this->currentSettings.strokeFilterSuccessiveTime);
+                                   this->currentSettings.strokeFilterSuccessiveTime,
+                                   this->currentSettings.doActionOnStrokeFiltered,
+                                   this->currentSettings.trySelectOnStrokeFiltered);
     canvas->setEmptyLastPageAppendMode(this->currentSettings.emptyLastPageAppend);
     this->documentController.setPdfCacheOptions(this->currentSettings.pdfPageCacheSize,
                                                 this->currentSettings.pdfPreloadPagesBefore,

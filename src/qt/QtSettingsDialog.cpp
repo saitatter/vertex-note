@@ -185,6 +185,8 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->lastImagePath = current.lastImagePath;
     this->lastPdfPath = current.lastPdfPath;
     this->lastExportPath = current.lastExportPath;
+    this->cursorHighlightColor = colorToQColor(current.cursorHighlightColor);
+    this->cursorHighlightBorderColor = colorToQColor(current.cursorHighlightBorderColor);
 
     auto* mainLayout = new QVBoxLayout(this);
     auto* tabs = new QTabWidget(this);
@@ -537,6 +539,16 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->strokeFilterSuccessiveTimeSpin->setSuffix(QStringLiteral(" ms"));
     generalLayout->addRow(QStringLiteral("Filter successive time:"), this->strokeFilterSuccessiveTimeSpin);
 
+    this->trySelectOnStrokeFilteredCheck = new QCheckBox(generalPage);
+    this->trySelectOnStrokeFilteredCheck->setChecked(current.trySelectOnStrokeFiltered);
+    generalLayout->addRow(QStringLiteral("Select on filtered stroke:"), this->trySelectOnStrokeFilteredCheck);
+
+    this->doActionOnStrokeFilteredCheck = new QCheckBox(generalPage);
+    this->doActionOnStrokeFilteredCheck->setChecked(current.doActionOnStrokeFiltered);
+    this->doActionOnStrokeFilteredCheck->setToolTip(
+            QStringLiteral("Stored for GTK parity; Qt does not show the legacy floating toolbox."));
+    generalLayout->addRow(QStringLiteral("Action on filtered stroke:"), this->doActionOnStrokeFilteredCheck);
+
     this->laserPointerFadeOutSpin = new QSpinBox(generalPage);
     this->laserPointerFadeOutSpin->setRange(100, 10000);
     this->laserPointerFadeOutSpin->setSingleStep(100);
@@ -600,6 +612,46 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
         }
     });
     appearanceLayout->addRow(QStringLiteral("Canvas background colour:"), this->backgroundColorButton);
+
+    this->highlightPositionCheck = new QCheckBox(appearancePage);
+    this->highlightPositionCheck->setChecked(current.highlightPosition);
+    appearanceLayout->addRow(QStringLiteral("Cursor position highlight:"), this->highlightPositionCheck);
+
+    this->cursorHighlightColorButton = makeColorButton(appearancePage, this->cursorHighlightColor);
+    QObject::connect(this->cursorHighlightColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->cursorHighlightColor, this,
+                                                     QStringLiteral("Cursor Highlight Colour"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->cursorHighlightColor = chosen;
+            updateColorButton(this->cursorHighlightColorButton, this->cursorHighlightColor);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Cursor highlight colour:"), this->cursorHighlightColorButton);
+
+    this->cursorHighlightBorderColorButton = makeColorButton(appearancePage, this->cursorHighlightBorderColor);
+    QObject::connect(this->cursorHighlightBorderColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor chosen = QColorDialog::getColor(this->cursorHighlightBorderColor, this,
+                                                     QStringLiteral("Cursor Highlight Border Colour"),
+                                                     QColorDialog::ShowAlphaChannel);
+        if (chosen.isValid()) {
+            this->cursorHighlightBorderColor = chosen;
+            updateColorButton(this->cursorHighlightBorderColorButton, this->cursorHighlightBorderColor);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Cursor highlight border:"), this->cursorHighlightBorderColorButton);
+
+    this->cursorHighlightRadiusSpin = new QSpinBox(appearancePage);
+    this->cursorHighlightRadiusSpin->setRange(1, 500);
+    this->cursorHighlightRadiusSpin->setValue(current.cursorHighlightRadius);
+    this->cursorHighlightRadiusSpin->setSuffix(QStringLiteral(" px"));
+    appearanceLayout->addRow(QStringLiteral("Cursor highlight radius:"), this->cursorHighlightRadiusSpin);
+
+    this->cursorHighlightBorderWidthSpin = new QSpinBox(appearancePage);
+    this->cursorHighlightBorderWidthSpin->setRange(0, 50);
+    this->cursorHighlightBorderWidthSpin->setValue(current.cursorHighlightBorderWidth);
+    this->cursorHighlightBorderWidthSpin->setSuffix(QStringLiteral(" px"));
+    appearanceLayout->addRow(QStringLiteral("Cursor highlight border width:"), this->cursorHighlightBorderWidthSpin);
 
     this->recolorMainViewCheck = new QCheckBox(appearancePage);
     this->recolorMainViewCheck->setChecked(current.recolorMainView);
@@ -1034,6 +1086,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .strokeFilterIgnoreTime = this->strokeFilterIgnoreTimeSpin->value(),
             .strokeFilterIgnoreLength = this->strokeFilterIgnoreLengthSpin->value(),
             .strokeFilterSuccessiveTime = this->strokeFilterSuccessiveTimeSpin->value(),
+            .doActionOnStrokeFiltered = this->doActionOnStrokeFilteredCheck->isChecked(),
+            .trySelectOnStrokeFiltered = this->trySelectOnStrokeFilteredCheck->isChecked(),
             .eraserCursorHidden = this->eraserCursorHiddenCheck->isChecked(),
             .buttonMatrix = {.eraserTipAction = static_cast<QtPointerButtonAction>(this->eraserTipActionCombo->currentData().toInt()),
                              .stylusButton1Action =
@@ -1059,6 +1113,11 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .iconTheme = this->iconThemeCombo->currentData().toString().toStdString(),
             .selectionColor = qColorToColor(this->selectionColor),
             .backgroundColor = qColorToColor(this->backgroundColor),
+            .highlightPosition = this->highlightPositionCheck->isChecked(),
+            .cursorHighlightColor = qColorToColor(this->cursorHighlightColor),
+            .cursorHighlightBorderColor = qColorToColor(this->cursorHighlightBorderColor),
+            .cursorHighlightRadius = this->cursorHighlightRadiusSpin->value(),
+            .cursorHighlightBorderWidth = this->cursorHighlightBorderWidthSpin->value(),
             .recolorMainView = this->recolorMainViewCheck->isChecked(),
             .recolorSidebarMiniatures = this->recolorSidebarCheck->isChecked(),
             .recolorLight = qColorToColor(this->recolorLightColor),

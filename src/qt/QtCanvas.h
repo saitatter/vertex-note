@@ -77,6 +77,8 @@ public:
     void setPageShadowEnabled(bool enabled);
     void setSelectionColor(Color color);
     void setCanvasBackgroundColor(Color color);
+    void setCursorHighlightOptions(bool enabled, Color fillColor, Color borderColor, int radiusPixels,
+                                   int borderWidthPixels);
     void setRecolorOptions(bool recolorMainView, Color light, Color dark);
     void setShapeRecognizerMinSize(double value);
     void setSnapRecognizedShapesEnabled(bool enabled);
@@ -84,7 +86,8 @@ public:
     void setTextEditorTabOptions(bool useSpaces, int numberOfSpaces);
     void setEdgePanOptions(double speed, double maxMultiplier);
     void setUnlimitedScrolling(bool enabled);
-    void setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs);
+    void setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs,
+                                bool doActionOnFiltered, bool trySelectOnFiltered);
     void setEmptyLastPageAppendMode(std::string mode);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
@@ -178,6 +181,7 @@ private:
                                         const vn::view::render::PageRenderSnapshot& pageInfo,
                                         std::size_t pageIndex) const;
     void drawOverlayHud(QPainter& painter) const;
+    void drawCursorHighlight(QPainter& painter) const;
     [[nodiscard]] auto screenToScene(const QPointF& screenPoint) const -> QPointF;
     [[nodiscard]] auto pageIndexAtScenePoint(const QPointF& scenePoint) const -> std::optional<std::size_t>;
     void updateGeometryHover(const QPointF& screenPoint);
@@ -309,6 +313,13 @@ private:
     std::vector<QtInputDeviceButtonProfile> inputDeviceButtonProfiles;
     Color selectionColor{0, 120, 255, 255};
     Color canvasBackgroundColor = Colors::xopp_gainsboro02;
+    bool cursorHighlightEnabled = false;
+    Color cursorHighlightFill{255, 255, 0, 90};
+    Color cursorHighlightBorder{255, 0, 0, 180};
+    int cursorHighlightRadiusPixels = 30;
+    int cursorHighlightBorderWidthPixels = 2;
+    bool cursorHighlightVisible = false;
+    QPointF lastCursorScreenPosition;
     bool recolorMainView = false;
     Color recolorLight{198, 208, 245, 255};
     Color recolorDark{48, 52, 70, 255};
@@ -371,6 +382,8 @@ private:
     int strokeFilterIgnoreTimeMs = 150;
     double strokeFilterIgnoreLengthMm = 1.0;
     int strokeFilterSuccessiveTimeMs = 500;
+    bool doActionOnStrokeFiltered = false;
+    bool trySelectOnStrokeFiltered = false;
     qint64 activeStrokeStartedMs = 0;
     qint64 lastFilteredStrokeMs = 0;
     std::string emptyLastPageAppendMode = "disabled";
