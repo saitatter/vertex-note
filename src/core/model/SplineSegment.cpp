@@ -13,12 +13,6 @@ SplineSegment::SplineSegment(const Point& p, const Point& fp, const Point& sp, c
     secondKnot = q;
 }
 
-void SplineSegment::draw(cairo_t* cr) const {
-    cairo_move_to(cr, firstKnot.x, firstKnot.y);
-    cairo_curve_to(cr, firstControlPoint.x, firstControlPoint.y, secondControlPoint.x, secondControlPoint.y,
-                   secondKnot.x, secondKnot.y);
-}
-
 auto SplineSegment::toPointSequence(bool usePressure) const -> std::list<Point> {
     if (isFlatEnough(usePressure)) {
         return {firstKnot};
