@@ -3,8 +3,7 @@
 #include <cinttypes>   // for PRIx32
 #include <cstdint>     // for uint32_t
 #include <cstdio>      // for sprintf, size_t
-
-#include <glib.h>                   // for g_free, g_strdup_printf
+#include <iostream>
 
 #include "control/pagetype/PageTypeHandler.h"  // for PageTypeHandler
 #include "control/xml/XmlAudioNode.h"          // for XmlAudioNode
@@ -112,7 +111,7 @@ void SaveHandler::visitStroke(XmlPointNode* stroke, const Stroke* s) {
     unsigned char alpha = 0xff;
 
     if (t >= StrokeTool::NAMES.size()) {
-        g_warning("Unknown StrokeTool::Value: %d", static_cast<unsigned int>(t));
+        std::cerr << "Unknown StrokeTool::Value: " << static_cast<unsigned int>(t) << '\n';
         t = StrokeTool::PEN;
     }
 
@@ -154,7 +153,7 @@ void SaveHandler::visitStrokeExtended(XmlPointNode* stroke, const Stroke* s) {
     StrokeCapStyle capStyle = s->getStrokeCapStyle();
 
     if (capStyle >= StrokeCapStyle::NAMES.size()) {
-        g_warning("Unknown stroke cap type: %d", static_cast<int>(capStyle));
+        std::cerr << "Unknown stroke cap type: " << static_cast<int>(capStyle) << '\n';
         capStyle = StrokeCapStyle::ROUND;
     }
 
@@ -181,7 +180,7 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
         } else if (e->getType() == ELEMENT_TEXT) {
             const Text* t = dynamic_cast<const Text*>(e);
             if (t->getText().empty()) {
-                g_warning("Trying to save an empty Text element. Discarding it!");
+                std::cerr << "Trying to save an empty Text element. Discarding it!\n";
                 continue;
             }
             auto* text = new XmlTextNode(TAG_NAMES[TagType::TEXT], t->getText());
@@ -221,7 +220,7 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(e);
             auto fallback = geometry->makeStrokeFallback();
             if (fallback->getPointCount() < 2) {
-                g_warning("Trying to save an empty Geometry element. Discarding it!");
+                std::cerr << "Trying to save an empty Geometry element. Discarding it!\n";
                 continue;
             }
             auto* stroke = new XmlPointNode(TAG_NAMES[TagType::STROKE]);
@@ -295,17 +294,15 @@ void SaveHandler::visitPage(XmlNode* root, ConstPageRef p, const Document* doc, 
         int cloneId = p->getBackgroundImage().getCloneId();
         if (cloneId != -1) {
             background->setAttrib(vn::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::CLONE]);
-            char* filename = g_strdup_printf("%i", cloneId);
+            auto filename = std::to_string(cloneId);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);
-            g_free(filename);
         } else if (p->getBackgroundImage().isAttached() && p->getBackgroundImage().hasLoadedImage()) {
-            char* filename = g_strdup_printf("bg_%d.png", this->attachBgId++);
+            auto filename = std::string("bg_") + std::to_string(this->attachBgId++) + ".png";
             background->setAttrib(vn::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ATTACH]);
             background->setAttrib(vn::xml_attrs::FILENAME_STR, filename);
 
             // Store the changed info to update the document in updateDocumentInfo()
             backgroundImages.emplace_back(ImageInfo{p->getBackgroundImage(), fs::path(filename), id});
-            g_free(filename);
         } else {
             // "absolute" just means path. For backward compatibility, it is hard to change the word
             background->setAttrib(vn::xml_attrs::DOMAIN_STR, Domain::NAMES[Domain::ABSOLUTE]);
