@@ -67,6 +67,8 @@ public:
     void setGridSnapEnabled(bool enabled);
     void setRotationSnapEnabled(bool enabled);
     void setViewInteractionOptions(double zoomStepPercent, double zoomStepScrollPercent, double rotationSnapTolerance);
+    void setTouchGestureOptions(bool zoomGesturesEnabled, double touchZoomStartThreshold,
+                                bool touchInertialScrolling);
     void setDrawDirectionModifiers(bool enabled, int radiusPixels);
     void setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below);
     void setTouchDrawingEnabled(bool enabled);
@@ -270,6 +272,7 @@ private:
     void finalizeInstrumentTool();
     void cancelInstrumentTool();
     void processTouchDrawing(const vn::ui::input::TouchEvent& event);
+    [[nodiscard]] auto handleTouchGesture(const QTouchEvent& event) -> bool;
     void updateEdgePanAtScreen(const QPointF& screenPoint);
     void stopEdgePan();
     void applyEdgePanStep();
@@ -305,6 +308,13 @@ private:
     double snapGridSize = 14.17;
     double zoomStepFactor = 1.10;
     double zoomStepScrollFactor = 1.02;
+    bool zoomGesturesEnabled = true;
+    double touchZoomStartThreshold = 0.0;
+    bool touchInertialScrolling = true;
+    bool touchZoomGestureActive = false;
+    double touchZoomInitialDistance = 0.0;
+    double touchZoomLastDistance = 0.0;
+    QPointF touchZoomLastCenter;
     double rotationSnapTolerance = 0.30;
     double extraPageSpaceLeft = 0.0;
     double extraPageSpaceRight = 0.0;

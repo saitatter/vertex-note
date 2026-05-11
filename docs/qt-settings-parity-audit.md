@@ -40,6 +40,7 @@ This audit compares GTK `Settings` keys from
 | `snapRotationTolerance` | Implemented | `general/rotationSnapTolerance`; applied to Qt stroke/shape rotation snapping. |
 | `snapGridTolerance`, `snapGridSize` | Implemented | `tools/snapGridTolerance`, `tools/snapGridSize`; applied to Qt geometry grid snapping. |
 | `zoomStep`, `zoomStepScroll` | Implemented | `view/zoomStepPercent`, `view/zoomStepScrollPercent`; applied to Qt zoom commands and Ctrl+wheel zoom. |
+| `zoomGesturesEnabled`, `touchZoomStartThreshold`, `gtkTouchInertialScrolling` | Partial / Qt-native | `view/zoomGesturesEnabled`, `view/touchZoomStartThreshold`, `view/touchInertialScrolling`; Qt applies two-finger pinch zoom/pan and the start threshold. Inertial scrolling is persisted as a parity preference, while kinetic behavior remains owned by Qt/platform input. |
 | `unlimitedScrolling` | Implemented | `view/unlimitedScrolling`; when disabled, Qt clamps the viewport to the document scene bounds plus configured page padding. |
 | `edgePanSpeed`, `edgePanMaxMult` | Implemented | `view/edgePanSpeed`, `view/edgePanMaxMult`; applied to Qt edge-pan while dragging strokes, erasers, selections, PDF text selections, vertical space, shapes, and geometry vertices. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
@@ -74,13 +75,11 @@ This audit compares GTK `Settings` keys from
 
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
-| `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work
 
-1. Add Qt-native gesture settings for `zoomGesturesEnabled` and `touchZoomStartThreshold`; `gtkTouchInertialScrolling` remains GTK-specific unless Qt gets a kinetic scrolling backend.
-2. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
-3. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.
+1. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
+2. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.

@@ -2737,6 +2737,18 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.zoomStepScrollPercent =
             settings.value(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent)
                     .toDouble();
+    this->currentSettings.zoomGesturesEnabled =
+            settings.value(QStringLiteral("view/zoomGesturesEnabled"),
+                           this->currentSettings.zoomGesturesEnabled)
+                    .toBool();
+    this->currentSettings.touchZoomStartThreshold =
+            settings.value(QStringLiteral("view/touchZoomStartThreshold"),
+                           this->currentSettings.touchZoomStartThreshold)
+                    .toDouble();
+    this->currentSettings.touchInertialScrolling =
+            settings.value(QStringLiteral("view/touchInertialScrolling"),
+                           this->currentSettings.touchInertialScrolling)
+                    .toBool();
     this->currentSettings.unlimitedScrolling =
             settings.value(QStringLiteral("view/unlimitedScrolling"), this->currentSettings.unlimitedScrolling).toBool();
     this->currentSettings.touchDrawingDefault =
@@ -3238,6 +3250,9 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/drawDirModsRadius"), this->currentSettings.drawDirModsRadius);
     settings.setValue(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent);
     settings.setValue(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent);
+    settings.setValue(QStringLiteral("view/zoomGesturesEnabled"), this->currentSettings.zoomGesturesEnabled);
+    settings.setValue(QStringLiteral("view/touchZoomStartThreshold"), this->currentSettings.touchZoomStartThreshold);
+    settings.setValue(QStringLiteral("view/touchInertialScrolling"), this->currentSettings.touchInertialScrolling);
     settings.setValue(QStringLiteral("view/unlimitedScrolling"), this->currentSettings.unlimitedScrolling);
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
@@ -3731,6 +3746,9 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
                                       this->currentSettings.rotationSnapTolerance);
+    canvas->setTouchGestureOptions(this->currentSettings.zoomGesturesEnabled,
+                                   this->currentSettings.touchZoomStartThreshold,
+                                   this->currentSettings.touchInertialScrolling);
     canvas->setDrawDirectionModifiers(this->currentSettings.drawDirModsEnabled,
                                       this->currentSettings.drawDirModsRadius);
     canvas->setUnlimitedScrolling(this->currentSettings.unlimitedScrolling);

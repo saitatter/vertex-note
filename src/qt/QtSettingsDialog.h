@@ -67,6 +67,9 @@ struct QtSettings {
     int drawDirModsRadius = 50;
     double zoomStepPercent = 10.0;
     double zoomStepScrollPercent = 2.0;
+    bool zoomGesturesEnabled = true;
+    double touchZoomStartThreshold = 0.0;
+    bool touchInertialScrolling = true;
     bool unlimitedScrolling = false;
     bool touchDrawingDefault = false;
     double minimumPressure = 0.05;
@@ -207,6 +210,9 @@ private:
     QSpinBox* drawDirModsRadiusSpin = nullptr;
     QDoubleSpinBox* zoomStepSpin = nullptr;
     QDoubleSpinBox* zoomStepScrollSpin = nullptr;
+    QCheckBox* zoomGesturesEnabledCheck = nullptr;
+    QDoubleSpinBox* touchZoomStartThresholdSpin = nullptr;
+    QCheckBox* touchInertialScrollingCheck = nullptr;
     QCheckBox* unlimitedScrollingCheck = nullptr;
     QCheckBox* touchDrawingCheck = nullptr;
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;

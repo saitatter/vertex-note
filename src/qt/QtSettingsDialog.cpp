@@ -457,6 +457,24 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->zoomStepScrollSpin->setSuffix(QStringLiteral("%"));
     generalLayout->addRow(QStringLiteral("Wheel zoom step:"), this->zoomStepScrollSpin);
 
+    this->zoomGesturesEnabledCheck = new QCheckBox(generalPage);
+    this->zoomGesturesEnabledCheck->setChecked(current.zoomGesturesEnabled);
+    generalLayout->addRow(QStringLiteral("Touch zoom gestures:"), this->zoomGesturesEnabledCheck);
+
+    this->touchZoomStartThresholdSpin = new QDoubleSpinBox(generalPage);
+    this->touchZoomStartThresholdSpin->setRange(0.0, 200.0);
+    this->touchZoomStartThresholdSpin->setSingleStep(1.0);
+    this->touchZoomStartThresholdSpin->setDecimals(1);
+    this->touchZoomStartThresholdSpin->setValue(current.touchZoomStartThreshold);
+    this->touchZoomStartThresholdSpin->setSuffix(QStringLiteral(" px"));
+    generalLayout->addRow(QStringLiteral("Touch zoom start threshold:"), this->touchZoomStartThresholdSpin);
+
+    this->touchInertialScrollingCheck = new QCheckBox(generalPage);
+    this->touchInertialScrollingCheck->setChecked(current.touchInertialScrolling);
+    this->touchInertialScrollingCheck->setToolTip(
+            QStringLiteral("Stored for settings parity; Qt uses the platform touch scroll behavior."));
+    generalLayout->addRow(QStringLiteral("Touch inertial scrolling:"), this->touchInertialScrollingCheck);
+
     this->unlimitedScrollingCheck = new QCheckBox(generalPage);
     this->unlimitedScrollingCheck->setChecked(current.unlimitedScrolling);
     generalLayout->addRow(QStringLiteral("Unlimited scrolling:"), this->unlimitedScrollingCheck);
@@ -1100,6 +1118,9 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .drawDirModsRadius = this->drawDirModsRadiusSpin->value(),
             .zoomStepPercent = this->zoomStepSpin->value(),
             .zoomStepScrollPercent = this->zoomStepScrollSpin->value(),
+            .zoomGesturesEnabled = this->zoomGesturesEnabledCheck->isChecked(),
+            .touchZoomStartThreshold = this->touchZoomStartThresholdSpin->value(),
+            .touchInertialScrolling = this->touchInertialScrollingCheck->isChecked(),
             .unlimitedScrolling = this->unlimitedScrollingCheck->isChecked(),
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
             .minimumPressure = this->minimumPressureSpin->value(),

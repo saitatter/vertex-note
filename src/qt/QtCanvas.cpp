@@ -676,6 +676,17 @@ void QtCanvas::setViewInteractionOptions(double zoomStepPercent, double zoomStep
     this->rotationSnapTolerance = std::clamp(rotationSnapTolerance, 0.01, M_PI / 2.0);
 }
 
+void QtCanvas::setTouchGestureOptions(bool zoomEnabled, double zoomStartThreshold, bool inertialScrolling) {
+    this->zoomGesturesEnabled = zoomEnabled;
+    this->touchZoomStartThreshold = std::clamp(zoomStartThreshold, 0.0, 200.0);
+    this->touchInertialScrolling = inertialScrolling;
+    if (!this->zoomGesturesEnabled) {
+        this->touchZoomGestureActive = false;
+        this->touchZoomInitialDistance = 0.0;
+        this->touchZoomLastDistance = 0.0;
+    }
+}
+
 void QtCanvas::setDrawDirectionModifiers(bool enabled, int radiusPixels) {
     this->drawDirectionModifiersEnabled = enabled;
     this->drawDirectionModifiersRadiusPixels = std::clamp(radiusPixels, 1, 500);
@@ -1325,6 +1336,10 @@ bool QtCanvas::event(QEvent* event) {
     if (event && (event->type() == QEvent::TouchBegin || event->type() == QEvent::TouchUpdate ||
                   event->type() == QEvent::TouchEnd)) {
         auto* touchEvent = static_cast<QTouchEvent*>(event);
+        if (handleTouchGesture(*touchEvent)) {
+            event->accept();
+            return true;
+        }
         this->activeTouchAction = pointerActionForTouchDevice(touchEvent->device());
         this->inputAdapter->handleTouch(*touchEvent);
         this->activeTouchAction.reset();
@@ -3835,4 +3850,58 @@ void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
     if (this->activeTouchPointId == touchPoint->id) {
         updateStrokeAtScreen(screenPoint, pressure);
     }
+}
+
+auto QtCanvas::handleTouchGesture(const QTouchEvent& event) -> bool {
+    if (!this->zoomGesturesEnabled) {
+        return false;
+    }
+
+    const auto points = event.points();
+    if (points.size() < 2) {
+        const bool wasGesture = this->touchZoomGestureActive || this->touchZoomInitialDistance > 0.0;
+        this->touchZoomGestureActive = false;
+        this->touchZoomInitialDistance = 0.0;
+        this->touchZoomLastDistance = 0.0;
+        return wasGesture;
+    }
+
+    const QPointF first = points[0].position();
+    const QPointF second = points[1].position();
+    const QPointF center = (first + second) / 2.0;
+    const double distance = std::hypot(first.x() - second.x(), first.y() - second.y());
+    if (distance <= 0.0) {
+        return true;
+    }
+
+    if (this->touchZoomInitialDistance <= 0.0) {
+        this->touchZoomInitialDistance = distance;
+        this->touchZoomLastDistance = distance;
+        this->touchZoomLastCenter = center;
+        return true;
+    }
+
+    if (!this->touchZoomGestureActive &&
+        std::abs(distance - this->touchZoomInitialDistance) < this->touchZoomStartThreshold) {
+        this->touchZoomLastDistance = distance;
+        this->touchZoomLastCenter = center;
+        return true;
+    }
+
+    this->touchZoomGestureActive = true;
+    const double factor = distance / std::max(this->touchZoomLastDistance, 1.0);
+    const QPointF centerDelta = center - this->touchZoomLastCenter;
+    const bool moved = std::abs(centerDelta.x()) > 0.1 || std::abs(centerDelta.y()) > 0.1;
+    if (moved) {
+        this->scrollX -= centerDelta.x() / std::max(0.001, this->zoomFactor);
+        this->scrollY -= centerDelta.y() / std::max(0.001, this->zoomFactor);
+    }
+    if (std::abs(factor - 1.0) > 0.001) {
+        zoomAroundScreenPoint(factor, center);
+    } else if (moved) {
+        emitViewportUpdate();
+    }
+    this->touchZoomLastDistance = distance;
+    this->touchZoomLastCenter = center;
+    return true;
 }
