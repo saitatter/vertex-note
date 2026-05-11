@@ -838,6 +838,70 @@ auto QtDocumentController::pdfTextSelection() const -> const std::optional<QtPdf
     return this->activePdfTextSelection;
 }
 
+auto QtDocumentController::createPdfTextMarkerStrokes(std::size_t pageIndex, const std::vector<PdfRectangle>& rects,
+                                                      QtPdfTextMarkerKind kind, int opacity, Color color) -> int {
+    if (!this->document || pageIndex >= this->document->getPageCount() || rects.empty()) {
+        return 0;
+    }
+
+    const int markerOpacity = std::clamp(opacity, 0, 255);
+    std::vector<ElementPtr> strokes;
+    strokes.reserve(rects.size());
+    for (const auto& rect: rects) {
+        const double middleOfLine = (rect.y1 + rect.y2) / 2.0;
+        const double bottomOfLine = std::max(rect.y1, rect.y2);
+        const double textHeight = std::max(1.0, std::abs(rect.y2 - rect.y1));
+        const double y = kind == QtPdfTextMarkerKind::Underline ? bottomOfLine : middleOfLine;
+        const double width = kind == QtPdfTextMarkerKind::Highlight ? textHeight : 1.0;
+
+        auto stroke = std::make_unique<Stroke>();
+        stroke->setColor(color);
+        stroke->setFill(markerOpacity);
+        stroke->setToolType(StrokeTool::HIGHLIGHTER);
+        stroke->setWidth(width);
+        stroke->setStrokeCapStyle(StrokeCapStyle::BUTT);
+        stroke->addPoint(Point(rect.x1, y, Point::NO_PRESSURE));
+        stroke->addPoint(Point(rect.x2, y, Point::NO_PRESSURE));
+        strokes.push_back(std::move(stroke));
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* layer = page ? page->getSelectedLayer() : nullptr;
+    if (!layer) {
+        this->document->unlock();
+        return 0;
+    }
+
+    QtInsertElementsHistoryEntry entry{.pageIndex = pageIndex, .elements = {}, .ownedElements = {}, .text = "Mark PDF text"};
+    entry.elements.reserve(strokes.size());
+    for (auto& stroke: strokes) {
+        entry.elements.push_back(stroke.get());
+        layer->addElement(std::move(stroke));
+    }
+    const int inserted = static_cast<int>(entry.elements.size());
+    if (inserted > 0) {
+        pushHistory(QtHistoryEntry{std::move(entry)});
+    }
+    this->document->unlock();
+
+    if (inserted > 0) {
+        rebuildPageSnapshots();
+    }
+    return inserted;
+}
+
+auto QtDocumentController::createPdfTextMarkerStrokesForSelection(QtPdfTextMarkerKind kind, int opacity, Color color)
+        -> int {
+    if (!this->activePdfTextSelection || this->activePdfTextSelection->previewRects.empty()) {
+        return 0;
+    }
+
+    const auto pageIndex = this->activePdfTextSelection->pageIndex;
+    const auto rects = this->activePdfTextSelection->previewRects;
+    return createPdfTextMarkerStrokes(pageIndex, rects, kind, opacity, color);
+}
+
 // ---------------------------------------------------------------------------
 // Eraser
 // ---------------------------------------------------------------------------
@@ -2712,6 +2776,35 @@ auto QtDocumentController::applyHistoryUndo(QtHistoryEntry& entry) -> bool {
                     this->document->unlock();
                     rebuildPageSnapshots();
                     return true;
+                } else if constexpr (std::is_same_v<T, QtInsertElementsHistoryEntry>) {
+                    if (e.elements.empty() || !this->document || e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    if (!page) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    e.ownedElements.clear();
+                    for (auto* layer: page->getLayers()) {
+                        if (!layer) {
+                            continue;
+                        }
+                        for (const auto* ptr: e.elements) {
+                            auto removed = layer->removeElement(ptr);
+                            if (removed.e) {
+                                e.ownedElements.push_back(std::move(removed));
+                            }
+                        }
+                    }
+                    e.elements.clear();
+                    this->document->unlock();
+                    if (!e.ownedElements.empty()) {
+                        rebuildPageSnapshots();
+                        return true;
+                    }
+                    return false;
                 } else if constexpr (std::is_same_v<T, QtLayerTransferHistoryEntry>) {
                     if (e.records.empty() || !this->document || e.pageIndex >= this->document->getPageCount()) {
                         return false;
@@ -2908,6 +3001,28 @@ auto QtDocumentController::applyHistoryRedo(QtHistoryEntry& entry) -> bool {
                         return true;
                     }
                     return false;
+                } else if constexpr (std::is_same_v<T, QtInsertElementsHistoryEntry>) {
+                    if (e.ownedElements.empty() || !this->document ||
+                        e.pageIndex >= this->document->getPageCount()) {
+                        return false;
+                    }
+                    this->document->lock();
+                    auto page = this->document->getPage(e.pageIndex);
+                    auto* layer = page ? page->getSelectedLayer() : nullptr;
+                    if (!layer) {
+                        this->document->unlock();
+                        return false;
+                    }
+                    std::sort(e.ownedElements.begin(), e.ownedElements.end());
+                    e.elements.clear();
+                    for (auto& ip: e.ownedElements) {
+                        e.elements.push_back(ip.e.get());
+                        layer->insertElement(std::move(ip.e), ip.pos);
+                    }
+                    e.ownedElements.clear();
+                    this->document->unlock();
+                    rebuildPageSnapshots();
+                    return true;
                 } else if constexpr (std::is_same_v<T, QtLayerTransferHistoryEntry>) {
                     if (e.records.empty() || !this->document || e.pageIndex >= this->document->getPageCount()) {
                         return false;

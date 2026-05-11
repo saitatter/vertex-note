@@ -69,6 +69,39 @@ TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifie
     EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, pdfTextMarkersCreateHighlighterStrokesWithUndoRedo) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+    const Color markerColor{0xfff06a00U};
+
+    const int inserted = controller.createPdfTextMarkerStrokes(
+            PageIndex, {PdfRectangle(10.0, 20.0, 110.0, 32.0), PdfRectangle(15.0, 40.0, 95.0, 50.0)},
+            QtPdfTextMarkerKind::Highlight, 60, markerColor);
+
+    ASSERT_EQ(2, inserted);
+    ASSERT_EQ(2U, strokeCount(controller.snapshotPages().front()));
+
+    const auto& markerStroke = lastStroke(controller.snapshotPages().front());
+    EXPECT_TRUE(markerStroke.highlighter);
+    EXPECT_EQ(markerColor, markerStroke.color);
+    EXPECT_EQ(60, markerStroke.fill);
+    EXPECT_EQ(static_cast<int>(StrokeCapStyle::BUTT), markerStroke.capStyle);
+    EXPECT_DOUBLE_EQ(10.0, markerStroke.width);
+    ASSERT_EQ(2U, markerStroke.points.size());
+    EXPECT_DOUBLE_EQ(15.0, markerStroke.points[0].x);
+    EXPECT_DOUBLE_EQ(45.0, markerStroke.points[0].y);
+    EXPECT_DOUBLE_EQ(95.0, markerStroke.points[1].x);
+    EXPECT_DOUBLE_EQ(45.0, markerStroke.points[1].y);
+
+    ASSERT_TRUE(controller.canUndo());
+    EXPECT_TRUE(controller.undo());
+    EXPECT_EQ(0U, strokeCount(controller.snapshotPages().front()));
+
+    ASSERT_TRUE(controller.canRedo());
+    EXPECT_TRUE(controller.redo());
+    EXPECT_EQ(2U, strokeCount(controller.snapshotPages().front()));
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyInstrumentStrokesForQtShell) {
     QtDocumentController controller;
     constexpr std::size_t PageIndex = 0U;

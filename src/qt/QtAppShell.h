@@ -136,6 +136,8 @@ private:
     // Phase 12: Pen styling
     void setPenLineStyle(const std::string& style);
     void setStrokeFill(int fillOpacity);
+    void setPdfTextMarkerOpacity(int opacity);
+    void highlightPdfTextSelection();
     void selectFont();
     void setPenSize(int sizeIndex);
     void setEraserSize(int sizeIndex);

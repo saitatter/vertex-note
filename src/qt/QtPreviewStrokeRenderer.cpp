@@ -206,7 +206,9 @@ void QtPreviewStrokeRenderer::draw(const StrokeRenderModel& stroke, RenderContex
         painter->setBrush(QBrush(toQColor(stroke.color)));
         painter->drawPath(outlinePath);
     } else {
-        QPen pen(toQColor(stroke.color, stroke.highlighter ? 0.47 : 1.0), stroke.width, Qt::SolidLine,
+        const double strokeAlpha = stroke.highlighter ? (stroke.fill >= 0 ? static_cast<double>(stroke.fill) / 255.0 : 0.47)
+                                                      : 1.0;
+        QPen pen(toQColor(stroke.color, strokeAlpha), stroke.width, Qt::SolidLine,
                  toPenCapStyle(stroke.capStyle), Qt::RoundJoin);
         if (!stroke.dashPattern.empty()) {
             QList<qreal> pattern;

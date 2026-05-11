@@ -269,6 +269,7 @@ auto legacyActionCommand(std::string_view action) -> std::string {
             {"ACTION_SHAPE_RECOGNIZER", "tool.draw-shape-recognizer"},
             {"ACTION_TOOL_SELECT_PDF_TEXT_LINEAR", "tool.select-pdf-text-linear"},
             {"ACTION_TOOL_SELECT_PDF_TEXT_RECT", "tool.select-pdf-text-rect"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_MARKER_OPACITY", "tool.select-pdf-text-marker-opacity"},
             {"ACTION_TOOL_LASER_POINTER_PEN", "tool.laser-pointer-pen"},
             {"ACTION_TOOL_LASER_POINTER_HIGHLIGHTER", "tool.laser-pointer-highlighter"},
             {"ACTION_SIZE_VERY_FINE", "pen.size-very-fine"},
@@ -831,9 +832,18 @@ auto luaActiveToolColor(const QtToolState& state) -> Color {
 }
 
 auto luaActiveToolFillEnabled(const QtToolState& state) -> bool {
+    if (state.activeTool == QtToolType::PdfTextLinear || state.activeTool == QtToolType::PdfTextRect) {
+        return state.pdfTextMarkerOpacity > 0;
+    }
     return state.activeTool == QtToolType::Highlighter || state.activeTool == QtToolType::LaserPointerHighlighter
                    ? state.highlighterFillEnabled
                    : state.fillEnabled;
+}
+
+auto luaActiveToolFillOpacity(const QtToolState& state) -> int {
+    return state.activeTool == QtToolType::PdfTextLinear || state.activeTool == QtToolType::PdfTextRect
+                   ? state.pdfTextMarkerOpacity
+                   : state.fillOpacity;
 }
 
 void luaPushSize(lua_State* lua, std::string name, double value) {
@@ -1829,7 +1839,7 @@ auto luaGetToolInfo(lua_State* lua) -> int {
     lua_setfield(lua, -2, "size");
     luaSetIntegerField(lua, "color", luaColorValue(luaActiveToolColor(state)));
     luaSetBoolField(lua, "filled", luaActiveToolFillEnabled(state));
-    luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+    luaSetIntegerField(lua, "fillOpacity", luaActiveToolFillOpacity(state));
     luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
     luaSetStringField(lua, "lineStyle", state.penLineStyle);
     luaSetNumberField(lua, "thickness", luaActiveToolWidth(state));
@@ -2144,7 +2154,7 @@ auto luaGetActionState(lua_State* lua) -> int {
         return 1;
     }
     if (action == "tool-fill-opacity") {
-        lua_pushinteger(lua, static_cast<lua_Integer>(plugin->runtime->currentToolState().fillOpacity));
+        lua_pushinteger(lua, static_cast<lua_Integer>(luaActiveToolFillOpacity(plugin->runtime->currentToolState())));
         return 1;
     }
     if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {

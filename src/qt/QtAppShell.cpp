@@ -1060,10 +1060,22 @@ void QtAppShell::registerBootstrapCommands() {
              .tooltip = "Select PDF text inside a dragged rectangle", .menu = "Tools", .checkable = true},
             [this]() { selectTool(QtToolType::PdfTextRect); });
     ch->registerCommand(
+            {.id = "tool.pdf-text-highlight", .text = "Highlight Selected PDF Text",
+             .tooltip = "Create highlighter strokes over the active PDF text selection", .menu = "Tools"},
+            [this]() { highlightPdfTextSelection(); });
+    ch->registerCommand(
             {.id = "tool.select-pdf-text-marker-opacity", .text = "PDF Text Marker Opacity",
-             .tooltip = "PDF text marker annotations are not available in the Qt shell yet", .menu = "Tools",
-             .enabled = false},
-            []() {});
+             .tooltip = "Set PDF text highlight marker opacity", .menu = "Tools"},
+            [this]() {
+                bool ok = false;
+                const int opacity =
+                        QInputDialog::getInt(&this->window, QStringLiteral("PDF Text Marker Opacity"),
+                                             QStringLiteral("Opacity:"), this->window.canvas()->toolState().pdfTextMarkerOpacity,
+                                             0, 255, 8, &ok);
+                if (ok) {
+                    setPdfTextMarkerOpacity(opacity);
+                }
+            });
     ch->registerCommand(
             {.id = "edit.insert-image", .text = "Image", .tooltip = "Insert image from file", .shortcut = "Ctrl+Shift+I", .menu = "Tools"},
             [this]() { insertImage(); });
@@ -3978,6 +3990,30 @@ void QtAppShell::setStrokeFill(int fillOpacity) {
         this->toolbarFillAction->setChecked(ts.fillEnabled);
     }
     this->window.statusBar()->showMessage(QStringLiteral("Fill opacity: %1").arg(fillOpacity), 2500);
+}
+
+void QtAppShell::setPdfTextMarkerOpacity(int opacity) {
+    auto& ts = this->window.canvas()->toolState();
+    ts.pdfTextMarkerOpacity = std::clamp(opacity, 0, 255);
+    this->window.canvas()->update();
+    this->window.statusBar()->showMessage(QStringLiteral("PDF text marker opacity: %1").arg(ts.pdfTextMarkerOpacity),
+                                          2500);
+}
+
+void QtAppShell::highlightPdfTextSelection() {
+    auto& ts = this->window.canvas()->toolState();
+    const int inserted = this->documentController.createPdfTextMarkerStrokesForSelection(
+            QtPdfTextMarkerKind::Highlight, ts.pdfTextMarkerOpacity, ts.highlighterColor);
+    if (inserted <= 0) {
+        this->window.statusBar()->showMessage(QStringLiteral("No active PDF text selection to highlight"), 3000);
+        return;
+    }
+
+    this->documentController.cancelPdfTextSelection();
+    this->window.canvas()->update();
+    updateEditCommandStates();
+    markSessionDirty();
+    this->window.statusBar()->showMessage(QStringLiteral("Highlighted selected PDF text"), 3000);
 }
 
 void QtAppShell::selectFont() {

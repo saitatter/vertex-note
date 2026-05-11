@@ -122,6 +122,13 @@ struct QtDeleteHistoryEntry {
     std::string text;
 };
 
+struct QtInsertElementsHistoryEntry {
+    std::size_t pageIndex = 0U;
+    std::vector<const Element*> elements;
+    InsertionOrder ownedElements;
+    std::string text;
+};
+
 struct QtLayerTransferRecord {
     const Element* element = nullptr;
     std::size_t fromLayerIndex = 0U;
@@ -147,8 +154,8 @@ struct QtPageSizeHistoryEntry {
 
 struct QtHistoryEntry {
     std::variant<QtGeometryHistoryEntry, QtStrokeHistoryEntry, QtEraseHistoryEntry, QtSegmentEraseHistoryEntry,
-                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry, QtLayerTransferHistoryEntry,
-                 QtPageSizeHistoryEntry>
+                 QtMoveHistoryEntry, QtTextHistoryEntry, QtDeleteHistoryEntry, QtInsertElementsHistoryEntry,
+                 QtLayerTransferHistoryEntry, QtPageSizeHistoryEntry>
             data;
     [[nodiscard]] auto text() const -> std::string;
 };
@@ -181,6 +188,8 @@ struct QtPdfTextSelectionState {
     std::string selectedText;
     bool finalized = false;
 };
+
+enum class QtPdfTextMarkerKind { Highlight, Underline, Strikethrough };
 
 struct QtLayerInfo {
     std::size_t index = 0U;
@@ -284,6 +293,10 @@ public:
     [[nodiscard]] auto finalizePdfTextSelection() -> std::string;
     void cancelPdfTextSelection();
     [[nodiscard]] auto pdfTextSelection() const -> const std::optional<QtPdfTextSelectionState>&;
+    [[nodiscard]] auto createPdfTextMarkerStrokes(std::size_t pageIndex, const std::vector<PdfRectangle>& rects,
+                                                  QtPdfTextMarkerKind kind, int opacity, Color color) -> int;
+    [[nodiscard]] auto createPdfTextMarkerStrokesForSelection(QtPdfTextMarkerKind kind, int opacity, Color color)
+            -> int;
 
     // Eraser
     auto beginErase(std::size_t pageIndex) -> void;

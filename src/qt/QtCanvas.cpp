@@ -2321,7 +2321,7 @@ void QtCanvas::drawPdfTextSelectionOverlay(QPainter& painter) const {
     painter.save();
     painter.translate(pageRect.x(), pageRect.y());
 
-    QColor fill(255, 230, 90, 120);
+    QColor fill(255, 230, 90, std::clamp(this->currentToolState.pdfTextMarkerOpacity, 0, 255));
     QColor outline(220, 170, 0, 190);
     painter.setPen(QPen(outline, 1.0 / this->zoomFactor));
     painter.setBrush(fill);

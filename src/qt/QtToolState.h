@@ -57,6 +57,7 @@ struct QtToolState {
     bool fillEnabled = false;
     int fillOpacity = 128;
     bool highlighterFillEnabled = false;
+    int pdfTextMarkerOpacity = 60;
     std::string fontName = "Sans";
     double fontSize = 12.0;
 
