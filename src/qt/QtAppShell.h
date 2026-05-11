@@ -10,6 +10,7 @@
 
 #include "QtAudioController.h"
 #include "QtClipboardService.h"
+#include "QtColorPalette.h"
 #include "QtDialogService.h"
 #include "QtDocumentController.h"
 #include "QtDocumentExporter.h"
@@ -73,6 +74,8 @@ private:
     void configureAutosave();
     void autosaveNow();
     void applyRuntimeSettings();
+    void applyAppearanceSettings();
+    void reloadColorPalette();
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
@@ -200,6 +203,7 @@ private:
     bool suppressDirtyTracking = false;
     bool presentationMode = false;
     QtSettings currentSettings;
+    std::vector<QtPaletteColor> activeColorPalette;
     std::vector<ElementPtr> elementClipboard;
     QToolButton* selectionToolButton = nullptr;
     QToolButton* strokeDrawingToolButton = nullptr;

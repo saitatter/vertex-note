@@ -258,6 +258,8 @@ latest Qt parity commits.
    - ✓ Add advanced pressure and grid snap settings: minimum pressure, pressure
      multiplier, pressure guessing, grid size, and grid tolerance.
    - ✓ Add appearance settings for titlebar file/page display and page shadow.
+   - ✓ Add appearance theme variant and `.gpl` colour palette settings; Qt uses
+     the loaded palette for quick colours and Lua `app.getColorPalette()`.
    - ✓ Add persisted PDF performance/cache knobs. They are stored in Qt settings
      now; wiring them to a dedicated Qt PDF cache remains future cache-layer work.
 

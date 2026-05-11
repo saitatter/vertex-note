@@ -33,6 +33,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QPlainTextEdit>
+#include <QPalette>
 #include <QSettings>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -179,13 +180,6 @@ constexpr std::array<ToolActionSpec, 2> PDF_TOOL_SPECS = {{
         {"tool.select-pdf-text-rect", QtToolType::PdfTextRect},
 }};
 
-constexpr std::array<Color, 11> TOOLBAR_QUICK_COLORS = {
-        Color{0x00, 0x00, 0x00, 0xff}, Color{0x00, 0x7a, 0x2f, 0xff}, Color{0x00, 0xa0, 0xa0, 0xff},
-        Color{0x29, 0x40, 0xd0, 0xff}, Color{0x5d, 0x5d, 0x5d, 0xff}, Color{0xc3, 0x00, 0x10, 0xff},
-        Color{0xc8, 0x00, 0x96, 0xff}, Color{0xff, 0x8c, 0x00, 0xff}, Color{0xff, 0xcc, 0x00, 0xff},
-        Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
-};
-
 constexpr int QT_SHELL_LAYOUT_VERSION = 4;
 constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
 constexpr std::string_view QT_CUSTOM_PROFILE_ID = "Qt Custom";
@@ -197,6 +191,34 @@ constexpr std::array<std::string_view, 9> QT_TOOLBAR_KEYS = {{
 auto isGtkParityProfileId(std::string_view profileId) -> bool { return profileId == QT_GTK_PARITY_PROFILE_ID; }
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
+
+auto lightPalette() -> QPalette {
+    QPalette palette;
+    palette.setColor(QPalette::Window, QColor(244, 244, 244));
+    palette.setColor(QPalette::WindowText, QColor(32, 32, 32));
+    palette.setColor(QPalette::Base, QColor(255, 255, 255));
+    palette.setColor(QPalette::AlternateBase, QColor(238, 238, 238));
+    palette.setColor(QPalette::Text, QColor(32, 32, 32));
+    palette.setColor(QPalette::Button, QColor(244, 244, 244));
+    palette.setColor(QPalette::ButtonText, QColor(32, 32, 32));
+    palette.setColor(QPalette::Highlight, QColor(47, 102, 255));
+    palette.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
+    return palette;
+}
+
+auto darkPalette() -> QPalette {
+    QPalette palette;
+    palette.setColor(QPalette::Window, QColor(43, 45, 48));
+    palette.setColor(QPalette::WindowText, QColor(236, 236, 236));
+    palette.setColor(QPalette::Base, QColor(31, 32, 35));
+    palette.setColor(QPalette::AlternateBase, QColor(52, 54, 58));
+    palette.setColor(QPalette::Text, QColor(236, 236, 236));
+    palette.setColor(QPalette::Button, QColor(52, 54, 58));
+    palette.setColor(QPalette::ButtonText, QColor(236, 236, 236));
+    palette.setColor(QPalette::Highlight, QColor(88, 140, 255));
+    palette.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
+    return palette;
+}
 
 auto findActionForTool(QtCommandHost* host, const auto& specs, QtToolType activeTool) -> QAction* {
     for (const auto& spec: specs) {
@@ -499,6 +521,7 @@ QtAppShell::QtAppShell():
                 this->window.canvas()->update();
             },
             [this]() { return this->window.canvas()->toolState(); });
+    this->luaPlugins.configureColorPaletteAccess([this]() { return this->activeColorPalette; });
     this->luaPlugins.configureViewAccess(
             [this]() { return this->window.canvas()->zoom(); },
             [this](double zoom) {
@@ -1843,6 +1866,13 @@ void QtAppShell::rebuildToolbar() {
         this->window.toolPalette()->syncFromToolState(toolState);
         syncToolbarWidgets();
     };
+    const auto toolbarColorAt = [this](int colorIndex) -> Color {
+        if (this->activeColorPalette.empty()) {
+            const auto palette = qtDefaultColorPalette();
+            return palette[static_cast<std::size_t>(colorIndex) % palette.size()].color;
+        }
+        return this->activeColorPalette[static_cast<std::size_t>(colorIndex) % this->activeColorPalette.size()].color;
+    };
     const auto ensureSelectionButton = [&]() -> QToolButton* {
         if (!this->selectionToolButton) {
             this->selectionToolButton = new QToolButton(&this->window);
@@ -1951,7 +1981,7 @@ void QtAppShell::rebuildToolbar() {
         button->setProperty("toolbarColorIndex", colorIndex);
         button->setToolTip(QStringLiteral("Quick colour"));
         QObject::connect(button, &QToolButton::clicked, &this->window,
-                         [applyToolbarColor, colorIndex]() { applyToolbarColor(TOOLBAR_QUICK_COLORS[static_cast<std::size_t>(colorIndex)]); });
+                         [applyToolbarColor, toolbarColorAt, colorIndex]() { applyToolbarColor(toolbarColorAt(colorIndex)); });
         this->toolbarColorButtons.push_back(button);
         return button;
     };
@@ -2166,7 +2196,7 @@ void QtAppShell::rebuildToolbar() {
         if (token.rfind("COLOR(", 0) == 0 && token.back() == ')') {
             const auto number = token.substr(6, token.size() - 7);
             const auto index = std::stoi(number);
-            if (index >= 0 && index < static_cast<int>(TOOLBAR_QUICK_COLORS.size())) {
+            if (index >= 0) {
                 toolbar->addWidget(makeColorButton(index));
             }
             return;
@@ -2404,11 +2434,17 @@ void QtAppShell::syncToolbarWidgets() {
         }
 
         const auto colorIndex = button->property("toolbarColorIndex").toInt();
-        if (colorIndex < 0 || colorIndex >= static_cast<int>(TOOLBAR_QUICK_COLORS.size())) {
+        if (colorIndex < 0) {
             continue;
         }
 
-        const auto color = TOOLBAR_QUICK_COLORS[static_cast<std::size_t>(colorIndex)];
+        Color color;
+        if (this->activeColorPalette.empty()) {
+            const auto palette = qtDefaultColorPalette();
+            color = palette[static_cast<std::size_t>(colorIndex) % palette.size()].color;
+        } else {
+            color = this->activeColorPalette[static_cast<std::size_t>(colorIndex) % this->activeColorPalette.size()].color;
+        }
         const bool selected = color == selectedColor;
         button->setStyleSheet(QStringLiteral(
                                       "QToolButton { background-color: %1; border-radius: 7px; border: %2; padding: 0px; }")
@@ -2589,6 +2625,15 @@ void QtAppShell::loadPersistentUiState() {
                     .toBool();
     this->currentSettings.showPageShadow =
             settings.value(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow).toBool();
+    this->currentSettings.themeVariant =
+            settings.value(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.colorPalettePath =
+            settings.value(QStringLiteral("appearance/colorPalettePath"),
+                           QString::fromStdString(this->currentSettings.colorPalettePath))
+                    .toString()
+                    .toStdString();
     this->currentSettings.autoloadPdfXoj =
             settings.value(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj).toBool();
     this->currentSettings.defaultPdfExportName =
@@ -2730,6 +2775,9 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
                       this->currentSettings.showPageNumberInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow);
+    settings.setValue(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant));
+    settings.setValue(QStringLiteral("appearance/colorPalettePath"),
+                      QString::fromStdString(this->currentSettings.colorPalettePath));
     settings.setValue(QStringLiteral("pdf/autoloadPdfXoj"), this->currentSettings.autoloadPdfXoj);
     settings.setValue(QStringLiteral("pdf/defaultExportName"), QString::fromStdString(this->currentSettings.defaultPdfExportName));
     settings.setValue(QStringLiteral("pdf/pageCacheSize"), this->currentSettings.pdfPageCacheSize);
@@ -3028,6 +3076,39 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setTouchDrawingEnabled(this->currentSettings.touchDrawingDefault);
     canvas->setShapeRecognizerMinSize(this->currentSettings.strokeRecognizerMinSize);
     canvas->setLaserPointerFadeOutMs(this->currentSettings.laserPointerFadeOutMs);
+    applyAppearanceSettings();
+    reloadColorPalette();
+}
+
+void QtAppShell::applyAppearanceSettings() {
+    auto* app = qobject_cast<QApplication*>(QApplication::instance());
+    if (app) {
+        const auto theme = QString::fromStdString(this->currentSettings.themeVariant).toLower();
+        if (theme == QStringLiteral("light")) {
+            app->setPalette(lightPalette());
+        } else if (theme == QStringLiteral("dark")) {
+            app->setPalette(darkPalette());
+        } else {
+            app->setPalette(app->style()->standardPalette());
+        }
+    }
+
+    updateWindowTitle();
+    this->window.canvas()->update();
+}
+
+void QtAppShell::reloadColorPalette() {
+    std::string errorMessage;
+    this->activeColorPalette =
+            qtLoadColorPaletteOrDefault(std::filesystem::path(this->currentSettings.colorPalettePath), &errorMessage);
+    const auto colors = qtPaletteColorsOnly(this->activeColorPalette);
+    this->window.toolPalette()->setQuickColors(colors);
+    syncToolbarWidgets();
+
+    if (!errorMessage.empty() && !this->currentSettings.colorPalettePath.empty()) {
+        this->window.statusBar()->showMessage(
+                QStringLiteral("Color palette fallback: %1").arg(QString::fromStdString(errorMessage)), 5000);
+    }
 }
 
 void QtAppShell::updateEditCommandStates() {

@@ -6,7 +6,10 @@
 
 #include "QtToolPalette.h"
 
-#include <array>
+#include "QtColorPalette.h"
+
+#include <algorithm>
+#include <utility>
 
 #include <QCheckBox>
 #include <QColorDialog>
@@ -18,13 +21,6 @@
 
 namespace {
 
-constexpr std::array<Color, 11> QUICK_COLORS = {
-        Color{0x00, 0x00, 0x00, 0xff}, Color{0x00, 0x7a, 0x2f, 0xff}, Color{0x00, 0xa0, 0xa0, 0xff},
-        Color{0x29, 0x40, 0xd0, 0xff}, Color{0x5d, 0x5d, 0x5d, 0xff}, Color{0xc3, 0x00, 0x10, 0xff},
-        Color{0xc8, 0x00, 0x96, 0xff}, Color{0xff, 0x8c, 0x00, 0xff}, Color{0xff, 0xcc, 0x00, 0xff},
-        Color{0x63, 0x39, 0xc8, 0xff}, Color{0xff, 0xff, 0xff, 0xff},
-};
-
 auto colorToHex(const Color& color) -> QString {
     return QColor(color.red, color.green, color.blue, color.alpha).name(QColor::HexArgb);
 }
@@ -33,6 +29,7 @@ auto colorToHex(const Color& color) -> QString {
 
 QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     setObjectName(QStringLiteral("vertexNoteQtToolPalette"));
+    this->quickColors = qtPaletteColorsOnly(qtDefaultColorPalette());
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(2, 0, 2, 0);
     layout->setSpacing(2);
@@ -46,13 +43,19 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     connect(this->colorSwatch, &QToolButton::clicked, this, &QtToolPalette::pickColor);
     layout->addWidget(this->colorSwatch);
 
-    for (const auto& preset: QUICK_COLORS) {
+    for (std::size_t colorIndex = 0; colorIndex < this->quickColors.size(); ++colorIndex) {
         auto* button = new QToolButton(this);
         button->setObjectName(QStringLiteral("vertexNoteQtQuickColor"));
         button->setFixedSize(17, 17);
         button->setAutoRaise(true);
         button->setToolTip(QStringLiteral("Quick colour"));
-        connect(button, &QToolButton::clicked, this, [this, preset]() { selectPresetColor(preset); });
+        button->setProperty("quickColorIndex", static_cast<int>(colorIndex));
+        connect(button, &QToolButton::clicked, this, [this, button]() {
+            const auto index = static_cast<std::size_t>(button->property("quickColorIndex").toInt());
+            if (index < this->quickColors.size()) {
+                selectPresetColor(this->quickColors[index]);
+            }
+        });
         this->presetButtons.push_back(button);
         layout->addWidget(button);
     }
@@ -109,6 +112,18 @@ void QtToolPalette::setCompactToolbarMode(bool compact) {
             .penColor = this->currentColor,
             .highlighterColor = this->currentColor,
     });
+}
+
+void QtToolPalette::setQuickColors(std::vector<Color> colors) {
+    if (colors.empty()) {
+        colors = qtPaletteColorsOnly(qtDefaultColorPalette());
+    }
+    const std::size_t visibleCount = std::min(this->presetButtons.size(), colors.size());
+    this->quickColors = std::move(colors);
+    for (std::size_t index = 0; index < this->presetButtons.size(); ++index) {
+        this->presetButtons[index]->setVisible(index < visibleCount);
+    }
+    updatePresetButtons();
 }
 
 void QtToolPalette::syncFromToolState(const QtToolState& state) {
@@ -195,11 +210,11 @@ void QtToolPalette::selectPresetColor(Color color) {
 }
 
 void QtToolPalette::updatePresetButtons() {
-    for (std::size_t index = 0; index < this->presetButtons.size() && index < QUICK_COLORS.size(); ++index) {
-        const bool selected = QUICK_COLORS[index] == this->currentColor;
+    for (std::size_t index = 0; index < this->presetButtons.size() && index < this->quickColors.size(); ++index) {
+        const bool selected = this->quickColors[index] == this->currentColor;
         this->presetButtons[index]->setStyleSheet(
                 QStringLiteral("#vertexNoteQtQuickColor { background-color: %1; border: %2; }")
-                        .arg(colorToHex(QUICK_COLORS[index]))
+                        .arg(colorToHex(this->quickColors[index]))
                         .arg(selected ? QStringLiteral("2px solid #2f66ff") : QStringLiteral("1px solid #a0a0a0")));
     }
 }

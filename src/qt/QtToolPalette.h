@@ -24,6 +24,7 @@ public:
     explicit QtToolPalette(QWidget* parent = nullptr);
 
     void setCompactToolbarMode(bool compact);
+    void setQuickColors(std::vector<Color> colors);
     void syncFromToolState(const QtToolState& state);
 
 Q_SIGNALS:
@@ -45,6 +46,7 @@ private:
     QCheckBox* pressureCheck = nullptr;
     QCheckBox* segmentCheck = nullptr;
     std::vector<QToolButton*> presetButtons;
+    std::vector<Color> quickColors;
     Color currentColor{0x33, 0x33, 0xcc, 0xff};
     QtToolType currentTool = QtToolType::Hand;
     bool compactToolbarMode = false;

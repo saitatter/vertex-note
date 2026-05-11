@@ -1847,24 +1847,16 @@ auto luaGetToolInfo(lua_State* lua) -> int {
 }
 
 auto luaGetColorPalette(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
     lua_settop(lua, 0);
-    struct Entry {
-        const char* name;
-        uint32_t color;
-    };
-    constexpr Entry PALETTE[] = {
-            {"black", 0x000000U}, {"green", 0x008000U}, {"lightblue", 0x00c0ffU}, {"lightgreen", 0x00ff80U},
-            {"blue", 0x0000ffU},  {"gray", 0x808080U},  {"red", 0xff0000U},       {"magenta", 0xff00ffU},
-            {"orange", 0xff8000U}, {"yellow", 0xffff00U}, {"white", 0xffffffU},
-    };
-
+    const auto palette = plugin ? plugin->runtime->currentColorPalette() : qtDefaultColorPalette();
     lua_newtable(lua);
     int index = 1;
-    for (const auto& entry: PALETTE) {
+    for (const auto& entry: palette) {
         lua_pushinteger(lua, index++);
         lua_newtable(lua);
         luaSetStringField(lua, "name", entry.name);
-        luaSetIntegerField(lua, "color", static_cast<lua_Integer>(entry.color));
+        luaSetIntegerField(lua, "color", luaColorValue(entry.color));
         lua_settable(lua, -3);
     }
     return 1;
@@ -2621,6 +2613,10 @@ void QtLuaPluginRuntime::configureToolAccess(
     this->toolStateProvider = std::move(toolStateProvider);
 }
 
+void QtLuaPluginRuntime::configureColorPaletteAccess(std::function<std::vector<QtPaletteColor>()> colorPaletteProvider) {
+    this->colorPaletteProvider = std::move(colorPaletteProvider);
+}
+
 void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvider,
                                              std::function<void(double)> zoomSetter,
                                              std::function<int()> layoutSpanProvider) {
@@ -2758,6 +2754,10 @@ void QtLuaPluginRuntime::changeToolColor(uint32_t rgb, const std::string& tool, 
 
 auto QtLuaPluginRuntime::currentToolState() const -> QtToolState {
     return this->toolStateProvider ? this->toolStateProvider() : QtToolState{};
+}
+
+auto QtLuaPluginRuntime::currentColorPalette() const -> std::vector<QtPaletteColor> {
+    return this->colorPaletteProvider ? this->colorPaletteProvider() : qtDefaultColorPalette();
 }
 
 auto QtLuaPluginRuntime::currentZoom() const -> double { return this->zoomProvider ? this->zoomProvider() : 1.0; }

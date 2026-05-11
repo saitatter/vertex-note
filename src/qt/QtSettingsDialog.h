@@ -53,6 +53,8 @@ struct QtSettings {
     bool showFilePathInTitlebar = false;
     bool showPageNumberInTitlebar = false;
     bool showPageShadow = true;
+    std::string themeVariant = "system";
+    std::string colorPalettePath;
     bool autoloadPdfXoj = true;
     std::string defaultPdfExportName = "%{name}_annotated";
     int pdfPageCacheSize = 10;
@@ -105,6 +107,8 @@ private:
     QCheckBox* showFilePathInTitlebarCheck = nullptr;
     QCheckBox* showPageNumberInTitlebarCheck = nullptr;
     QCheckBox* showPageShadowCheck = nullptr;
+    QComboBox* themeVariantCombo = nullptr;
+    QLineEdit* colorPalettePathEdit = nullptr;
     QCheckBox* autoloadPdfXojCheck = nullptr;
     QLineEdit* defaultPdfExportNameEdit = nullptr;
     QSpinBox* pdfPageCacheSizeSpin = nullptr;

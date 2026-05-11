@@ -10,6 +10,8 @@ set(vertexnote_qt_sources
         QtCanvas.cpp
         QtCanvasLayout.h
         QtCanvasLayout.cpp
+        QtColorPalette.h
+        QtColorPalette.cpp
         QtClipboardService.h
         QtClipboardService.cpp
         QtCommandHost.h

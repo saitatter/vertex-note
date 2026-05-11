@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "QtToolState.h"
+#include "QtColorPalette.h"
 #include "ui/common/IPluginUiBridge.h"
 #include "ui/common/UiTypes.h"
 
@@ -55,6 +56,7 @@ public:
                                std::function<bool(const std::filesystem::path&, std::string*)> pngExporter);
     void configureToolAccess(std::function<void(uint32_t, const std::string&, bool)> toolColorChanger,
                              std::function<QtToolState()> toolStateProvider = {});
+    void configureColorPaletteAccess(std::function<std::vector<QtPaletteColor>()> colorPaletteProvider);
     void configureViewAccess(std::function<double()> zoomProvider, std::function<void(double)> zoomSetter,
                              std::function<int()> layoutSpanProvider);
     void configureViewportAccess(std::function<vn::ui::common::CanvasViewport()> viewportProvider,
@@ -74,6 +76,7 @@ public:
     [[nodiscard]] auto exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool;
     void changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const;
     [[nodiscard]] auto currentToolState() const -> QtToolState;
+    [[nodiscard]] auto currentColorPalette() const -> std::vector<QtPaletteColor>;
     [[nodiscard]] auto currentZoom() const -> double;
     void setZoom(double zoom) const;
     [[nodiscard]] auto currentLayoutSpan() const -> int;
@@ -101,6 +104,7 @@ private:
     std::function<bool(const std::filesystem::path&, std::string*)> pngExporter;
     std::function<void(uint32_t, const std::string&, bool)> toolColorChanger;
     std::function<QtToolState()> toolStateProvider;
+    std::function<std::vector<QtPaletteColor>()> colorPaletteProvider;
     std::function<double()> zoomProvider;
     std::function<void(double)> zoomSetter;
     std::function<int()> layoutSpanProvider;

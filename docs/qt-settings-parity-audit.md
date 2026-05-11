@@ -37,6 +37,8 @@ This audit compares GTK `Settings` keys from
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt can persist eraser cursor hiding and active/right-button eraser cursor behavior. |
 | `filepathShownInTitlebar`, `pageNumberShownInTitlebar` | Implemented | `appearance/showFilePathInTitlebar`, `appearance/showPageNumberInTitlebar`. |
 | `showPageShadow` | Implemented | `appearance/showPageShadow`; applied to the Qt page background renderer. |
+| `themeVariant` | Qt-only equivalent | `appearance/themeVariant`; Qt can apply System, Light, or Dark application palettes without sharing GTK theme storage. |
+| `colorPalette` | Implemented | `appearance/colorPalettePath`; Qt loads `.gpl` palette files for toolbar quick colors and Lua `app.getColorPalette()`, falling back to the built-in palette on parse errors. |
 | `autosaveEnabled`, `autosaveTimeout` | Implemented | `general/autosaveEnabled`, `general/autosaveTimeoutMinutes`; autosaves dirty existing `.xopp`/`.xoj`/`.xopt` documents without prompting. |
 | `strokeRecognizerMinSize` | Implemented | `general/strokeRecognizerMinSize`. |
 | `laserPointerFadeOutTime` | Implemented | `general/laserPointerFadeOutMs`. |
@@ -47,10 +49,9 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Current Qt behavior | Gap |
 | --- | --- | --- |
 | Custom data `deviceClasses`, `buttonConfig` | Qt settings discovers current `QInputDevice`s and persists right/middle button action policy. | No per-device class matrix or full GTK button action editor yet. |
-| `iconTheme`, `themeVariant`, `useStockIcons` | Qt uses bundled Qt icons and native Qt palette defaults. | No user-selectable icon theme or light/dark override in Qt settings. |
+| `iconTheme`, `useStockIcons` | Qt uses bundled Qt icons and native Qt palette/theme defaults. | No user-selectable icon theme or stock-icon toggle in Qt settings. |
 | `presentationMode` | Qt has the `view.presentation` command. | Presentation state is not persisted as a settings default. |
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt uses native file dialogs and recent documents. | Last dialog directories are not separately persisted. |
-| `colorPalette` | Qt has built-in quick colors/tool state. | No Qt palette-file selection or cycling settings parity yet. |
 | `latexSettings.defaultText`, `latexSettings.genCmd`, `latexSettings.*editor*`, `latexSettings.sourceView*`, `latexSettings.useExternalEditor`, `latexSettings.externalEditor*`, `latexSettings.temporaryFileExt`, `latexSettings.autoCheckDependencies` | Qt can render LaTeX using the template path. | Advanced LaTeX editor/generator settings are not exposed in Qt. |
 | `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Qt audio settings cover folder, sample rate, gain, seek step and uses the shared audio backend. | No Qt device selector or global disable toggle in settings. |
 | `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
@@ -89,7 +90,6 @@ This audit compares GTK `Settings` keys from
    tool mappings.
 2. Add advanced Tools settings for rotation tolerance, stroke filtering, and
    stabilizer controls.
-3. Add Appearance settings for theme variant, icon theme, selection colors, and
-   recolor mode.
+3. Add Appearance settings for icon theme, selection colors, and recolor mode.
 4. Wire the persisted PDF performance settings into a dedicated Qt PDF cache
    layer once that layer has stable knobs to expose.

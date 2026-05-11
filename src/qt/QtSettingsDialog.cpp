@@ -192,6 +192,33 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->showPageShadowCheck = new QCheckBox(appearancePage);
     this->showPageShadowCheck->setChecked(current.showPageShadow);
     appearanceLayout->addRow(QStringLiteral("Show page shadow:"), this->showPageShadowCheck);
+
+    this->themeVariantCombo = new QComboBox(appearancePage);
+    this->themeVariantCombo->addItem(QStringLiteral("System"), QStringLiteral("system"));
+    this->themeVariantCombo->addItem(QStringLiteral("Light"), QStringLiteral("light"));
+    this->themeVariantCombo->addItem(QStringLiteral("Dark"), QStringLiteral("dark"));
+    const QString currentTheme = QString::fromStdString(current.themeVariant);
+    const int themeIndex = this->themeVariantCombo->findData(currentTheme);
+    this->themeVariantCombo->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
+    appearanceLayout->addRow(QStringLiteral("Theme:"), this->themeVariantCombo);
+
+    auto* paletteRow = new QWidget(appearancePage);
+    auto* paletteRowLayout = new QHBoxLayout(paletteRow);
+    paletteRowLayout->setContentsMargins(0, 0, 0, 0);
+    this->colorPalettePathEdit = new QLineEdit(QString::fromStdString(current.colorPalettePath), paletteRow);
+    auto* browsePaletteButton = new QPushButton(QStringLiteral("Browse..."), paletteRow);
+    paletteRowLayout->addWidget(this->colorPalettePathEdit, 1);
+    paletteRowLayout->addWidget(browsePaletteButton, 0);
+    QObject::connect(browsePaletteButton, &QPushButton::clicked, this, [this]() {
+        const QString selectedPath =
+                QFileDialog::getOpenFileName(this, QStringLiteral("Select Color Palette"),
+                                             this->colorPalettePathEdit->text().trimmed(),
+                                             QStringLiteral("GIMP Palette (*.gpl);;All Files (*)"));
+        if (!selectedPath.isEmpty()) {
+            this->colorPalettePathEdit->setText(selectedPath);
+        }
+    });
+    appearanceLayout->addRow(QStringLiteral("Color palette:"), paletteRow);
     appearancePage->setLayout(appearanceLayout);
     tabs->addTab(appearancePage, QStringLiteral("Appearance"));
 
@@ -399,6 +426,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .showFilePathInTitlebar = this->showFilePathInTitlebarCheck->isChecked(),
             .showPageNumberInTitlebar = this->showPageNumberInTitlebarCheck->isChecked(),
             .showPageShadow = this->showPageShadowCheck->isChecked(),
+            .themeVariant = this->themeVariantCombo->currentData().toString().toStdString(),
+            .colorPalettePath = this->colorPalettePathEdit->text().trimmed().toStdString(),
             .autoloadPdfXoj = this->autoloadPdfXojCheck->isChecked(),
             .defaultPdfExportName = this->defaultPdfExportNameEdit->text().trimmed().toStdString(),
             .pdfPageCacheSize = this->pdfPageCacheSizeSpin->value(),
