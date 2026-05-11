@@ -27,6 +27,8 @@ public:
     void setDocumentController(QtDocumentController* controller);
     void setContentRenderer(vn::view::render::PageContentRenderer* renderer);
     void setRecolorOptions(bool enabled, Color light, Color dark);
+    void setPreferredSidebarWidth(int width);
+    void setDisplayOptions(int numberingStyle, int scrollbarHideType, bool scrollbarOnLeft, bool disableScrollbarFadeout);
     void setCurrentPage(std::size_t pageIndex);
     void refresh();
 
@@ -46,4 +48,9 @@ private:
     bool recolorEnabled = false;
     Color recolorLight{198, 208, 245, 255};
     Color recolorDark{48, 52, 70, 255};
+    int preferredSidebarWidth = 90;
+    int numberingStyle = 1;
+    int scrollbarHideType = 0;
+    bool scrollbarOnLeft = false;
+    bool disableScrollbarFadeout = false;
 };

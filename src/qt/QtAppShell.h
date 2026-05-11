@@ -76,6 +76,7 @@ private:
     void checkForUpdates(bool silentWhenCurrent = false);
     void applyRuntimeSettings();
     void applyAppearanceSettings();
+    void applySidebarSettings();
     void reloadColorPalette();
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);

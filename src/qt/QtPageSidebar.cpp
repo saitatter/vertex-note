@@ -14,6 +14,7 @@
 #include <QListWidgetItem>
 #include <QPainter>
 #include <QPixmap>
+#include <QScrollBar>
 #include <QVBoxLayout>
 
 #include "QtDocumentController.h"
@@ -24,6 +25,12 @@ namespace {
 constexpr int THUMB_WIDTH = 64;
 constexpr int THUMB_HEIGHT = 92;
 constexpr int THUMB_ITEM_WIDTH = 72;
+constexpr int SIDEBAR_NUMBERING_NONE = 0;
+constexpr int SIDEBAR_NUMBERING_BELOW = 1;
+constexpr int SIDEBAR_NUMBERING_CIRCLE = 2;
+constexpr int SIDEBAR_NUMBERING_SQUARE = 3;
+constexpr int SCROLLBAR_HIDE_HORIZONTAL = 1 << 1;
+constexpr int SCROLLBAR_HIDE_VERTICAL = 1 << 2;
 
 auto recolorDifference(Color light, Color dark) -> QColor {
     return QColor(std::abs(static_cast<int>(dark.red) - static_cast<int>(light.red)),
@@ -45,7 +52,7 @@ QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
     setMinimumWidth(76);
-    setMaximumWidth(92);
+    setMaximumWidth(600);
     setTitleBarWidget(new QWidget(this));
 
     auto* container = new QWidget(this);
@@ -63,6 +70,7 @@ QtPageSidebar::QtPageSidebar(QWidget* parent): QDockWidget(QStringLiteral("Pages
     this->pageList->setSpacing(2);
     this->pageList->setSelectionMode(QAbstractItemView::SingleSelection);
     this->pageList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->pageList->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     this->pageList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     this->pageList->setFrameShape(QFrame::NoFrame);
     this->pageList->setWordWrap(true);
@@ -92,6 +100,29 @@ void QtPageSidebar::setRecolorOptions(bool enabled, Color light, Color dark) {
     refresh();
 }
 
+void QtPageSidebar::setPreferredSidebarWidth(int width) {
+    this->preferredSidebarWidth = std::clamp(width, 76, 600);
+    setMinimumWidth(76);
+    setMaximumWidth(600);
+    resize(this->preferredSidebarWidth, height());
+}
+
+void QtPageSidebar::setDisplayOptions(int numbering, int scrollbarHide, bool scrollbarLeft, bool disableFadeout) {
+    this->numberingStyle = std::clamp(numbering, SIDEBAR_NUMBERING_NONE, SIDEBAR_NUMBERING_SQUARE);
+    this->scrollbarHideType = scrollbarHide;
+    this->scrollbarOnLeft = scrollbarLeft;
+    this->disableScrollbarFadeout = disableFadeout;
+
+    const bool hideHorizontal = (this->scrollbarHideType & SCROLLBAR_HIDE_HORIZONTAL) != 0;
+    const bool hideVertical = (this->scrollbarHideType & SCROLLBAR_HIDE_VERTICAL) != 0;
+    this->pageList->setHorizontalScrollBarPolicy(hideHorizontal ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    this->pageList->setVerticalScrollBarPolicy(hideVertical ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    this->pageList->setLayoutDirection(this->scrollbarOnLeft ? Qt::RightToLeft : Qt::LeftToRight);
+    this->pageList->viewport()->setLayoutDirection(Qt::LeftToRight);
+    this->pageList->verticalScrollBar()->setProperty("vertexDisableFadeout", this->disableScrollbarFadeout);
+    refresh();
+}
+
 void QtPageSidebar::setCurrentPage(std::size_t pageIndex) {
     if (this->currentPageIndex == pageIndex && this->pageList->count() > 0) {
         syncCurrentSelection();
@@ -115,12 +146,15 @@ void QtPageSidebar::refresh() {
     const auto& pages = this->controller->snapshotPages();
     for (std::size_t i = 0; i < pages.size(); ++i) {
         auto* item = new QListWidgetItem(this->pageList);
-        item->setText(QStringLiteral("%1").arg(static_cast<int>(i + 1)));
+        item->setText(this->numberingStyle == SIDEBAR_NUMBERING_BELOW
+                              ? QStringLiteral("%1").arg(static_cast<int>(i + 1))
+                              : QString());
         item->setTextAlignment(Qt::AlignHCenter);
         item->setForeground(QBrush(QColor(215, 64, 64)));
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<qulonglong>(i)));
         item->setIcon(QIcon(renderThumbnail(i)));
-        item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT + 22));
+        item->setSizeHint(QSize(THUMB_ITEM_WIDTH, THUMB_HEIGHT +
+                                                       (this->numberingStyle == SIDEBAR_NUMBERING_BELOW ? 22 : 8)));
     }
     syncCurrentSelection();
 }
@@ -207,6 +241,21 @@ auto QtPageSidebar::renderThumbnail(std::size_t pageIndex) const -> QPixmap {
     borderPainter.setPen(QPen(QColor(180, 180, 180), 1.0));
     borderPainter.setBrush(Qt::NoBrush);
     borderPainter.drawRect(0, 0, pixWidth - 1, pixHeight - 1);
+    if (this->numberingStyle == SIDEBAR_NUMBERING_CIRCLE || this->numberingStyle == SIDEBAR_NUMBERING_SQUARE) {
+        const QString pageNumber = QString::number(static_cast<int>(pageIndex + 1));
+        const int badgeSize = std::max(18, std::min(28, pixWidth / 3));
+        const QRect badgeRect(pixWidth - badgeSize - 4, pixHeight - badgeSize - 4, badgeSize, badgeSize);
+        borderPainter.setRenderHint(QPainter::Antialiasing, true);
+        borderPainter.setPen(Qt::NoPen);
+        borderPainter.setBrush(QColor(215, 64, 64, 230));
+        if (this->numberingStyle == SIDEBAR_NUMBERING_CIRCLE) {
+            borderPainter.drawEllipse(badgeRect);
+        } else {
+            borderPainter.drawRoundedRect(badgeRect, 2, 2);
+        }
+        borderPainter.setPen(QColor(255, 255, 255));
+        borderPainter.drawText(badgeRect, Qt::AlignCenter, pageNumber);
+    }
 
     return pixmap;
 }

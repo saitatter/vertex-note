@@ -686,6 +686,7 @@ QtAppShell::QtAppShell():
         this->window.canvas()->newBlankDocument();
         this->window.canvas()->fitWidth();
     }
+    applySidebarSettings();
     this->window.cascadeFloatingToolBars();
     this->window.menuBar()->setVisible(this->persistedShowMenubar);
     applySidebarVisibility(this->persistedShowSidebar);
@@ -2904,6 +2905,25 @@ void QtAppShell::loadPersistentUiState() {
                     .toBool();
     this->currentSettings.showPageShadow =
             settings.value(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow).toBool();
+    this->currentSettings.sidebarWidth =
+            std::clamp(settings.value(QStringLiteral("appearance/sidebarWidth"), this->currentSettings.sidebarWidth)
+                               .toInt(),
+                       76, 600);
+    this->currentSettings.sidebarOnRight =
+            settings.value(QStringLiteral("appearance/sidebarOnRight"), this->currentSettings.sidebarOnRight).toBool();
+    this->currentSettings.scrollbarOnLeft =
+            settings.value(QStringLiteral("appearance/scrollbarOnLeft"), this->currentSettings.scrollbarOnLeft).toBool();
+    this->currentSettings.sidebarNumberingStyle =
+            std::clamp(settings.value(QStringLiteral("appearance/sidebarNumberingStyle"),
+                                      this->currentSettings.sidebarNumberingStyle)
+                               .toInt(),
+                       0, 3);
+    this->currentSettings.scrollbarHideType =
+            settings.value(QStringLiteral("appearance/scrollbarHideType"), this->currentSettings.scrollbarHideType).toInt() & 6;
+    this->currentSettings.disableScrollbarFadeout =
+            settings.value(QStringLiteral("appearance/disableScrollbarFadeout"),
+                           this->currentSettings.disableScrollbarFadeout)
+                    .toBool();
     this->currentSettings.themeVariant =
             settings.value(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant))
                     .toString()
@@ -3281,6 +3301,13 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
                       this->currentSettings.showPageNumberInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow);
+    settings.setValue(QStringLiteral("appearance/sidebarWidth"), this->currentSettings.sidebarWidth);
+    settings.setValue(QStringLiteral("appearance/sidebarOnRight"), this->currentSettings.sidebarOnRight);
+    settings.setValue(QStringLiteral("appearance/scrollbarOnLeft"), this->currentSettings.scrollbarOnLeft);
+    settings.setValue(QStringLiteral("appearance/sidebarNumberingStyle"), this->currentSettings.sidebarNumberingStyle);
+    settings.setValue(QStringLiteral("appearance/scrollbarHideType"), this->currentSettings.scrollbarHideType);
+    settings.setValue(QStringLiteral("appearance/disableScrollbarFadeout"),
+                      this->currentSettings.disableScrollbarFadeout);
     settings.setValue(QStringLiteral("appearance/themeVariant"), QString::fromStdString(this->currentSettings.themeVariant));
     settings.setValue(QStringLiteral("appearance/iconTheme"), QString::fromStdString(this->currentSettings.iconTheme));
     settings.setValue(QStringLiteral("appearance/selectionColor"),
@@ -3750,8 +3777,17 @@ void QtAppShell::applyRuntimeSettings() {
                                                 this->currentSettings.pdfPreloadPagesAfter,
                                                 this->currentSettings.pdfEagerPageCleanup,
                                                 this->currentSettings.pdfPageRerenderThreshold);
+    applySidebarSettings();
     applyAppearanceSettings();
     reloadColorPalette();
+}
+
+void QtAppShell::applySidebarSettings() {
+    this->window.setSidebarPreferences(this->currentSettings.sidebarWidth, this->currentSettings.sidebarOnRight,
+                                       this->currentSettings.sidebarNumberingStyle,
+                                       this->currentSettings.scrollbarHideType,
+                                       this->currentSettings.scrollbarOnLeft,
+                                       this->currentSettings.disableScrollbarFadeout);
 }
 
 void QtAppShell::applyAppearanceSettings() {

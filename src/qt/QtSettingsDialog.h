@@ -97,6 +97,12 @@ struct QtSettings {
     bool showFilePathInTitlebar = false;
     bool showPageNumberInTitlebar = false;
     bool showPageShadow = true;
+    int sidebarWidth = 90;
+    bool sidebarOnRight = false;
+    bool scrollbarOnLeft = false;
+    int sidebarNumberingStyle = 1;
+    int scrollbarHideType = 0;
+    bool disableScrollbarFadeout = false;
     std::string themeVariant = "system";
     std::string iconTheme = "color";
     Color selectionColor{0, 120, 255, 255};
@@ -233,6 +239,12 @@ private:
     QCheckBox* showFilePathInTitlebarCheck = nullptr;
     QCheckBox* showPageNumberInTitlebarCheck = nullptr;
     QCheckBox* showPageShadowCheck = nullptr;
+    QSpinBox* sidebarWidthSpin = nullptr;
+    QCheckBox* sidebarOnRightCheck = nullptr;
+    QCheckBox* scrollbarOnLeftCheck = nullptr;
+    QComboBox* sidebarNumberingStyleCombo = nullptr;
+    QComboBox* scrollbarHideTypeCombo = nullptr;
+    QCheckBox* disableScrollbarFadeoutCheck = nullptr;
     QComboBox* themeVariantCombo = nullptr;
     QComboBox* iconThemeCombo = nullptr;
     QPushButton* selectionColorButton = nullptr;

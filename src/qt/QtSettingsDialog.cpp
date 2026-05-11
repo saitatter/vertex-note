@@ -572,6 +572,42 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->showPageShadowCheck->setChecked(current.showPageShadow);
     appearanceLayout->addRow(QStringLiteral("Show page shadow:"), this->showPageShadowCheck);
 
+    this->sidebarWidthSpin = new QSpinBox(appearancePage);
+    this->sidebarWidthSpin->setRange(76, 600);
+    this->sidebarWidthSpin->setValue(std::clamp(current.sidebarWidth, 76, 600));
+    this->sidebarWidthSpin->setSuffix(QStringLiteral(" px"));
+    appearanceLayout->addRow(QStringLiteral("Sidebar width:"), this->sidebarWidthSpin);
+
+    this->sidebarOnRightCheck = new QCheckBox(appearancePage);
+    this->sidebarOnRightCheck->setChecked(current.sidebarOnRight);
+    appearanceLayout->addRow(QStringLiteral("Sidebar on right:"), this->sidebarOnRightCheck);
+
+    this->scrollbarOnLeftCheck = new QCheckBox(appearancePage);
+    this->scrollbarOnLeftCheck->setChecked(current.scrollbarOnLeft);
+    appearanceLayout->addRow(QStringLiteral("Sidebar scrollbar on left:"), this->scrollbarOnLeftCheck);
+
+    this->sidebarNumberingStyleCombo = new QComboBox(appearancePage);
+    this->sidebarNumberingStyleCombo->addItem(QStringLiteral("None"), 0);
+    this->sidebarNumberingStyleCombo->addItem(QStringLiteral("Below preview"), 1);
+    this->sidebarNumberingStyleCombo->addItem(QStringLiteral("Circular badge"), 2);
+    this->sidebarNumberingStyleCombo->addItem(QStringLiteral("Square badge"), 3);
+    const int numberingIndex = this->sidebarNumberingStyleCombo->findData(current.sidebarNumberingStyle);
+    this->sidebarNumberingStyleCombo->setCurrentIndex(numberingIndex >= 0 ? numberingIndex : 1);
+    appearanceLayout->addRow(QStringLiteral("Sidebar numbering:"), this->sidebarNumberingStyleCombo);
+
+    this->scrollbarHideTypeCombo = new QComboBox(appearancePage);
+    this->scrollbarHideTypeCombo->addItem(QStringLiteral("None"), 0);
+    this->scrollbarHideTypeCombo->addItem(QStringLiteral("Horizontal"), 2);
+    this->scrollbarHideTypeCombo->addItem(QStringLiteral("Vertical"), 4);
+    this->scrollbarHideTypeCombo->addItem(QStringLiteral("Both"), 6);
+    const int scrollbarIndex = this->scrollbarHideTypeCombo->findData(current.scrollbarHideType);
+    this->scrollbarHideTypeCombo->setCurrentIndex(scrollbarIndex >= 0 ? scrollbarIndex : 0);
+    appearanceLayout->addRow(QStringLiteral("Hide sidebar scrollbars:"), this->scrollbarHideTypeCombo);
+
+    this->disableScrollbarFadeoutCheck = new QCheckBox(appearancePage);
+    this->disableScrollbarFadeoutCheck->setChecked(current.disableScrollbarFadeout);
+    appearanceLayout->addRow(QStringLiteral("Disable scrollbar fadeout:"), this->disableScrollbarFadeoutCheck);
+
     this->themeVariantCombo = new QComboBox(appearancePage);
     this->themeVariantCombo->addItem(QStringLiteral("System"), QStringLiteral("system"));
     this->themeVariantCombo->addItem(QStringLiteral("Light"), QStringLiteral("light"));
@@ -1109,6 +1145,12 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .showFilePathInTitlebar = this->showFilePathInTitlebarCheck->isChecked(),
             .showPageNumberInTitlebar = this->showPageNumberInTitlebarCheck->isChecked(),
             .showPageShadow = this->showPageShadowCheck->isChecked(),
+            .sidebarWidth = this->sidebarWidthSpin->value(),
+            .sidebarOnRight = this->sidebarOnRightCheck->isChecked(),
+            .scrollbarOnLeft = this->scrollbarOnLeftCheck->isChecked(),
+            .sidebarNumberingStyle = this->sidebarNumberingStyleCombo->currentData().toInt(),
+            .scrollbarHideType = this->scrollbarHideTypeCombo->currentData().toInt(),
+            .disableScrollbarFadeout = this->disableScrollbarFadeoutCheck->isChecked(),
             .themeVariant = this->themeVariantCombo->currentData().toString().toStdString(),
             .iconTheme = this->iconThemeCombo->currentData().toString().toStdString(),
             .selectionColor = qColorToColor(this->selectionColor),

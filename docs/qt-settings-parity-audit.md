@@ -49,6 +49,7 @@ This audit compares GTK `Settings` keys from
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
 | `filepathShownInTitlebar`, `pageNumberShownInTitlebar` | Implemented | `appearance/showFilePathInTitlebar`, `appearance/showPageNumberInTitlebar`. |
 | `showPageShadow` | Implemented | `appearance/showPageShadow`; applied to the Qt page background renderer. |
+| `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Implemented / Qt-native | `appearance/sidebarWidth`, `appearance/sidebarOnRight`, `appearance/scrollbarOnLeft`, `appearance/sidebarNumberingStyle`, `appearance/scrollbarHideType`, `appearance/disableScrollbarFadeout`; applied to the Qt dock/page sidebar. The Qt canvas itself has no GTK-style viewport scrollbars. |
 | `themeVariant`, `iconTheme`, `useStockIcons` | Qt-only equivalent | `appearance/themeVariant`, `appearance/iconTheme`; Qt applies System, Light, Dark, Color icons, and Lucide icons without sharing GTK theme storage. |
 | `colorPalette` | Implemented | `appearance/colorPalettePath`; Qt loads `.gpl` palette files for toolbar quick colors and Lua `app.getColorPalette()`, falling back to the built-in palette on parse errors. |
 | `autosaveEnabled`, `autosaveTimeout` | Implemented | `general/autosaveEnabled`, `general/autosaveTimeoutMinutes`; autosaves dirty existing `.xopp`/`.xoj`/`.xopt` documents without prompting. |
@@ -74,13 +75,12 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
-| `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work
 
-1. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
+1. Add Qt-native gesture settings for `zoomGesturesEnabled` and `touchZoomStartThreshold`; `gtkTouchInertialScrolling` remains GTK-specific unless Qt gets a kinetic scrolling backend.
 2. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
 3. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.

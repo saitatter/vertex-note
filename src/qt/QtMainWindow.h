@@ -47,6 +47,11 @@ public:
     [[nodiscard]] auto zoomStatusLabel() -> QLabel*;
     void cascadeFloatingToolBars();
     void setGtkParitySidebarMode(bool enabled);
+    void setSidebarPreferences(int width, bool onRight, int numberingStyle, int scrollbarHideType, bool scrollbarOnLeft,
+                               bool disableScrollbarFadeout);
+
+private:
+    [[nodiscard]] auto preferredSidebarArea() const -> Qt::DockWidgetArea;
 
 private:
     QtCanvas* canvasWidget = nullptr;
@@ -67,4 +72,10 @@ private:
     QLabel* pageLabel = nullptr;
     QLabel* layerLabel = nullptr;
     QLabel* zoomLabel = nullptr;
+    int sidebarPreferredWidth = 90;
+    bool sidebarRightSide = false;
+    int sidebarNumberingStyle = 1;
+    int sidebarScrollbarHideType = 0;
+    bool sidebarScrollbarOnLeft = false;
+    bool sidebarDisableScrollbarFadeout = false;
 };

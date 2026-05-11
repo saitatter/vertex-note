@@ -6,6 +6,8 @@
 
 #include "QtMainWindow.h"
 
+#include <algorithm>
+
 #include <QComboBox>
 #include <QMenuBar>
 #include <QPoint>
@@ -217,26 +219,51 @@ auto QtMainWindow::layerStatusLabel() -> QLabel* { return this->layerLabel; }
 
 auto QtMainWindow::zoomStatusLabel() -> QLabel* { return this->zoomLabel; }
 
+auto QtMainWindow::preferredSidebarArea() const -> Qt::DockWidgetArea {
+    return this->sidebarRightSide ? Qt::RightDockWidgetArea : Qt::LeftDockWidgetArea;
+}
+
+void QtMainWindow::setSidebarPreferences(int width, bool onRight, int numberingStyle, int scrollbarHideType,
+                                         bool scrollbarOnLeft, bool disableScrollbarFadeout) {
+    this->sidebarPreferredWidth = std::clamp(width, 76, 600);
+    this->sidebarRightSide = onRight;
+    this->sidebarNumberingStyle = numberingStyle;
+    this->sidebarScrollbarHideType = scrollbarHideType;
+    this->sidebarScrollbarOnLeft = scrollbarOnLeft;
+    this->sidebarDisableScrollbarFadeout = disableScrollbarFadeout;
+    this->pageSidebarWidget->setPreferredSidebarWidth(this->sidebarPreferredWidth);
+    this->pageSidebarWidget->setDisplayOptions(this->sidebarNumberingStyle, this->sidebarScrollbarHideType,
+                                               this->sidebarScrollbarOnLeft, this->sidebarDisableScrollbarFadeout);
+    resizeDocks({this->pageSidebarWidget}, {this->sidebarPreferredWidth}, Qt::Horizontal);
+}
+
 void QtMainWindow::setGtkParitySidebarMode(bool enabled) {
+    const auto sidebarArea = preferredSidebarArea();
     if (enabled) {
         removeDockWidget(this->layerPanelWidget);
         if (dockWidgetArea(this->pageSidebarWidget) == Qt::NoDockWidgetArea) {
-            addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
+            addDockWidget(sidebarArea, this->pageSidebarWidget);
+        } else if (dockWidgetArea(this->pageSidebarWidget) != sidebarArea) {
+            addDockWidget(sidebarArea, this->pageSidebarWidget);
         }
         this->pageSidebarWidget->raise();
-        resizeDocks({this->pageSidebarWidget}, {88}, Qt::Horizontal);
+        resizeDocks({this->pageSidebarWidget}, {this->sidebarPreferredWidth}, Qt::Horizontal);
         return;
     }
 
     if (dockWidgetArea(this->pageSidebarWidget) == Qt::NoDockWidgetArea) {
-        addDockWidget(Qt::LeftDockWidgetArea, this->pageSidebarWidget);
+        addDockWidget(sidebarArea, this->pageSidebarWidget);
+    } else if (dockWidgetArea(this->pageSidebarWidget) != sidebarArea) {
+        addDockWidget(sidebarArea, this->pageSidebarWidget);
     }
     if (dockWidgetArea(this->layerPanelWidget) == Qt::NoDockWidgetArea) {
-        addDockWidget(Qt::LeftDockWidgetArea, this->layerPanelWidget);
+        addDockWidget(sidebarArea, this->layerPanelWidget);
+    } else if (dockWidgetArea(this->layerPanelWidget) != sidebarArea) {
+        addDockWidget(sidebarArea, this->layerPanelWidget);
     }
     tabifyDockWidget(this->pageSidebarWidget, this->layerPanelWidget);
     this->pageSidebarWidget->raise();
-    resizeDocks({this->pageSidebarWidget}, {90}, Qt::Horizontal);
+    resizeDocks({this->pageSidebarWidget}, {this->sidebarPreferredWidth}, Qt::Horizontal);
 }
 
 void QtMainWindow::cascadeFloatingToolBars() {
