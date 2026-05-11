@@ -29,6 +29,12 @@ struct QtToolbarProfileOption {
     std::string displayName;
 };
 
+struct QtAudioDeviceOption {
+    int index = -1;
+    std::string displayName;
+    bool selected = false;
+};
+
 struct QtSettings {
     double defaultPenWidth = 1.41;
     double defaultHighlighterWidth = 8.50;
@@ -107,12 +113,29 @@ struct QtSettings {
     std::string emptyLastPageAppend = "disabled";
     std::string sizeUnit = "cm";
     std::string latexTemplatePath;
+    bool latexAutoCheckDependencies = true;
+    std::string latexDefaultText = "x^2";
+    std::string latexGenCmd = "pdflatex -halt-on-error -interaction=nonstopmode '{}'";
+    std::string latexSourceViewThemeId;
+    bool latexSourceViewAutoIndent = true;
+    bool latexSourceViewSyntaxHighlight = true;
+    bool latexSourceViewShowLineNumbers = false;
+    std::string latexEditorFont = "Monospace 12";
+    bool latexUseCustomEditorFont = false;
+    bool latexEditorWordWrap = true;
+    bool latexUseExternalEditor = false;
+    bool latexExternalEditorAutoConfirm = false;
+    std::string latexExternalEditorCmd;
+    std::string latexTemporaryFileExt = "tex";
     std::string audioFolder;
     std::string lastOpenPath;
     std::string lastSavePath;
     std::string lastImagePath;
     std::string lastPdfPath;
     std::string lastExportPath;
+    bool disableAudio = false;
+    int audioInputDevice = -1;
+    int audioOutputDevice = -1;
     double audioSampleRate = 44100.0;
     double audioGain = 1.0;
     int defaultSeekTimeSeconds = 5;
@@ -124,6 +147,8 @@ class QtSettingsDialog: public QDialog {
 
 public:
     explicit QtSettingsDialog(const QtSettings& current, const std::vector<QtToolbarProfileOption>& toolbarProfiles,
+                              const std::vector<QtAudioDeviceOption>& audioInputDevices = {},
+                              const std::vector<QtAudioDeviceOption>& audioOutputDevices = {},
                               QWidget* parent = nullptr);
 
     [[nodiscard]] auto settings() const -> QtSettings;
@@ -215,6 +240,23 @@ private:
     QDoubleSpinBox* pdfPageRerenderThresholdSpin = nullptr;
     QComboBox* emptyLastPageAppendCombo = nullptr;
     QLineEdit* latexTemplatePathEdit = nullptr;
+    QCheckBox* latexAutoCheckDependenciesCheck = nullptr;
+    QLineEdit* latexDefaultTextEdit = nullptr;
+    QLineEdit* latexGenCmdEdit = nullptr;
+    QLineEdit* latexSourceViewThemeIdEdit = nullptr;
+    QCheckBox* latexSourceViewAutoIndentCheck = nullptr;
+    QCheckBox* latexSourceViewSyntaxHighlightCheck = nullptr;
+    QCheckBox* latexSourceViewShowLineNumbersCheck = nullptr;
+    QLineEdit* latexEditorFontEdit = nullptr;
+    QCheckBox* latexUseCustomEditorFontCheck = nullptr;
+    QCheckBox* latexEditorWordWrapCheck = nullptr;
+    QCheckBox* latexUseExternalEditorCheck = nullptr;
+    QCheckBox* latexExternalEditorAutoConfirmCheck = nullptr;
+    QLineEdit* latexExternalEditorCmdEdit = nullptr;
+    QLineEdit* latexTemporaryFileExtEdit = nullptr;
+    QCheckBox* disableAudioCheck = nullptr;
+    QComboBox* audioInputDeviceCombo = nullptr;
+    QComboBox* audioOutputDeviceCombo = nullptr;
     QLineEdit* audioFolderEdit = nullptr;
     QDoubleSpinBox* audioSampleRateSpin = nullptr;
     QDoubleSpinBox* audioGainSpin = nullptr;

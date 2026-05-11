@@ -15,6 +15,7 @@
 
 #include "config-features.h"
 #include "filesystem.h"
+#include "QtSettingsDialog.h"
 
 class AudioPlayer;
 class AudioRecorder;
@@ -24,8 +25,6 @@ class Settings;
 namespace portaudio {
 class AutoSystem;
 }
-
-struct QtSettings;
 
 struct QtAudioPlaybackTarget {
     fs::path path;
@@ -42,6 +41,8 @@ public:
     void applySettings(const QtSettings& settings);
 
     [[nodiscard]] auto isAudioAvailable() const -> bool;
+    [[nodiscard]] auto inputDeviceOptions() const -> std::vector<QtAudioDeviceOption>;
+    [[nodiscard]] auto outputDeviceOptions() const -> std::vector<QtAudioDeviceOption>;
     [[nodiscard]] auto isRecording() const -> bool;
     [[nodiscard]] auto isPlaying() const -> bool;
     [[nodiscard]] auto isPaused() const -> bool;

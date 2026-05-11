@@ -310,9 +310,27 @@ auto defaultLatexTemplatePath() -> fs::path {
     return fs::path(PROJECT_SOURCE_DIR) / "resources" / "default_template.tex";
 }
 
-auto buildQtLatexSettings(const std::string& templatePath) -> LatexSettings {
+auto buildQtLatexSettings(const QtSettings& qtSettings) -> LatexSettings {
     LatexSettings settings;
-    settings.globalTemplatePath = templatePath.empty() ? defaultLatexTemplatePath() : fs::path(templatePath);
+    settings.autoCheckDependencies = qtSettings.latexAutoCheckDependencies;
+    settings.defaultText = qtSettings.latexDefaultText;
+    settings.globalTemplatePath =
+            qtSettings.latexTemplatePath.empty() ? defaultLatexTemplatePath() : fs::path(qtSettings.latexTemplatePath);
+    settings.genCmd = qtSettings.latexGenCmd;
+    settings.sourceViewThemeId = qtSettings.latexSourceViewThemeId;
+    settings.sourceViewAutoIndent = qtSettings.latexSourceViewAutoIndent;
+    settings.sourceViewSyntaxHighlight = qtSettings.latexSourceViewSyntaxHighlight;
+    settings.sourceViewShowLineNumbers = qtSettings.latexSourceViewShowLineNumbers;
+    if (!qtSettings.latexEditorFont.empty()) {
+        settings.editorFont = qtSettings.latexEditorFont;
+    }
+    settings.useCustomEditorFont = qtSettings.latexUseCustomEditorFont;
+    settings.editorWordWrap = qtSettings.latexEditorWordWrap;
+    settings.useExternalEditor = qtSettings.latexUseExternalEditor;
+    settings.externalEditorAutoConfirm = qtSettings.latexExternalEditorAutoConfirm;
+    settings.externalEditorCmd = qtSettings.latexExternalEditorCmd;
+    settings.temporaryFileExt = qtSettings.latexTemporaryFileExt.empty() ? std::string("tex")
+                                                                         : qtSettings.latexTemporaryFileExt;
     return settings;
 }
 
@@ -2920,6 +2938,63 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath))
                     .toString()
                     .toStdString();
+    this->currentSettings.latexAutoCheckDependencies =
+            settings.value(QStringLiteral("latex/autoCheckDependencies"),
+                           this->currentSettings.latexAutoCheckDependencies)
+                    .toBool();
+    this->currentSettings.latexDefaultText =
+            settings.value(QStringLiteral("latex/defaultText"), QString::fromStdString(this->currentSettings.latexDefaultText))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexGenCmd =
+            settings.value(QStringLiteral("latex/genCmd"), QString::fromStdString(this->currentSettings.latexGenCmd))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexSourceViewThemeId =
+            settings.value(QStringLiteral("latex/sourceViewThemeId"),
+                           QString::fromStdString(this->currentSettings.latexSourceViewThemeId))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexSourceViewAutoIndent =
+            settings.value(QStringLiteral("latex/sourceViewAutoIndent"),
+                           this->currentSettings.latexSourceViewAutoIndent)
+                    .toBool();
+    this->currentSettings.latexSourceViewSyntaxHighlight =
+            settings.value(QStringLiteral("latex/sourceViewSyntaxHighlight"),
+                           this->currentSettings.latexSourceViewSyntaxHighlight)
+                    .toBool();
+    this->currentSettings.latexSourceViewShowLineNumbers =
+            settings.value(QStringLiteral("latex/sourceViewShowLineNumbers"),
+                           this->currentSettings.latexSourceViewShowLineNumbers)
+                    .toBool();
+    this->currentSettings.latexEditorFont =
+            settings.value(QStringLiteral("latex/editorFont"), QString::fromStdString(this->currentSettings.latexEditorFont))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexUseCustomEditorFont =
+            settings.value(QStringLiteral("latex/useCustomEditorFont"),
+                           this->currentSettings.latexUseCustomEditorFont)
+                    .toBool();
+    this->currentSettings.latexEditorWordWrap =
+            settings.value(QStringLiteral("latex/editorWordWrap"), this->currentSettings.latexEditorWordWrap).toBool();
+    this->currentSettings.latexUseExternalEditor =
+            settings.value(QStringLiteral("latex/useExternalEditor"),
+                           this->currentSettings.latexUseExternalEditor)
+                    .toBool();
+    this->currentSettings.latexExternalEditorAutoConfirm =
+            settings.value(QStringLiteral("latex/externalEditorAutoConfirm"),
+                           this->currentSettings.latexExternalEditorAutoConfirm)
+                    .toBool();
+    this->currentSettings.latexExternalEditorCmd =
+            settings.value(QStringLiteral("latex/externalEditorCmd"),
+                           QString::fromStdString(this->currentSettings.latexExternalEditorCmd))
+                    .toString()
+                    .toStdString();
+    this->currentSettings.latexTemporaryFileExt =
+            settings.value(QStringLiteral("latex/temporaryFileExt"),
+                           QString::fromStdString(this->currentSettings.latexTemporaryFileExt))
+                    .toString()
+                    .toStdString();
     this->currentSettings.audioFolder =
             settings.value(QStringLiteral("audio/folder"), QString::fromStdString(this->currentSettings.audioFolder))
                     .toString()
@@ -2951,6 +3026,12 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.defaultSeekTimeSeconds =
             settings.value(QStringLiteral("audio/defaultSeekTimeSeconds"), this->currentSettings.defaultSeekTimeSeconds)
                     .toInt();
+    this->currentSettings.disableAudio =
+            settings.value(QStringLiteral("audio/disabled"), this->currentSettings.disableAudio).toBool();
+    this->currentSettings.audioInputDevice =
+            settings.value(QStringLiteral("audio/inputDevice"), this->currentSettings.audioInputDevice).toInt();
+    this->currentSettings.audioOutputDevice =
+            settings.value(QStringLiteral("audio/outputDevice"), this->currentSettings.audioOutputDevice).toInt();
     this->currentSettings.toolbarProfileId = settings.value(
                                                      QStringLiteral("general/toolbarProfileId"),
                                                      QString::fromStdString(this->currentSettings.toolbarProfileId))
@@ -3164,6 +3245,26 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("page/emptyLastPageAppend"),
                       QString::fromStdString(this->currentSettings.emptyLastPageAppend));
     settings.setValue(QStringLiteral("latex/templatePath"), QString::fromStdString(this->currentSettings.latexTemplatePath));
+    settings.setValue(QStringLiteral("latex/autoCheckDependencies"), this->currentSettings.latexAutoCheckDependencies);
+    settings.setValue(QStringLiteral("latex/defaultText"), QString::fromStdString(this->currentSettings.latexDefaultText));
+    settings.setValue(QStringLiteral("latex/genCmd"), QString::fromStdString(this->currentSettings.latexGenCmd));
+    settings.setValue(QStringLiteral("latex/sourceViewThemeId"),
+                      QString::fromStdString(this->currentSettings.latexSourceViewThemeId));
+    settings.setValue(QStringLiteral("latex/sourceViewAutoIndent"), this->currentSettings.latexSourceViewAutoIndent);
+    settings.setValue(QStringLiteral("latex/sourceViewSyntaxHighlight"),
+                      this->currentSettings.latexSourceViewSyntaxHighlight);
+    settings.setValue(QStringLiteral("latex/sourceViewShowLineNumbers"),
+                      this->currentSettings.latexSourceViewShowLineNumbers);
+    settings.setValue(QStringLiteral("latex/editorFont"), QString::fromStdString(this->currentSettings.latexEditorFont));
+    settings.setValue(QStringLiteral("latex/useCustomEditorFont"), this->currentSettings.latexUseCustomEditorFont);
+    settings.setValue(QStringLiteral("latex/editorWordWrap"), this->currentSettings.latexEditorWordWrap);
+    settings.setValue(QStringLiteral("latex/useExternalEditor"), this->currentSettings.latexUseExternalEditor);
+    settings.setValue(QStringLiteral("latex/externalEditorAutoConfirm"),
+                      this->currentSettings.latexExternalEditorAutoConfirm);
+    settings.setValue(QStringLiteral("latex/externalEditorCmd"),
+                      QString::fromStdString(this->currentSettings.latexExternalEditorCmd));
+    settings.setValue(QStringLiteral("latex/temporaryFileExt"),
+                      QString::fromStdString(this->currentSettings.latexTemporaryFileExt));
     settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
     settings.setValue(QStringLiteral("view/showToolbar"), showToolbar);
@@ -3183,6 +3284,9 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("audio/sampleRate"), this->currentSettings.audioSampleRate);
     settings.setValue(QStringLiteral("audio/gain"), this->currentSettings.audioGain);
     settings.setValue(QStringLiteral("audio/defaultSeekTimeSeconds"), this->currentSettings.defaultSeekTimeSeconds);
+    settings.setValue(QStringLiteral("audio/disabled"), this->currentSettings.disableAudio);
+    settings.setValue(QStringLiteral("audio/inputDevice"), this->currentSettings.audioInputDevice);
+    settings.setValue(QStringLiteral("audio/outputDevice"), this->currentSettings.audioOutputDevice);
 
     QStringList recentEntries;
     for (const auto& path: this->recentFiles.recentFiles()) {
@@ -4034,7 +4138,7 @@ void QtAppShell::insertMathTex() {
         return;
     }
 
-    const auto settings = buildQtLatexSettings(this->currentSettings.latexTemplatePath);
+    const auto settings = buildQtLatexSettings(this->currentSettings);
     if (!fs::is_regular_file(settings.globalTemplatePath)) {
         QMessageBox::warning(&this->window, QStringLiteral("Math TeX"),
                              QStringLiteral("VertexNote could not find the LaTeX template file."));
@@ -4054,7 +4158,8 @@ void QtAppShell::insertMathTex() {
 
     auto* editor = new QPlainTextEdit(&dialog);
     editor->setObjectName(QStringLiteral("vertexNoteQtMathTexEditor"));
-    editor->setPlainText(QStringLiteral("x^2"));
+    editor->setPlainText(QString::fromStdString(settings.defaultText));
+    editor->setLineWrapMode(settings.editorWordWrap ? QPlainTextEdit::WidgetWidth : QPlainTextEdit::NoWrap);
     layout->addWidget(editor, 1);
 
     auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -4113,7 +4218,9 @@ void QtAppShell::insertMathTex() {
 }
 
 void QtAppShell::showSettingsDialog() {
-    QtSettingsDialog dialog(this->currentSettings, this->availableToolbarProfiles, &this->window);
+    QtSettingsDialog dialog(this->currentSettings, this->availableToolbarProfiles,
+                            this->audioController.inputDeviceOptions(),
+                            this->audioController.outputDeviceOptions(), &this->window);
     if (dialog.exec() != QDialog::Accepted) {
         return;
     }

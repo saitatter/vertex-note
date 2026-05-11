@@ -16,6 +16,7 @@
 #include "QtSettingsDialog.h"
 #include "audio/AudioPlayer.h"
 #include "audio/AudioRecorder.h"
+#include "audio/DeviceInfo.h"
 #include "control/settings/Settings.h"
 #include "model/AudioElement.h"
 #include "util/PathUtil.h"
@@ -53,11 +54,26 @@ QtAudioController::~QtAudioController() = default;
 
 void QtAudioController::applySettings(const QtSettings& qtSettings) {
 #ifdef ENABLE_AUDIO
+    const bool wasAvailable = isAudioAvailable();
+    this->settings->setAudioDisabled(qtSettings.disableAudio);
+    this->settings->setAudioInputDevice(qtSettings.audioInputDevice);
+    this->settings->setAudioOutputDevice(qtSettings.audioOutputDevice);
     this->settings->setAudioFolder(qtSettings.audioFolder.empty() ? defaultAudioFolderPath()
                                                                   : fs::path(qtSettings.audioFolder));
     this->settings->setAudioSampleRate(qtSettings.audioSampleRate);
     this->settings->setAudioGain(qtSettings.audioGain);
     this->settings->setDefaultSeekTime(static_cast<unsigned int>(std::max(1, qtSettings.defaultSeekTimeSeconds)));
+    if (wasAvailable && qtSettings.disableAudio) {
+        if (this->recorder && this->recorder->isRecording()) {
+            this->recorder->stop();
+        }
+        if (this->player && this->player->isPlaying()) {
+            this->player->stop();
+        }
+        this->paused = false;
+        this->currentPlayback.reset();
+        Q_EMIT audioStateChanged();
+    }
 #else
     (void)qtSettings;
 #endif
@@ -65,10 +81,40 @@ void QtAudioController::applySettings(const QtSettings& qtSettings) {
 
 auto QtAudioController::isAudioAvailable() const -> bool {
 #ifdef ENABLE_AUDIO
-    return this->recorder != nullptr && this->player != nullptr;
+    return this->recorder != nullptr && this->player != nullptr && !this->settings->isAudioDisabled();
 #else
     return false;
 #endif
+}
+
+auto QtAudioController::inputDeviceOptions() const -> std::vector<QtAudioDeviceOption> {
+    std::vector<QtAudioDeviceOption> devices;
+#ifdef ENABLE_AUDIO
+    if (!this->recorder) {
+        return devices;
+    }
+    for (const auto& device: this->recorder->getInputDevices()) {
+        devices.push_back({.index = static_cast<int>(device.getIndex()),
+                           .displayName = device.getDeviceName(),
+                           .selected = device.getSelected()});
+    }
+#endif
+    return devices;
+}
+
+auto QtAudioController::outputDeviceOptions() const -> std::vector<QtAudioDeviceOption> {
+    std::vector<QtAudioDeviceOption> devices;
+#ifdef ENABLE_AUDIO
+    if (!this->player) {
+        return devices;
+    }
+    for (const auto& device: this->player->getOutputDevices()) {
+        devices.push_back({.index = static_cast<int>(device.getIndex()),
+                           .displayName = device.getDeviceName(),
+                           .selected = device.getSelected()});
+    }
+#endif
+    return devices;
 }
 
 auto QtAudioController::isRecording() const -> bool {

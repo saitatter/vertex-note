@@ -135,9 +135,23 @@ auto rowDeviceMatrix(const QTableWidget* table, int row) -> QtPointerButtonMatri
             .touchAction = pointerActionFromCombo(qobject_cast<QComboBox*>(table->cellWidget(row, 11)))};
 }
 
+void populateAudioDeviceCombo(QComboBox* combo, const std::vector<QtAudioDeviceOption>& devices, int selectedIndex) {
+    combo->addItem(QStringLiteral("System default"), -1);
+    int currentIndex = selectedIndex < 0 ? 0 : -1;
+    for (const auto& device: devices) {
+        combo->addItem(QString::fromStdString(device.displayName), device.index);
+        if (device.index == selectedIndex || (selectedIndex < 0 && device.selected)) {
+            currentIndex = combo->count() - 1;
+        }
+    }
+    combo->setCurrentIndex(currentIndex >= 0 ? currentIndex : 0);
+}
+
 }  // namespace
 
 QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<QtToolbarProfileOption>& toolbarProfiles,
+                                   const std::vector<QtAudioDeviceOption>& audioInputDevices,
+                                   const std::vector<QtAudioDeviceOption>& audioOutputDevices,
                                    QWidget* parent):
         QDialog(parent) {
     setWindowTitle(QStringLiteral("Preferences"));
@@ -684,12 +698,75 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
         }
     });
     latexLayout->addRow(QStringLiteral("Template path:"), latexTemplateRow);
+
+    this->latexAutoCheckDependenciesCheck = new QCheckBox(latexPage);
+    this->latexAutoCheckDependenciesCheck->setChecked(current.latexAutoCheckDependencies);
+    latexLayout->addRow(QStringLiteral("Auto-check dependencies:"), this->latexAutoCheckDependenciesCheck);
+
+    this->latexDefaultTextEdit = new QLineEdit(QString::fromStdString(current.latexDefaultText), latexPage);
+    latexLayout->addRow(QStringLiteral("Default text:"), this->latexDefaultTextEdit);
+
+    this->latexGenCmdEdit = new QLineEdit(QString::fromStdString(current.latexGenCmd), latexPage);
+    latexLayout->addRow(QStringLiteral("Generation command:"), this->latexGenCmdEdit);
+
+    this->latexSourceViewThemeIdEdit = new QLineEdit(QString::fromStdString(current.latexSourceViewThemeId), latexPage);
+    latexLayout->addRow(QStringLiteral("Source theme id:"), this->latexSourceViewThemeIdEdit);
+
+    this->latexSourceViewAutoIndentCheck = new QCheckBox(latexPage);
+    this->latexSourceViewAutoIndentCheck->setChecked(current.latexSourceViewAutoIndent);
+    latexLayout->addRow(QStringLiteral("Source auto-indent:"), this->latexSourceViewAutoIndentCheck);
+
+    this->latexSourceViewSyntaxHighlightCheck = new QCheckBox(latexPage);
+    this->latexSourceViewSyntaxHighlightCheck->setChecked(current.latexSourceViewSyntaxHighlight);
+    latexLayout->addRow(QStringLiteral("Source syntax highlight:"), this->latexSourceViewSyntaxHighlightCheck);
+
+    this->latexSourceViewShowLineNumbersCheck = new QCheckBox(latexPage);
+    this->latexSourceViewShowLineNumbersCheck->setChecked(current.latexSourceViewShowLineNumbers);
+    latexLayout->addRow(QStringLiteral("Source line numbers:"), this->latexSourceViewShowLineNumbersCheck);
+
+    this->latexEditorFontEdit = new QLineEdit(QString::fromStdString(current.latexEditorFont), latexPage);
+    latexLayout->addRow(QStringLiteral("Editor font:"), this->latexEditorFontEdit);
+
+    this->latexUseCustomEditorFontCheck = new QCheckBox(latexPage);
+    this->latexUseCustomEditorFontCheck->setChecked(current.latexUseCustomEditorFont);
+    latexLayout->addRow(QStringLiteral("Use custom editor font:"), this->latexUseCustomEditorFontCheck);
+
+    this->latexEditorWordWrapCheck = new QCheckBox(latexPage);
+    this->latexEditorWordWrapCheck->setChecked(current.latexEditorWordWrap);
+    latexLayout->addRow(QStringLiteral("Editor word wrap:"), this->latexEditorWordWrapCheck);
+
+    this->latexUseExternalEditorCheck = new QCheckBox(latexPage);
+    this->latexUseExternalEditorCheck->setChecked(current.latexUseExternalEditor);
+    latexLayout->addRow(QStringLiteral("Use external editor:"), this->latexUseExternalEditorCheck);
+
+    this->latexExternalEditorAutoConfirmCheck = new QCheckBox(latexPage);
+    this->latexExternalEditorAutoConfirmCheck->setChecked(current.latexExternalEditorAutoConfirm);
+    latexLayout->addRow(QStringLiteral("External editor auto-confirm:"), this->latexExternalEditorAutoConfirmCheck);
+
+    this->latexExternalEditorCmdEdit = new QLineEdit(QString::fromStdString(current.latexExternalEditorCmd), latexPage);
+    latexLayout->addRow(QStringLiteral("External editor command:"), this->latexExternalEditorCmdEdit);
+
+    this->latexTemporaryFileExtEdit = new QLineEdit(QString::fromStdString(current.latexTemporaryFileExt), latexPage);
+    latexLayout->addRow(QStringLiteral("Temporary file extension:"), this->latexTemporaryFileExtEdit);
+
     latexPage->setLayout(latexLayout);
     tabs->addTab(latexPage, QStringLiteral("LaTeX"));
 
     // --- Audio tab ---
     auto* audioPage = new QWidget(this);
     auto* audioLayout = new QFormLayout(audioPage);
+
+    this->disableAudioCheck = new QCheckBox(audioPage);
+    this->disableAudioCheck->setChecked(current.disableAudio);
+    audioLayout->addRow(QStringLiteral("Disable audio:"), this->disableAudioCheck);
+
+    this->audioInputDeviceCombo = new QComboBox(audioPage);
+    populateAudioDeviceCombo(this->audioInputDeviceCombo, audioInputDevices, current.audioInputDevice);
+    audioLayout->addRow(QStringLiteral("Input device:"), this->audioInputDeviceCombo);
+
+    this->audioOutputDeviceCombo = new QComboBox(audioPage);
+    populateAudioDeviceCombo(this->audioOutputDeviceCombo, audioOutputDevices, current.audioOutputDevice);
+    audioLayout->addRow(QStringLiteral("Output device:"), this->audioOutputDeviceCombo);
 
     auto* audioFolderRow = new QWidget(audioPage);
     auto* audioFolderRowLayout = new QHBoxLayout(audioFolderRow);
@@ -958,12 +1035,29 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .emptyLastPageAppend = this->emptyLastPageAppendCombo->currentData().toString().toStdString(),
             .sizeUnit = currentSizeUnitName(this->sizeUnitCombo),
             .latexTemplatePath = this->latexTemplatePathEdit->text().trimmed().toStdString(),
+            .latexAutoCheckDependencies = this->latexAutoCheckDependenciesCheck->isChecked(),
+            .latexDefaultText = this->latexDefaultTextEdit->text().toStdString(),
+            .latexGenCmd = this->latexGenCmdEdit->text().trimmed().toStdString(),
+            .latexSourceViewThemeId = this->latexSourceViewThemeIdEdit->text().trimmed().toStdString(),
+            .latexSourceViewAutoIndent = this->latexSourceViewAutoIndentCheck->isChecked(),
+            .latexSourceViewSyntaxHighlight = this->latexSourceViewSyntaxHighlightCheck->isChecked(),
+            .latexSourceViewShowLineNumbers = this->latexSourceViewShowLineNumbersCheck->isChecked(),
+            .latexEditorFont = this->latexEditorFontEdit->text().trimmed().toStdString(),
+            .latexUseCustomEditorFont = this->latexUseCustomEditorFontCheck->isChecked(),
+            .latexEditorWordWrap = this->latexEditorWordWrapCheck->isChecked(),
+            .latexUseExternalEditor = this->latexUseExternalEditorCheck->isChecked(),
+            .latexExternalEditorAutoConfirm = this->latexExternalEditorAutoConfirmCheck->isChecked(),
+            .latexExternalEditorCmd = this->latexExternalEditorCmdEdit->text().trimmed().toStdString(),
+            .latexTemporaryFileExt = this->latexTemporaryFileExtEdit->text().trimmed().toStdString(),
             .audioFolder = this->audioFolderEdit->text().trimmed().toStdString(),
             .lastOpenPath = this->lastOpenPath,
             .lastSavePath = this->lastSavePath,
             .lastImagePath = this->lastImagePath,
             .lastPdfPath = this->lastPdfPath,
             .lastExportPath = this->lastExportPath,
+            .disableAudio = this->disableAudioCheck->isChecked(),
+            .audioInputDevice = this->audioInputDeviceCombo->currentData().toInt(),
+            .audioOutputDevice = this->audioOutputDeviceCombo->currentData().toInt(),
             .audioSampleRate = this->audioSampleRateSpin->value(),
             .audioGain = this->audioGainSpin->value(),
             .defaultSeekTimeSeconds = this->defaultSeekTimeSpin->value(),

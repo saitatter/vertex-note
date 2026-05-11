@@ -32,9 +32,9 @@ This audit compares GTK `Settings` keys from
 | `addHorizontalSpace`, `addHorizontalSpaceAmountRight`, `addHorizontalSpaceAmountLeft`, `addVerticalSpace`, `addVerticalSpaceAmountAbove`, `addVerticalSpaceAmountBelow` | Qt-only equivalent | `page/addHorizontalSpace*` and `page/addVerticalSpace*`; applied to Qt canvas scrollable page padding. The Vertical Space tool also supports click-drag insertion with undo/redo. |
 | `emptyLastPageAppend` | Implemented | `page/emptyLastPageAppend`; Qt appends a blank page on draw/scroll at the last page when no PDF is attached. |
 | `sizeUnit` | Implemented | `page/sizeUnit`; Qt page defaults show cm/in/points while preserving model values in points. |
-| `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`. |
+| `audioFolder`, `audioSampleRate`, `audioGain`, `defaultSeekTime`, `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Implemented | `audio/folder`, `audio/sampleRate`, `audio/gain`, `audio/defaultSeekTimeSeconds`, `audio/inputDevice`, `audio/outputDevice`, `audio/disabled`; Qt lists PortAudio devices and applies the shared audio backend settings. |
 | `pluginEnabled`, `pluginDisabled` | Qt-only equivalent | Qt stores per-plugin enabled overrides under `plugins/enabled/<plugin-key>`. |
-| `latexSettings.globalTemplatePath` | Implemented | `latex/templatePath`. |
+| `latexSettings.*` | Implemented | `latex/templatePath`, `latex/defaultText`, `latex/genCmd`, `latex/sourceView*`, `latex/editor*`, `latex/externalEditor*`, `latex/temporaryFileExt`, `latex/autoCheckDependencies`; Qt feeds the shared `LatexGenerator` settings used by Math TeX insertion. |
 | `touchDrawing` | Implemented | `general/touchDrawing`. |
 | `snapRotation`, `vertexNoteGeometrySnapEnabled`, `vertexNoteGridSnapEnabled` | Implemented | `general/rotationSnap`, `general/geometrySnap`, `general/gridSnap`. |
 | `snapRotationTolerance` | Implemented | `general/rotationSnapTolerance`; applied to Qt stroke/shape rotation snapping. |
@@ -71,8 +71,6 @@ This audit compares GTK `Settings` keys from
 
 | GTK setting key(s) | Current Qt behavior | Gap |
 | --- | --- | --- |
-| `latexSettings.defaultText`, `latexSettings.genCmd`, `latexSettings.*editor*`, `latexSettings.sourceView*`, `latexSettings.useExternalEditor`, `latexSettings.externalEditor*`, `latexSettings.temporaryFileExt`, `latexSettings.autoCheckDependencies` | Qt can render LaTeX using the template path. | Advanced LaTeX editor/generator settings are not exposed in Qt. |
-| `audioInputDevice`, `audioOutputDevice`, `disableAudio` | Qt audio settings cover folder, sample rate, gain, seek step and uses the shared audio backend. | No Qt device selector or global disable toggle in settings. |
 | `numPairsOffset` | Qt pairs pages through two-column layout. | No pairs parity offset command/setting. |
 ## Legacy GTK Or Unsupported
 
@@ -89,6 +87,6 @@ This audit compares GTK `Settings` keys from
 
 ## Next Settings Work
 
-1. Add advanced Tools settings for stroke filtering and GTK's full stabilizer matrix.
-2. Add Qt edge-pan/unlimited-scroll behavior if the shell keeps GTK's selection-edge workflow.
-3. Add remaining advanced LaTeX/audio device selectors.
+1. Decide whether GTK's remaining gesture/sidebar/window-policy settings should stay GTK-only or receive Qt-native behavior.
+2. Add Qt equivalents for cursor position highlighting and filtered-stroke follow-up actions if those workflows are still wanted.
+3. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.
