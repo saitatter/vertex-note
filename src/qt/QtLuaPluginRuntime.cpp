@@ -262,6 +262,8 @@ struct QtLuaPluginRuntime::Plugin {
     int registeredActions = 0;
     std::string error;
     std::vector<std::string> actionIds;
+    std::vector<std::string> placeholderIds;
+    std::unordered_map<std::string, std::string> placeholderIdsByLuaId;
     QtLuaPluginRuntime* runtime = nullptr;
 
 #ifdef ENABLE_PLUGINS
@@ -386,6 +388,34 @@ struct QtLuaPluginRuntime::Plugin {
             actionIds.push_back(id);
         }
         return menuId;
+    }
+
+    auto uniquePlaceholderId(std::string_view luaId) const -> std::string {
+        return std::string("plugin.") + name + ".placeholder." + std::string(luaId);
+    }
+
+    void registerPlaceholder(const std::string& luaId, const std::string& description) {
+        if (luaId.empty() || !runtime || !runtime->bridge) {
+            return;
+        }
+
+        const auto uniqueId = uniquePlaceholderId(luaId);
+        runtime->bridge->registerPlaceholder(uniqueId, luaId, description);
+        placeholderIdsByLuaId[luaId] = uniqueId;
+        if (std::ranges::find(placeholderIds, uniqueId) == placeholderIds.end()) {
+            placeholderIds.push_back(uniqueId);
+        }
+    }
+
+    void setPlaceholderValue(const std::string& luaId, const std::string& value) {
+        if (!runtime || !runtime->bridge) {
+            return;
+        }
+        const auto it = placeholderIdsByLuaId.find(luaId);
+        if (it == placeholderIdsByLuaId.end()) {
+            return;
+        }
+        runtime->bridge->setPlaceholderValue(it->second, value);
     }
 
     auto triggerCommand(std::string_view commandId) -> bool {
@@ -1669,14 +1699,20 @@ auto luaGetActionState(lua_State* lua) -> int {
 }
 
 auto luaRegisterPlaceholder(lua_State* lua) -> int {
-    luaL_checkstring(lua, 1);
-    luaL_checkstring(lua, 2);
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->registerPlaceholder(luaL_checkstring(lua, 1), luaL_checkstring(lua, 2));
     return 0;
 }
 
 auto luaSetPlaceholderValue(lua_State* lua) -> int {
-    luaL_checkstring(lua, 1);
-    luaL_checkstring(lua, 2);
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->setPlaceholderValue(luaL_checkstring(lua, 1), luaL_checkstring(lua, 2));
     return 0;
 }
 
@@ -2065,6 +2101,11 @@ void QtLuaPluginRuntime::loadEnabledPlugins() {
         for (const auto& actionId: plugin->actionIds) {
             if (this->bridge) {
                 this->bridge->removeAction(actionId);
+            }
+        }
+        for (const auto& placeholderId: plugin->placeholderIds) {
+            if (this->bridge) {
+                this->bridge->removePlaceholder(placeholderId);
             }
         }
     }

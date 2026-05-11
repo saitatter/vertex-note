@@ -206,6 +206,8 @@ This is the current implementation plan after the Qt parity batch through
 8. ✓ Plugin runtime parity v1.
    - Lua plugins load in Qt without instantiating GTK `Control`.
    - Plugins can register menu/toolbar callbacks through `IPluginUiBridge`.
+   - Plugins can register/update toolbar placeholder labels in the Qt Plugins
+     toolbar.
    - Plugin manager lists plugins, enabled/default state, registered actions,
      and load errors.
    - Bundled plugin hooks are covered: UI registration, document structure,
@@ -224,8 +226,6 @@ This is the current implementation plan after the Qt parity batch through
      same configuration as the Qt shell.
 
 2. **Plugin runtime parity hardening**
-   - Replace `registerPlaceholder` / `setPlaceholderValue` no-op compatibility
-     with real Qt toolbar placeholder labels.
    - Expand `getActionState` for more GTK action-state values:
      current tool, current tool colour, pen line style, fill, sizes.
    - Decide whether to support more legacy file/document APIs beyond the safe
