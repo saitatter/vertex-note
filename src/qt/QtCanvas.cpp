@@ -689,6 +689,12 @@ void QtCanvas::setEdgePanOptions(double speed, double maxMultiplier) {
     this->edgePanMaxMultiplier = std::clamp(maxMultiplier, 1.0, 20.0);
 }
 
+void QtCanvas::setUnlimitedScrolling(bool enabled) {
+    this->unlimitedScrolling = enabled;
+    constrainScrollToDocumentBounds();
+    emitViewportUpdate(false);
+}
+
 void QtCanvas::setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs) {
     this->strokeFilterEnabled = enabled;
     this->strokeFilterIgnoreTimeMs = std::clamp(ignoreTimeMs, 0, 5000);
@@ -1301,6 +1307,7 @@ void QtCanvas::updateDebugOverlay(QString summary) {
 }
 
 void QtCanvas::emitViewportUpdate(bool edited) {
+    constrainScrollToDocumentBounds();
     update();
     Q_EMIT viewportStateChanged();
     Q_EMIT statusHintChanged(QStringLiteral("Zoom %1% | Scroll (%2, %3)")
@@ -1346,6 +1353,36 @@ auto QtCanvas::documentSceneBounds() const -> QRectF {
     }
     return bounds.adjusted(-80.0 - this->extraPageSpaceLeft, -80.0 - this->extraPageSpaceAbove,
                            80.0 + this->extraPageSpaceRight, 80.0 + this->extraPageSpaceBelow);
+}
+
+void QtCanvas::constrainScrollToDocumentBounds() {
+    if (this->unlimitedScrolling || this->zoomFactor <= 0.0) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    if (rects.empty()) {
+        return;
+    }
+
+    QRectF bounds = rects.front();
+    for (std::size_t i = 1; i < rects.size(); ++i) {
+        bounds = bounds.united(rects[i]);
+    }
+    bounds = bounds.adjusted(-80.0 - this->extraPageSpaceLeft, -80.0 - this->extraPageSpaceAbove,
+                             80.0 + this->extraPageSpaceRight, 80.0 + this->extraPageSpaceBelow);
+
+    const double visibleWidth = width() / std::max(0.001, this->zoomFactor);
+    const double visibleHeight = height() / std::max(0.001, this->zoomFactor);
+    const auto clampAxis = [](double value, double minValue, double maxValue, double visibleSize) {
+        if (visibleSize >= maxValue - minValue) {
+            return minValue - (visibleSize - (maxValue - minValue)) / 2.0;
+        }
+        return std::clamp(value, minValue, maxValue - visibleSize);
+    };
+
+    this->scrollX = clampAxis(this->scrollX, bounds.left(), bounds.right(), visibleWidth);
+    this->scrollY = clampAxis(this->scrollY, bounds.top(), bounds.bottom(), visibleHeight);
 }
 
 void QtCanvas::drawPageContents(QPainter& painter, const QRectF& rect,

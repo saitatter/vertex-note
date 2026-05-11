@@ -2693,6 +2693,8 @@ void QtAppShell::loadPersistentUiState() {
     this->currentSettings.zoomStepScrollPercent =
             settings.value(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent)
                     .toDouble();
+    this->currentSettings.unlimitedScrolling =
+            settings.value(QStringLiteral("view/unlimitedScrolling"), this->currentSettings.unlimitedScrolling).toBool();
     this->currentSettings.touchDrawingDefault =
             settings.value(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault).toBool();
     this->currentSettings.minimumPressure =
@@ -3071,6 +3073,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/rotationSnapTolerance"), this->currentSettings.rotationSnapTolerance);
     settings.setValue(QStringLiteral("view/zoomStepPercent"), this->currentSettings.zoomStepPercent);
     settings.setValue(QStringLiteral("view/zoomStepScrollPercent"), this->currentSettings.zoomStepScrollPercent);
+    settings.setValue(QStringLiteral("view/unlimitedScrolling"), this->currentSettings.unlimitedScrolling);
     settings.setValue(QStringLiteral("general/touchDrawing"), this->currentSettings.touchDrawingDefault);
     settings.setValue(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize);
     settings.setValue(QStringLiteral("tools/snapRecognizedShapesEnabled"),
@@ -3519,6 +3522,7 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
                                       this->currentSettings.rotationSnapTolerance);
+    canvas->setUnlimitedScrolling(this->currentSettings.unlimitedScrolling);
     canvas->setPageSpaceOptions(this->currentSettings.addHorizontalSpace,
                                 this->currentSettings.addHorizontalSpaceAmountLeft,
                                 this->currentSettings.addHorizontalSpaceAmountRight,

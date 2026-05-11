@@ -393,6 +393,10 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->zoomStepScrollSpin->setSuffix(QStringLiteral("%"));
     generalLayout->addRow(QStringLiteral("Wheel zoom step:"), this->zoomStepScrollSpin);
 
+    this->unlimitedScrollingCheck = new QCheckBox(generalPage);
+    this->unlimitedScrollingCheck->setChecked(current.unlimitedScrolling);
+    generalLayout->addRow(QStringLiteral("Unlimited scrolling:"), this->unlimitedScrollingCheck);
+
     this->touchDrawingCheck = new QCheckBox(generalPage);
     this->touchDrawingCheck->setChecked(current.touchDrawingDefault);
     generalLayout->addRow(QStringLiteral("Touch drawing enabled:"), this->touchDrawingCheck);
@@ -880,6 +884,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .rotationSnapTolerance = this->rotationSnapToleranceSpin->value(),
             .zoomStepPercent = this->zoomStepSpin->value(),
             .zoomStepScrollPercent = this->zoomStepScrollSpin->value(),
+            .unlimitedScrolling = this->unlimitedScrollingCheck->isChecked(),
             .touchDrawingDefault = this->touchDrawingCheck->isChecked(),
             .minimumPressure = this->minimumPressureSpin->value(),
             .pressureMultiplier = this->pressureMultiplierSpin->value(),

@@ -82,6 +82,7 @@ public:
     void setLaserPointerFadeOutMs(int value);
     void setTextEditorTabOptions(bool useSpaces, int numberOfSpaces);
     void setEdgePanOptions(double speed, double maxMultiplier);
+    void setUnlimitedScrolling(bool enabled);
     void setStrokeFilterOptions(bool enabled, int ignoreTimeMs, double ignoreLengthMm, int successiveTimeMs);
     void setEmptyLastPageAppendMode(std::string mode);
     [[nodiscard]] auto isGeometrySnapEnabled() const -> bool;
@@ -169,6 +170,7 @@ private:
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
     [[nodiscard]] auto pageRects() const -> std::vector<QRectF>;
     [[nodiscard]] auto documentSceneBounds() const -> QRectF;
+    void constrainScrollToDocumentBounds();
     void drawPageContents(QPainter& painter, const QRectF& rect, const vn::view::render::PageRenderSnapshot& pageInfo,
                           std::size_t pageIndex, bool selected) const;
     void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
@@ -374,6 +376,7 @@ private:
     QPointF edgePanScreenPoint;
     double edgePanSpeed = 20.0;
     double edgePanMaxMultiplier = 5.0;
+    bool unlimitedScrolling = false;
     QtToolState currentToolState;
     QtTextEditor* textEditor = nullptr;
 };

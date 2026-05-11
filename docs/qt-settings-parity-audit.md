@@ -40,6 +40,7 @@ This audit compares GTK `Settings` keys from
 | `snapRotationTolerance` | Implemented | `general/rotationSnapTolerance`; applied to Qt stroke/shape rotation snapping. |
 | `snapGridTolerance`, `snapGridSize` | Implemented | `tools/snapGridTolerance`, `tools/snapGridSize`; applied to Qt geometry grid snapping. |
 | `zoomStep`, `zoomStepScroll` | Implemented | `view/zoomStepPercent`, `view/zoomStepScrollPercent`; applied to Qt zoom commands and Ctrl+wheel zoom. |
+| `unlimitedScrolling` | Implemented | `view/unlimitedScrolling`; when disabled, Qt clamps the viewport to the document scene bounds plus configured page padding. |
 | `edgePanSpeed`, `edgePanMaxMult` | Implemented | `view/edgePanSpeed`, `view/edgePanMaxMult`; applied to Qt edge-pan while dragging strokes, erasers, selections, PDF text selections, vertical space, shapes, and geometry vertices. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
 | `font` | Qt-only equivalent | `tools/defaultFontName`, `tools/defaultFontSize`; applied to the Qt text tool, toolbar font controls, and Lua font access. |
@@ -78,7 +79,6 @@ This audit compares GTK `Settings` keys from
 | --- | --- | --- |
 | `zoomGesturesEnabled`, `gtkTouchInertialScrolling`, `touchZoomStartThreshold` | Legacy GTK / unsupported | Gesture semantics need a Qt input design before migration. |
 | `sidebarWidth`, `sidebarOnRight`, `scrollbarOnLeft`, `sidebarNumberingStyle`, `scrollbarHideType`, `disableScrollbarFadeout` | Legacy GTK / partial | Qt dock/sidebar placement is owned by `window/state`; numbering and scrollbar policies are not exposed. |
-| `unlimitedScrolling` | Unsupported | Qt canvas currently uses its own scroll model. |
 | `drawDirModsEnabled`, `drawDirModsRadius` | Unsupported | No Qt directional drawing modifier support yet. |
 | `highlightPosition`, `cursorHighlightColor`, `cursorHighlightBorderColor`, `cursorHighlightRadius`, `cursorHighlightBorderWidth` | Unsupported | GTK position-highlighting plugin/settings are not a Qt shell feature yet. |
 | `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |

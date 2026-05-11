@@ -58,6 +58,7 @@ struct QtSettings {
     double rotationSnapTolerance = 0.30;
     double zoomStepPercent = 10.0;
     double zoomStepScrollPercent = 2.0;
+    bool unlimitedScrolling = false;
     bool touchDrawingDefault = false;
     double minimumPressure = 0.05;
     double pressureMultiplier = 1.0;
@@ -162,6 +163,7 @@ private:
     QDoubleSpinBox* rotationSnapToleranceSpin = nullptr;
     QDoubleSpinBox* zoomStepSpin = nullptr;
     QDoubleSpinBox* zoomStepScrollSpin = nullptr;
+    QCheckBox* unlimitedScrollingCheck = nullptr;
     QCheckBox* touchDrawingCheck = nullptr;
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;
     QDoubleSpinBox* snapGridSizeSpin = nullptr;
