@@ -11,7 +11,8 @@
 
 #pragma once
 #include <config-debug.h>
-#include <glib.h>
+
+#include <cstdio>
 
 #define MAX_POLYGON_SIDES 4
 
@@ -28,7 +29,7 @@
 
 
 #ifdef DEBUG_RECOGNIZER
-#define RDEBUG(msg, ...) g_message("ShapeReco::" msg, ##__VA_ARGS__)
+#define RDEBUG(msg, ...) std::fprintf(stderr, "ShapeReco::" msg "\n", ##__VA_ARGS__)
 #else
 #define RDEBUG(msg, ...)
 #endif

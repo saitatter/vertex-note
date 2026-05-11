@@ -13,8 +13,6 @@
 
 #include <string>
 
-#include <glib.h>  // for g_warning
-
 #include "util/Assert.h"
 #include "util/StringUtils.h"
 #include "util/safe_casts.h"  // for to_underlying Todo(cpp20) remove

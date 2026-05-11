@@ -1,13 +1,12 @@
 #include "ShapeRecognizer.h"
 
 #include <cmath>     // for fabs, M_PI
+#include <cstdio>    // for fprintf
 #include <iterator>  // for begin, next
 #include <memory>    // for allocator...
 #include <span>      // for span
 #include <utility>   // for move
 #include <vector>    // for vector
-
-#include <glib.h>  // for g_message
 
 #include "control/shaperecognizer/RecoSegment.h"            // for RecoSegment
 #include "control/shaperecognizer/ShapeRecognizerConfig.h"  // for RDEBUG
@@ -350,12 +349,13 @@ auto ShapeRecognizer::recognizePatterns(Stroke* stroke, double strokeMinSize) ->
     if (n > 0) {
         optimizePolygonal(stroke->getPoints(), n, brk, ss);
 #ifdef DEBUG_RECOGNIZER
-        g_message("--");
-        g_message("ShapeReco:: Polygon, %d edges:", n);
+        std::fprintf(stderr, "--\n");
+        std::fprintf(stderr, "ShapeReco:: Polygon, %d edges:\n", n);
         for (int i = 0; i < n; i++) {
-            g_message("ShapeReco::      %d-%d (M=%.0f, det=%.4f)", brk[i], brk[i + 1], ss[i].getMass(), ss[i].det());
+            std::fprintf(stderr, "ShapeReco::      %d-%d (M=%.0f, det=%.4f)\n", brk[i], brk[i + 1], ss[i].getMass(),
+                         ss[i].det());
         }
-        g_message("--");
+        std::fprintf(stderr, "--\n");
 #endif
         // update recognizer segment queue (most recent at end)
         while (n + queueLength > MAX_POLYGON_SIDES) {
