@@ -73,6 +73,7 @@
 #include "QtIconResources.h"
 #include "QtPageSidebar.h"
 #include "QtSettingsDialog.h"
+#include "QtToolFamilies.h"
 #include "vertexnote/update/GithubReleaseParser.h"
 #include "vertexnote/update/ReleaseAssetSelector.h"
 #include "vertexnote/update/ReleaseFetcher.h"
@@ -113,48 +114,6 @@ auto isAutosavableDocumentPath(const std::filesystem::path& path) -> bool {
     return ext == ".xopp" || ext == ".xoj" || ext == ".xopt";
 }
 
-struct ToolActionSpec {
-    std::string_view commandId;
-    QtToolType tool;
-};
-
-constexpr std::array<ToolActionSpec, 5> SELECTION_TOOL_SPECS = {{
-        {"tool.select", QtToolType::SelectRect},
-        {"tool.select-region", QtToolType::SelectRegion},
-        {"tool.select-multilayer-rect", QtToolType::SelectMultiLayerRect},
-        {"tool.select-multilayer-region", QtToolType::SelectMultiLayerRegion},
-        {"tool.select-object", QtToolType::SelectObject},
-}};
-
-constexpr std::array<ToolActionSpec, 8> STROKE_DRAWING_TOOL_SPECS = {{
-        {"tool.draw-line", QtToolType::DrawLine},
-        {"tool.draw-rectangle", QtToolType::DrawRectangle},
-        {"tool.draw-ellipse", QtToolType::DrawEllipse},
-        {"tool.draw-arrow", QtToolType::DrawArrow},
-        {"tool.draw-double-arrow", QtToolType::DrawDoubleArrow},
-        {"tool.draw-coordinate-system", QtToolType::DrawCoordinateSystem},
-        {"tool.draw-spline", QtToolType::DrawSpline},
-        {"tool.draw-shape-recognizer", QtToolType::ShapeRecognizer},
-}};
-
-constexpr std::array<ToolActionSpec, 5> VERTEX_DRAWING_TOOL_SPECS = {{
-        {"tool.draw-circle", QtToolType::DrawCircle},
-        {"tool.draw-arc", QtToolType::DrawArc},
-        {"tool.draw-polyline", QtToolType::DrawPolyline},
-        {"tool.draw-construction-line", QtToolType::DrawConstructionLine},
-        {"tool.draw-construction-circle", QtToolType::DrawConstructionCircle},
-}};
-
-constexpr std::array<ToolActionSpec, 2> LASER_TOOL_SPECS = {{
-        {"tool.laser-pointer-pen", QtToolType::LaserPointerPen},
-        {"tool.laser-pointer-highlighter", QtToolType::LaserPointerHighlighter},
-}};
-
-constexpr std::array<ToolActionSpec, 2> PDF_TOOL_SPECS = {{
-        {"tool.select-pdf-text-linear", QtToolType::PdfTextLinear},
-        {"tool.select-pdf-text-rect", QtToolType::PdfTextRect},
-}};
-
 constexpr int QT_SHELL_LAYOUT_VERSION = 5;
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
@@ -190,17 +149,6 @@ auto darkPalette() -> QPalette {
     palette.setColor(QPalette::Highlight, QColor(88, 140, 255));
     palette.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
     return palette;
-}
-
-auto findActionForTool(QtCommandHost* host, const auto& specs, QtToolType activeTool) -> QAction* {
-    for (const auto& spec: specs) {
-        if (spec.tool == activeTool) {
-            if (auto* action = host->actionForCommand(spec.commandId)) {
-                return action;
-            }
-        }
-    }
-    return host->actionForCommand(specs.front().commandId);
 }
 
 struct PaperPresetSpec {
@@ -1662,7 +1610,7 @@ void QtAppShell::rebuildToolbar() {
             this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
             this->selectionToolButton->setIcon(bundledQtIcon("xopp-combo-selection.svg"));
             auto* selectionMenu = new QMenu(this->selectionToolButton);
-            for (const auto& spec: SELECTION_TOOL_SPECS) {
+            for (const auto& spec: selectionToolSpecs()) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                     selectionMenu->addAction(action);
                 }
@@ -1678,7 +1626,7 @@ void QtAppShell::rebuildToolbar() {
         button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
         button->setToolTip(QStringLiteral("Stroke drawing tools"));
         auto* drawingMenu = new QMenu(button);
-        for (const auto& spec: STROKE_DRAWING_TOOL_SPECS) {
+        for (const auto& spec: strokeDrawingToolSpecs()) {
             if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                 drawingMenu->addAction(action);
             }
@@ -1698,7 +1646,7 @@ void QtAppShell::rebuildToolbar() {
         button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
         button->setToolTip(QStringLiteral("Vertex drawing tools"));
         auto* drawingMenu = new QMenu(button);
-        for (const auto& spec: VERTEX_DRAWING_TOOL_SPECS) {
+        for (const auto& spec: vertexDrawingToolSpecs()) {
             if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                 drawingMenu->addAction(action);
             }
@@ -1718,7 +1666,7 @@ void QtAppShell::rebuildToolbar() {
             this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
             this->laserToolButton->setIcon(bundledQtIcon("xopp-laser-pointer.svg"));
             auto* laserMenu = new QMenu(this->laserToolButton);
-            for (const auto& spec: LASER_TOOL_SPECS) {
+            for (const auto& spec: laserToolSpecs()) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                     laserMenu->addAction(action);
                 }
@@ -1734,7 +1682,7 @@ void QtAppShell::rebuildToolbar() {
             this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
             this->pdfToolButton->setIcon(bundledQtIcon("xopp-select-pdf-text-ht.svg"));
             auto* pdfMenu = new QMenu(this->pdfToolButton);
-            for (const auto& spec: PDF_TOOL_SPECS) {
+            for (const auto& spec: pdfToolSpecs()) {
                 if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
                     pdfMenu->addAction(action);
                 }
@@ -2152,14 +2100,14 @@ void QtAppShell::syncToolbarWidgets() {
     const auto& toolState = this->window.canvas()->toolState();
 
     if (this->selectionToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), SELECTION_TOOL_SPECS, toolState.activeTool)) {
+        if (auto* action = findActionForTool(this->window.commandHost(), selectionToolSpecs(), toolState.activeTool)) {
             this->selectionToolButton->setDefaultAction(action);
             this->selectionToolButton->setMenu(this->selectionToolButton->menu());
             this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
         }
     }
 
-    if (auto* action = findActionForTool(this->window.commandHost(), STROKE_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+    if (auto* action = findActionForTool(this->window.commandHost(), strokeDrawingToolSpecs(), toolState.activeTool)) {
         for (auto* button: this->strokeDrawingToolButtons) {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
@@ -2168,7 +2116,7 @@ void QtAppShell::syncToolbarWidgets() {
         }
     }
 
-    if (auto* action = findActionForTool(this->window.commandHost(), VERTEX_DRAWING_TOOL_SPECS, toolState.activeTool)) {
+    if (auto* action = findActionForTool(this->window.commandHost(), vertexDrawingToolSpecs(), toolState.activeTool)) {
         for (auto* button: this->vertexDrawingToolButtons) {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
@@ -2178,7 +2126,7 @@ void QtAppShell::syncToolbarWidgets() {
     }
 
     if (this->laserToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), LASER_TOOL_SPECS, toolState.activeTool)) {
+        if (auto* action = findActionForTool(this->window.commandHost(), laserToolSpecs(), toolState.activeTool)) {
             this->laserToolButton->setDefaultAction(action);
             this->laserToolButton->setMenu(this->laserToolButton->menu());
             this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
@@ -2186,7 +2134,7 @@ void QtAppShell::syncToolbarWidgets() {
     }
 
     if (this->pdfToolButton) {
-        if (auto* action = findActionForTool(this->window.commandHost(), PDF_TOOL_SPECS, toolState.activeTool)) {
+        if (auto* action = findActionForTool(this->window.commandHost(), pdfToolSpecs(), toolState.activeTool)) {
             this->pdfToolButton->setDefaultAction(action);
             this->pdfToolButton->setMenu(this->pdfToolButton->menu());
             this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
