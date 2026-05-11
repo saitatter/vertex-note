@@ -16,9 +16,6 @@
 #include <string_view>
 #include <vector>
 
-#include <glib.h>
-#include <glibconfig.h>
-
 #include "control/xojfile/DocumentBuilderInterface.h"
 #include "control/xojfile/XmlParserHelper.h"
 #include "control/xojfile/XmlTags.h"
@@ -31,15 +28,9 @@ class XmlParser {
 public:
     XmlParser(DocumentBuilderInterface& builder);
 
-    // GMarkup callbacks
-    static void parserStartElement(GMarkupParseContext* context, const gchar* elementName, const gchar** attributeNames,
-                                   const gchar** attributeValues, gpointer userdata, GError** error);
-    static void parserEndElement(GMarkupParseContext* context, const gchar* elementName, gpointer userdata,
-                                 GError** error);
-    static void parserText(GMarkupParseContext* context, const gchar* text, gsize textLen, gpointer userdata,
-                           GError** error);
-
-    static constexpr GMarkupParser interface = {parserStartElement, parserEndElement, parserText, nullptr, nullptr};
+    void startElement(const char* elementName, const char** attributeNames, const char** attributeValues);
+    void endElement(const char* elementName);
+    void text(std::string_view text);
 
     // Attempt recovery of truncated documents by closing all open nodes
     void closeOpenNodes();

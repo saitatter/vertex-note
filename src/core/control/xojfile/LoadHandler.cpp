@@ -8,6 +8,7 @@
 #include <cstdlib>        // for atoi, size_t
 #include <cstring>        // for strcmp, strlen
 #include <fstream>        // for ofstream
+#include <iostream>
 #include <iterator>       // for back_inserter
 #include <memory>         // for make_unique, make_shared...
 #include <optional>       // for optional
@@ -20,7 +21,7 @@
 #include <utility>        // for move, forward, exchange
 #include <vector>         // for vector
 
-#include <glib.h>     // for g_message...
+#include <QXmlStreamReader>
 #include <zip.h>      // for zip_file_t, zip_fopen,...
 #include <zipconf.h>  // for zip_int64_t, zip_uint64_t
 
@@ -45,7 +46,6 @@
 #include "util/ZipInputStream.h"        // for ZipInputStream
 #include "util/i18n.h"                  // for _F, FS, _
 #include "util/raii/CLibrariesSPtr.h"   // for adopt
-#include "util/raii/GLibGuards.h"       // for GErrorGuard
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
@@ -354,7 +354,7 @@ void LoadHandler::finalizeStroke() {
     if (this->stroke) {
         if (this->stroke->getPointCount() < 2) {
             // Strokes with less than two points can't be drawn
-            g_warning("LoadHandler: Ignoring stroke with less than two points");
+            std::cerr << "LoadHandler: Ignoring stroke with less than two points\n";
             this->stroke.reset();
             this->strokeGeometryMetadata.reset();
             return;
@@ -374,7 +374,7 @@ void LoadHandler::finalizeStroke() {
                 return;
             }
 
-            g_warning("LoadHandler: Ignoring invalid VertexNote geometry metadata: %s", error.c_str());
+            std::cerr << "LoadHandler: Ignoring invalid VertexNote geometry metadata: " << error << '\n';
         }
 
         this->layer->addElement(std::move(this->stroke));
@@ -423,7 +423,7 @@ void LoadHandler::setImageData(std::string data) {
     xoj_assert(this->image);
 
     if (this->image->hasData() && !data.empty()) {
-        g_warning("LoadHandler: Image data section found, but the image already has data");
+        std::cerr << "LoadHandler: Image data section found, but the image already has data\n";
     }
 
     this->image->setImage(std::move(data));
@@ -433,7 +433,7 @@ void LoadHandler::setImageAttachment(const fs::path& filename) {
     xoj_assert(this->image);
 
     if (this->image->hasData()) {
-        g_warning("LoadHandler: Image attachment found, but the image already has data");
+        std::cerr << "LoadHandler: Image attachment found, but the image already has data\n";
     }
 
     auto imageData = readZipAttachment(filename);
@@ -446,7 +446,7 @@ void LoadHandler::finalizeImage() {
     xoj_assert(this->image);
 
     if (!this->image->hasData()) {
-        g_warning("LoadHandler: Ignoring image with no data");
+        std::cerr << "LoadHandler: Ignoring image with no data\n";
         this->image.reset();
         return;
     }
@@ -488,7 +488,7 @@ void LoadHandler::finalizeTexImage() {
 }
 
 void LoadHandler::logError(const std::string& error) {
-    g_warning("LoadHandler: %s", error.c_str());
+    std::cerr << "LoadHandler: " << error << '\n';
     if (this->errorMessages) {
         this->errorMessages->emplace_back(error);
     }
@@ -554,26 +554,14 @@ auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<vn::util
 
 void LoadHandler::closeFile() noexcept { this->zipFp.reset(); }
 
-VN_GIO_GUARD_GENERATOR_TYPE(GMarkupParseContext, g_markup_parse_context_free);
-
 void LoadHandler::parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStream) {
     xoj_assert(xmlContentStream);
 
     XmlParser parserInterface{*this};
-    auto context = GMarkupParseContextGuard{g_markup_parse_context_new(
-            &XmlParser::interface, static_cast<GMarkupParseFlags>(0), &parserInterface, nullptr)};
-
-    const auto handleGError = [this](vn::util::GErrorGuard error) -> void {
-        if (error) {
-            logError(FS(_F("XML Parser error: {1}") % error->message));
-        }
-    };
-
+    QByteArray xmlContent;
     std::array<char, 1024> buffer{};
-    int len{};
-    vn::util::GErrorGuard error;
     while (true) {
-        len = xmlContentStream->read(buffer.data(), buffer.size());
+        const int len = xmlContentStream->read(buffer.data(), buffer.size());
         if (len < 0) {
             throw std::runtime_error{_("Failed to read from compressed file")};
         } else if (len == 0) {
@@ -581,17 +569,48 @@ void LoadHandler::parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStre
             break;
         }
 
-        auto valid = g_markup_parse_context_parse(context.get(), buffer.data(), len, vn::util::out_ptr(error));
-        handleGError(std::move(error));
-        if (!valid) {
-            throw std::runtime_error{_("Invalid XML data read")};
+        xmlContent.append(buffer.data(), len);
+    }
+
+    QXmlStreamReader reader(xmlContent);
+    while (!reader.atEnd()) {
+        const auto token = reader.readNext();
+        if (token == QXmlStreamReader::StartElement) {
+            std::vector<QByteArray> attributeNameStorage;
+            std::vector<QByteArray> attributeValueStorage;
+            std::vector<const char*> attributeNames;
+            std::vector<const char*> attributeValues;
+            const auto attributes = reader.attributes();
+            attributeNameStorage.reserve(static_cast<std::size_t>(attributes.size()));
+            attributeValueStorage.reserve(static_cast<std::size_t>(attributes.size()));
+            attributeNames.reserve(static_cast<std::size_t>(attributes.size()) + 1U);
+            attributeValues.reserve(static_cast<std::size_t>(attributes.size()) + 1U);
+            for (const auto& attribute: attributes) {
+                attributeNameStorage.push_back(attribute.qualifiedName().toUtf8());
+                attributeValueStorage.push_back(attribute.value().toString().toUtf8());
+            }
+            for (std::size_t i = 0; i < attributeNameStorage.size(); ++i) {
+                attributeNames.push_back(attributeNameStorage[i].constData());
+                attributeValues.push_back(attributeValueStorage[i].constData());
+            }
+            attributeNames.push_back(nullptr);
+            attributeValues.push_back(nullptr);
+            const auto name = reader.qualifiedName().toUtf8();
+            parserInterface.startElement(name.constData(), attributeNames.data(), attributeValues.data());
+        } else if (token == QXmlStreamReader::EndElement) {
+            const auto name = reader.qualifiedName().toUtf8();
+            parserInterface.endElement(name.constData());
+        } else if (token == QXmlStreamReader::Characters) {
+            const auto text = reader.text().toString().toUtf8();
+            parserInterface.text(std::string_view{text.constData(), static_cast<std::size_t>(text.size())});
         }
     }
 
     // Sanity checks for document validity
-    if (!g_markup_parse_context_end_parse(context.get(), vn::util::out_ptr(error)) || !this->parsingComplete) {
-        handleGError(std::move(error));
-
+    if (reader.hasError() || !this->parsingComplete) {
+        if (reader.hasError()) {
+            logError(FS(_F("XML Parser error: {1}") % reader.errorString().toStdString()));
+        }
         // The end may be cut off. Attempt to recover contents by closing the remaining open nodes.
         parserInterface.closeOpenNodes();
         // If a document was created in addDocument(), finalizeDocument() must have been called now.
@@ -671,12 +690,12 @@ void LoadHandler::fixNullPressureValues(std::vector<Point> pts) {
 
     if (strokePortions.empty()) {
         // There were no valid pressure values! Delete the stroke entirely
-        g_warning("LoadHandler: Found a stroke with only non-positive pressure values! Removing this invisible stroke");
+        std::cerr << "LoadHandler: Found a stroke with only non-positive pressure values! Removing this invisible stroke\n";
         this->stroke.reset();
         return;
     }
 
-    g_warning("LoadHandler: Found a stroke with some non-positive pressure values. Removing the affected points");
+    std::cerr << "LoadHandler: Found a stroke with some non-positive pressure values. Removing the affected points\n";
     for_first_then_each(
             strokePortions, [&](std::vector<Point>& points) { this->stroke->setPointVector(std::move(points)); },
             [&](std::vector<Point>& points) {

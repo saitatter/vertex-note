@@ -3,15 +3,13 @@
 #include <algorithm>    // for all_of
 #include <cctype>       // for isspace
 #include <cstddef>      // for size_t
+#include <iostream>
 #include <ranges>       // for all_of, reverse_view
 #include <stdexcept>    // for domain_error
 #include <string>       // for stod, string
 #include <string_view>  // for string_view
 #include <utility>      // for move
 #include <vector>       // for vector
-
-#include <glib.h>        // for GMarkupParseContext, g_warning...
-#include <glibconfig.h>  // for gsize
 
 #include "control/pagetype/PageTypeHandler.h"          // for PageTypeHandler
 #include "control/xojfile/DocumentBuilderInterface.h"  // for DocumentBuilderInterface
@@ -73,80 +71,57 @@ static auto parseDouble(const char*& it, const char* end, double& value) -> bool
         value = XmlParserHelper::parseNumeric<double>(it, end);
         return true;
     } catch (const std::domain_error& e) {
-        g_warning("XML parser: Error parsing a double:\n"
-                  "\"%s\"\n"
-                  "Remaining string: \"%s\"",
-                  e.what(), StringUtils::ellipsize(std::string_view{it, end}).c_str());
+        std::cerr << "XML parser: Error parsing a double:\n\"" << e.what() << "\"\nRemaining string: \""
+                  << StringUtils::ellipsize(std::string_view{it, end}) << "\"\n";
         return false;
     }
 }
 
-void XmlParser::parserStartElement(GMarkupParseContext* context, const gchar* elementName, const gchar** attributeNames,
-                                   const gchar** attributeValues, gpointer userdata, GError** error) {
-    auto self = static_cast<XmlParser*>(userdata);
-    xoj_assert(self);
-
-    const auto tagType = self->getTagType(elementName | vn::util::utf8);
+void XmlParser::startElement(const char* elementName, const char** attributeNames, const char** attributeValues) {
+    const auto tagType = this->getTagType(elementName | vn::util::utf8);
 
     // Check for unknown tags
     if (tagType == TagType::UNKNOWN) {
-        if (!self->lastValidTag) {
-            if (!self->hierarchy.empty()) {
-                self->builder.logError(
+        if (!this->lastValidTag) {
+            if (!this->hierarchy.empty()) {
+                this->builder.logError(
                         FS(_F("Ignoring unexpected {1} tag inside unrecognized document structure") % elementName));
             }
             // If the hierarchy is empty, we will attempt parsing it anyways
         } else {
-            self->builder.logError(
-                    FS(_F("Ignoring unexpected {1} tag under {2}") % elementName % TAG_NAMES[*self->lastValidTag]));
+            this->builder.logError(
+                    FS(_F("Ignoring unexpected {1} tag under {2}") % elementName % TAG_NAMES[*this->lastValidTag]));
         }
     }
 
     // Call parsing function
     if (parsingTable[tagType].start) {
         const auto attributes = XmlParserHelper::AttributeMap{attributeNames, attributeValues};
-        (self->*parsingTable[tagType].start)(attributes);
+        (this->*parsingTable[tagType].start)(attributes);
     }
 
-    self->hierarchy.push_back(tagType);
+    this->hierarchy.push_back(tagType);
     if (tagType != TagType::UNKNOWN) {
-        self->lastValidTag = tagType;
+        this->lastValidTag = tagType;
     }
 }
 
-void XmlParser::parserEndElement(GMarkupParseContext* context, const gchar* elementName, gpointer userdata,
-                                 GError** error) {
-    auto self = static_cast<XmlParser*>(userdata);
-    xoj_assert(self);
-
-    // GMarkup should have already risen an error if there was an error in the document structure.
-    xoj_assert(!self->hierarchy.empty());
-    xoj_assert(TAG_NAMES[self->hierarchy.back()] == vn::util::utf8(elementName) ||
-               self->hierarchy.back() == TagType::UNKNOWN);
-    self->closeTopTag();
+void XmlParser::endElement(const char* elementName) {
+    xoj_assert(!this->hierarchy.empty());
+    xoj_assert(TAG_NAMES[this->hierarchy.back()] == vn::util::utf8(elementName) ||
+               this->hierarchy.back() == TagType::UNKNOWN);
+    this->closeTopTag();
 }
 
-void XmlParser::parserText(GMarkupParseContext* context, const gchar* text, gsize textLen, gpointer userdata,
-                           GError** error) {
-    auto self = static_cast<XmlParser*>(userdata);
-    xoj_assert(self);
+void XmlParser::text(std::string_view textSV) {
+    xoj_assert(!this->hierarchy.empty());
+    const auto tagType = this->hierarchy.back();
 
-    const auto textSV = std::string_view{text, textLen};
-
-    // GMarkup should have risen an error for text at document root
-    xoj_assert(!self->hierarchy.empty());
-    const auto tagType = self->hierarchy.back();
-
-    if (self->parsingTable[tagType].text) {
-        // Text may come in separated chunks only if it contains comments or other
-        // special instances starting with '<', which we do not expect. This means
-        // we always get the whole text in a single callback.
-        // There is no hard guarantee for this, but it has long been the status-quo.
-        // See also https://gitlab.gnome.org/GNOME/glib/issues/3772
-        (self->*parsingTable[tagType].text)(textSV);
+    if (this->parsingTable[tagType].text) {
+        (this->*parsingTable[tagType].text)(textSV);
     } else if (tagType != TagType::TITLE && tagType != TagType::PREVIEW && tagType != TagType::UNKNOWN &&
                !isAllWhitespace(textSV)) {
-        self->builder.logError(
+        this->builder.logError(
                 FS(_F("Unexpected text in {1} node: \"{2}\"") % TAG_NAMES[tagType] % StringUtils::ellipsize(textSV)));
     }
 }
@@ -166,7 +141,7 @@ void XmlParser::parseUnknownTag(const XmlParserHelper::AttributeMap& attributeMa
         // Unknown tag at document root. Assume it's another application (like VertexNote or MrWriter) that has
         // its own tag name, but a similar structure. Attempt parsing anyways.
         this->builder.addDocument(u8"Unknown", 1);
-        g_warning("XML parser: Attempting to parse unknown document type");
+        std::cerr << "XML parser: Attempting to parse unknown document type\n";
     }
 }
 
@@ -366,7 +341,7 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
     const auto optFilename = XmlParserHelper::getAttrib<fs::path>(vn::xml_attrs::AUDIO_FILENAME_STR, attributeMap);
     if (optFilename && !optFilename->empty()) {
         if (!this->tempFilename.empty()) {
-            g_warning("XML parser: Discarding audio timestamp element, because stroke tag contains \"fn\" attribute");
+            std::cerr << "XML parser: Discarding audio timestamp element, because stroke tag contains \"fn\" attribute\n";
         }
         this->tempFilename = *optFilename;
         this->tempTimestamp =
@@ -448,7 +423,7 @@ void XmlParser::parseTextTag(const XmlParserHelper::AttributeMap& attributeMap) 
     const auto optFilename = XmlParserHelper::getAttrib<fs::path>(vn::xml_attrs::AUDIO_FILENAME_STR, attributeMap);
     if (optFilename && !optFilename->empty()) {
         if (!this->tempFilename.empty()) {
-            g_warning("XML parser: Discarding audio timestamp element, because text tag contains \"fn\" attribute");
+            std::cerr << "XML parser: Discarding audio timestamp element, because text tag contains \"fn\" attribute\n";
         }
         this->tempFilename = *optFilename;
         this->tempTimestamp =
