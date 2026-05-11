@@ -126,10 +126,6 @@ auto QtToolbarLayoutEngine::expandTokenAliases(const std::vector<std::string>& t
             expanded.emplace_back("DRAW_VERTEX");
             continue;
         }
-        if (token == "DRAW_LEGACY") {
-            expanded.emplace_back("DRAW_STROKE");
-            continue;
-        }
         expanded.push_back(token);
     }
     return expanded;

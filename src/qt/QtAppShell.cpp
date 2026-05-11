@@ -217,7 +217,7 @@ constexpr std::array<ToolActionSpec, 2> PDF_TOOL_SPECS = {{
         {"tool.select-pdf-text-rect", QtToolType::PdfTextRect},
 }};
 
-constexpr int QT_SHELL_LAYOUT_VERSION = 4;
+constexpr int QT_SHELL_LAYOUT_VERSION = 5;
 constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
 constexpr std::string_view QT_CUSTOM_PROFILE_ID = "Qt Custom";
 constexpr std::array<std::string_view, 9> QT_TOOLBAR_KEYS = {{
@@ -1948,7 +1948,7 @@ void QtAppShell::rebuildToolbar() {
     const auto ensureStrokeDrawingButton = [&]() -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        button->setPopupMode(QToolButton::MenuButtonPopup);
+        button->setPopupMode(QToolButton::InstantPopup);
         button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
         button->setToolTip(QStringLiteral("Stroke drawing tools"));
         auto* drawingMenu = new QMenu(button);
@@ -1964,7 +1964,7 @@ void QtAppShell::rebuildToolbar() {
     const auto ensureVertexDrawingButton = [&]() -> QToolButton* {
         auto* button = new QToolButton(&this->window);
         button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        button->setPopupMode(QToolButton::MenuButtonPopup);
+        button->setPopupMode(QToolButton::InstantPopup);
         button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
         button->setToolTip(QStringLiteral("Vertex drawing tools"));
         auto* drawingMenu = new QMenu(button);
@@ -2287,8 +2287,8 @@ void QtAppShell::rebuildToolbar() {
                                     "SEPARATOR", "SELECT_FONT"});
     auto top2Tokens = toolbarItems("toolbarTop2",
                                    {"PEN", "ERASER", "HILIGHTER", "LASER_POINTER", "IMAGE", "TEXT",
-                                    "MATH_TEX", "DRAW", "SEPARATOR", "ROTATION_SNAPPING", "GRID_SNAPPING",
-                                    "VERTEXNOTE_GEOMETRY_SNAPPING", "VERTEXNOTE_GRID_SNAPPING",
+                                    "MATH_TEX", "DRAW_STROKE", "DRAW_VERTEX", "SEPARATOR", "ROTATION_SNAPPING",
+                                    "GRID_SNAPPING", "VERTEXNOTE_GEOMETRY_SNAPPING", "VERTEXNOTE_GRID_SNAPPING",
                                     "TOGGLE_TOUCH_DRAWING", "SEPARATOR", "SELECT", "VERTICAL_SPACE", "HAND",
                                     "SEPARATOR", "DEFAULT_TOOL", "SEPARATOR", "VERY_FINE", "FINE", "MEDIUM",
                                     "THICK", "VERY_THICK", "SEPARATOR", "TOOL_FILL", "SEPARATOR", "COLOR(0)",
