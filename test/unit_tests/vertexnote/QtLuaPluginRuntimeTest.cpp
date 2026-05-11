@@ -4,15 +4,18 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include <config-features.h>
 #include <config-paths.h>
 #include <gtest/gtest.h>
 
+#include "qt/QtDocumentController.h"
 #include "qt/QtLuaPluginRuntime.h"
 #include "ui/common/ICommandHost.h"
 #include "ui/common/IPluginUiBridge.h"
+#include "view/render/Renderers.h"
 
 namespace {
 
@@ -59,7 +62,9 @@ public:
         this->handlers.push_back(std::move(handler));
     }
 
-    void setCommandEnabled(std::string_view, bool) override {}
+    void setCommandEnabled(std::string_view id, bool enabled) override {
+        this->enabledCommandIds.push_back(std::string(id) + (enabled ? "=true" : "=false"));
+    }
     void setCommandChecked(std::string_view id, bool checked) override {
         this->checkedCommandIds.push_back(std::string(id) + (checked ? "=true" : "=false"));
     }
@@ -74,6 +79,7 @@ public:
 public:
     std::vector<std::string> commandIds;
     std::vector<CommandHandler> handlers;
+    std::vector<std::string> enabledCommandIds;
     std::vector<std::string> checkedCommandIds;
     std::vector<std::string> triggeredCommandIds;
 };
@@ -113,6 +119,52 @@ void writeSmokePlugin(const std::filesystem::path& searchRoot) {
         lua << "end\n";
         lua << "function onSmoke() end\n";
     }
+}
+
+void writeLegacyCompatPlugin(const std::filesystem::path& searchRoot) {
+    const auto pluginDir = searchRoot / "QtLegacyCompatPlugin";
+    std::filesystem::create_directories(pluginDir);
+
+    {
+        std::ofstream ini(pluginDir / "plugin.ini", std::ios::trunc);
+        ini << "[about]\n";
+        ini << "author=VertexNote Test\n";
+        ini << "description=Qt Lua legacy compat plugin\n";
+        ini << "version=1.0\n";
+        ini << "[default]\n";
+        ini << "enabled=true\n";
+        ini << "[plugin]\n";
+        ini << "mainfile=main.lua\n";
+    }
+
+    {
+        std::ofstream lua(pluginDir / "main.lua", std::ios::trunc);
+        lua << "function initUi()\n";
+        lua << "  local pos = app.getScrollPos()\n";
+        lua << "  if pos.x ~= 10 or pos.y ~= 20 or pos.width ~= 300 or pos.height ~= 200 then error('bad scroll pos') end\n";
+        lua << "  app.scrollToPos(5, 7)\n";
+        lua << "  app.scrollToPos(100, 110, false)\n";
+        lua << "  if app.getSidebarPageNo() ~= 1 then error('bad sidebar page') end\n";
+        lua << "  app.setSidebarPageNo(3)\n";
+        lua << "  app.showFloatingToolbox(12, 34)\n";
+        lua << "  app.uiAction({action='ACTION_PASTE'})\n";
+        lua << "  app.uiAction({action='ACTION_COPY', enabled=false})\n";
+        lua << "  app.layerAction('ACTION_GOTO_NEXT_LAYER')\n";
+        lua << "  app.sidebarAction('NEW_AFTER')\n";
+        lua << "  app.sidebarAction('MOVE_UP')\n";
+        lua << "  app.addSplines({splines={{coordinates={0,0,10,0,10,10,20,10}, width=2, color=16711935}}})\n";
+        lua << "end\n";
+    }
+}
+
+auto strokeCount(const vn::view::render::PageRenderSnapshot& snapshot) -> std::size_t {
+    std::size_t count = 0;
+    for (const auto& drawable: snapshot.drawables) {
+        if (std::holds_alternative<vn::view::render::StrokeRenderModel>(drawable)) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 }  // namespace
@@ -177,6 +229,59 @@ TEST(VertexNoteQtLuaPluginRuntime, discoversBundledPluginsWithoutLoadErrors) {
         EXPECT_TRUE(status.error.empty()) << status.name << ": " << status.error;
     }
     EXPECT_EQ(actualNames, expectedNames);
+#else
+    GTEST_SKIP() << "Lua plugin support is disabled";
+#endif
+}
+
+TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
+#ifdef ENABLE_PLUGINS
+    const auto searchRoot = uniqueTempPath();
+    writeLegacyCompatPlugin(searchRoot);
+
+    RecordingPluginUiBridge bridge;
+    RecordingCommandHost commandHost;
+    commandHost.commandIds = {"edit.paste", "edit.copy", "layer.goto-next", "page.add"};
+    QtDocumentController controller;
+    bool refreshed = false;
+    bool dirty = false;
+    std::vector<std::string> scrollCalls;
+
+    QtLuaPluginRuntime runtime(&bridge, &commandHost, nullptr);
+    runtime.configurePluginSearchPaths({searchRoot});
+    runtime.configureDocumentAccess(&controller, []() { return 0U; }, [](std::size_t) {},
+                                    [&]() { refreshed = true; }, [&]() { dirty = true; });
+    runtime.configureViewportAccess(
+            []() {
+                return vn::ui::common::CanvasViewport{.zoom = 1.5,
+                                                      .scrollX = 10.0,
+                                                      .scrollY = 20.0,
+                                                      .width = 300.0,
+                                                      .height = 200.0,
+                                                      .devicePixelRatio = 1.0};
+            },
+            [&](double x, double y, bool relative) {
+                scrollCalls.push_back(std::to_string(static_cast<int>(x)) + "," +
+                                      std::to_string(static_cast<int>(y)) + "," + (relative ? "rel" : "abs"));
+            });
+
+    runtime.loadEnabledPlugins();
+
+    const auto statuses = runtime.statuses();
+    ASSERT_EQ(statuses.size(), 1U);
+    EXPECT_TRUE(statuses.front().valid) << statuses.front().error;
+    EXPECT_TRUE(statuses.front().error.empty()) << statuses.front().error;
+    EXPECT_TRUE(refreshed);
+    EXPECT_TRUE(dirty);
+    EXPECT_EQ(scrollCalls, (std::vector<std::string>{"5,7,rel", "100,110,abs"}));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "edit.paste"));
+    EXPECT_TRUE(hasString(commandHost.enabledCommandIds, "edit.copy=false"));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "layer.goto-next"));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "page.add"));
+    ASSERT_EQ(1U, controller.snapshotPages().size());
+    EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+
+    std::filesystem::remove_all(searchRoot);
 #else
     GTEST_SKIP() << "Lua plugin support is disabled";
 #endif

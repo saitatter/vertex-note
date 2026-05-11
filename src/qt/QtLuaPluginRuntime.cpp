@@ -40,6 +40,7 @@
 #include "model/Font.h"
 #include "model/Image.h"
 #include "model/NotePage.h"
+#include "model/SplineSegment.h"
 #include "model/Stroke.h"
 #include "model/StrokeStyle.h"
 #include "model/Text.h"
@@ -114,77 +115,217 @@ auto luaOptionalInteger(lua_State* lua, int index, ptrdiff_t fallback = 0) -> pt
 }
 
 auto luaOptionalBool(lua_State* lua, int index, bool fallback = false) -> bool {
-    return lua_isnil(lua, index) == 1 ? fallback : lua_toboolean(lua, index) != 0;
+    return lua_isnoneornil(lua, index) == 1 ? fallback : lua_toboolean(lua, index) != 0;
 }
 
 auto legacyActionCommand(std::string_view action) -> std::string {
     static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
             {"new-file", "app.new"},
+            {"ACTION_NEW", "app.new"},
             {"open", "app.open"},
+            {"ACTION_OPEN", "app.open"},
             {"annotate-pdf", "file.annotate-pdf"},
+            {"ACTION_ANNOTATE_PDF", "file.annotate-pdf"},
             {"save", "file.save"},
+            {"ACTION_SAVE", "file.save"},
             {"save-as", "app.save-as"},
+            {"ACTION_SAVE_AS", "app.save-as"},
             {"export-as-pdf", "export.pdf"},
+            {"ACTION_EXPORT_AS_PDF", "export.pdf"},
             {"export-as", "export.png"},
+            {"ACTION_EXPORT_AS", "export.png"},
             {"print", "file.print"},
+            {"ACTION_PRINT", "file.print"},
             {"quit", "app.quit"},
+            {"ACTION_QUIT", "app.quit"},
             {"undo", "edit.undo-geometry"},
+            {"ACTION_UNDO", "edit.undo-geometry"},
             {"redo", "edit.redo-geometry"},
+            {"ACTION_REDO", "edit.redo-geometry"},
             {"cut", "edit.cut"},
+            {"ACTION_CUT", "edit.cut"},
             {"copy", "edit.copy"},
+            {"ACTION_COPY", "edit.copy"},
             {"paste", "edit.paste"},
+            {"ACTION_PASTE", "edit.paste"},
             {"search", "edit.find"},
+            {"ACTION_SEARCH", "edit.find"},
             {"select-all", "edit.select-all"},
+            {"ACTION_SELECT_ALL", "edit.select-all"},
             {"delete", "edit.delete"},
+            {"ACTION_DELETE", "edit.delete"},
             {"move-selection-layer-up", "edit.move-selection-layer-up"},
+            {"ACTION_MOVE_SELECTION_LAYER_UP", "edit.move-selection-layer-up"},
             {"move-selection-layer-down", "edit.move-selection-layer-down"},
+            {"ACTION_MOVE_SELECTION_LAYER_DOWN", "edit.move-selection-layer-down"},
             {"preferences", "app.settings"},
+            {"ACTION_SETTINGS", "app.settings"},
             {"manage-toolbar", "app.settings"},
+            {"ACTION_MANAGE_TOOLBAR", "app.settings"},
             {"customize-toolbar", "view.customize-toolbar"},
+            {"ACTION_CUSTOMIZE_TOOLBAR", "view.customize-toolbar"},
             {"paired-pages-mode", "view.paired-pages"},
+            {"ACTION_VIEW_PAIRED_PAGES", "view.paired-pages"},
             {"presentation-mode", "view.presentation"},
+            {"ACTION_VIEW_PRESENTATION_MODE", "view.presentation"},
             {"fullscreen", "view.fullscreen"},
+            {"ACTION_FULLSCREEN", "view.fullscreen"},
             {"show-sidebar", "view.show-sidebar"},
+            {"ACTION_SHOW_SIDEBAR", "view.show-sidebar"},
             {"show-toolbar", "view.show-toolbar"},
             {"show-menubar", "view.show-menubar"},
             {"zoom-in", "view.zoom-in"},
+            {"ACTION_ZOOM_IN", "view.zoom-in"},
             {"zoom-out", "view.zoom-out"},
+            {"ACTION_ZOOM_OUT", "view.zoom-out"},
             {"zoom-100", "view.zoom-100"},
+            {"ACTION_ZOOM_100", "view.zoom-100"},
             {"zoom-fit", "view.fit-page"},
+            {"ACTION_ZOOM_FIT", "view.fit-page"},
             {"goto-first", "nav.first-page"},
+            {"ACTION_GOTO_FIRST", "nav.first-page"},
             {"goto-previous", "nav.prev-page"},
+            {"ACTION_GOTO_BACK", "nav.prev-page"},
             {"goto-page", "nav.goto-page"},
+            {"ACTION_GOTO_PAGE", "nav.goto-page"},
             {"goto-next", "nav.next-page"},
+            {"ACTION_GOTO_NEXT", "nav.next-page"},
             {"goto-last", "nav.last-page"},
+            {"ACTION_GOTO_LAST", "nav.last-page"},
             {"goto-next-annotated-page", "nav.next-annotated"},
+            {"ACTION_GOTO_NEXT_ANNOTATED_PAGE", "nav.next-annotated"},
             {"goto-previous-annotated-page", "nav.prev-annotated"},
+            {"ACTION_GOTO_PREVIOUS_ANNOTATED_PAGE", "nav.prev-annotated"},
             {"new-page-before", "page.add-before"},
+            {"ACTION_NEW_PAGE_BEFORE", "page.add-before"},
             {"new-page-after", "page.add"},
+            {"ACTION_NEW_PAGE_AFTER", "page.add"},
             {"new-page-at-end", "page.add-end"},
+            {"ACTION_NEW_PAGE_AT_END", "page.add-end"},
             {"duplicate-page", "page.duplicate"},
+            {"ACTION_DUPLICATE_PAGE", "page.duplicate"},
             {"append-new-pdf-pages", "journal.append-new-pdf-pages"},
+            {"ACTION_APPEND_NEW_PDF_PAGES", "journal.append-new-pdf-pages"},
             {"configure-page-template", "page.template"},
+            {"ACTION_CONFIGURE_PAGE_TEMPLATE", "page.template"},
             {"delete-page", "page.delete"},
+            {"ACTION_DELETE_PAGE", "page.delete"},
             {"paper-format", "page.format"},
+            {"ACTION_PAPER_FORMAT", "page.format"},
             {"paper-background-color", "page.background"},
+            {"ACTION_PAPER_BACKGROUND_COLOR", "page.background"},
             {"setsquare", "tool.setsquare"},
+            {"ACTION_SETSQUARE", "tool.setsquare"},
             {"compass", "tool.compass"},
+            {"ACTION_COMPASS", "tool.compass"},
             {"tool-fill", "pen.fill-toggle"},
+            {"ACTION_TOOL_FILL", "pen.fill-toggle"},
+            {"ACTION_TOOL_PEN_FILL", "pen.fill-toggle"},
             {"layer-new-above-current", "layer.add-above"},
+            {"ACTION_NEW_LAYER", "layer.add-above"},
             {"layer-new-below-current", "layer.add-below"},
+            {"ACTION_NEW_LAYER_BELOW_CURRENT", "layer.add-below"},
             {"layer-copy", "layer.copy"},
             {"layer-delete", "page.delete-layer"},
+            {"ACTION_DELETE_LAYER", "page.delete-layer"},
             {"layer-merge-down", "layer.merge-down"},
+            {"ACTION_MERGE_LAYER_DOWN", "layer.merge-down"},
             {"layer-rename", "layer.rename"},
+            {"ACTION_RENAME_LAYER", "layer.rename"},
             {"layer-show-all", "layer.show-all"},
             {"layer-hide-all", "layer.hide-all"},
             {"layer-goto-next", "layer.goto-next"},
+            {"ACTION_GOTO_NEXT_LAYER", "layer.goto-next"},
             {"layer-goto-previous", "layer.goto-prev"},
+            {"ACTION_GOTO_PREVIOUS_LAYER", "layer.goto-prev"},
             {"layer-goto-top", "layer.goto-top"},
+            {"ACTION_GOTO_TOP_LAYER", "layer.goto-top"},
             {"plugin-manager", "plugins.manager"},
+            {"ACTION_PLUGIN_MANAGER", "plugins.manager"},
             {"help", "help.open"},
+            {"ACTION_HELP", "help.open"},
             {"check-for-updates", "app.check-updates"},
+            {"ACTION_CHECK_FOR_UPDATES", "app.check-updates"},
             {"about", "app.about-qt-shell"},
+            {"ACTION_ABOUT", "app.about-qt-shell"},
+            {"ACTION_TOOL_PEN", "tool.pen"},
+            {"ACTION_TOOL_ERASER", "tool.eraser"},
+            {"ACTION_TOOL_HIGHLIGHTER", "tool.highlighter"},
+            {"ACTION_TOOL_TEXT", "tool.text"},
+            {"ACTION_TOOL_SELECT_RECT", "tool.select"},
+            {"ACTION_TOOL_SELECT_REGION", "tool.select-region"},
+            {"ACTION_TOOL_SELECT_MULTILAYER_RECT", "tool.select-multilayer-rect"},
+            {"ACTION_TOOL_SELECT_MULTILAYER_REGION", "tool.select-multilayer-region"},
+            {"ACTION_TOOL_SELECT_OBJECT", "tool.select-object"},
+            {"ACTION_TOOL_VERTICAL_SPACE", "tool.vertical-space"},
+            {"ACTION_TOOL_HAND", "tool.hand"},
+            {"ACTION_TOOL_DRAW_RECT", "tool.draw-rectangle"},
+            {"ACTION_TOOL_DRAW_ELLIPSE", "tool.draw-ellipse"},
+            {"ACTION_TOOL_DRAW_ARROW", "tool.draw-arrow"},
+            {"ACTION_TOOL_DRAW_DOUBLE_ARROW", "tool.draw-double-arrow"},
+            {"ACTION_TOOL_DRAW_COORDINATE_SYSTEM", "tool.draw-coordinate-system"},
+            {"ACTION_RULER", "tool.draw-line"},
+            {"ACTION_TOOL_DRAW_SPLINE", "tool.draw-spline"},
+            {"ACTION_SHAPE_RECOGNIZER", "tool.draw-shape-recognizer"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_LINEAR", "tool.select-pdf-text-linear"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_RECT", "tool.select-pdf-text-rect"},
+            {"ACTION_TOOL_LASER_POINTER_PEN", "tool.laser-pointer-pen"},
+            {"ACTION_TOOL_LASER_POINTER_HIGHLIGHTER", "tool.laser-pointer-highlighter"},
+            {"ACTION_SIZE_VERY_FINE", "pen.size-very-fine"},
+            {"ACTION_SIZE_FINE", "pen.size-fine"},
+            {"ACTION_SIZE_MEDIUM", "pen.size-medium"},
+            {"ACTION_SIZE_THICK", "pen.size-thick"},
+            {"ACTION_SIZE_VERY_THICK", "pen.size-very-thick"},
+            {"ACTION_TOOL_PEN_SIZE_VERY_FINE", "pen.size-very-fine"},
+            {"ACTION_TOOL_PEN_SIZE_FINE", "pen.size-fine"},
+            {"ACTION_TOOL_PEN_SIZE_MEDIUM", "pen.size-medium"},
+            {"ACTION_TOOL_PEN_SIZE_THICK", "pen.size-thick"},
+            {"ACTION_TOOL_PEN_SIZE_VERY_THICK", "pen.size-very-thick"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_VERY_FINE", "highlighter.size-very-fine"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_FINE", "highlighter.size-fine"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_MEDIUM", "highlighter.size-medium"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_THICK", "highlighter.size-thick"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_VERY_THICK", "highlighter.size-very-thick"},
+            {"ACTION_TOOL_ERASER_SIZE_VERY_FINE", "eraser.size-very-fine"},
+            {"ACTION_TOOL_ERASER_SIZE_FINE", "eraser.size-fine"},
+            {"ACTION_TOOL_ERASER_SIZE_MEDIUM", "eraser.size-medium"},
+            {"ACTION_TOOL_ERASER_SIZE_THICK", "eraser.size-thick"},
+            {"ACTION_TOOL_ERASER_SIZE_VERY_THICK", "eraser.size-very-thick"},
+            {"ACTION_TOOL_LINE_STYLE_PLAIN", "pen.line-solid"},
+            {"ACTION_TOOL_LINE_STYLE_DASH", "pen.line-dash"},
+            {"ACTION_TOOL_LINE_STYLE_DASH_DOT", "pen.line-dashdot"},
+            {"ACTION_TOOL_LINE_STYLE_DOT", "pen.line-dot"},
+            {"ACTION_TOOL_ERASER_STANDARD", "eraser.type-standard"},
+            {"ACTION_TOOL_ERASER_DELETE_STROKE", "eraser.type-delete-stroke"},
+            {"ACTION_TOOL_ERASER_WHITEOUT", "eraser.type-whiteout"},
+            {"ACTION_GRID_SNAPPING", "view.toggle-grid-snap"},
+            {"ACTION_ROTATION_SNAPPING", "view.toggle-rotation-snap"},
+            {"ACTION_SET_LAYOUT_HORIZONTAL", "view.layout-horizontal"},
+            {"ACTION_SET_LAYOUT_VERTICAL", "view.layout-vertical"},
+            {"ACTION_SET_LAYOUT_L2R", "view.layout-ltr"},
+            {"ACTION_SET_LAYOUT_R2L", "view.layout-rtl"},
+            {"ACTION_SET_LAYOUT_T2B", "view.layout-ttb"},
+            {"ACTION_SET_LAYOUT_B2T", "view.layout-btt"},
+            {"ACTION_SET_COLUMNS_1", "view.columns-1"},
+            {"ACTION_SET_COLUMNS_2", "view.columns-2"},
+            {"ACTION_SET_COLUMNS_3", "view.columns-3"},
+            {"ACTION_SET_COLUMNS_4", "view.columns-4"},
+            {"ACTION_SET_COLUMNS_5", "view.columns-5"},
+            {"ACTION_SET_COLUMNS_6", "view.columns-6"},
+            {"ACTION_SET_COLUMNS_7", "view.columns-7"},
+            {"ACTION_SET_COLUMNS_8", "view.columns-8"},
+            {"ACTION_SET_ROWS_1", "view.rows-1"},
+            {"ACTION_SET_ROWS_2", "view.rows-2"},
+            {"ACTION_SET_ROWS_3", "view.rows-3"},
+            {"ACTION_SET_ROWS_4", "view.rows-4"},
+            {"ACTION_SET_ROWS_5", "view.rows-5"},
+            {"ACTION_SET_ROWS_6", "view.rows-6"},
+            {"ACTION_SET_ROWS_7", "view.rows-7"},
+            {"ACTION_SET_ROWS_8", "view.rows-8"},
+            {"ACTION_ARRANGE_BRING_TO_FRONT", "edit.bring-to-front"},
+            {"ACTION_ARRANGE_BRING_FORWARD", "edit.bring-forward"},
+            {"ACTION_ARRANGE_SEND_BACKWARD", "edit.send-backward"},
+            {"ACTION_ARRANGE_SEND_TO_BACK", "edit.send-to-back"},
     };
     const auto it = ACTIONS.find(action);
     return it == ACTIONS.end() ? std::string(action) : std::string(it->second);
@@ -244,6 +385,19 @@ auto lineStyleCommand(std::string_view style) -> std::string {
     }
     return {};
 }
+
+auto sidebarActionCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"COPY", "page.duplicate"},
+            {"DELETE", "page.delete"},
+            {"NEW_BEFORE", "page.add-before"},
+            {"NEW_AFTER", "page.add"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string() : std::string(it->second);
+}
+
+auto isNoOpSidebarAction(std::string_view action) -> bool { return action == "MOVE_UP" || action == "MOVE_DOWN"; }
 #endif
 
 }  // namespace
@@ -1186,6 +1340,90 @@ auto luaAddStrokes(lua_State* lua) -> int {
     return 1;
 }
 
+auto luaAddSplines(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "splines");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing spline table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto splineCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= splineCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "coordinates");
+        const auto coordinates = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        if (coordinates.size() % 8U != 0U) {
+            return luaL_error(lua, "Spline coordinates must be divisible by 8");
+        }
+        if (coordinates.empty()) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto stroke = std::make_unique<Stroke>();
+        std::vector<Point> points;
+        points.reserve(coordinates.size());
+        for (std::size_t offset = 0; offset + 7U < coordinates.size(); offset += 8U) {
+            const Point start(coordinates[offset], coordinates[offset + 1U]);
+            const Point control1(coordinates[offset + 2U], coordinates[offset + 3U]);
+            const Point control2(coordinates[offset + 4U], coordinates[offset + 5U]);
+            const Point end(coordinates[offset + 6U], coordinates[offset + 7U]);
+            SplineSegment segment(start, control1, control2, end);
+            auto segmentPoints = segment.toPointSequence();
+            if (!points.empty() && !segmentPoints.empty()) {
+                segmentPoints.erase(segmentPoints.begin());
+            }
+            points.insert(points.end(), segmentPoints.begin(), segmentPoints.end());
+        }
+        if (points.size() < 2U) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        stroke->setPointVector(std::move(points));
+
+        lua_getfield(lua, -1, "tool");
+        stroke->setToolType(strokeToolFromLua(luaOptionalString(lua, -1, "pen")));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        stroke->setWidth(luaL_optnumber(lua, -1, 1.0));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "color");
+        stroke->setColor(luaOptionalRgbColor(lua, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "fill");
+        stroke->setFill(static_cast<int>(luaL_optinteger(lua, -1, -1)));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "lineStyle");
+        stroke->setLineStyle(StrokeStyle::parseStyle(luaOptionalString(lua, -1, "plain")));
+        lua_pop(lua, 1);
+        stroke->freeUnusedPointItems();
+
+        const auto* ptr = controller->insertElement(plugin->runtime->currentDocumentPageIndex(), std::move(stroke),
+                                                    "Plugin insert spline");
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
 auto luaGetImages(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     auto* controller = documentControllerFromLua(lua);
@@ -1670,6 +1908,48 @@ auto luaSetZoom(lua_State* lua) -> int {
     return 0;
 }
 
+auto luaGetScrollPos(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto viewport = plugin && plugin->runtime ? plugin->runtime->currentViewport()
+                                                    : vn::ui::common::CanvasViewport{};
+    lua_newtable(lua);
+    luaSetNumberField(lua, "x", viewport.scrollX);
+    luaSetNumberField(lua, "y", viewport.scrollY);
+    luaSetNumberField(lua, "width", viewport.width);
+    luaSetNumberField(lua, "height", viewport.height);
+    return 1;
+}
+
+auto luaScrollToPos(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    const double x = luaL_checknumber(lua, 1);
+    const double y = luaL_checknumber(lua, 2);
+    const bool relative = luaOptionalBool(lua, 3, true);
+    plugin->runtime->scrollViewportTo(x, y, relative);
+    return 0;
+}
+
+auto luaGetSidebarPageNo(lua_State* lua) -> int {
+    lua_pushinteger(lua, 1);
+    return 1;
+}
+
+auto luaSetSidebarPageNo(lua_State* lua) -> int {
+    const auto pageNo = luaL_checkinteger(lua, 1);
+    if (pageNo <= 0) {
+        return luaL_error(lua, "Sidebar page number must be positive");
+    }
+    return 0;
+}
+
+auto luaShowFloatingToolbox(lua_State* lua) -> int {
+    lua_settop(lua, 2);
+    return 0;
+}
+
 auto luaSetBackgroundName(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     auto* controller = documentControllerFromLua(lua);
@@ -1997,6 +2277,61 @@ auto luaActivateAction(lua_State* lua) -> int {
     return 0;
 }
 
+auto luaUiAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "action");
+    const auto action = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    if (action.empty()) {
+        return luaL_error(lua, "Missing action");
+    }
+    lua_getfield(lua, 1, "enabled");
+    const bool enabled = luaOptionalBool(lua, -1, true);
+    lua_pop(lua, 1);
+
+    const auto command = legacyActionCommand(action);
+    if (command.empty()) {
+        return luaL_error(lua, "Qt shell cannot map legacy action '%s'", action.c_str());
+    }
+    if (!enabled) {
+        plugin->runtime->setCommandEnabled(command, false);
+        return 0;
+    }
+    if (!plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaLayerAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    const auto command = legacyActionCommand(action);
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate layer action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaSidebarAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    const auto command = sidebarActionCommand(action);
+    if (command.empty() && isNoOpSidebarAction(action)) {
+        return 0;
+    }
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate sidebar action '%s'", action.c_str());
+    }
+    return 0;
+}
+
 auto luaChangeActionState(lua_State* lua) -> int {
     auto* plugin = pluginFromLua(lua);
     const auto action = luaOptionalString(lua, 1);
@@ -2077,6 +2412,7 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"setPageSize", luaSetPageSize},
         {"getStrokes", luaGetStrokes},
         {"addStrokes", luaAddStrokes},
+        {"addSplines", luaAddSplines},
         {"getImages", luaGetImages},
         {"addImages", luaAddImages},
         {"getTexts", luaGetTexts},
@@ -2086,8 +2422,13 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"getColorPalette", luaGetColorPalette},
         {"getFolder", luaGetFolder},
         {"getDisplayDpi", luaGetDisplayDpi},
+        {"getScrollPos", luaGetScrollPos},
+        {"scrollToPos", luaScrollToPos},
+        {"getSidebarPageNo", luaGetSidebarPageNo},
+        {"setSidebarPageNo", luaSetSidebarPageNo},
         {"getZoom", luaGetZoom},
         {"setZoom", luaSetZoom},
+        {"showFloatingToolbox", luaShowFloatingToolbox},
         {"setBackgroundName", luaSetBackgroundName},
         {"getFonts", luaGetFonts},
         {"getFont", luaGetFont},
@@ -2102,6 +2443,9 @@ constexpr luaL_Reg QT_APP_LIB[] = {
         {"glib_rename", luaGlibRename},
         {"export", luaExport},
         {"refreshPage", luaRefreshPage},
+        {"uiAction", luaUiAction},
+        {"layerAction", luaLayerAction},
+        {"sidebarAction", luaSidebarAction},
         {"changeActionState", luaChangeActionState},
         {"activateAction", luaActivateAction},
         {"getActionState", luaGetActionState},
@@ -2278,6 +2622,13 @@ void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvide
     this->layoutSpanProvider = std::move(layoutSpanProvider);
 }
 
+void QtLuaPluginRuntime::configureViewportAccess(
+        std::function<vn::ui::common::CanvasViewport()> viewportProvider,
+        std::function<void(double, double, bool)> viewportScroller) {
+    this->viewportProvider = std::move(viewportProvider);
+    this->viewportScroller = std::move(viewportScroller);
+}
+
 void QtLuaPluginRuntime::configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
                                              std::function<void(std::string, double)> fontSetter) {
     this->fontProvider = std::move(fontProvider);
@@ -2414,6 +2765,16 @@ auto QtLuaPluginRuntime::currentLayoutSpan() const -> int {
     return this->layoutSpanProvider ? this->layoutSpanProvider() : 1;
 }
 
+auto QtLuaPluginRuntime::currentViewport() const -> vn::ui::common::CanvasViewport {
+    return this->viewportProvider ? this->viewportProvider() : vn::ui::common::CanvasViewport{};
+}
+
+void QtLuaPluginRuntime::scrollViewportTo(double x, double y, bool relative) const {
+    if (this->viewportScroller) {
+        this->viewportScroller(x, y, relative);
+    }
+}
+
 auto QtLuaPluginRuntime::currentFont() const -> std::pair<std::string, double> {
     return this->fontProvider ? this->fontProvider() : std::pair<std::string, double>{"Sans", 12.0};
 }
@@ -2430,6 +2791,12 @@ auto QtLuaPluginRuntime::openFile(const std::filesystem::path& path, int pageInd
 
 auto QtLuaPluginRuntime::commandChecked(std::string_view commandId) const -> bool {
     return this->commandHost && this->commandHost->hasCommand(commandId) && this->commandHost->isCommandChecked(commandId);
+}
+
+void QtLuaPluginRuntime::setCommandEnabled(std::string_view commandId, bool enabled) const {
+    if (this->commandHost && this->commandHost->hasCommand(commandId)) {
+        this->commandHost->setCommandEnabled(commandId, enabled);
+    }
 }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {

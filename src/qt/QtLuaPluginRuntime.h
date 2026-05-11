@@ -17,6 +17,7 @@
 
 #include "QtToolState.h"
 #include "ui/common/IPluginUiBridge.h"
+#include "ui/common/UiTypes.h"
 
 class QtDocumentController;
 class QWidget;
@@ -56,6 +57,8 @@ public:
                              std::function<QtToolState()> toolStateProvider = {});
     void configureViewAccess(std::function<double()> zoomProvider, std::function<void(double)> zoomSetter,
                              std::function<int()> layoutSpanProvider);
+    void configureViewportAccess(std::function<vn::ui::common::CanvasViewport()> viewportProvider,
+                                 std::function<void(double, double, bool)> viewportScroller);
     void configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
                              std::function<void(std::string, double)> fontSetter);
     void configureFileAccess(std::function<bool(const std::filesystem::path&, int)> fileOpener);
@@ -74,10 +77,13 @@ public:
     [[nodiscard]] auto currentZoom() const -> double;
     void setZoom(double zoom) const;
     [[nodiscard]] auto currentLayoutSpan() const -> int;
+    [[nodiscard]] auto currentViewport() const -> vn::ui::common::CanvasViewport;
+    void scrollViewportTo(double x, double y, bool relative) const;
     [[nodiscard]] auto currentFont() const -> std::pair<std::string, double>;
     void setFont(std::string name, double size) const;
     [[nodiscard]] auto openFile(const std::filesystem::path& path, int pageIndex) const -> bool;
     [[nodiscard]] auto commandChecked(std::string_view commandId) const -> bool;
+    void setCommandEnabled(std::string_view commandId, bool enabled) const;
 
 public:
     struct Plugin;
@@ -98,6 +104,8 @@ private:
     std::function<double()> zoomProvider;
     std::function<void(double)> zoomSetter;
     std::function<int()> layoutSpanProvider;
+    std::function<vn::ui::common::CanvasViewport()> viewportProvider;
+    std::function<void(double, double, bool)> viewportScroller;
     std::function<std::pair<std::string, double>()> fontProvider;
     std::function<void(std::string, double)> fontSetter;
     std::function<bool(const std::filesystem::path&, int)> fileOpener;

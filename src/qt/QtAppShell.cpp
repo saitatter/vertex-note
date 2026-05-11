@@ -493,6 +493,14 @@ QtAppShell::QtAppShell():
                 updateStatusBarLabels();
             },
             [this]() { return this->window.canvas()->layoutColumnsRows(); });
+    this->luaPlugins.configureViewportAccess(
+            [this]() { return this->window.canvas()->viewport(); },
+            [this](double x, double y, bool relative) {
+                const auto viewport = this->window.canvas()->viewport();
+                this->window.canvas()->setViewportState(viewport.zoom, relative ? viewport.scrollX + x : x,
+                                                        relative ? viewport.scrollY + y : y);
+                updateStatusBarLabels();
+            });
     this->luaPlugins.configureFontAccess(
             [this]() {
                 const auto& toolState = this->window.canvas()->toolState();
