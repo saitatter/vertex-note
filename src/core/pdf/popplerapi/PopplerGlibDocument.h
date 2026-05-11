@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * Poppler GLib Implementation
+ * Poppler PDF implementation
  *
  * @author VertexNote Team
  * https://github.com/saitatter/vertex-note
@@ -15,7 +15,7 @@
 #include <memory>
 #include <string>  // for string
 
-#include <glib.h>     // for GError, gpointer, gsize
+#include <glib.h>     // for GError
 #include <poppler.h>  // for PopplerDocument
 #include <poppler/cpp/poppler-document.h>
 
@@ -48,7 +48,7 @@ public:
     PdfBookmarkIterator* getContentsIter() const override;
 
 private:
-    PopplerDocument* document = nullptr;
-    std::shared_ptr<std::string> renderDocumentData;
-    std::shared_ptr<poppler::document> renderDocument;
+    PopplerDocument* linkDocument = nullptr;
+    std::shared_ptr<std::string> documentData;
+    std::shared_ptr<poppler::document> document;
 };

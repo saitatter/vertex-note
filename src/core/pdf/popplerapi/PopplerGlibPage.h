@@ -1,7 +1,7 @@
 /*
  * VertexNote
  *
- * PDF Page GLib Implementation
+ * PDF Page implementation
  *
  * @author VertexNote Team
  * https://github.com/saitatter/vertex-note
@@ -15,7 +15,7 @@
 #include <string>  // for string
 #include <vector>  // for vector
 
-#include <poppler.h>  // for PopplerPage
+#include <poppler.h>  // for PopplerDocument, PopplerPage
 #include <poppler/cpp/poppler-document.h>
 
 #include "pdf/base/PdfPage.h"  // for PdfRectangle (ptr only), XojPdfP...
@@ -23,8 +23,8 @@
 
 class PopplerGlibPage: public PdfPage {
 public:
-    PopplerGlibPage(PopplerPage* page, PopplerDocument* doc);
-    PopplerGlibPage(PopplerPage* page, PopplerDocument* doc, std::shared_ptr<poppler::document> renderDocument);
+    PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, PopplerPage* linkPage,
+                    PopplerDocument* linkDocument);
     PopplerGlibPage(const PopplerGlibPage& other);
     virtual ~PopplerGlibPage();
     PopplerGlibPage& operator=(const PopplerGlibPage& other);
@@ -49,7 +49,11 @@ public:
     std::string getPageLabel() const override;
 
 private:
-    PopplerPage* page;
-    PopplerDocument* document;
-    std::shared_ptr<poppler::document> renderDocument;
+    [[nodiscard]] auto createPage() const -> std::unique_ptr<poppler::page>;
+
+private:
+    int pageIndex = -1;
+    std::shared_ptr<poppler::document> document;
+    PopplerPage* linkPage = nullptr;
+    PopplerDocument* linkDocument = nullptr;
 };

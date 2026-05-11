@@ -1,51 +1,91 @@
 #include "PopplerGlibPage.h"
 
 #include <algorithm>  // for max, min
-#include <cstdlib>    // for abs, NULL, ptrdiff_t
-#include <cstring>    // for memcpy
-#include <memory>     // for make_unique
-#include <sstream>    // for operator<<, ostringstream, bas...
+#include <cmath>
+#include <cstdlib>  // for NULL
+#include <memory>   // for make_unique
+#include <optional>
+#include <sstream>  // for operator<<, ostringstream, bas...
 
-#include <glib.h>          // for g_free, g_utf8_offset_to_pointer
-#include <poppler-page.h>  // for _PopplerRectangle, _PopplerLin...
+#include <glib.h>          // for g_list_next
+#include <poppler-page.h>  // for PopplerLinkMapping
 #include <poppler.h>       // for PopplerRectangle, g_object_ref
+#include <poppler/cpp/poppler-global.h>
 #include <poppler/cpp/poppler-image.h>
 #include <poppler/cpp/poppler-page-renderer.h>
 #include <poppler/cpp/poppler-page.h>
 
-#include "pdf/base/PdfAction.h"     // for PdfAction
-#include "pdf/base/PdfPage.h"       // for PdfRectangle, PdfPage::Link
-#include "util/Assert.h"               // for xoj_assert
-#include "util/GListView.h"            // for GListView, GListView<>::GListV...
+#include "pdf/base/PdfAction.h"  // for PdfAction
+#include "pdf/base/PdfPage.h"    // for PdfRectangle, PdfPage::Link
 
 #include "PopplerGlibAction.h"  // for PopplerGlibAction
 
-PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc):
-        PopplerGlibPage(page, parentDoc, nullptr) {}
+namespace {
 
-PopplerGlibPage::PopplerGlibPage(PopplerPage* page, PopplerDocument* parentDoc,
-                                 std::shared_ptr<poppler::document> renderDocument):
-        page(page),
-        document(parentDoc),
-        renderDocument(std::move(renderDocument)) {
-    if (page != nullptr) {
-        g_object_ref(page);
+auto toStdString(const poppler::ustring& value) -> std::string {
+    const auto bytes = value.to_utf8();
+    return {bytes.begin(), bytes.end()};
+}
+
+auto normalized(const PdfRectangle& rect) -> PdfRectangle {
+    return {std::min(rect.x1, rect.x2), std::min(rect.y1, rect.y2), std::max(rect.x1, rect.x2),
+            std::max(rect.y1, rect.y2)};
+}
+
+auto toPopplerRect(const PdfRectangle& rect) -> poppler::rectf {
+    const auto r = normalized(rect);
+    return {r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1};
+}
+
+auto toPdfRectangle(const poppler::rectf& rect) -> PdfRectangle {
+    return {rect.left(), rect.top(), rect.right(), rect.bottom()};
+}
+
+auto intersects(const PdfRectangle& selection, const poppler::rectf& rect) -> bool {
+    const auto x1 = std::max(selection.x1, rect.left());
+    const auto y1 = std::max(selection.y1, rect.top());
+    const auto x2 = std::min(selection.x2, rect.right());
+    const auto y2 = std::min(selection.y2, rect.bottom());
+    return x2 > x1 && y2 > y1;
+}
+
+}  // namespace
+
+PopplerGlibPage::PopplerGlibPage(int pageIndex, std::shared_ptr<poppler::document> doc, PopplerPage* linkPage,
+                                 PopplerDocument* linkDocument):
+        pageIndex(pageIndex),
+        document(std::move(doc)),
+        linkPage(linkPage),
+        linkDocument(linkDocument) {
+    if (this->linkPage != nullptr) {
+        g_object_ref(this->linkPage);
+    }
+    if (this->linkDocument != nullptr) {
+        g_object_ref(this->linkDocument);
     }
 }
 
 PopplerGlibPage::PopplerGlibPage(const PopplerGlibPage& other):
-        page(other.page),
+        pageIndex(other.pageIndex),
         document(other.document),
-        renderDocument(other.renderDocument) {
-    if (page != nullptr) {
-        g_object_ref(page);
+        linkPage(other.linkPage),
+        linkDocument(other.linkDocument) {
+    if (linkPage != nullptr) {
+        g_object_ref(linkPage);
+    }
+    if (linkDocument != nullptr) {
+        g_object_ref(linkDocument);
     }
 }
 
 PopplerGlibPage::~PopplerGlibPage() {
-    if (page) {
-        g_object_unref(page);
-        page = nullptr;
+    if (linkPage) {
+        g_object_unref(linkPage);
+        linkPage = nullptr;
+    }
+    if (linkDocument) {
+        g_object_unref(linkDocument);
+        linkDocument = nullptr;
     }
 }
 
@@ -53,43 +93,53 @@ PopplerGlibPage& PopplerGlibPage::operator=(const PopplerGlibPage& other) {
     if (&other == this) {
         return *this;
     }
-    if (page) {
-        g_object_unref(page);
-        page = nullptr;
+    if (linkPage) {
+        g_object_unref(linkPage);
+        linkPage = nullptr;
+    }
+    if (linkDocument) {
+        g_object_unref(linkDocument);
+        linkDocument = nullptr;
     }
 
-    page = other.page;
-    if (page != nullptr) {
-        g_object_ref(page);
-    }
-
+    pageIndex = other.pageIndex;
     document = other.document;
-    renderDocument = other.renderDocument;
+    linkPage = other.linkPage;
+    linkDocument = other.linkDocument;
+    if (linkPage != nullptr) {
+        g_object_ref(linkPage);
+    }
+    if (linkDocument != nullptr) {
+        g_object_ref(linkDocument);
+    }
 
     return *this;
 }
 
-auto PopplerGlibPage::getWidth() const -> double {
-    double width = 0;
-    poppler_page_get_size(const_cast<PopplerPage*>(page), &width, nullptr);
+auto PopplerGlibPage::createPage() const -> std::unique_ptr<poppler::page> {
+    if (!document || pageIndex < 0 || pageIndex >= document->pages()) {
+        return nullptr;
+    }
+    return std::unique_ptr<poppler::page>(document->create_page(pageIndex));
+}
 
-    return width;
+auto PopplerGlibPage::getWidth() const -> double {
+    const auto page = createPage();
+    return page ? page->page_rect().width() : 0.0;
 }
 
 auto PopplerGlibPage::getHeight() const -> double {
-    double height = 0;
-    poppler_page_get_size(const_cast<PopplerPage*>(page), nullptr, &height);
-
-    return height;
+    const auto page = createPage();
+    return page ? page->page_rect().height() : 0.0;
 }
 
 auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, double pageWidth, double pageHeight) const
         -> vn::util::RasterImageData {
-    if (pixelWidth <= 0 || pixelHeight <= 0 || !renderDocument) {
+    if (pixelWidth <= 0 || pixelHeight <= 0 || !document) {
         return {};
     }
 
-    std::unique_ptr<poppler::page> cppPage(renderDocument->create_page(getPageId()));
+    auto cppPage = createPage();
     if (!cppPage) {
         return {};
     }
@@ -117,219 +167,101 @@ auto PopplerGlibPage::renderPreviewRaster(int pixelWidth, int pixelHeight, doubl
     return raster;
 }
 
-auto PopplerGlibPage::getPageId() const -> int { return poppler_page_get_index(page); }
+auto PopplerGlibPage::getPageId() const -> int { return pageIndex; }
 
 auto PopplerGlibPage::getPageLabel() const -> std::string {
-    gchar* label{poppler_page_get_label(page)};
-    std::string cpp_label{label};
-    g_free(label);
-    return cpp_label;
+    const auto page = createPage();
+    return page ? toStdString(page->label()) : std::string{};
 }
 
 auto PopplerGlibPage::findText(const std::string& text) -> std::vector<PdfRectangle> {
     std::vector<PdfRectangle> findings;
-
-    double height = getHeight();
-    GList* matches = poppler_page_find_text(page, text.c_str());
-    for (auto& rect: GListView<PopplerRectangle>(matches)) {
-        findings.emplace_back(rect.x1, height - rect.y2, rect.x2, height - rect.y1);
-        poppler_rectangle_free(&rect);
+    const auto page = createPage();
+    if (!page || text.empty()) {
+        return findings;
     }
-    g_list_free(matches);
+
+    poppler::rectf match;
+    auto direction = poppler::page::search_from_top;
+    while (page->search(poppler::ustring::from_utf8(text.c_str()), match, direction, poppler::case_insensitive)) {
+        findings.push_back(toPdfRectangle(match));
+        direction = poppler::page::search_next_result;
+    }
 
     return findings;
 }
 
-auto getPopplerSelectionStyle(PdfPageSelectionStyle style) -> PopplerSelectionStyle {
-    switch (style) {
-        case PdfPageSelectionStyle::Word:
-            return POPPLER_SELECTION_WORD;
-        case PdfPageSelectionStyle::Line:
-            return POPPLER_SELECTION_LINE;
-        case PdfPageSelectionStyle::Linear:
-        case PdfPageSelectionStyle::Area:
-            return POPPLER_SELECTION_GLYPH;
-        default:
-            xoj_assert_message(false, "unimplemented");
-    }
-    return POPPLER_SELECTION_GLYPH;
-}
-
 auto PopplerGlibPage::selectText(const PdfRectangle& rect, PdfPageSelectionStyle style) -> std::string {
-    PopplerRectangle pRect = {rect.x1, rect.y1, rect.x2, rect.y2};
-    const auto pStyle = getPopplerSelectionStyle(style);
-    if (style == PdfPageSelectionStyle::Area) {
-        PopplerRectangle* rectArray = nullptr;
-        guint numRects = 0;
-        if (!poppler_page_get_text_layout_for_area(this->page, &pRect, &rectArray, &numRects)) {
-            return "";
-        }
-        char* textBytes = poppler_page_get_text_for_area(page, &pRect);
-        xoj_assert(textBytes);
-
-        double y = rectArray[0].y2;
-        std::ostringstream ss;
-        for (guint i = 0; i < numRects; i++) {
-            // do not copy characters whose bounding box has a non-empty intersection with rect
-            const auto& r = rectArray[i];
-            {
-                auto x1 = std::max(rect.x1, r.x1);
-                auto y1 = std::max(rect.y1, r.y1);
-                auto x2 = std::min(rect.x2, r.x2);
-                auto y2 = std::min(rect.y2, r.y2);
-
-                bool inBounds = x2 > x1 && y2 > y1;
-                if (!inBounds)
-                    continue;
-            }
-
-            const auto eps = 1e-5;
-            if (std::abs(y - r.y2) > eps) {
-                // new line
-                ss << '\n';
-                y = rectArray[i].y2;
-            }
-
-            char* const startPos = g_utf8_offset_to_pointer(textBytes, i);
-            char* const endPos = g_utf8_offset_to_pointer(textBytes, i + 1);
-            for (long j = 0; j < static_cast<ptrdiff_t>(endPos - startPos); ++j) { ss << startPos[j]; }
-        }
-        g_free(textBytes);
-        return ss.str();
-    } else {
-        char* text = poppler_page_get_selected_text(page, pStyle, &pRect);
-        if (text) {
-            std::string ret(text);
-            g_free(text);
-            return ret;
-        } else {
-            return "";
-        }
+    const auto page = createPage();
+    if (!page) {
+        return {};
     }
-}
 
-namespace {
-
-auto intersects(const PopplerRectangle& selection, const PopplerRectangle& rect) -> bool {
-    const auto x1 = std::max(selection.x1, rect.x1);
-    const auto y1 = std::max(selection.y1, rect.y1);
-    const auto x2 = std::min(selection.x2, rect.x2);
-    const auto y2 = std::min(selection.y2, rect.y2);
-    return x2 > x1 && y2 > y1;
+    (void) style;
+    return toStdString(page->text(toPopplerRect(rect)));
 }
-}  // namespace
 
 auto PopplerGlibPage::selectTextLines(const PdfRectangle& selectRect, PdfPageSelectionStyle style)
         -> TextSelection {
     std::vector<PdfRectangle> textRects;
-
-    // The selection rectangle may be "improper" when selecting right-to-left
-    // or bottom-to-top, so construct a normalized rectangle for hit testing.
-    PopplerRectangle rect{std::min(selectRect.x1, selectRect.x2), std::min(selectRect.y1, selectRect.y2),
-                          std::max(selectRect.x1, selectRect.x2), std::max(selectRect.y1, selectRect.y2)};
-
-    PopplerRectangle* rectArray = nullptr;
-    guint numRects = 0;
-    if (style == PdfPageSelectionStyle::Area) {
-        // We always want to select in the "proper" rectangle.
-        PopplerRectangle area{rect.x1, rect.y1, rect.x2, rect.y2};
-        if (!poppler_page_get_text_layout_for_area(this->page, &area, &rectArray, &numRects)) {
-            return {textRects};
-        }
-    } else {
-        if (!poppler_page_get_text_layout(this->page, &rectArray, &numRects)) {
-            return {textRects};
-        }
-    }
-    if (numRects == 0) {
-        g_free(rectArray);
+    const auto page = createPage();
+    if (!page) {
         return {textRects};
     }
 
-    const auto isSameLine = [&](const auto& r1, const auto& r2) {
-        const auto eps = 1e-5;
-        return std::abs(r1.y1 - r2.y1) < eps && std::abs(r1.y2 - r2.y2) < eps;
-    };
-
-    PopplerRectangle prevRect = rectArray[0];
-    if (style == PdfPageSelectionStyle::Area) {
-        // helper to add only those rectangles that have nonempty intersection with the selected area
-        const auto addTextRectsInArea = [&](const PopplerRectangle& r) {
-            auto x1 = std::max(rect.x1, r.x1);
-            auto y1 = std::max(rect.y1, r.y1);
-            auto x2 = std::min(rect.x2, r.x2);
-            auto y2 = std::min(rect.y2, r.y2);
-
-            bool inBounds = x2 > x1 && y2 > y1;
-            if (inBounds) {
-                textRects.emplace_back(r.x1, r.y1, r.x2, r.y2);
-            }
-        };
-
-        // construct the text rectangles
-        for (guint i = 1; i < numRects; i++) {
-            PopplerRectangle nextRect = rectArray[i];
-            if (isSameLine(prevRect, nextRect)) {
-                // Merge if both prev & next rectangles are in bounds. Note that
-                // only x is checked since rectArray was constructed for the
-                // selected area.
-                bool shouldMerge = (rect.x1 <= prevRect.x1 && prevRect.x2 <= rect.x2 && rect.x1 <= nextRect.x1 &&
-                                    nextRect.x2 <= rect.x2);
-                if (shouldMerge) {
-                    prevRect.x1 = std::min(prevRect.x1, nextRect.x2);
-                    prevRect.x2 = std::max(prevRect.x2, nextRect.x2);
-                    continue;
-                }
-            }
-
-            addTextRectsInArea(prevRect);
-            prevRect = nextRect;
-        }
-        addTextRectsInArea(prevRect);
-    } else {
-        // this is for all other styles (e.g., linear)
-
-        const auto addTextRectsInSelection = [&](const PopplerRectangle& r) {
-            if (intersects(rect, r)) {
-                textRects.emplace_back(r.x1, r.y1, r.x2, r.y2);
-            }
-        };
-
-        // construct the text rectangles
-        for (guint i = 1; i < numRects; i++) {
-            PopplerRectangle nextRect = rectArray[i];
-            if (isSameLine(prevRect, nextRect)) {
-                // merge the rectangles if their combined bounds still intersect the selection
-                auto x1 = std::min(prevRect.x1, nextRect.x2);
-                auto x2 = std::max(prevRect.x2, nextRect.x2);
-                const PopplerRectangle merged{x1, prevRect.y1, x2, prevRect.y2};
-                if (intersects(rect, merged)) {
-                    prevRect.x1 = x1;
-                    prevRect.x2 = x2;
-                    continue;
-                }
-            }
-            addTextRectsInSelection(prevRect);
-            prevRect = nextRect;
-        }
-        addTextRectsInSelection(prevRect);
+    // The selection rectangle may be "improper" when selecting right-to-left
+    // or bottom-to-top, so construct a normalized rectangle for hit testing.
+    const auto rect = normalized(selectRect);
+    const auto boxes = page->text_list();
+    if (boxes.empty()) {
+        return {textRects};
     }
 
-    g_free(rectArray);
+    const auto isSameLine = [](const poppler::rectf& r1, const poppler::rectf& r2) {
+        const auto eps = 1e-5;
+        return std::abs(r1.top() - r2.top()) < eps && std::abs(r1.bottom() - r2.bottom()) < eps;
+    };
+
+    (void) style;
+    std::optional<poppler::rectf> current;
+    for (const auto& box: boxes) {
+        const auto bbox = box.bbox();
+        if (!intersects(rect, bbox)) {
+            continue;
+        }
+        if (current && isSameLine(*current, bbox)) {
+            current->set_left(std::min(current->left(), bbox.left()));
+            current->set_right(std::max(current->right(), bbox.right()));
+            current->set_top(std::min(current->top(), bbox.top()));
+            current->set_bottom(std::max(current->bottom(), bbox.bottom()));
+            continue;
+        }
+        if (current) {
+            textRects.push_back(toPdfRectangle(*current));
+        }
+        current = bbox;
+    }
+    if (current) {
+        textRects.push_back(toPdfRectangle(*current));
+    }
+
     return {textRects};
 }
 
 auto PopplerGlibPage::getLinks() -> std::vector<Link> {
     std::vector<Link> results;
+    if (!linkPage || !linkDocument) {
+        return results;
+    }
     const double height = getHeight();
 
-    GList* links = poppler_page_get_link_mapping(this->page);
+    GList* links = poppler_page_get_link_mapping(this->linkPage);
     for (GList* l = links; l != NULL; l = g_list_next(l)) {
         const auto& link = *static_cast<PopplerLinkMapping*>(l->data);
 
         if (link.action) {
             PdfRectangle rect{link.area.x1, height - link.area.y2, link.area.x2, height - link.area.y1};
-            results.emplace_back(Link{rect, std::make_unique<PopplerGlibAction>(link.action, document)});
+            results.emplace_back(Link{rect, std::make_unique<PopplerGlibAction>(link.action, linkDocument)});
         }
     }
     poppler_page_free_link_mapping(links);
