@@ -15,12 +15,9 @@
 #include <utility>  // for pair
 #include <vector>   // for vector, vector<>::iterator
 
-#include <cairo.h>  // for cairo_t
-
 #include "util/Rectangle.h"  // for Rectangle
 
 #include "ErasableStroke.h"  // for ErasableStroke::SubSection, ErasableStroke
-#include "config-debug.h"    // for DEBUG_ERASABLE_STROKE_BOXES
 
 class Point;
 class Range;
@@ -37,17 +34,6 @@ public:
 
     bool isPopulated() const;
 
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-    /**
-     * @brief Add to a vector rectangles which altogether contain every overlap between the subsection corresponding
-     * to this tree and the subsection corresponding to another tree.
-     * @param other The other tree
-     * @param halfWidth half the width of the stroke
-     * @param overlapBoxes the Rectangle vector to which we push
-     * @param cr A cairo context in which we paint the rectangles, for debug purposes
-     */
-    void addOverlapsToRange(const OverlapTree& other, double halfWidth, Range& range, cairo_t* cr = nullptr) const;
-#else
     /**
      * @brief Add to a vector rectangles which altogether contain every overlap between the subsection corresponding
      * to this tree and the subsection corresponding to another tree.
@@ -56,7 +42,6 @@ public:
      * @param overlapBoxes the Rectangle vector to which we push
      */
     void addOverlapsToRange(const OverlapTree& other, double halfWidth, Range& range) const;
-#endif
 
 private:
     /**
@@ -65,17 +50,6 @@ private:
     class Node {
     public:
         Node() = default;
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-        /**
-         * @brief Add to a vector rectangles which altogether contain every overlap between the subsection corresponding
-         * to this node and the subsection corresponding to another node.
-         * @param other The other node
-         * @param halfWidth half the width of the stroke
-         * @param overlapBoxes the Rectangle vector to which we push
-         * @param cr A cairo context in which we paint the rectangles, for debug purposes
-         */
-        void addOverlapsToRange(const Node& other, double halfWidth, Range& range, cairo_t* cr) const;
-#else
         /**
          * @brief Add to a vector rectangles which altogether contain every overlap between the subsection corresponding
          * to this node and the subsection corresponding to another node.
@@ -84,7 +58,6 @@ private:
          * @param overlapBoxes the Rectangle vector to which we push
          */
         void addOverlapsToRange(const Node& other, double halfWidth, Range& range) const;
-#endif
 
         /**
          * Bounding box of the subsection represented by the node.

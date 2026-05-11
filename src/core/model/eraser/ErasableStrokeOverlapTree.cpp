@@ -21,20 +21,11 @@ void ErasableStroke::OverlapTree::populate(const SubSection& section, const Stro
 
 bool ErasableStroke::OverlapTree::isPopulated() const { return populated; }
 
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-void ErasableStroke::OverlapTree::addOverlapsToRange(const ErasableStroke::OverlapTree& other, double halfWidth,
-                                                     Range& range, cairo_t* cr) const {
-#else
 void ErasableStroke::OverlapTree::addOverlapsToRange(const ErasableStroke::OverlapTree& other, double halfWidth,
                                                      Range& range) const {
-#endif
     xoj_assert(this->isPopulated() && other.isPopulated());
 
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-    this->root.addOverlapsToRange(other.root, halfWidth, range, cr);
-#else
     this->root.addOverlapsToRange(other.root, halfWidth, range);
-#endif
 }
 
 void ErasableStroke::OverlapTree::Populator::populate(const SubSection& section, Node& root) {
@@ -172,12 +163,7 @@ void ErasableStroke::OverlapTree::Node::computeBoxFromChildren() {
     maxY = std::max(children->first.maxY, children->second.maxY);
 }
 
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-void ErasableStroke::OverlapTree::Node::addOverlapsToRange(const Node& other, double halfWidth, Range& range,
-                                                           cairo_t* cr) const {
-#else
 void ErasableStroke::OverlapTree::Node::addOverlapsToRange(const Node& other, double halfWidth, Range& range) const {
-#endif
     bool intersect = this->maxX + halfWidth > other.minX - halfWidth &&
                      this->minX - halfWidth<other.maxX + halfWidth&& this->maxY + halfWidth> other.minY - halfWidth &&
                      this->minY - halfWidth < other.maxY + halfWidth;
@@ -185,13 +171,8 @@ void ErasableStroke::OverlapTree::Node::addOverlapsToRange(const Node& other, do
         return;
     }
     if (other.children != nullptr) {
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-        other.children->first.addOverlapsToRange(*this, halfWidth, range, cr);
-        other.children->second.addOverlapsToRange(*this, halfWidth, range, cr);
-#else
         other.children->first.addOverlapsToRange(*this, halfWidth, range);
         other.children->second.addOverlapsToRange(*this, halfWidth, range);
-#endif
         return;
     }
     /**
@@ -199,13 +180,8 @@ void ErasableStroke::OverlapTree::Node::addOverlapsToRange(const Node& other, do
      * Split *this until it's just a leaf
      */
     if (this->children != nullptr) {
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-        this->children->first.addOverlapsToRange(other, halfWidth, range, cr);
-        this->children->second.addOverlapsToRange(other, halfWidth, range, cr);
-#else
         this->children->first.addOverlapsToRange(other, halfWidth, range);
         this->children->second.addOverlapsToRange(other, halfWidth, range);
-#endif
         return;
     }
     /**
@@ -219,11 +195,6 @@ void ErasableStroke::OverlapTree::Node::addOverlapsToRange(const Node& other, do
     xoj_assert(inter);
 
     const Rectangle<double>& rect = inter.value();
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-    paintDebugRect(rectThis, 'g', cr);
-    paintDebugRect(rectOther, 'g', cr);
-    paintDebugRect(rect, 'b', cr);
-#endif
     range.addPoint(rect.x, rect.y);
     range.addPoint(rect.x + rect.width, rect.y + rect.height);
 }

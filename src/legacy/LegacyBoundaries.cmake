@@ -42,7 +42,6 @@ set(VERTEXNOTE_LEGACY_RENDER_CORE_PATTERNS
         ".*/src/core/pdf/popplerapi/PopplerGlibPage\\.(cpp|h)$"
         ".*/src/core/model/(SplineSegment|StrokeContour)\\.(cpp|h)$"
         ".*/src/core/model/TexImage\\.cpp$"
-        ".*/src/core/model/eraser/.*"
 )
 
 set(VERTEXNOTE_LEGACY_GTK_UTIL_PATTERNS
