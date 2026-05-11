@@ -234,7 +234,7 @@ This is the current implementation plan after the Qt parity batch through
      `openFile` bridge already implemented.
    - ✓ Add automated coverage for plugin load/enable/reload behavior using a
      synthetic Lua plugin fixture.
-   - Add automated coverage for bundled plugin load behavior.
+   - ✓ Add automated coverage for bundled plugin load behavior.
 
 3. **Settings parity v2**
    - ✓ Split Toolbar into its own settings tab instead of keeping profile

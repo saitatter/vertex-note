@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <config-features.h>
+#include <config-paths.h>
 #include <gtest/gtest.h>
 
 #include "qt/QtLuaPluginRuntime.h"
@@ -147,6 +148,35 @@ TEST(VertexNoteQtLuaPluginRuntime, loadsEnabledPluginAndCleansUiRegistrationsOnR
     EXPECT_TRUE(hasString(bridge.removedPlaceholderIds, "plugin.QtSmokePlugin.placeholder.mode"));
 
     std::filesystem::remove_all(searchRoot);
+#else
+    GTEST_SKIP() << "Lua plugin support is disabled";
+#endif
+}
+
+TEST(VertexNoteQtLuaPluginRuntime, discoversBundledPluginsWithoutLoadErrors) {
+#ifdef ENABLE_PLUGINS
+    RecordingPluginUiBridge bridge;
+    RecordingCommandHost commandHost;
+    QtLuaPluginRuntime runtime(&bridge, &commandHost, nullptr);
+    runtime.configurePluginSearchPaths({std::filesystem::path(PROJECT_SOURCE_DIR) / "plugins"});
+
+    runtime.loadEnabledPlugins();
+
+    const auto statuses = runtime.statuses();
+    const std::vector<std::string> expectedNames = {"BeamerPresentation", "ColorCycle",     "Example",
+                                                    "Export",             "FitToContent",   "HighlightPosition",
+                                                    "ImageActions",       "LayerActions",   "QuickScreenshot",
+                                                    "SpaceForNotes",      "ToggleGrid"};
+    ASSERT_EQ(statuses.size(), expectedNames.size());
+
+    std::vector<std::string> actualNames;
+    actualNames.reserve(statuses.size());
+    for (const auto& status: statuses) {
+        actualNames.push_back(status.name);
+        EXPECT_TRUE(status.valid) << status.name << ": " << status.error;
+        EXPECT_TRUE(status.error.empty()) << status.name << ": " << status.error;
+    }
+    EXPECT_EQ(actualNames, expectedNames);
 #else
     GTEST_SKIP() << "Lua plugin support is disabled";
 #endif
