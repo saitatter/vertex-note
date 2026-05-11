@@ -3389,7 +3389,7 @@ static int applib_getImages(lua_State* L) {
         lua_setfield(L, -2, "data");
 
         // format: string
-        lua_pushstring(L, gdk_pixbuf_format_get_name(im->getImageFormat()));
+        lua_pushstring(L, im->getImageFormatName().c_str());
         lua_setfield(L, -2, "format");
 
         std::pair<int, int> imageSize = im->getImageSize();

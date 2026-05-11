@@ -221,9 +221,7 @@ static void checkStroke(const Layer* layer, size_t elementIndex, StrokeTool tool
 }
 
 static void checkImageFormat(const Image* img, const char* formatName) {
-    const auto gdkFormatName = gdk_pixbuf_format_get_name(img->getImageFormat());
-    EXPECT_STREQ(gdkFormatName, formatName);
-    g_free(gdkFormatName);
+    EXPECT_EQ(img->getImageFormatName(), formatName);
 }
 
 static void checkText(const Layer* layer, size_t elementIndex, const std::string& text, Color color) {

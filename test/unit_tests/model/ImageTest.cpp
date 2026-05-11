@@ -12,6 +12,7 @@
 #include <fstream>
 
 #include <config-test.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gtest/gtest.h>
 
 #include "model/Image.h"

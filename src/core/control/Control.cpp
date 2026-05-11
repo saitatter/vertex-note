@@ -76,6 +76,7 @@
 #include "model/Element.h"                                       // for Element
 #include "model/Font.h"                                          // for NoteFont
 #include "model/Image.h"                                         // for Image
+#include "model/ImageGtk.h"
 #include "model/Layer.h"                                         // for Layer
 #include "model/LineStyle.h"                                     // for Line...
 #include "model/PageType.h"                                      // for Page...
@@ -2413,7 +2414,10 @@ void Control::clipboardPasteImage(GdkPixbuf* img) {
     auto image = std::make_unique<Image>();
     vn::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(img), vn::util::adopt);
 
-    image->setImage(pixbuf.get());
+    if (auto error = vn::legacy::setImageFromGdkPixbuf(*image, pixbuf.get())) {
+        g_warning("Could not paste image from clipboard: %s", error->c_str());
+        return;
+    }
 
     auto zoom100 = this->getZoomControl()->getZoom100Value();
 

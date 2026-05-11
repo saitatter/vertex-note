@@ -1463,8 +1463,7 @@ auto luaGetImages(lua_State* lua) -> int {
         luaSetNumberField(lua, "height", image->getElementHeight());
         lua_pushlstring(lua, reinterpret_cast<const char*>(image->getRawData()), image->getRawDataLength());
         lua_setfield(lua, -2, "data");
-        auto* format = image->getImageFormat();
-        luaSetStringField(lua, "format", format ? gdk_pixbuf_format_get_name(format) : "");
+        luaSetStringField(lua, "format", image->getImageFormatName());
         const auto [imageWidth, imageHeight] = image->getImageSize();
         luaSetIntegerField(lua, "imageWidth", imageWidth);
         luaSetIntegerField(lua, "imageHeight", imageHeight);

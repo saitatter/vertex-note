@@ -1,7 +1,5 @@
 #include "Image.h"
 
-#include <algorithm>  // for min
-#include <array>      // for array
 #include <cmath>      // for sqrt
 #include <memory>
 #include <utility>  // for move, pair
@@ -28,11 +26,6 @@ Image::~Image() {
         cairo_surface_destroy(this->image);
         this->image = nullptr;
     }
-
-    if (this->format) {
-        gdk_pixbuf_format_free(this->format);
-        this->format = nullptr;
-    }
 }
 
 auto Image::clone() const -> ElementPtr {
@@ -45,7 +38,9 @@ auto Image::clone() const -> ElementPtr {
     img->height = this->height;
     img->data = this->data;
 
-    img->image = cairo_surface_reference(this->image);
+    img->image = this->image ? cairo_surface_reference(this->image) : nullptr;
+    img->imageSize = this->imageSize;
+    img->imageFormatName = this->imageFormatName;
     img->snappedBounds = this->snappedBounds;
     img->sizeCalculated = this->sizeCalculated;
 
@@ -70,62 +65,8 @@ void Image::setImage(std::string&& data) {
         this->image = nullptr;
     }
     this->data = std::move(data);
-
-    if (this->format) {
-        gdk_pixbuf_format_free(this->format);
-        this->format = nullptr;
-    }
-
-    // FIXME: awful hack to try to parse the format
-    std::array<char*, 4096> buffer{};
-    vn::util::GObjectSPtr<GdkPixbufLoader> loader(gdk_pixbuf_loader_new(), vn::util::adopt);
-    size_t remaining = this->data.size();
-    while (remaining > 0) {
-        size_t readLen = std::min(remaining, buffer.size());
-        if (!gdk_pixbuf_loader_write(loader.get(), reinterpret_cast<const guchar*>(this->data.c_str()), readLen,
-                                     nullptr))
-            break;
-        remaining -= readLen;
-
-        // Try to determine the format early, if possible
-        this->format = gdk_pixbuf_loader_get_format(loader.get());
-        if (this->format) {
-            break;
-        }
-    }
-    gdk_pixbuf_loader_close(loader.get(), nullptr);
-    // if the format was not determined early, it can probably be determined now
-    if (!this->format) {
-        this->format = gdk_pixbuf_loader_get_format(loader.get());
-    }
-    xoj_assert_message(this->format != nullptr, "could not parse the image format!");
-
-    // the format is owned by the pixbuf, so create a copy
-    this->format = gdk_pixbuf_format_copy(this->format);
-}
-
-void Image::setImage(GdkPixbuf* img) {
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
-    this->imageSize = {gdk_pixbuf_get_width(img), gdk_pixbuf_get_height(img)};
-
-    this->image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, this->imageSize.first, this->imageSize.second);
-    xoj_assert(this->image != nullptr);
-
-    // Paint the pixbuf on to the surface
-    cairo_t* cr = cairo_create(this->image);
-    gdk_cairo_set_source_pixbuf(cr, img, 0, 0);
-    cairo_paint(cr);
-    cairo_destroy(cr);
-
-    const cairo_write_func_t writeFunc = [](void* bufferPtr, const unsigned char* data,
-                                            unsigned int length) -> cairo_status_t {
-        reinterpret_cast<decltype(Image::data)*>(bufferPtr)->append(reinterpret_cast<const char*>(data), length);
-        return CAIRO_STATUS_SUCCESS;
-    };
-    cairo_surface_write_to_png_stream(image, writeFunc, &data);
+    this->imageSize = NOSIZE;
+    this->imageFormatName.clear();
 }
 
 auto Image::renderBuffer() const -> std::optional<std::string> {
@@ -179,6 +120,12 @@ auto Image::renderBuffer() const -> std::optional<std::string> {
     GdkPixbuf* tmp = gdk_pixbuf_loader_get_pixbuf(loader.get());
     xoj_assert(tmp != nullptr);
     vn::util::GObjectSPtr<GdkPixbuf> pixbuf(gdk_pixbuf_apply_embedded_orientation(tmp), vn::util::adopt);
+
+    if (auto* format = gdk_pixbuf_loader_get_format(loader.get())) {
+        gchar* formatName = gdk_pixbuf_format_get_name(format);
+        this->imageFormatName = formatName ? formatName : "";
+        g_free(formatName);
+    }
 
     this->imageSize = {gdk_pixbuf_get_width(pixbuf.get()), gdk_pixbuf_get_height(pixbuf.get())};
 
@@ -247,6 +194,8 @@ void Image::readSerialized(ObjectInputStream& in) {
     }
 
     this->data = in.readImage();
+    this->imageSize = NOSIZE;
+    this->imageFormatName.clear();
 
     in.endObject();
     this->calcSize();
@@ -265,4 +214,9 @@ size_t Image::getRawDataLength() const { return this->data.size(); }
 
 std::pair<int, int> Image::getImageSize() const { return this->imageSize; }
 
-GdkPixbufFormat* Image::getImageFormat() const { return this->format; }
+const std::string& Image::getImageFormatName() const {
+    if (this->imageFormatName.empty() && hasData()) {
+        (void) renderBuffer();
+    }
+    return this->imageFormatName;
+}
