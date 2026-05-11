@@ -1,5 +1,7 @@
 #include "util/PathUtil.h"
 
+#include "config-features.h"
+
 #include <algorithm>
 #include <cstdlib>      // for system
 #include <fstream>      // for ifstream, char_traits, basic_ist...
@@ -17,11 +19,14 @@
 #include "util/PlaceholderString.h"  // for PlaceholderString
 #include "util/StringUtils.h"        // for replace_pair, StringUtils
 #include "util/Util.h"               // for getPid, execInUiThread
-#include "util/AppMessageBox.h"          // for AppMessageBox
 #include "util/i18n.h"               // for FS, _F, FORMAT_STR
 #include "util/raii/CStringWrapper.h"
 #include "util/safe_casts.h"  // for as_signed
 #include "util/utf8_view.h"   // for utf8_view
+
+#ifdef ENABLE_LEGACY_GTK_SHELL
+#include "util/AppMessageBox.h"  // for AppMessageBox
+#endif
 
 #include "config.h"  // for PROJECT_NAME
 
@@ -39,6 +44,14 @@
 
 constexpr auto const* CONFIG_FOLDER_NAME = "vertex-note";
 constexpr auto const* LEGACY_CONFIG_FOLDER_NAME = "vertex-note";
+
+static void reportPathErrorToUser(const std::string& msg) {
+#ifdef ENABLE_LEGACY_GTK_SHELL
+    AppMessageBox::showErrorToUser(nullptr, msg);
+#else
+    g_warning("%s", msg.c_str());
+#endif
+}
 
 static void migrateLegacyUserFolderIfNeeded(const fs::path& currentFolder, const fs::path& legacyFolder) {
     try {
@@ -145,7 +158,7 @@ auto Util::readString(fs::path const& path, bool showErrorToUser, std::ios_base:
     } catch (const std::exception& e) {
         if (showErrorToUser) {
             const auto msg = FS(_F("Error reading \"{1}\":\n{2}") % path.u8string() % e.what());
-            AppMessageBox::showErrorToUser(nullptr, msg);
+            reportPathErrorToUser(msg);
         }
     }
     return std::nullopt;
@@ -431,7 +444,11 @@ auto Util::ensureFolderExists(const fs::path& p) -> fs::path {
         fs::create_directories(p);
     } catch (const fs::filesystem_error& fe) {
         std::string msg = FS(_F("Could not create folder: {1}\nFailed with error: {2}") % p.u8string() % fe.what());
+#ifdef ENABLE_LEGACY_GTK_SHELL
         Util::execInUiThread([msg = std::move(msg)]() { AppMessageBox::showErrorToUser(nullptr, msg); });
+#else
+        reportPathErrorToUser(msg);
+#endif
     }
     return p;
 }
