@@ -25,6 +25,7 @@ set(vertexnote_qt_sources
         QtDocumentController.cpp
         QtDocumentControllerEraser.cpp
         QtDocumentControllerLayers.cpp
+        QtDocumentControllerPageBackground.cpp
         QtDocumentControllerPdfText.cpp
         QtDocumentSession.h
         QtDocumentSession.cpp

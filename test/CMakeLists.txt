@@ -78,6 +78,7 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerEraser.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerLayers.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPageBackground.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPdfText.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtLuaPluginRuntime.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
