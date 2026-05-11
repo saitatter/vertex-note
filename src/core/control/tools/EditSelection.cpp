@@ -806,23 +806,26 @@ void EditSelection::mouseMove(double mouseX, double mouseY, bool alt) {
 
         bool changed = false;
         this->activeGeometryVertexCurrent = modelPosition;
-        this->activeGeometryVertexCurrentPositions.clear();
-        this->activeGeometryVertexCurrentPositions.reserve(this->activeGeometryVertexStartPositions.size());
 
         for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
             const auto start = this->activeGeometryVertexStartPositions[i];
             const vn::geom::Vec2 next{start.x + delta.x, start.y + delta.y};
             changed = this->activeGeometryElement->setVertexPosition(this->activeGeometryVertices[i], next) || changed;
-            this->activeGeometryVertexCurrentPositions.push_back(next);
         }
         changed = applyGeometryConstraints(this->activeGeometryElement->geometry()) || changed;
 
+        this->activeGeometryVertexCurrentPositions.clear();
+        this->activeGeometryVertexCurrentPositions.reserve(this->activeGeometryVertices.size());
         for (std::size_t i = 0; i < this->activeGeometryVertices.size(); ++i) {
-            if (const auto* vertex = this->activeGeometryElement->geometry().vertex(this->activeGeometryVertices[i])) {
-                this->activeGeometryVertexCurrentPositions[i] = vertex->position;
-                if (this->activeGeometryVertices[i] == this->activeGeometryVertex) {
+            const auto vertexId = this->activeGeometryVertices[i];
+            if (const auto* vertex = this->activeGeometryElement->geometry().vertex(vertexId)) {
+                this->activeGeometryVertexCurrentPositions.push_back(vertex->position);
+                if (vertexId == this->activeGeometryVertex) {
                     this->activeGeometryVertexCurrent = vertex->position;
                 }
+            } else {
+                const auto start = this->activeGeometryVertexStartPositions[i];
+                this->activeGeometryVertexCurrentPositions.push_back({start.x + delta.x, start.y + delta.y});
             }
         }
 
