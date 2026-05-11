@@ -6,8 +6,6 @@
 #include <memory>
 #include <utility>  // for move
 
-#include <poppler-document.h>  // for poppler_document_ge...
-#include <poppler-page.h>      // for poppler_page_get_size
 #include <poppler/cpp/poppler-document.h>
 #include <poppler/cpp/poppler-image.h>
 #include <poppler/cpp/poppler-page-renderer.h>
@@ -15,11 +13,27 @@
 
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
-#include "util/raii/GObjectSPtr.h"                // for GObjectSPtr
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
 using vn::util::Rectangle;
+
+namespace {
+
+auto adoptPopplerDocument(poppler::document* document) -> std::shared_ptr<poppler::document> {
+    return std::shared_ptr<poppler::document>(document, [](poppler::document* ptr) { delete ptr; });
+}
+
+auto makePopplerDocumentFromBytes(const std::string& bytes) -> std::shared_ptr<poppler::document> {
+    if (bytes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        return {};
+    }
+
+    return adoptPopplerDocument(
+            poppler::document::load_from_raw_data(bytes.data(), static_cast<int>(bytes.size())));
+}
+
+}  // namespace
 
 TexImage::TexImage(): Element(ELEMENT_TEXIMAGE) { this->sizeCalculated = true; }
 
@@ -41,12 +55,6 @@ auto TexImage::cloneTexImage() const -> std::unique_ptr<TexImage> {
     img->snappedBounds = this->snappedBounds;
     img->sizeCalculated = this->sizeCalculated;
 
-    // Clone has a copy of our PDF.
-    img->pdf = this->pdf;
-
-    // Load a copy of our data (must be called after
-    // giving the clone a copy of our PDF -- it may change
-    // the PDF we've given it).
     img->loadData(std::string(this->binaryData), nullptr);
 
     return img;
@@ -82,17 +90,19 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
 
     const std::string type = binaryData.substr(1, 3);
     if (type == "PDF") {
-        // Note: binaryData must not be modified while pdf is live.
-        auto* bytes = g_bytes_new_with_free_func(this->binaryData.data(), this->binaryData.size(), nullptr, nullptr);
-        this->pdf.reset(poppler_document_new_from_bytes(bytes, nullptr, err), vn::util::adopt);
-        g_bytes_unref(bytes);
-
-        if (!pdf.get() || poppler_document_get_n_pages(this->pdf.get()) < 1) {
+        (void) err;
+        this->pdf = makePopplerDocumentFromBytes(this->binaryData);
+        if (!this->pdf || this->pdf->pages() < 1) {
             return false;
         }
         if (std::abs(this->width * this->height) <= std::numeric_limits<double>::epsilon()) {
-            vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
-            poppler_page_get_size(page.get(), &this->width, &this->height);
+            std::unique_ptr<poppler::page> page(this->pdf->create_page(0));
+            if (!page) {
+                return false;
+            }
+            const auto rect = page->page_rect();
+            this->width = rect.width();
+            this->height = rect.height();
         }
     } else if (type != "PNG") {
         g_warning("Unknown Latex image type: \"%s\"", type.c_str());
@@ -101,27 +111,17 @@ auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
     return true;
 }
 
-auto TexImage::getPdf() const -> PopplerDocument* { return this->pdf.get(); }
+auto TexImage::getPdf() const -> const poppler::document* { return this->pdf.get(); }
 
 auto TexImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
     if (!this->pdf) {
         return {};
     }
 
-    if (this->binaryData.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-        return {};
-    }
-
     const int pixelWidth = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->width))));
     const int pixelHeight = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->height))));
 
-    std::unique_ptr<poppler::document> renderDocument(poppler::document::load_from_raw_data(
-            this->binaryData.data(), static_cast<int>(this->binaryData.size())));
-    if (!renderDocument || renderDocument->pages() < 1) {
-        return {};
-    }
-
-    std::unique_ptr<poppler::page> page(renderDocument->create_page(0));
+    std::unique_ptr<poppler::page> page(this->pdf->create_page(0));
     if (!page) {
         return {};
     }

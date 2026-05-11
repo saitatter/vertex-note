@@ -14,16 +14,18 @@
 #include <memory>
 #include <string>  // for string
 
-#include <glib.h>     // for GError
-#include <poppler.h>  // for PopplerDocument
+#include <glib.h>  // for GError
 
-#include "util/raii/GObjectSPtr.h"  // for GObjectSPtr
 #include "util/RasterImageData.h"
 
 #include "Element.h"  // for Element
 
 class ObjectInputStream;
 class ObjectOutputStream;
+
+namespace poppler {
+class document;
+}
 
 
 class TexImage: public Element {
@@ -46,10 +48,8 @@ public:
 
     /**
      * @return The PDF Document, if rendered as a PDF.
-     *
-     * The document needs to be referenced, if it will be hold somewhere
      */
-    PopplerDocument* getPdf() const;
+    const poppler::document* getPdf() const;
 
     [[nodiscard]] auto renderPreviewRaster() const -> xoj::util::RasterImageData;
 
@@ -77,15 +77,15 @@ private:
     void calcSize() const override;
 
     /**
-     * Free image and PDF
+     * Free PDF
      */
     void freeImageAndPdf();
 
 private:
     /**
-     * Tex PDF Document, if rendered as PDF
+     * TeX PDF Document, if rendered as PDF
      */
-    vn::util::GObjectSPtr<PopplerDocument> pdf;
+    std::shared_ptr<poppler::document> pdf;
 
     /**
      * PNG Image / PDF Document
