@@ -2241,6 +2241,10 @@ QtLuaPluginRuntime::QtLuaPluginRuntime(vn::ui::common::IPluginUiBridge* bridge,
 
 QtLuaPluginRuntime::~QtLuaPluginRuntime() = default;
 
+void QtLuaPluginRuntime::configurePluginSearchPaths(std::vector<std::filesystem::path> searchPaths) {
+    this->pluginSearchPaths = std::move(searchPaths);
+}
+
 void QtLuaPluginRuntime::configureDocumentAccess(QtDocumentController* controller,
                                                  std::function<std::size_t()> currentPageProvider,
                                                  std::function<void(std::size_t)> pageNavigator,
@@ -2300,8 +2304,9 @@ void QtLuaPluginRuntime::loadEnabledPlugins() {
     this->plugins.clear();
 
 #ifdef ENABLE_PLUGINS
-    const std::vector<std::filesystem::path> searchPaths = {std::filesystem::path(PROJECT_SOURCE_DIR) / "plugins",
-                                                            Util::getConfigSubfolder("plugins")};
+    const std::vector<std::filesystem::path> defaultSearchPaths = {std::filesystem::path(PROJECT_SOURCE_DIR) / "plugins",
+                                                                   Util::getConfigSubfolder("plugins")};
+    const auto& searchPaths = this->pluginSearchPaths.empty() ? defaultSearchPaths : this->pluginSearchPaths;
 
     for (const auto& searchPath: searchPaths) {
         if (!std::filesystem::is_directory(searchPath)) {

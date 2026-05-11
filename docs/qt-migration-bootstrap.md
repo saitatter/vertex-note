@@ -224,7 +224,7 @@ This is the current implementation plan after the Qt parity batch through
 ### Remaining work
 
 1. **Qt UI tests for the parity batch**
-   - Add a small Lua runtime smoke test if the test target can link Lua in the
+   - ✓ Add a small Lua runtime smoke test when the test target links Lua in the
      same configuration as the Qt shell.
 
 2. **Plugin runtime parity hardening**
@@ -232,7 +232,9 @@ This is the current implementation plan after the Qt parity batch through
      current tool, current tool colour, pen line style, fill, sizes.
    - Decide whether to support more legacy file/document APIs beyond the safe
      `openFile` bridge already implemented.
-   - Add automated coverage for bundled plugin load/enable/reload behavior.
+   - ✓ Add automated coverage for plugin load/enable/reload behavior using a
+     synthetic Lua plugin fixture.
+   - Add automated coverage for bundled plugin load behavior.
 
 3. **Settings parity v2**
    - ✓ Split Toolbar into its own settings tab instead of keeping profile

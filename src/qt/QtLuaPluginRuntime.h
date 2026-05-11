@@ -45,6 +45,7 @@ public:
     ~QtLuaPluginRuntime();
 
 public:
+    void configurePluginSearchPaths(std::vector<std::filesystem::path> searchPaths);
     void loadEnabledPlugins();
     void configureDocumentAccess(QtDocumentController* controller, std::function<std::size_t()> currentPageProvider,
                                  std::function<void(std::size_t)> pageNavigator,
@@ -100,5 +101,6 @@ private:
     std::function<std::pair<std::string, double>()> fontProvider;
     std::function<void(std::string, double)> fontSetter;
     std::function<bool(const std::filesystem::path&, int)> fileOpener;
+    std::vector<std::filesystem::path> pluginSearchPaths;
     std::vector<std::unique_ptr<Plugin>> plugins;
 };

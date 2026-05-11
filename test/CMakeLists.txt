@@ -74,13 +74,14 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/QtCanvasLayout.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtCommandHost.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/QtLuaPluginRuntime.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtRecentFilesService.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/QtToolbarLayoutEngine.cpp"
   )
   target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
-  target_link_libraries(test-units Qt6::Widgets)
+  target_link_libraries(test-units Qt6::Widgets $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>)
   target_include_directories(test-units PRIVATE "${PROJECT_SOURCE_DIR}/src")
 endif ()
 
