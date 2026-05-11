@@ -53,6 +53,7 @@ This audit compares GTK `Settings` keys from
 | `colorPalette` | Implemented | `appearance/colorPalettePath`; Qt loads `.gpl` palette files for toolbar quick colors and Lua `app.getColorPalette()`, falling back to the built-in palette on parse errors. |
 | `autosaveEnabled`, `autosaveTimeout` | Implemented | `general/autosaveEnabled`, `general/autosaveTimeoutMinutes`; autosaves dirty existing `.xopp`/`.xoj`/`.xopt` documents without prompting. |
 | `autoloadMostRecent` | Implemented | `general/autoloadMostRecent`; opens the first available recent document during Qt shell startup. |
+| `preferredLocale` | Partial / Qt-only equivalent | `general/preferredLocale`; Qt exposes the installed locale list and updates the `LANGUAGE` environment for subsequent gettext lookups/startup. Existing widgets are not dynamically retranslatable yet. |
 | `vertexNoteAutomaticUpdateCheckEnabled` | Qt-only equivalent | `general/automaticUpdateCheckEnabled`; runs the shared update checker on startup and keeps manual Help > Check for Updates. |
 | `presentationMode` | Implemented | `view/presentationModeDefault`; Qt can start directly in presentation mode. |
 | `lastSavePath`, `lastOpenPath`, `lastImagePath` | Qt-only equivalent | `paths/lastSave`, `paths/lastOpen`, `paths/lastImage`, plus Qt-only `paths/lastPdf` and `paths/lastExport`. |
@@ -82,7 +83,6 @@ This audit compares GTK `Settings` keys from
 | `doActionOnStrokeFiltered`, `trySelectOnStrokeFiltered` | Unsupported | GTK post-filter action/selection behavior depends on legacy floating-toolbox and PageView workflows. |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Legacy GTK / unsupported | Device input system settings depend on GTK/GDK input handling. |
-| `preferredLocale` | Unsupported | Qt shell does not expose localization selection yet. |
 | `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work

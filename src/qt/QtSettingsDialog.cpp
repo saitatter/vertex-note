@@ -34,7 +34,9 @@
 #include <QVBoxLayout>
 
 #include "QtInputDeviceKey.h"
+#include "filesystem.h"
 #include "model/FormatDefinitions.h"
+#include "util/PathUtil.h"
 
 namespace {
 
@@ -145,6 +147,28 @@ void populateAudioDeviceCombo(QComboBox* combo, const std::vector<QtAudioDeviceO
         }
     }
     combo->setCurrentIndex(currentIndex >= 0 ? currentIndex : 0);
+}
+
+auto availableLocaleCodes() -> std::vector<std::string> {
+    std::vector<std::string> locales;
+    try {
+        const auto baseLocaleDir = Util::getGettextFilepath(Util::getLocalePath());
+        if (fs::exists(baseLocaleDir)) {
+            for (const auto& entry: fs::directory_iterator(baseLocaleDir)) {
+                if (entry.is_directory()) {
+                    locales.push_back(entry.path().filename().string());
+                }
+            }
+        }
+    } catch (...) {
+        locales.clear();
+    }
+    std::ranges::sort(locales);
+    if (!std::ranges::binary_search(locales, std::string("en"))) {
+        locales.push_back("en");
+        std::ranges::sort(locales);
+    }
+    return locales;
 }
 
 }  // namespace
@@ -356,6 +380,20 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->autoloadMostRecentCheck = new QCheckBox(generalPage);
     this->autoloadMostRecentCheck->setChecked(current.autoloadMostRecent);
     generalLayout->addRow(QStringLiteral("Autoload most recent document:"), this->autoloadMostRecentCheck);
+
+    this->preferredLocaleCombo = new QComboBox(generalPage);
+    this->preferredLocaleCombo->addItem(QStringLiteral("System default"), QString());
+    for (const auto& locale: availableLocaleCodes()) {
+        this->preferredLocaleCombo->addItem(QString::fromStdString(locale), QString::fromStdString(locale));
+    }
+    int localeIndex = this->preferredLocaleCombo->findData(QString::fromStdString(current.preferredLocale));
+    if (localeIndex < 0 && !current.preferredLocale.empty()) {
+        this->preferredLocaleCombo->addItem(QString::fromStdString(current.preferredLocale),
+                                            QString::fromStdString(current.preferredLocale));
+        localeIndex = this->preferredLocaleCombo->count() - 1;
+    }
+    this->preferredLocaleCombo->setCurrentIndex(localeIndex >= 0 ? localeIndex : 0);
+    generalLayout->addRow(QStringLiteral("Preferred language:"), this->preferredLocaleCombo);
 
     this->automaticUpdateCheckEnabledCheck = new QCheckBox(generalPage);
     this->automaticUpdateCheckEnabledCheck->setChecked(current.automaticUpdateCheckEnabled);
@@ -956,6 +994,7 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .autosaveEnabled = this->autosaveEnabledCheck->isChecked(),
             .autosaveTimeoutMinutes = this->autosaveTimeoutSpin->value(),
             .autoloadMostRecent = this->autoloadMostRecentCheck->isChecked(),
+            .preferredLocale = this->preferredLocaleCombo->currentData().toString().toStdString(),
             .automaticUpdateCheckEnabled = this->automaticUpdateCheckEnabledCheck->isChecked(),
             .presentationModeDefault = this->presentationModeDefaultCheck->isChecked(),
             .displayDpi = this->displayDpiSpin->value(),

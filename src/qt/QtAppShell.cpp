@@ -19,6 +19,7 @@
 
 #include <QApplication>
 #include <QAction>
+#include <QByteArray>
 #include <QColorDialog>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -308,6 +309,10 @@ auto isLandscapeSize(double width, double height) -> bool { return width > heigh
 
 auto defaultLatexTemplatePath() -> fs::path {
     return fs::path(PROJECT_SOURCE_DIR) / "resources" / "default_template.tex";
+}
+
+void applyQtPreferredLocale(const std::string& preferredLocale) {
+    qputenv("LANGUAGE", QByteArray(preferredLocale.c_str(), static_cast<qsizetype>(preferredLocale.size())));
 }
 
 auto buildQtLatexSettings(const QtSettings& qtSettings) -> LatexSettings {
@@ -2688,6 +2693,11 @@ void QtAppShell::loadPersistentUiState() {
                     .toInt();
     this->currentSettings.autoloadMostRecent =
             settings.value(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent).toBool();
+    this->currentSettings.preferredLocale =
+            settings.value(QStringLiteral("general/preferredLocale"),
+                           QString::fromStdString(this->currentSettings.preferredLocale))
+                    .toString()
+                    .toStdString();
     this->currentSettings.automaticUpdateCheckEnabled =
             settings.value(QStringLiteral("general/automaticUpdateCheckEnabled"),
                            this->currentSettings.automaticUpdateCheckEnabled)
@@ -3094,6 +3104,7 @@ void QtAppShell::loadPersistentUiState() {
     if (this->currentSettings.audioFolder.empty()) {
         this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     }
+    applyQtPreferredLocale(this->currentSettings.preferredLocale);
 }
 
 void QtAppShell::savePersistentUiState() const {
@@ -3148,6 +3159,8 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("general/autosaveEnabled"), this->currentSettings.autosaveEnabled);
     settings.setValue(QStringLiteral("general/autosaveTimeoutMinutes"), this->currentSettings.autosaveTimeoutMinutes);
     settings.setValue(QStringLiteral("general/autoloadMostRecent"), this->currentSettings.autoloadMostRecent);
+    settings.setValue(QStringLiteral("general/preferredLocale"),
+                      QString::fromStdString(this->currentSettings.preferredLocale));
     settings.setValue(QStringLiteral("general/automaticUpdateCheckEnabled"),
                       this->currentSettings.automaticUpdateCheckEnabled);
     settings.setValue(QStringLiteral("view/presentationModeDefault"), this->currentSettings.presentationModeDefault);
@@ -4228,6 +4241,7 @@ void QtAppShell::showSettingsDialog() {
     const auto previousToolbarProfileId = this->currentSettings.toolbarProfileId;
     const auto previousIconTheme = this->currentSettings.iconTheme;
     const auto previousThemeVariant = this->currentSettings.themeVariant;
+    const auto previousLocale = this->currentSettings.preferredLocale;
     this->currentSettings = dialog.settings();
     if (this->currentSettings.audioFolder.empty()) {
         this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
@@ -4235,6 +4249,9 @@ void QtAppShell::showSettingsDialog() {
 
     // Apply relevant settings immediately
     applyRuntimeSettings();
+    if (this->currentSettings.preferredLocale != previousLocale) {
+        applyQtPreferredLocale(this->currentSettings.preferredLocale);
+    }
     this->audioController.applySettings(this->currentSettings);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", this->currentSettings.geometrySnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);

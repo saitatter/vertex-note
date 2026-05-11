@@ -49,6 +49,7 @@ struct QtSettings {
     bool autosaveEnabled = true;
     int autosaveTimeoutMinutes = 3;
     bool autoloadMostRecent = false;
+    std::string preferredLocale;
     bool automaticUpdateCheckEnabled = false;
     bool presentationModeDefault = false;
     int displayDpi = -1;
@@ -181,6 +182,7 @@ private:
     QCheckBox* autosaveEnabledCheck = nullptr;
     QSpinBox* autosaveTimeoutSpin = nullptr;
     QCheckBox* autoloadMostRecentCheck = nullptr;
+    QComboBox* preferredLocaleCombo = nullptr;
     QCheckBox* automaticUpdateCheckEnabledCheck = nullptr;
     QCheckBox* presentationModeDefaultCheck = nullptr;
     QSpinBox* displayDpiSpin = nullptr;
