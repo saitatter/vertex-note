@@ -12,7 +12,8 @@
 #include <cstdlib>
 #include <ctime>
 
-#include <glib.h>
+#include <QString>
+#include <QStringDecoder>
 #include <gtest/gtest.h>
 
 #include "util/StringUtils.h"
@@ -21,6 +22,18 @@
 
 
 using namespace std;
+
+namespace {
+auto isValidUtf8(std::string_view text) -> bool {
+    QStringDecoder decoder(QStringDecoder::Utf8);
+    (void)decoder(QByteArrayView(text.data(), static_cast<qsizetype>(text.size())));
+    return !decoder.hasError();
+}
+
+auto utf16Length(std::string_view text) -> qsizetype {
+    return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())).size();
+}
+}  // namespace
 
 
 TEST(UtilStringUtils, testStartWith) {
@@ -85,11 +98,11 @@ TEST(UtilStringUtils, testEllipsize) {
     for (const auto& tc: cases) {
         auto out = StringUtils::ellipsize(tc.str, tc.max_width);
 
-        EXPECT_TRUE(g_utf8_validate(out.c_str(), out.size(), nullptr))
+        EXPECT_TRUE(isValidUtf8(out))
                 << "Ellipsizing string \"" << tc.str << "\" produced invalid UTF-8";
 
         if (tc.ellipsized) {
-            EXPECT_EQ(g_utf8_strlen(out.c_str(), out.size()), tc.max_width)
+            EXPECT_EQ(utf16Length(out), static_cast<qsizetype>(tc.max_width))
                     << "Ellipsizing string \"" << tc.str << "\" produced a string of the wrong size";
             EXPECT_TRUE(StringUtils::endsWith(out, "...")) << '"' << out << "\" does not end with an ellipsis";
         } else {

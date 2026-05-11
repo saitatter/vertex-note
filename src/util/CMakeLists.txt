@@ -6,7 +6,7 @@ unset(util_SOURCES)
 file(GLOB_RECURSE util_SOURCES *.cpp *.h)
 
 add_library(util STATIC ${util_SOURCES})
-target_link_libraries(util PUBLIC vertexnote::defaults vertexnote::external_common_modules)
+target_link_libraries(util PUBLIC vertexnote::defaults vertexnote::external_common_modules Qt6::Core)
 target_compile_features(util PUBLIC ${PROJECT_CXX_FEATURES})
 target_compile_features(util PUBLIC cxx_std_20)
 target_include_directories(util PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
