@@ -1,4 +1,4 @@
-#include "qt/QtColorPalette.h"
+#include "QtColorPalette.h"
 
 #include <filesystem>
 #include <fstream>

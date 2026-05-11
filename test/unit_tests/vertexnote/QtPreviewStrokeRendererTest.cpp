@@ -9,7 +9,7 @@
 #include <QPainter>
 
 #include "model/Stroke.h"
-#include "qt/QtPreviewStrokeRenderer.h"
+#include "QtPreviewStrokeRenderer.h"
 #include "view/render/QtPainterRenderContext.h"
 
 TEST(VertexNoteQtPreviewStrokeRenderer, pressureSensitiveStrokeUsesFinalPointRadiusForRoundCap) {

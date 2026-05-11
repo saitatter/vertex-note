@@ -7,7 +7,7 @@
 #include <config-test.h>
 #include <gtest/gtest.h>
 
-#include "qt/QtDocumentController.h"
+#include "QtDocumentController.h"
 #include "view/render/Renderers.h"
 
 namespace {

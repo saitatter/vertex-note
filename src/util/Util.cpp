@@ -10,10 +10,6 @@
 
 #include <gdk/gdk.h>  // for gdk_cairo_set_source_rgba, gdk_t...
 
-#ifdef ENABLE_LEGACY_GTK_SHELL
-#include <gtk/gtk.h>
-#endif
-
 #include "util/Color.h"              // for argb_to_GdkRGBA, rgb_to_GdkRGBA
 #include "util/OutputStream.h"       // for OutputStream
 #include "util/PlaceholderString.h"  // for PlaceholderString
@@ -47,17 +43,6 @@ auto Util::getPid() -> PID {
     return ::getpid();
 #endif
 }
-
-#ifdef ENABLE_LEGACY_GTK_SHELL
-auto Util::paintBackgroundWhite(GtkWidget* widget, cairo_t* cr, void*) -> gboolean {
-    GtkAllocation alloc;
-    gtk_widget_get_allocation(widget, &alloc);
-    cairo_set_source_rgb(cr, 1, 1, 1);
-    cairo_rectangle(cr, 0, 0, alloc.width, alloc.height);
-    cairo_fill(cr);
-    return false;
-}
-#endif
 
 void Util::cairo_set_dash_from_vector(cairo_t* cr, const std::vector<double>& dashes, double offset) {
     cairo_set_dash(cr, dashes.data(), static_cast<int>(dashes.size()), offset);

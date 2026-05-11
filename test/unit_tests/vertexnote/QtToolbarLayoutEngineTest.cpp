@@ -4,8 +4,8 @@
 #include <gtest/gtest.h>
 
 #include "filesystem.h"
-#include "qt/QtToolbarLayoutEngine.h"
-#include "qt/QtToolbarProfileStore.h"
+#include "QtToolbarLayoutEngine.h"
+#include "QtToolbarProfileStore.h"
 
 TEST(VertexNoteQtToolbarLayoutEngine, parsesToolbarProfilesAndTokens) {
     const auto path = fs::temp_directory_path() / "vertexnote-qt-toolbar-layout-test.ini";

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "qt/QtRecentFilesService.h"
+#include "QtRecentFilesService.h"
 
 TEST(VertexNoteQtRecentFilesService, deduplicatesAndCapsRecentFiles) {
     QtRecentFilesService service;

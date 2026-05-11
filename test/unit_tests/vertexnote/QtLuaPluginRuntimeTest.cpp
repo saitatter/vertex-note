@@ -11,8 +11,8 @@
 #include <config-paths.h>
 #include <gtest/gtest.h>
 
-#include "qt/QtDocumentController.h"
-#include "qt/QtLuaPluginRuntime.h"
+#include "QtDocumentController.h"
+#include "QtLuaPluginRuntime.h"
 #include "ui/common/ICommandHost.h"
 #include "ui/common/IPluginUiBridge.h"
 #include "view/render/Renderers.h"

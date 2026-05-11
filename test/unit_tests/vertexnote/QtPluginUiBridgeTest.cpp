@@ -7,8 +7,8 @@
 #include <QMainWindow>
 #include <QToolBar>
 
-#include "qt/QtCommandHost.h"
-#include "qt/QtPluginUiBridge.h"
+#include "QtCommandHost.h"
+#include "QtPluginUiBridge.h"
 
 namespace {
 

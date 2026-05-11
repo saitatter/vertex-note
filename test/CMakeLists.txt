@@ -77,28 +77,37 @@ target_compile_features(test-units PRIVATE cxx_std_20)
 target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
 if (ENABLE_QT_SHELL)
   target_sources(test-units PRIVATE
-    "${PROJECT_SOURCE_DIR}/src/qt/QtCanvasLayout.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtColorPalette.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtCommandHost.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentController.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerEraser.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerHistory.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerLayers.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPageBackground.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPages.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerPdfText.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerSelection.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtDocumentControllerShapes.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtLuaPluginRuntime.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtPluginUiBridge.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtPreviewStrokeRenderer.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtRecentFilesService.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtToolbarLayoutEngine.cpp"
-    "${PROJECT_SOURCE_DIR}/src/qt/QtToolbarProfileStore.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas/QtCanvasLayout.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas/QtPreviewStrokeRenderer.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerEraser.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerHistory.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerLayers.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPageBackground.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPages.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPdfText.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerSelection.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerShapes.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtCommandHost.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtLuaPluginRuntime.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtPluginUiBridge.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtRecentFilesService.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtColorPalette.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarLayoutEngine.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarProfileStore.cpp"
   )
   target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
   target_link_libraries(test-units Qt6::Widgets $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>)
-  target_include_directories(test-units PRIVATE "${PROJECT_SOURCE_DIR}/src")
+  target_include_directories(test-units PRIVATE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_SOURCE_DIR}/src/qt"
+    "${PROJECT_SOURCE_DIR}/src/qt/app"
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas"
+    "${PROJECT_SOURCE_DIR}/src/qt/document"
+    "${PROJECT_SOURCE_DIR}/src/qt/services"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar"
+    "${PROJECT_SOURCE_DIR}/src/qt/widgets"
+  )
 endif ()
 
 if (ENABLE_LEGACY_GTK_SHELL)

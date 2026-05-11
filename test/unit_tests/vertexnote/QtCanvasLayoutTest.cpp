@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "qt/QtCanvasLayout.h"
+#include "QtCanvasLayout.h"
 
 namespace {
 
