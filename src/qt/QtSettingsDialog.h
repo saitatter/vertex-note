@@ -79,6 +79,13 @@ struct QtSettings {
     int strokeStabilizerSamples = 6;
     double strokeStabilizerStrength = 0.65;
     bool strokeStabilizerFinalizeStroke = true;
+    int strokeStabilizerAveragingMethod = 1;
+    int strokeStabilizerPreprocessor = 0;
+    double strokeStabilizerSigma = 0.5;
+    double strokeStabilizerDeadzoneRadius = 1.3;
+    double strokeStabilizerDrag = 0.4;
+    double strokeStabilizerMass = 5.0;
+    bool strokeStabilizerCuspDetection = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     double strokeRecognizerMinSize = 40.0;
@@ -187,6 +194,13 @@ private:
     QSpinBox* strokeStabilizerSamplesSpin = nullptr;
     QDoubleSpinBox* strokeStabilizerStrengthSpin = nullptr;
     QCheckBox* strokeStabilizerFinalizeCheck = nullptr;
+    QComboBox* strokeStabilizerAveragingCombo = nullptr;
+    QComboBox* strokeStabilizerPreprocessorCombo = nullptr;
+    QDoubleSpinBox* strokeStabilizerSigmaSpin = nullptr;
+    QDoubleSpinBox* strokeStabilizerDeadzoneRadiusSpin = nullptr;
+    QDoubleSpinBox* strokeStabilizerDragSpin = nullptr;
+    QDoubleSpinBox* strokeStabilizerMassSpin = nullptr;
+    QCheckBox* strokeStabilizerCuspDetectionCheck = nullptr;
     QComboBox* eraserModeCombo = nullptr;
     QDoubleSpinBox* pageWidthSpin = nullptr;
     QDoubleSpinBox* pageHeightSpin = nullptr;

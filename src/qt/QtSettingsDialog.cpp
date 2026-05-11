@@ -270,6 +270,56 @@ QtSettingsDialog::QtSettingsDialog(const QtSettings& current, const std::vector<
     this->strokeStabilizerFinalizeCheck->setChecked(current.strokeStabilizerFinalizeStroke);
     toolsLayout->addRow(QStringLiteral("Stabilizer catches final point:"), this->strokeStabilizerFinalizeCheck);
 
+    this->strokeStabilizerAveragingCombo = new QComboBox(toolsPage);
+    this->strokeStabilizerAveragingCombo->addItem(QStringLiteral("None"), 0);
+    this->strokeStabilizerAveragingCombo->addItem(QStringLiteral("Arithmetic"), 1);
+    this->strokeStabilizerAveragingCombo->addItem(QStringLiteral("Velocity Gaussian"), 2);
+    const int averagingIndex = this->strokeStabilizerAveragingCombo->findData(current.strokeStabilizerAveragingMethod);
+    this->strokeStabilizerAveragingCombo->setCurrentIndex(averagingIndex >= 0 ? averagingIndex : 1);
+    toolsLayout->addRow(QStringLiteral("Stabilizer averaging:"), this->strokeStabilizerAveragingCombo);
+
+    this->strokeStabilizerPreprocessorCombo = new QComboBox(toolsPage);
+    this->strokeStabilizerPreprocessorCombo->addItem(QStringLiteral("None"), 0);
+    this->strokeStabilizerPreprocessorCombo->addItem(QStringLiteral("Deadzone"), 1);
+    this->strokeStabilizerPreprocessorCombo->addItem(QStringLiteral("Inertia"), 2);
+    const int preprocessorIndex =
+            this->strokeStabilizerPreprocessorCombo->findData(current.strokeStabilizerPreprocessor);
+    this->strokeStabilizerPreprocessorCombo->setCurrentIndex(preprocessorIndex >= 0 ? preprocessorIndex : 0);
+    toolsLayout->addRow(QStringLiteral("Stabilizer preprocessor:"), this->strokeStabilizerPreprocessorCombo);
+
+    this->strokeStabilizerSigmaSpin = new QDoubleSpinBox(toolsPage);
+    this->strokeStabilizerSigmaSpin->setRange(0.05, 20.0);
+    this->strokeStabilizerSigmaSpin->setSingleStep(0.05);
+    this->strokeStabilizerSigmaSpin->setDecimals(2);
+    this->strokeStabilizerSigmaSpin->setValue(current.strokeStabilizerSigma);
+    toolsLayout->addRow(QStringLiteral("Gaussian sigma:"), this->strokeStabilizerSigmaSpin);
+
+    this->strokeStabilizerDeadzoneRadiusSpin = new QDoubleSpinBox(toolsPage);
+    this->strokeStabilizerDeadzoneRadiusSpin->setRange(0.0, 100.0);
+    this->strokeStabilizerDeadzoneRadiusSpin->setSingleStep(0.1);
+    this->strokeStabilizerDeadzoneRadiusSpin->setDecimals(2);
+    this->strokeStabilizerDeadzoneRadiusSpin->setValue(current.strokeStabilizerDeadzoneRadius);
+    this->strokeStabilizerDeadzoneRadiusSpin->setSuffix(QStringLiteral(" pt"));
+    toolsLayout->addRow(QStringLiteral("Deadzone radius:"), this->strokeStabilizerDeadzoneRadiusSpin);
+
+    this->strokeStabilizerCuspDetectionCheck = new QCheckBox(toolsPage);
+    this->strokeStabilizerCuspDetectionCheck->setChecked(current.strokeStabilizerCuspDetection);
+    toolsLayout->addRow(QStringLiteral("Deadzone cusp detection:"), this->strokeStabilizerCuspDetectionCheck);
+
+    this->strokeStabilizerDragSpin = new QDoubleSpinBox(toolsPage);
+    this->strokeStabilizerDragSpin->setRange(0.0, 0.99);
+    this->strokeStabilizerDragSpin->setSingleStep(0.05);
+    this->strokeStabilizerDragSpin->setDecimals(2);
+    this->strokeStabilizerDragSpin->setValue(current.strokeStabilizerDrag);
+    toolsLayout->addRow(QStringLiteral("Inertia drag:"), this->strokeStabilizerDragSpin);
+
+    this->strokeStabilizerMassSpin = new QDoubleSpinBox(toolsPage);
+    this->strokeStabilizerMassSpin->setRange(0.1, 100.0);
+    this->strokeStabilizerMassSpin->setSingleStep(0.5);
+    this->strokeStabilizerMassSpin->setDecimals(2);
+    this->strokeStabilizerMassSpin->setValue(current.strokeStabilizerMass);
+    toolsLayout->addRow(QStringLiteral("Inertia mass:"), this->strokeStabilizerMassSpin);
+
     this->eraserModeCombo = new QComboBox(toolsPage);
     this->eraserModeCombo->addItem(QStringLiteral("Whole Stroke"), static_cast<int>(QtEraserMode::Standard));
     this->eraserModeCombo->addItem(QStringLiteral("Segment"), static_cast<int>(QtEraserMode::Segment));
@@ -1148,6 +1198,13 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .strokeStabilizerSamples = this->strokeStabilizerSamplesSpin->value(),
             .strokeStabilizerStrength = this->strokeStabilizerStrengthSpin->value(),
             .strokeStabilizerFinalizeStroke = this->strokeStabilizerFinalizeCheck->isChecked(),
+            .strokeStabilizerAveragingMethod = this->strokeStabilizerAveragingCombo->currentData().toInt(),
+            .strokeStabilizerPreprocessor = this->strokeStabilizerPreprocessorCombo->currentData().toInt(),
+            .strokeStabilizerSigma = this->strokeStabilizerSigmaSpin->value(),
+            .strokeStabilizerDeadzoneRadius = this->strokeStabilizerDeadzoneRadiusSpin->value(),
+            .strokeStabilizerDrag = this->strokeStabilizerDragSpin->value(),
+            .strokeStabilizerMass = this->strokeStabilizerMassSpin->value(),
+            .strokeStabilizerCuspDetection = this->strokeStabilizerCuspDetectionCheck->isChecked(),
             .snapGridTolerance = this->snapGridToleranceSpin->value(),
             .snapGridSize = this->snapGridSizeSpin->value(),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),

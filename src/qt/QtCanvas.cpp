@@ -12,6 +12,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <type_traits>
 #include <utility>
 
@@ -607,11 +608,20 @@ void QtCanvas::setPressureOptions(double minimumPressure, double pressureMultipl
     this->pressureGuessing = pressureGuessing;
 }
 
-void QtCanvas::setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke) {
+void QtCanvas::setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke,
+                                          int averagingMethod, int preprocessor, double sigma, double deadzoneRadius,
+                                          double drag, double mass, bool cuspDetection) {
     this->strokeStabilizerEnabled = enabled;
     this->strokeStabilizerSamples = std::clamp(samples, 2, 64);
     this->strokeStabilizerStrength = std::clamp(strength, 0.0, 1.0);
     this->strokeStabilizerFinalizeStroke = finalizeStroke;
+    this->strokeStabilizerAveragingMethod = std::clamp(averagingMethod, 0, 2);
+    this->strokeStabilizerPreprocessor = std::clamp(preprocessor, 0, 2);
+    this->strokeStabilizerSigma = std::clamp(sigma, 0.05, 20.0);
+    this->strokeStabilizerDeadzoneRadius = std::clamp(deadzoneRadius, 0.0, 100.0);
+    this->strokeStabilizerDrag = std::clamp(drag, 0.0, 0.99);
+    this->strokeStabilizerMass = std::clamp(mass, 0.1, 100.0);
+    this->strokeStabilizerCuspDetection = cuspDetection;
 }
 
 void QtCanvas::setGridSnapOptions(double gridSize, double tolerance) {
@@ -2185,7 +2195,32 @@ auto QtCanvas::stabilizedStrokePoint(const QPointF& pagePoint, double pressure) 
         return {raw.point, raw.pressure};
     }
 
-    this->strokeStabilizerSamplesBuffer.push_back(raw);
+    StabilizerSample processed = raw;
+    if (this->lastEmittedStrokeSample) {
+        const QPointF previous = this->lastEmittedStrokeSample->point;
+        if (this->strokeStabilizerPreprocessor == 1 && this->strokeStabilizerDeadzoneRadius > 0.0) {
+            const QPointF movement = raw.point - previous;
+            const double distance = std::hypot(movement.x(), movement.y());
+            const double dot = QPointF::dotProduct(movement, this->strokeStabilizerDeadzoneDirection);
+            if (distance <= this->strokeStabilizerDeadzoneRadius &&
+                (!this->strokeStabilizerCuspDetection || dot >= 0.0)) {
+                this->lastEmittedStrokeSample = {.point = previous, .pressure = raw.pressure};
+                return {previous, raw.pressure};
+            }
+            if (distance > 0.0) {
+                const double ratio = std::min(this->strokeStabilizerDeadzoneRadius / distance, 1.0);
+                processed.point = raw.point - movement * ratio;
+                this->strokeStabilizerDeadzoneDirection = movement;
+            }
+        } else if (this->strokeStabilizerPreprocessor == 2) {
+            const QPointF spring((raw.point.x() - previous.x()) / this->strokeStabilizerMass,
+                                 (raw.point.y() - previous.y()) / this->strokeStabilizerMass);
+            this->strokeStabilizerVelocity = this->strokeStabilizerVelocity * (1.0 - this->strokeStabilizerDrag) + spring;
+            processed.point = previous + this->strokeStabilizerVelocity;
+        }
+    }
+
+    this->strokeStabilizerSamplesBuffer.push_back(processed);
     const auto maxSamples = static_cast<std::size_t>(std::max(2, this->strokeStabilizerSamples));
     if (this->strokeStabilizerSamplesBuffer.size() > maxSamples) {
         this->strokeStabilizerSamplesBuffer.erase(this->strokeStabilizerSamplesBuffer.begin(),
@@ -2193,23 +2228,39 @@ auto QtCanvas::stabilizedStrokePoint(const QPointF& pagePoint, double pressure) 
                                                           static_cast<std::ptrdiff_t>(maxSamples));
     }
 
-    QPointF averaged;
-    double averagedPressure = 0.0;
-    double weightSum = 0.0;
-    double weight = 1.0;
-    for (auto it = this->strokeStabilizerSamplesBuffer.rbegin(); it != this->strokeStabilizerSamplesBuffer.rend(); ++it) {
-        averaged += it->point * weight;
-        averagedPressure += it->pressure * weight;
-        weightSum += weight;
-        weight *= 0.82;
+    QPointF averaged = processed.point;
+    double averagedPressure = processed.pressure;
+    if (this->strokeStabilizerAveragingMethod != 0) {
+        averaged = QPointF();
+        averagedPressure = 0.0;
+        double weightSum = 0.0;
+        double distanceSum = 0.0;
+        for (auto it = this->strokeStabilizerSamplesBuffer.rbegin(); it != this->strokeStabilizerSamplesBuffer.rend();
+             ++it) {
+            double weight = 1.0;
+            if (this->strokeStabilizerAveragingMethod == 2) {
+                weight = std::exp(-(distanceSum * distanceSum) /
+                                  (2.0 * this->strokeStabilizerSigma * this->strokeStabilizerSigma));
+                if (weight < 0.01) {
+                    break;
+                }
+                const auto next = std::next(it);
+                if (next != this->strokeStabilizerSamplesBuffer.rend()) {
+                    distanceSum += std::hypot(it->point.x() - next->point.x(), it->point.y() - next->point.y());
+                }
+            }
+            averaged += it->point * weight;
+            averagedPressure += it->pressure * weight;
+            weightSum += weight;
+        }
+        averaged /= std::max(weightSum, 0.001);
+        averagedPressure /= std::max(weightSum, 0.001);
     }
-    averaged /= weightSum;
-    averagedPressure /= weightSum;
 
     const double strength = std::clamp(this->strokeStabilizerStrength, 0.0, 1.0);
     const StabilizerSample emitted{
-            .point = raw.point * (1.0 - strength) + averaged * strength,
-            .pressure = raw.pressure * (1.0 - strength) + averagedPressure * strength,
+            .point = processed.point * (1.0 - strength) + averaged * strength,
+            .pressure = processed.pressure * (1.0 - strength) + averagedPressure * strength,
     };
     this->lastEmittedStrokeSample = emitted;
     return {emitted.point, emitted.pressure};
@@ -2221,6 +2272,8 @@ void QtCanvas::resetStrokeStabilizer(const QPointF& pagePoint, double pressure) 
     this->strokeStabilizerSamplesBuffer.push_back(sample);
     this->lastRawStrokeSample = sample;
     this->lastEmittedStrokeSample = sample;
+    this->strokeStabilizerVelocity = QPointF();
+    this->strokeStabilizerDeadzoneDirection = QPointF();
 }
 
 void QtCanvas::maybeFinalizeStabilizedStroke() {

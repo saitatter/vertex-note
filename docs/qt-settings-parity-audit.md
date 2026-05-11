@@ -45,7 +45,7 @@ This audit compares GTK `Settings` keys from
 | `edgePanSpeed`, `edgePanMaxMult` | Implemented | `view/edgePanSpeed`, `view/edgePanMaxMult`; applied to Qt edge-pan while dragging strokes, erasers, selections, PDF text selections, vertical space, shapes, and geometry vertices. |
 | `pressureSensitivity`, `minimumPressure`, `pressureMultiplier`, `pressureGuessing` | Implemented | `tools/defaultPressureSensitive`, `tools/minimumPressure`, `tools/pressureMultiplier`, `tools/pressureGuessing`; applied to Qt stroke input pressure. |
 | `font` | Qt-only equivalent | `tools/defaultFontName`, `tools/defaultFontSize`; applied to the Qt text tool, toolbar font controls, and Lua font access. |
-| `stabilizerAveragingMethod`, `stabilizerBuffersize`, `stabilizerFinalizeStroke` | Partial / Qt-only equivalent | `tools/strokeStabilizerEnabled`, `tools/strokeStabilizerSamples`, `tools/strokeStabilizerStrength`, `tools/strokeStabilizerFinalizeStroke`; Qt applies a native moving-average stabilizer instead of reusing GTK `StrokeHandler`. |
+| `stabilizerAveragingMethod`, `stabilizerPreprocessor`, `stabilizerBuffersize`, `stabilizerFinalizeStroke`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Implemented / Qt-native | `tools/strokeStabilizer*`; Qt applies native arithmetic/velocity-Gaussian averaging plus deadzone/inertia preprocessing on the Qt stroke pipeline instead of reusing GTK `StrokeHandler`. |
 | Custom data `deviceClasses`, `buttonConfig` | Qt-only equivalent | Qt discovers `QInputDevice`s, persists a global button matrix and per-device override matrices, and applies them for mouse/tablet/touch input. |
 | `numIgnoredStylusEvents`, `inputSystemTPCButton`, `inputSystemDrawOutsideWindow` | Partial / Qt-native | `devices/ignoredStylusEvents`, `devices/inputSystemTPCButton`, `devices/inputSystemDrawOutsideWindow`; Qt applies ignored initial tablet events. The TPC/draw-outside flags are persisted for parity, while Qt uses native tablet button/window event delivery. |
 | `stylusCursorType`, `eraserVisibility` | Partial / Qt-only equivalent | `devices/eraserCursorHidden`; Qt persists eraser cursor hiding and active/right-button/per-device eraser cursor behavior. |
@@ -77,9 +77,7 @@ This audit compares GTK `Settings` keys from
 | GTK setting key(s) | Status | Notes |
 | --- | --- | --- |
 | `restoreLineWidthEnabled` | Unsupported | Qt selection resizing does not yet expose the GTK scale workflow that uses this setting. |
-| `stabilizerPreprocessor`, `stabilizerSigma`, `stabilizerDeadzoneRadius`, `stabilizerDrag`, `stabilizerMass`, `stabilizerCuspDetection` | Unsupported | Qt has a native moving-average stabilizer, but not GTK's full deadzone/inertia/gaussian stabilizer matrix. |
 
 ## Next Settings Work
 
 1. Add `restoreLineWidthEnabled` only after Qt exposes selection scaling/resizing; the current Qt selection workflow moves elements but does not scale them.
-2. Add the full GTK stabilizer matrix only if Qt needs more than the current native moving-average stabilizer.

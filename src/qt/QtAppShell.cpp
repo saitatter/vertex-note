@@ -2774,6 +2774,36 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("tools/strokeStabilizerFinalizeStroke"),
                            this->currentSettings.strokeStabilizerFinalizeStroke)
                     .toBool();
+    this->currentSettings.strokeStabilizerAveragingMethod =
+            std::clamp(settings.value(QStringLiteral("tools/strokeStabilizerAveragingMethod"),
+                                      this->currentSettings.strokeStabilizerAveragingMethod)
+                               .toInt(),
+                       0, 2);
+    this->currentSettings.strokeStabilizerPreprocessor =
+            std::clamp(settings.value(QStringLiteral("tools/strokeStabilizerPreprocessor"),
+                                      this->currentSettings.strokeStabilizerPreprocessor)
+                               .toInt(),
+                       0, 2);
+    this->currentSettings.strokeStabilizerSigma =
+            settings.value(QStringLiteral("tools/strokeStabilizerSigma"),
+                           this->currentSettings.strokeStabilizerSigma)
+                    .toDouble();
+    this->currentSettings.strokeStabilizerDeadzoneRadius =
+            settings.value(QStringLiteral("tools/strokeStabilizerDeadzoneRadius"),
+                           this->currentSettings.strokeStabilizerDeadzoneRadius)
+                    .toDouble();
+    this->currentSettings.strokeStabilizerDrag =
+            settings.value(QStringLiteral("tools/strokeStabilizerDrag"),
+                           this->currentSettings.strokeStabilizerDrag)
+                    .toDouble();
+    this->currentSettings.strokeStabilizerMass =
+            settings.value(QStringLiteral("tools/strokeStabilizerMass"),
+                           this->currentSettings.strokeStabilizerMass)
+                    .toDouble();
+    this->currentSettings.strokeStabilizerCuspDetection =
+            settings.value(QStringLiteral("tools/strokeStabilizerCuspDetection"),
+                           this->currentSettings.strokeStabilizerCuspDetection)
+                    .toBool();
     this->currentSettings.snapGridTolerance =
             settings.value(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance).toDouble();
     this->currentSettings.snapGridSize =
@@ -3227,6 +3257,17 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/strokeStabilizerStrength"), this->currentSettings.strokeStabilizerStrength);
     settings.setValue(QStringLiteral("tools/strokeStabilizerFinalizeStroke"),
                       this->currentSettings.strokeStabilizerFinalizeStroke);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerAveragingMethod"),
+                      this->currentSettings.strokeStabilizerAveragingMethod);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerPreprocessor"),
+                      this->currentSettings.strokeStabilizerPreprocessor);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerSigma"), this->currentSettings.strokeStabilizerSigma);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerDeadzoneRadius"),
+                      this->currentSettings.strokeStabilizerDeadzoneRadius);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerDrag"), this->currentSettings.strokeStabilizerDrag);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerMass"), this->currentSettings.strokeStabilizerMass);
+    settings.setValue(QStringLiteral("tools/strokeStabilizerCuspDetection"),
+                      this->currentSettings.strokeStabilizerCuspDetection);
     settings.setValue(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance);
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
@@ -3758,7 +3799,14 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setStrokeStabilizerOptions(this->currentSettings.strokeStabilizerEnabled,
                                        this->currentSettings.strokeStabilizerSamples,
                                        this->currentSettings.strokeStabilizerStrength,
-                                       this->currentSettings.strokeStabilizerFinalizeStroke);
+                                       this->currentSettings.strokeStabilizerFinalizeStroke,
+                                       this->currentSettings.strokeStabilizerAveragingMethod,
+                                       this->currentSettings.strokeStabilizerPreprocessor,
+                                       this->currentSettings.strokeStabilizerSigma,
+                                       this->currentSettings.strokeStabilizerDeadzoneRadius,
+                                       this->currentSettings.strokeStabilizerDrag,
+                                       this->currentSettings.strokeStabilizerMass,
+                                       this->currentSettings.strokeStabilizerCuspDetection);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,

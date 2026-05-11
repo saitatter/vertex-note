@@ -73,7 +73,9 @@ public:
     void setPageSpaceOptions(bool horizontalEnabled, int left, int right, bool verticalEnabled, int above, int below);
     void setTouchDrawingEnabled(bool enabled);
     void setPressureOptions(double minimumPressure, double pressureMultiplier, bool pressureGuessing);
-    void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke);
+    void setStrokeStabilizerOptions(bool enabled, int samples, double strength, bool finalizeStroke,
+                                    int averagingMethod, int preprocessor, double sigma, double deadzoneRadius,
+                                    double drag, double mass, bool cuspDetection);
     void setGridSnapOptions(double gridSize, double tolerance);
     void setEraserCursorHidden(bool hidden);
     void setInputSystemOptions(int ignoredStylusEvents, bool tpcButtonEnabled, bool drawOutsideWindowEnabled);
@@ -305,6 +307,13 @@ private:
     int strokeStabilizerSamples = 6;
     double strokeStabilizerStrength = 0.65;
     bool strokeStabilizerFinalizeStroke = true;
+    int strokeStabilizerAveragingMethod = 1;
+    int strokeStabilizerPreprocessor = 0;
+    double strokeStabilizerSigma = 0.5;
+    double strokeStabilizerDeadzoneRadius = 1.3;
+    double strokeStabilizerDrag = 0.4;
+    double strokeStabilizerMass = 5.0;
+    bool strokeStabilizerCuspDetection = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     double zoomStepFactor = 1.10;
@@ -365,6 +374,8 @@ private:
     std::vector<StabilizerSample> strokeStabilizerSamplesBuffer;
     std::optional<StabilizerSample> lastRawStrokeSample;
     std::optional<StabilizerSample> lastEmittedStrokeSample;
+    QPointF strokeStabilizerVelocity;
+    QPointF strokeStabilizerDeadzoneDirection;
     std::optional<std::size_t> eraserPreviewPageIndex;
     std::optional<QtPointerButtonAction> activeTouchAction;
     QPointF eraserPreviewPagePoint;
