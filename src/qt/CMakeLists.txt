@@ -4,8 +4,10 @@ set(vertexnote_qt_sources
         QtAudioController.cpp
         QtAppShell.h
         QtAppShell.cpp
+        QtAppShellAudioActions.cpp
         QtAppShellCommandStates.cpp
         QtAppShellCommands.cpp
+        QtAppShellConstraintActions.cpp
         QtAppShellDialogs.cpp
         QtAppShellDocumentIo.cpp
         QtAppShellEditCommands.cpp
@@ -15,6 +17,7 @@ set(vertexnote_qt_sources
         QtAppShellJournalCommands.cpp
         QtAppShellNavigationCommands.cpp
         QtAppShellNavigation.cpp
+        QtAppShellPageActions.cpp
         QtAppShellPersistentStateLoad.cpp
         QtAppShellPersistentStateSave.cpp
         QtAppShellSettings.cpp
@@ -22,6 +25,7 @@ set(vertexnote_qt_sources
         QtAppShellToolbar.cpp
         QtAppShellToolbarSync.cpp
         QtAppShellToolCommands.cpp
+        QtAppShellViewActions.cpp
         QtAppShellViewCommands.cpp
         QtAppShellWindowState.cpp
         QtBackgroundDialog.h
