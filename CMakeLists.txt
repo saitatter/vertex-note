@@ -153,7 +153,6 @@ endif()
 
 set(common-pkg-module-spec "")
 list(APPEND common-pkg-module-spec "glib-2.0 >= 2.32.0")
-list(APPEND common-pkg-module-spec "gobject-2.0 >= 2.32.0")
 list(APPEND common-pkg-module-spec "gthread-2.0 >= 2.4.0")
 list(APPEND common-pkg-module-spec "libxml-2.0 >= 2.0.0")
 list(APPEND common-pkg-module-spec "libzip >= 1.0.1")

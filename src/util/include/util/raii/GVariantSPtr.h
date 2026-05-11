@@ -13,7 +13,7 @@
 
 #include <utility>
 
-#include <glib-object.h>
+#include <glib.h>
 
 #include "util/NamespaceAliases.h"
 
