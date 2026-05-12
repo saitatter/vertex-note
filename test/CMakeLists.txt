@@ -88,6 +88,7 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerShapes.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/services/QtCommandHost.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/services/QtLuaPluginRuntime.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtLuaPluginRuntimeAccess.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/services/QtPluginUiBridge.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/services/QtRecentFilesService.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtColorPalette.cpp"

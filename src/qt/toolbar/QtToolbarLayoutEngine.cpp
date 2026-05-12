@@ -139,11 +139,11 @@ auto QtToolbarLayoutEngine::normalizeQtDrawingFamilies(const std::vector<std::st
     const auto isLegacyStrokeDrawingToken = [](const std::string& token) {
         return token == "DRAW_RECTANGLE" || token == "DRAW_ELLIPSE" || token == "DRAW_ARROW" ||
                token == "DRAW_DOUBLE_ARROW" || token == "DRAW_COORDINATE_SYSTEM" || token == "RULER" ||
-               token == "DRAW_SPLINE" || token == "SHAPE_RECOGNIZER";
+               token == "DRAW_LINE" || token == "DRAW_SPLINE" || token == "SHAPE_RECOGNIZER";
     };
 
     const auto isLegacyVertexDrawingToken = [](const std::string& token) {
-        return token == "DRAW_CIRCLE" || token == "DRAW_ARC" || token == "DRAW_POLYLINE" ||
+        return token == "DRAW_EDGE" || token == "DRAW_CIRCLE" || token == "DRAW_ARC" || token == "DRAW_POLYLINE" ||
                token == "DRAW_CONSTRUCTION_LINE" || token == "DRAW_CONSTRUCTION_CIRCLE";
     };
 

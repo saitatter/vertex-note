@@ -26,7 +26,7 @@
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
 // ---------------------------------------------------------------------------
-// Shape creation (geometry-based)
+// Shape creation
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -231,6 +231,17 @@ auto insertLegacyStroke(Document* doc, std::size_t pageIndex, const std::vector<
 }  // namespace
 
 auto QtDocumentController::createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
+                                      double width, const std::string& lineStyle) -> const Element* {
+    auto [ptr, entry] =
+            insertLegacyStroke(this->document.get(), pageIndex, {{x1, y1}, {x2, y2}}, color, width, lineStyle, "Draw line");
+    if (ptr) {
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+    }
+    return ptr;
+}
+
+auto QtDocumentController::createEdge(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
                                       double width) -> const Element* {
     vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
     auto start = object.addVertex({x1, y1});
@@ -246,7 +257,7 @@ auto QtDocumentController::createLine(std::size_t pageIndex, double x1, double y
         QtStrokeHistoryEntry entry;
         entry.pageIndex = pageIndex;
         entry.element = ptr;
-        entry.text = "Draw line";
+        entry.text = "Draw edge";
         pushHistory(QtHistoryEntry{std::move(entry)});
         rebuildPageSnapshots();
     }

@@ -66,6 +66,13 @@ struct QtSnapOptions {
     bool gridEnabled = false;
     double gridSize = 14.17;
     double gridTolerance = 0.50;
+    double screenTolerance = 18.0;
+};
+
+struct QtSnapPointResult {
+    vn::geom::Vec2 pagePoint;
+    std::optional<vn::snap::SnapKind> snapKind;
+    bool snapped = false;
 };
 
 struct QtGeometryHistoryEntry {
@@ -277,6 +284,10 @@ public:
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtGeometryHit>&;
     [[nodiscard]] auto selectedVertexIds() const -> const std::vector<vn::geom::VertexId>&;
     [[nodiscard]] auto selectedEdgeIds() const -> const std::vector<vn::geom::EdgeId>&;
+    [[nodiscard]] auto snapPagePoint(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                     const QtSnapOptions& options,
+                                     std::optional<vn::geom::ObjectId> ignoredObjectId = std::nullopt) const
+            -> QtSnapPointResult;
     [[nodiscard]] auto beginGeometryVertexDrag(const QtGeometryHit& hit) -> bool;
     [[nodiscard]] auto updateGeometryVertexDrag(double pageX, double pageY, double zoom,
                                                 const QtSnapOptions& options) -> bool;
@@ -284,6 +295,7 @@ public:
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtGeometryDragState>&;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
+    [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
 
     // Geometry constraints
     [[nodiscard]] auto applyConstraint(vn::geom::ConstraintKind kind) -> bool;
@@ -291,8 +303,10 @@ public:
     [[nodiscard]] auto selectedFixedLengthConstraint() -> std::optional<vn::geom::Constraint>;
     [[nodiscard]] auto updateFixedLengthConstraint(double value) -> bool;
 
-    // Shape creation (geometry-based)
-    auto createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
+    // Shape creation
+    auto createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width,
+                    const std::string& lineStyle = "plain") -> const Element*;
+    auto createEdge(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
             -> const Element*;
     auto createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
             -> const Element*;

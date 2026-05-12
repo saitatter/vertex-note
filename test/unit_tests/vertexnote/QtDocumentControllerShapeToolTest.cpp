@@ -28,6 +28,16 @@ auto strokeCount(const vn::view::render::PageRenderSnapshot& snapshot) -> std::s
     return count;
 }
 
+auto geometryCount(const vn::view::render::PageRenderSnapshot& snapshot) -> std::size_t {
+    std::size_t count = 0;
+    for (const auto& drawable: snapshot.drawables) {
+        if (std::holds_alternative<vn::view::render::GeometryRenderModel>(drawable)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 auto lastStroke(const vn::view::render::PageRenderSnapshot& snapshot)
         -> const vn::view::render::StrokeRenderModel& {
     for (auto it = snapshot.drawables.rbegin(); it != snapshot.drawables.rend(); ++it) {
@@ -36,6 +46,16 @@ auto lastStroke(const vn::view::render::PageRenderSnapshot& snapshot)
         }
     }
     throw std::runtime_error("Expected a stroke drawable");
+}
+
+auto lastGeometry(const vn::view::render::PageRenderSnapshot& snapshot)
+        -> const vn::view::render::GeometryRenderModel& {
+    for (auto it = snapshot.drawables.rbegin(); it != snapshot.drawables.rend(); ++it) {
+        if (auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&*it)) {
+            return *geometry;
+        }
+    }
+    throw std::runtime_error("Expected a geometry drawable");
 }
 
 auto strokes(const vn::view::render::PageRenderSnapshot& snapshot) -> std::vector<vn::view::render::StrokeRenderModel> {
@@ -71,6 +91,74 @@ TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyStrokeShapesForQtShe
     EXPECT_EQ(shapeColor, splineStroke.color);
     EXPECT_DOUBLE_EQ(2.25, splineStroke.width);
     EXPECT_GT(splineStroke.points.size(), 4U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, separatesStrokeLineFromVertexEdge) {
+    QtDocumentController controller;
+    constexpr std::size_t PageIndex = 0U;
+
+    ASSERT_NE(nullptr, controller.createLine(PageIndex, 10.0, 20.0, 90.0, 20.0, Colors::black, 2.0));
+    ASSERT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+    EXPECT_EQ(0U, geometryCount(controller.snapshotPages().front()));
+
+    ASSERT_NE(nullptr, controller.createEdge(PageIndex, 10.0, 50.0, 90.0, 50.0, Colors::black, 2.0));
+    EXPECT_EQ(1U, strokeCount(controller.snapshotPages().front()));
+    EXPECT_EQ(1U, geometryCount(controller.snapshotPages().front()));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, snapsPagePointsToGridOnPlainPages) {
+    QtDocumentController controller;
+
+    const auto snapped = controller.snapPagePoint(
+            0U, 12.0, 19.0, 1.0,
+            {.geometryEnabled = false, .gridEnabled = true, .gridSize = 10.0, .gridTolerance = 1.0});
+
+    ASSERT_TRUE(snapped.snapped);
+    ASSERT_TRUE(snapped.snapKind.has_value());
+    EXPECT_EQ(vn::snap::SnapKind::Grid, *snapped.snapKind);
+    EXPECT_DOUBLE_EQ(10.0, snapped.pagePoint.x);
+    EXPECT_DOUBLE_EQ(20.0, snapped.pagePoint.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, snapsPagePointsToGeometryVertices) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 50.0, 120.0, 50.0, Colors::black, 1.0));
+
+    const auto snapped = controller.snapPagePoint(
+            0U, 52.0, 49.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0});
+
+    ASSERT_TRUE(snapped.snapped);
+    ASSERT_TRUE(snapped.snapKind.has_value());
+    EXPECT_EQ(vn::snap::SnapKind::ExplicitVertex, *snapped.snapKind);
+    EXPECT_DOUBLE_EQ(50.0, snapped.pagePoint.x);
+    EXPECT_DOUBLE_EQ(50.0, snapped.pagePoint.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, translatesSelectedVerticesWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 50.0, 120.0, 50.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 50.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.translateSelectedVertices(7.0, -3.0));
+    const auto& translated = lastGeometry(controller.snapshotPages().front());
+    ASSERT_FALSE(translated.vertices.empty());
+    EXPECT_DOUBLE_EQ(57.0, translated.vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(47.0, translated.vertices.front().position.y);
+
+    ASSERT_TRUE(controller.undoGeometryEdit());
+    const auto& undone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_DOUBLE_EQ(50.0, undone.vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(50.0, undone.vertices.front().position.y);
+
+    ASSERT_TRUE(controller.redoGeometryEdit());
+    const auto& redone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_DOUBLE_EQ(57.0, redone.vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(47.0, redone.vertices.front().position.y);
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifiedUndoRedo) {

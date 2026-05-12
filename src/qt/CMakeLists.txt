@@ -38,7 +38,10 @@ set(vertexnote_qt_sources
         app/QtAppShellWindowState.cpp
         canvas/QtCanvas.h
         canvas/QtCanvas.cpp
+        canvas/QtCanvasInteractionTools.cpp
+        canvas/QtCanvasInputTools.cpp
         canvas/QtCanvasSelection.cpp
+        canvas/QtCanvasShapeTools.cpp
         canvas/QtCanvasLayout.h
         canvas/QtCanvasLayout.cpp
         canvas/QtPageContentRenderer.h
@@ -81,6 +84,7 @@ set(vertexnote_qt_sources
         services/QtPluginUiBridge.cpp
         services/QtLuaPluginRuntime.h
         services/QtLuaPluginRuntime.cpp
+        services/QtLuaPluginRuntimeAccess.cpp
         services/QtUpdatePresentationService.h
         services/QtUpdatePresentationService.cpp
         services/QtInputAdapter.h
@@ -111,6 +115,8 @@ set(vertexnote_qt_sources
         widgets/QtTextEditor.cpp
         widgets/QtSettingsDialog.h
         widgets/QtSettingsDialog.cpp
+        widgets/QtSettingsDialogState.cpp
+        widgets/QtSettingsDialogTabs.cpp
 )
 
 add_executable(vertexnote-qt-shell ${vertexnote_qt_sources})

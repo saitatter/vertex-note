@@ -140,6 +140,7 @@ private:
     void applyConstraint(vn::geom::ConstraintKind kind);
     void deleteConstraints();
     void editFixedLengthConstraint();
+    void translateSelectedVertices();
     void toggleAudioRecording();
     void toggleAudioPausePlayback();
     void stopAudioPlayback();
@@ -283,6 +284,7 @@ private:
     bool persistedVerticalLayout = true;
     bool persistedLayoutRtl = false;
     bool persistedLayoutBtt = false;
+    int pluginSidebarPageNo = 1;
     void recordNavPoint();
     [[nodiscard]] auto selectedElementsForAudioPlayback() const -> std::vector<const Element*>;
 };

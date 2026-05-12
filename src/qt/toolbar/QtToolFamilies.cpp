@@ -33,7 +33,8 @@ constexpr std::array<ToolActionSpec, 8> STROKE_DRAWING_TOOL_SPECS = {{
         {"tool.draw-shape-recognizer", QtToolType::ShapeRecognizer},
 }};
 
-constexpr std::array<ToolActionSpec, 5> VERTEX_DRAWING_TOOL_SPECS = {{
+constexpr std::array<ToolActionSpec, 6> VERTEX_DRAWING_TOOL_SPECS = {{
+        {"tool.draw-edge", QtToolType::DrawEdge},
         {"tool.draw-circle", QtToolType::DrawCircle},
         {"tool.draw-arc", QtToolType::DrawArc},
         {"tool.draw-polyline", QtToolType::DrawPolyline},

@@ -63,6 +63,7 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("tools/restoreLineWidthEnabled"), this->currentSettings.restoreLineWidthEnabled);
     settings.setValue(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance);
     settings.setValue(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize);
+    settings.setValue(QStringLiteral("tools/vertexSnapMarkerSize"), this->currentSettings.vertexSnapMarkerSize);
     settings.setValue(QStringLiteral("page/defaultWidth"), this->currentSettings.defaultPageWidth);
     settings.setValue(QStringLiteral("page/defaultHeight"), this->currentSettings.defaultPageHeight);
     settings.setValue(QStringLiteral("page/sizeUnit"), QString::fromStdString(this->currentSettings.sizeUnit));

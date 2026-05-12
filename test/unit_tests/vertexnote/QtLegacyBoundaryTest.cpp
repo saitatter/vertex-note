@@ -44,3 +44,18 @@ TEST(VertexNoteQtLegacyBoundary, qtSourcesDoNotIncludeGtkGdkCairoOrGtkControl) {
         }
     }
 }
+
+TEST(VertexNoteQtLegacyBoundary, qtSourceTreeDoesNotOwnSvgAssets) {
+    const std::filesystem::path qtRoot = std::filesystem::path(std::u8string(PROJECT_SOURCE_DIR)) / "src" / "qt";
+
+    ASSERT_TRUE(std::filesystem::is_directory(qtRoot));
+    for (const auto& entry: std::filesystem::recursive_directory_iterator(qtRoot)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+
+        EXPECT_NE(entry.path().extension(), ".svg")
+                << "Qt-specific SVG assets should live under ui/ so icons and styling assets stay centralized: "
+                << entry.path().string();
+    }
+}

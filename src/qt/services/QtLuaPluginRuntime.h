@@ -62,6 +62,9 @@ public:
     void configureDisplayAccess(std::function<int()> displayDpiProvider);
     void configureViewportAccess(std::function<vn::ui::common::CanvasViewport()> viewportProvider,
                                  std::function<void(double, double, bool)> viewportScroller);
+    void configureSidebarAccess(std::function<int()> sidebarPageProvider,
+                                std::function<void(int)> sidebarPageSetter);
+    void configureFloatingToolboxAccess(std::function<void(double, double)> floatingToolboxShower);
     void configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
                              std::function<void(std::string, double)> fontSetter);
     void configureFileAccess(std::function<bool(const std::filesystem::path&, int)> fileOpener);
@@ -84,6 +87,9 @@ public:
     [[nodiscard]] auto currentDisplayDpi() const -> int;
     [[nodiscard]] auto currentViewport() const -> vn::ui::common::CanvasViewport;
     void scrollViewportTo(double x, double y, bool relative) const;
+    [[nodiscard]] auto currentSidebarPage() const -> int;
+    void setSidebarPage(int pageNo) const;
+    void showFloatingToolbox(double x, double y) const;
     [[nodiscard]] auto currentFont() const -> std::pair<std::string, double>;
     void setFont(std::string name, double size) const;
     [[nodiscard]] auto openFile(const std::filesystem::path& path, int pageIndex) const -> bool;
@@ -113,6 +119,9 @@ private:
     std::function<int()> displayDpiProvider;
     std::function<vn::ui::common::CanvasViewport()> viewportProvider;
     std::function<void(double, double, bool)> viewportScroller;
+    std::function<int()> sidebarPageProvider;
+    std::function<void(int)> sidebarPageSetter;
+    std::function<void(double, double)> floatingToolboxShower;
     std::function<std::pair<std::string, double>()> fontProvider;
     std::function<void(std::string, double)> fontSetter;
     std::function<bool(const std::filesystem::path&, int)> fileOpener;

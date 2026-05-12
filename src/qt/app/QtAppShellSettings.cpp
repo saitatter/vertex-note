@@ -156,6 +156,7 @@ void QtAppShell::applyRuntimeSettings() {
                                        this->currentSettings.strokeStabilizerCuspDetection);
     canvas->setRestoreLineWidthOnScale(this->currentSettings.restoreLineWidthEnabled);
     canvas->setGridSnapOptions(this->currentSettings.snapGridSize, this->currentSettings.snapGridTolerance);
+    canvas->setVertexSnapMarkerSize(this->currentSettings.vertexSnapMarkerSize);
     canvas->setViewInteractionOptions(this->currentSettings.zoomStepPercent,
                                       this->currentSettings.zoomStepScrollPercent,
                                       this->currentSettings.rotationSnapTolerance);

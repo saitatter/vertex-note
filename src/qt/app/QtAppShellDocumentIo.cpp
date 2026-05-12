@@ -65,6 +65,7 @@ void QtAppShell::rebuildRecentDocumentsMenu() {
     const auto recentPaths = this->recentFiles.recentFiles();
     if (recentPaths.empty()) {
         auto* emptyAction = menu->addAction(QStringLiteral("No Recent Documents"));
+        emptyAction->setIconVisibleInMenu(false);
         emptyAction->setEnabled(false);
         return;
     }
@@ -75,6 +76,7 @@ void QtAppShell::rebuildRecentDocumentsMenu() {
         const QString fullPath = QString::fromStdString(path.string());
         auto* action =
                 menu->addAction(QStringLiteral("&%1 %2").arg(index + 1).arg(filename.isEmpty() ? fullPath : filename));
+        action->setIconVisibleInMenu(false);
         action->setToolTip(fullPath);
         action->setStatusTip(fullPath);
         QObject::connect(action, &QAction::triggered, &this->window, [this, path]() { openPath(path, true); });
@@ -82,6 +84,7 @@ void QtAppShell::rebuildRecentDocumentsMenu() {
 
     menu->addSeparator();
     auto* clearAction = menu->addAction(QStringLiteral("Clear Recent Documents"));
+    clearAction->setIconVisibleInMenu(false);
     QObject::connect(clearAction, &QAction::triggered, &this->window, [this]() {
         this->recentFiles.setRecentFiles({});
         rebuildRecentDocumentsMenu();

@@ -1,6 +1,7 @@
 #include "LatexGenerator.h"
 
 #include <algorithm>    // for transform
+#include <cstddef>      // for size_t
 #include <fstream>
 #include <map>          // for map
 #include <regex>        // for smatch, sregex_iterator
@@ -15,12 +16,19 @@
 #include "util/i18n.h"                       // for FS, _F
 
 #include <QProcess>
+#include <QByteArray>
 #include <QStandardPaths>
 #include <QString>
 #include <QStringList>
 
 
 using namespace vn::util;
+
+namespace {
+
+constexpr int LATEX_PROCESS_TIMEOUT_MS = 30000;
+
+}
 
 LatexGenerator::LatexGenerator(const LatexSettings& settings): settings(settings) {}
 
@@ -140,10 +148,18 @@ auto LatexGenerator::run(const fs::path& texDir, const std::string& texFileConte
         return GenError({FS(_F("Could not start {1}: {2} (exit code: {3})") % executable.toStdString() %
                             process.errorString().toStdString() % static_cast<int>(process.error()))});
     }
-    if (!process.waitForFinished(-1)) {
-        return GenError({FS(_F("Could not start {1}: {2} (exit code: {3})") % executable.toStdString() %
-                            process.errorString().toStdString() % static_cast<int>(process.error()))});
+    if (!process.waitForFinished(LATEX_PROCESS_TIMEOUT_MS)) {
+        if (process.error() == QProcess::Timedout) {
+            process.kill();
+            process.waitForFinished();
+            return GenError({FS(_F("LaTeX generator command timed out after {1} seconds: {2}") %
+                                (LATEX_PROCESS_TIMEOUT_MS / 1000) % executable.toStdString())});
+        }
+        return GenError({FS(_F("LaTeX generator command failed to finish: {1}: {2} (process error: {3})") %
+                            executable.toStdString() % process.errorString().toStdString() %
+                            static_cast<int>(process.error()))});
     }
 
-    return GenOutput{std::string(process.readAllStandardOutput().constData()), process.exitCode()};
+    const QByteArray output = process.readAllStandardOutput();
+    return GenOutput{std::string(output.constData(), static_cast<std::size_t>(output.size())), process.exitCode()};
 }

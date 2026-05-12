@@ -56,9 +56,6 @@ constexpr double MIN_ZOOM = 0.1;
 constexpr double MAX_ZOOM = 8.0;
 constexpr double GEOMETRY_HIT_RADIUS_PIXELS = 10.0;
 constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
-constexpr double CM_TO_PT = 28.3464566929;
-constexpr double INSTRUMENT_EDGE_HIT_BAND = 14.0;
-constexpr double INSTRUMENT_INNER_BAND = 12.0;
 constexpr double INSTRUMENT_MIN_SIZE = 48.0;
 constexpr double INSTRUMENT_MAX_SIZE = 420.0;
 
@@ -151,166 +148,30 @@ auto snapColor(std::optional<vn::snap::SnapKind> kind) -> QColor {
     return QColor(45, 125, 255);
 }
 
-auto cubicSplinePath(const std::vector<QPointF>& points) -> QPainterPath {
-    QPainterPath path;
-    if (points.empty()) {
-        return path;
+auto isVertexSnapKind(std::optional<vn::snap::SnapKind> kind) -> bool {
+    return kind == vn::snap::SnapKind::ExplicitVertex || kind == vn::snap::SnapKind::EdgeEndpoint;
+}
+
+void drawSnapMarker(QPainter& painter, const QPointF& center, std::optional<vn::snap::SnapKind> kind,
+                    int vertexMarkerSizePixels) {
+    const double scale = std::max(0.1, painter.transform().m11());
+    const QColor color = snapColor(kind);
+    if (isVertexSnapKind(kind)) {
+        const double halfSize = std::clamp(vertexMarkerSizePixels, 8, 48) * 0.5 / scale;
+        painter.setPen(QPen(QColor(0, 100, 255), 1.7 / scale));
+        painter.setBrush(QColor(0, 115, 255, 36));
+        painter.drawRect(QRectF(center.x() - halfSize, center.y() - halfSize, halfSize * 2.0, halfSize * 2.0));
+        return;
     }
 
-    path.moveTo(points.front());
-    if (points.size() == 1U) {
-        return path;
-    }
-    if (points.size() == 2U) {
-        path.lineTo(points.back());
-        return path;
-    }
-
-    for (std::size_t index = 0; index + 1 < points.size(); ++index) {
-        const QPointF& p0 = index == 0 ? points[index] : points[index - 1];
-        const QPointF& p1 = points[index];
-        const QPointF& p2 = points[index + 1];
-        const QPointF& p3 = (index + 2 < points.size()) ? points[index + 2] : points[index + 1];
-        const QPointF c1(p1.x() + (p2.x() - p0.x()) / 6.0, p1.y() + (p2.y() - p0.y()) / 6.0);
-        const QPointF c2(p2.x() - (p3.x() - p1.x()) / 6.0, p2.y() - (p3.y() - p1.y()) / 6.0);
-        path.cubicTo(c1, c2, p2);
-    }
-
-    return path;
-}
-
-auto buildArrowPreviewPoints(const QPointF& start, const QPointF& end, double thickness, bool doubleEnded)
-        -> std::vector<QPointF> {
-    const double lineLength = std::hypot(end.x() - start.x(), end.y() - start.y());
-    if (lineLength <= 0.0001) {
-        return {start, end};
-    }
-
-    const double safeThickness = std::max(0.5, thickness);
-    const double slimness = lineLength / safeThickness;
-    double delta = M_PI / 6.0;
-    constexpr double THICK1 = 7.0;
-    constexpr double THICK3 = 1.6;
-    constexpr double LENGTH2 = 0.4;
-    constexpr double LENGTH4 = 0.8;
-    constexpr double LENGTH4_DOUBLE = 0.5;
-    double arrowDist = safeThickness * THICK1;
-    if (slimness >= THICK1 / LENGTH2) {
-        // keep default
-    } else if (slimness >= THICK3 / LENGTH2) {
-        arrowDist = lineLength * LENGTH2;
-    } else if (slimness >= THICK3 / (doubleEnded ? LENGTH4_DOUBLE : LENGTH4)) {
-        arrowDist = safeThickness * THICK3;
-        delta = (1 + (slimness - THICK3 / LENGTH2) /
-                            (THICK3 / (doubleEnded ? LENGTH4_DOUBLE : LENGTH4) - THICK3 / LENGTH2)) *
-                M_PI / 6.0;
-        arrowDist *= std::sin(M_PI / 6.0) / std::sin(delta);
-    } else {
-        arrowDist = lineLength * (doubleEnded ? LENGTH4_DOUBLE : LENGTH4);
-        delta = M_PI / 3.0;
-        arrowDist *= std::sin(M_PI / 6.0) / std::sin(M_PI / 3.0);
-    }
-
-    const double angle = std::atan2(end.y() - start.y(), end.x() - start.x());
-    std::vector<QPointF> shape;
-    shape.reserve(doubleEnded ? 10 : 6);
-    shape.emplace_back(start);
-    if (doubleEnded) {
-        shape.emplace_back(start.x() + arrowDist * std::cos(angle + delta),
-                           start.y() + arrowDist * std::sin(angle + delta));
-        shape.emplace_back(start);
-        shape.emplace_back(start.x() + arrowDist * std::cos(angle - delta),
-                           start.y() + arrowDist * std::sin(angle - delta));
-        shape.emplace_back(start);
-    }
-    shape.emplace_back(end);
-    shape.emplace_back(end.x() - arrowDist * std::cos(angle + delta), end.y() - arrowDist * std::sin(angle + delta));
-    shape.emplace_back(end);
-    shape.emplace_back(end.x() - arrowDist * std::cos(angle - delta), end.y() - arrowDist * std::sin(angle - delta));
-    shape.emplace_back(end);
-    return shape;
-}
-
-auto buildCoordinateSystemPreviewPoints(const QPointF& start, const QPointF& current) -> std::vector<QPointF> {
-    return {start, QPointF(start.x(), current.y()), QPointF(current.x(), current.y())};
-}
-
-auto instrumentDefaultSize(QtToolType tool) -> double {
-    switch (tool) {
-        case QtToolType::Setsquare:
-            return 8.0 * CM_TO_PT;
-        case QtToolType::Compass:
-            return 3.0 * CM_TO_PT;
-        default:
-            return 4.0 * CM_TO_PT;
-    }
-}
-
-auto rotatePoint(const QPointF& point, double angle) -> QPointF {
-    const double c = std::cos(angle);
-    const double s = std::sin(angle);
-    return QPointF(point.x() * c - point.y() * s, point.x() * s + point.y() * c);
-}
-
-auto toLocalInstrument(const QPointF& point, const QPointF& origin, double rotation) -> QPointF {
-    return rotatePoint(point - origin, -rotation);
-}
-
-auto fromLocalInstrument(const QPointF& point, const QPointF& origin, double rotation) -> QPointF {
-    return origin + rotatePoint(point, rotation);
-}
-
-auto setsquareHalfSpan(double size) -> double { return size / std::sqrt(2.0); }
-
-auto setsquareRadius(double size) -> double { return std::max(0.0, setsquareHalfSpan(size) - 1.15 * CM_TO_PT); }
-
-auto insideSetsquare(const QPointF& local, double size) -> bool {
-    const double halfSpan = setsquareHalfSpan(size);
-    return local.y() <= 0.0 && local.y() >= local.x() - halfSpan && local.y() >= -local.x() - halfSpan;
-}
-
-auto insideCompass(const QPointF& local, double size) -> bool { return std::hypot(local.x(), local.y()) <= size; }
-
-auto buildSetsquareOutline(const QPointF& origin, double rotation, double size) -> std::array<QPointF, 4> {
-    const double halfSpan = setsquareHalfSpan(size);
-    return {fromLocalInstrument(QPointF(-halfSpan, 0.0), origin, rotation),
-            fromLocalInstrument(QPointF(halfSpan, 0.0), origin, rotation),
-            fromLocalInstrument(QPointF(0.0, -halfSpan), origin, rotation),
-            fromLocalInstrument(QPointF(-halfSpan, 0.0), origin, rotation)};
-}
-
-auto buildSetsquareStrokePoints(bool edgeStroke, const QPointF& origin, double rotation, double size, double a,
-                                double b) -> std::vector<QPointF> {
-    if (edgeStroke) {
-        return {fromLocalInstrument(QPointF(a, 0.0), origin, rotation),
-                fromLocalInstrument(QPointF(b, 0.0), origin, rotation)};
-    }
-
-    const double radius = std::min(std::max(0.0, b), setsquareRadius(size));
-    return {origin, fromLocalInstrument(QPointF(radius * std::cos(a), -radius * std::sin(a)), origin, rotation)};
-}
-
-auto normalizeAngleDelta(double previousAngle, double angle) -> double {
-    return previousAngle + std::remainder(angle - previousAngle, 2.0 * M_PI);
-}
-
-auto buildCompassArcPoints(const QPointF& origin, double rotation, double radius, double angleMin, double angleMax)
-        -> std::vector<QPointF> {
-    std::vector<QPointF> points;
-    const double clampedMax = std::min(angleMax, angleMin + 2.0 * M_PI);
-    const int samples = 100;
-    points.reserve(samples + 1);
-    for (int i = 0; i <= samples; ++i) {
-        const double angle = angleMin + (static_cast<double>(i) / samples) * (clampedMax - angleMin);
-        points.push_back(fromLocalInstrument(QPointF(radius * std::cos(angle), -radius * std::sin(angle)), origin, rotation));
-    }
-    return points;
-}
-
-auto buildCompassRadiusPoints(const QPointF& origin, double rotation, double radiusMin, double radiusMax)
-        -> std::vector<QPointF> {
-    return {fromLocalInstrument(QPointF(radiusMin, 0.0), origin, rotation),
-            fromLocalInstrument(QPointF(radiusMax, 0.0), origin, rotation)};
+    const double radius = 4.8 / scale;
+    painter.setPen(QPen(QColor(255, 255, 255, 235), 3.2 / scale));
+    painter.setBrush(QColor(color.red(), color.green(), color.blue(), 40));
+    painter.drawEllipse(center, radius, radius);
+    painter.setPen(QPen(color, 1.4 / scale));
+    painter.drawEllipse(center, radius, radius);
+    painter.drawLine(QPointF(center.x() - radius, center.y()), QPointF(center.x() + radius, center.y()));
+    painter.drawLine(QPointF(center.x(), center.y() - radius), QPointF(center.x(), center.y() + radius));
 }
 
 }  // namespace
@@ -398,6 +259,7 @@ void QtCanvas::newBlankDocument() {
 }
 
 void QtCanvas::setViewportState(double zoom, double scrollX, double scrollY) {
+    this->fitWidthModeEnabled = false;
     this->zoomFactor = clampZoom(zoom);
     this->scrollX = scrollX;
     this->scrollY = scrollY;
@@ -413,11 +275,13 @@ void QtCanvas::zoomIn() { zoomAroundScreenPoint(this->zoomStepFactor, rect().cen
 void QtCanvas::zoomOut() { zoomAroundScreenPoint(1.0 / this->zoomStepFactor, rect().center()); }
 
 void QtCanvas::resetViewport() {
+    this->fitWidthModeEnabled = false;
     fitPage();
     updateDebugOverlay(QStringLiteral("viewport reset"));
 }
 
 void QtCanvas::fitPage(bool edited) {
+    this->fitWidthModeEnabled = false;
     const QRectF documentBounds = documentSceneBounds();
     const double padding = 40.0;
     const double availableWidth = std::max(1.0, width() - 2.0 * padding);
@@ -446,7 +310,7 @@ void QtCanvas::setPairedPagesEnabled(bool enabled) {
     }
     this->pairedPagesEnabled = enabled;
     this->layoutColumnsRowsValue = wantedColumns;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::isPairedPagesEnabled() const -> bool { return this->pairedPagesEnabled; }
@@ -457,7 +321,7 @@ void QtCanvas::setPairOffset(int offset) {
         return;
     }
     this->pairOffsetValue = offset;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::pairOffset() const -> int { return this->pairOffsetValue; }
@@ -469,7 +333,7 @@ void QtCanvas::setLayoutColumns(int columns) {
     }
     this->layoutColumnsRowsValue = columns;
     this->pairedPagesEnabled = columns == 2;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 void QtCanvas::setLayoutRows(int rows) {
@@ -480,7 +344,7 @@ void QtCanvas::setLayoutRows(int rows) {
     }
     this->layoutColumnsRowsValue = value;
     this->pairedPagesEnabled = false;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::layoutColumnsRows() const -> int { return this->layoutColumnsRowsValue; }
@@ -490,7 +354,7 @@ void QtCanvas::setVerticalLayout(bool enabled) {
         return;
     }
     this->verticalLayoutEnabled = enabled;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::isVerticalLayout() const -> bool { return this->verticalLayoutEnabled; }
@@ -500,7 +364,7 @@ void QtCanvas::setRightToLeftLayout(bool enabled) {
         return;
     }
     this->rightToLeftLayoutEnabled = enabled;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::isRightToLeftLayout() const -> bool { return this->rightToLeftLayoutEnabled; }
@@ -510,7 +374,7 @@ void QtCanvas::setBottomToTopLayout(bool enabled) {
         return;
     }
     this->bottomToTopLayoutEnabled = enabled;
-    fitPage();
+    this->fitWidthModeEnabled ? fitWidth() : fitPage();
 }
 
 auto QtCanvas::isBottomToTopLayout() const -> bool { return this->bottomToTopLayoutEnabled; }
@@ -553,6 +417,7 @@ void QtCanvas::scrollToPage(std::size_t pageIndex) {
 }
 
 void QtCanvas::fitWidth() {
+    this->fitWidthModeEnabled = true;
     const auto rects = pageRects();
     if (rects.empty()) {
         return;
@@ -577,6 +442,7 @@ void QtCanvas::fitWidth() {
 }
 
 void QtCanvas::zoomToActualSize() {
+    this->fitWidthModeEnabled = false;
     this->zoomFactor = 1.0;
     emitViewportUpdate();
 }
@@ -584,6 +450,7 @@ void QtCanvas::zoomToActualSize() {
 auto QtCanvas::zoom() const -> double { return this->zoomFactor; }
 
 void QtCanvas::setZoom(double zoom) {
+    this->fitWidthModeEnabled = false;
     this->zoomFactor = clampZoom(zoom);
     emitViewportUpdate();
 }
@@ -628,6 +495,8 @@ void QtCanvas::setGridSnapOptions(double gridSize, double tolerance) {
     this->snapGridSize = std::clamp(gridSize, 1.0, 500.0);
     this->snapGridTolerance = std::clamp(tolerance, 0.01, 10.0);
 }
+
+void QtCanvas::setVertexSnapMarkerSize(int sizePixels) { this->vertexSnapMarkerSize = std::clamp(sizePixels, 8, 48); }
 
 void QtCanvas::setEraserCursorHidden(bool hidden) {
     this->eraserCursorHidden = hidden;
@@ -906,14 +775,14 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
 
 void QtCanvas::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
-    if (this->deferredFitWidthPending && width() > 0 && height() > 0) {
+    if ((this->deferredFitWidthPending || this->fitWidthModeEnabled) && width() > 0 && height() > 0) {
         fitWidth();
     }
 }
 
 void QtCanvas::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
-    if (this->deferredFitWidthPending && width() > 0 && height() > 0) {
+    if ((this->deferredFitWidthPending || this->fitWidthModeEnabled) && width() > 0 && height() > 0) {
         fitWidth();
     }
 }
@@ -922,6 +791,11 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
     this->inputAdapter->handleMousePress(*event);
     if (this->spaceHeld && event->button() == Qt::LeftButton) {
         beginPan(event->position());
+        event->accept();
+        return;
+    }
+    if (this->shapeDrawing && event->button() == Qt::RightButton) {
+        cancelShape();
         event->accept();
         return;
     }
@@ -1360,9 +1234,12 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         if (this->documentController->isVerticalSpacing()) {
             cancelVerticalSpace();
         }
+        if (this->shapeDrawing) {
+            cancelShape();
+        }
         this->documentController->clearElementSelection();
         this->documentController->clearInteractiveGeometryState();
-        updateDebugOverlay(QStringLiteral("selection cleared"));
+        updateDebugOverlay(QStringLiteral("operation cancelled"));
         if (!this->spaceHeld && !this->panning) {
             refreshToolCursor();
         }
@@ -1425,6 +1302,7 @@ void QtCanvas::emitViewportUpdate(bool edited) {
 }
 
 void QtCanvas::zoomAroundScreenPoint(double factor, const QPointF& screenPoint) {
+    this->fitWidthModeEnabled = false;
     const double oldZoom = this->zoomFactor;
     const double newZoom = clampZoom(oldZoom * factor);
     if (newZoom == oldZoom) {
@@ -1609,7 +1487,8 @@ void QtCanvas::updateGeometryDragAtScreen(const QPointF& screenPoint) {
             {.geometryEnabled = this->geometrySnapEnabled,
              .gridEnabled = this->gridSnapEnabled,
              .gridSize = this->snapGridSize,
-             .gridTolerance = this->snapGridTolerance}));
+             .gridTolerance = this->snapGridTolerance,
+             .screenTolerance = 22.0}));
     update();
 }
 
@@ -1867,24 +1746,19 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
     if (hasIndicator) {
         const QPointF center = indicatorCenter;
         const QColor color = snapColor(indicatorKind);
-        painter.setPen(QPen(QColor(255, 255, 255, 235), 3.2));
-        painter.setBrush(QColor(color.red(), color.green(), color.blue(), 40));
-        painter.drawEllipse(center, 4.8, 4.8);
-        painter.setPen(QPen(color, 1.4));
-        painter.drawEllipse(center, 4.8, 4.8);
-        painter.drawLine(QPointF(center.x() - 4.8, center.y()), QPointF(center.x() + 4.8, center.y()));
-        painter.drawLine(QPointF(center.x(), center.y() - 4.8), QPointF(center.x(), center.y() + 4.8));
+        drawSnapMarker(painter, center, indicatorKind, this->vertexSnapMarkerSize);
 
-        const QString label = drag && drag->pageIndex == pageIndex && drag->snapKind ? snapLabel(drag->snapKind)
-                                                                                      : snapLabel(indicatorKind);
-        QFontMetrics metrics(painter.font());
-        const int labelWidth = metrics.horizontalAdvance(label) + 10;
-        const QRectF badge(center.x() + 10.0, center.y() - 22.0, labelWidth, 18.0);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(QColor(255, 255, 255, 225));
-        painter.drawRoundedRect(badge, 6.0, 6.0);
-        painter.setPen(color);
-        painter.drawText(badge, Qt::AlignCenter, label);
+        if (drag && drag->pageIndex == pageIndex && drag->snapKind) {
+            const QString label = snapLabel(drag->snapKind);
+            QFontMetrics metrics(painter.font());
+            const int labelWidth = metrics.horizontalAdvance(label) + 10;
+            const QRectF badge(center.x() + 10.0, center.y() - 22.0, labelWidth, 18.0);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(255, 255, 255, 225));
+            painter.drawRoundedRect(badge, 6.0, 6.0);
+            painter.setPen(color);
+            painter.drawText(badge, Qt::AlignCenter, label);
+        }
     }
     painter.restore();
 }
@@ -2016,6 +1890,7 @@ void QtCanvas::setCursorForTool(QtToolType tool) {
         case QtToolType::DrawSpline:
         case QtToolType::ShapeRecognizer:
         case QtToolType::DrawArc:
+        case QtToolType::DrawEdge:
         case QtToolType::DrawPolyline:
         case QtToolType::DrawConstructionLine:
         case QtToolType::DrawConstructionCircle:
@@ -2124,1635 +1999,4 @@ auto QtCanvas::performRedo() -> bool {
 
 auto QtCanvas::contentRenderer() const -> vn::view::render::PageContentRenderer* {
     return this->pageContentRenderer.get();
-}
-
-// ---------------------------------------------------------------------------
-// Stroke input
-// ---------------------------------------------------------------------------
-
-void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) {
-    if (!this->documentController) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[*pageIdx];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-    const double inputPressure = adjustedPressure(pressure);
-    resetStrokeStabilizer(QPointF(pageX, pageY), inputPressure);
-
-    Color color;
-    double width;
-    StrokeTool::Value toolType;
-    const auto tool = this->currentToolState.activeTool;
-    if (tool == QtToolType::Pen || tool == QtToolType::ShapeRecognizer || tool == QtToolType::LaserPointerPen) {
-        color = this->currentToolState.penColor;
-        width = this->currentToolState.penWidth;
-        toolType = StrokeTool::PEN;
-    } else if (tool == QtToolType::Highlighter || tool == QtToolType::LaserPointerHighlighter) {
-        color = this->currentToolState.highlighterColor;
-        width = this->currentToolState.highlighterWidth;
-        toolType = StrokeTool::HIGHLIGHTER;
-    } else {
-        return;
-    }
-
-    if (this->documentController->beginStroke(*pageIdx, pageX, pageY, inputPressure, color, width, toolType,
-                                               this->currentToolState.pressureSensitive,
-                                               this->currentToolState.penLineStyle,
-                                               this->currentToolState.fillEnabled
-                                                       ? this->currentToolState.fillOpacity
-                                                       : -1)) {
-        this->activeStrokeStartedMs = QDateTime::currentMSecsSinceEpoch();
-        this->drawing = true;
-        update();
-    }
-}
-
-void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure) {
-    if (!this->documentController || !this->drawing) {
-        return;
-    }
-
-    const auto* active = this->documentController->activeStroke();
-    if (!active) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (active->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const QRectF& pageRect = rects[active->pageIndex];
-    const QPointF pagePoint(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y());
-    const auto [pagePointForStroke, pressureForStroke] = stabilizedStrokePoint(pagePoint, adjustedPressure(pressure));
-
-    if (this->documentController->updateStroke(pagePointForStroke.x(), pagePointForStroke.y(), pressureForStroke)) {
-        update();
-    }
-}
-
-auto QtCanvas::adjustedPressure(double pressure) const -> double {
-    if (!this->currentToolState.pressureSensitive) {
-        return pressure;
-    }
-    if (pressure <= 0.0) {
-        return this->pressureGuessing ? 0.5 : pressure;
-    }
-
-    const double minPressure = std::clamp(this->minimumPressure, 0.0, 0.95);
-    const double normalized = std::clamp((pressure - minPressure) / std::max(0.05, 1.0 - minPressure), 0.01, 1.0);
-    return std::clamp(normalized * this->pressureMultiplier, 0.01, 4.0);
-}
-
-auto QtCanvas::stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double> {
-    const StabilizerSample raw{.point = pagePoint, .pressure = pressure};
-    this->lastRawStrokeSample = raw;
-    if (!this->strokeStabilizerEnabled || this->strokeStabilizerStrength <= 0.0) {
-        this->lastEmittedStrokeSample = raw;
-        return {raw.point, raw.pressure};
-    }
-
-    StabilizerSample processed = raw;
-    if (this->lastEmittedStrokeSample) {
-        const QPointF previous = this->lastEmittedStrokeSample->point;
-        if (this->strokeStabilizerPreprocessor == 1 && this->strokeStabilizerDeadzoneRadius > 0.0) {
-            const QPointF movement = raw.point - previous;
-            const double distance = std::hypot(movement.x(), movement.y());
-            const double dot = QPointF::dotProduct(movement, this->strokeStabilizerDeadzoneDirection);
-            if (distance <= this->strokeStabilizerDeadzoneRadius &&
-                (!this->strokeStabilizerCuspDetection || dot >= 0.0)) {
-                this->lastEmittedStrokeSample = {.point = previous, .pressure = raw.pressure};
-                return {previous, raw.pressure};
-            }
-            if (distance > 0.0) {
-                const double ratio = std::min(this->strokeStabilizerDeadzoneRadius / distance, 1.0);
-                processed.point = raw.point - movement * ratio;
-                this->strokeStabilizerDeadzoneDirection = movement;
-            }
-        } else if (this->strokeStabilizerPreprocessor == 2) {
-            const QPointF spring((raw.point.x() - previous.x()) / this->strokeStabilizerMass,
-                                 (raw.point.y() - previous.y()) / this->strokeStabilizerMass);
-            this->strokeStabilizerVelocity = this->strokeStabilizerVelocity * (1.0 - this->strokeStabilizerDrag) + spring;
-            processed.point = previous + this->strokeStabilizerVelocity;
-        }
-    }
-
-    this->strokeStabilizerSamplesBuffer.push_back(processed);
-    const auto maxSamples = static_cast<std::size_t>(std::max(2, this->strokeStabilizerSamples));
-    if (this->strokeStabilizerSamplesBuffer.size() > maxSamples) {
-        this->strokeStabilizerSamplesBuffer.erase(this->strokeStabilizerSamplesBuffer.begin(),
-                                                  this->strokeStabilizerSamplesBuffer.end() -
-                                                          static_cast<std::ptrdiff_t>(maxSamples));
-    }
-
-    QPointF averaged = processed.point;
-    double averagedPressure = processed.pressure;
-    if (this->strokeStabilizerAveragingMethod != 0) {
-        averaged = QPointF();
-        averagedPressure = 0.0;
-        double weightSum = 0.0;
-        double distanceSum = 0.0;
-        for (auto it = this->strokeStabilizerSamplesBuffer.rbegin(); it != this->strokeStabilizerSamplesBuffer.rend();
-             ++it) {
-            double weight = 1.0;
-            if (this->strokeStabilizerAveragingMethod == 2) {
-                weight = std::exp(-(distanceSum * distanceSum) /
-                                  (2.0 * this->strokeStabilizerSigma * this->strokeStabilizerSigma));
-                if (weight < 0.01) {
-                    break;
-                }
-                const auto next = std::next(it);
-                if (next != this->strokeStabilizerSamplesBuffer.rend()) {
-                    distanceSum += std::hypot(it->point.x() - next->point.x(), it->point.y() - next->point.y());
-                }
-            }
-            averaged += it->point * weight;
-            averagedPressure += it->pressure * weight;
-            weightSum += weight;
-        }
-        averaged /= std::max(weightSum, 0.001);
-        averagedPressure /= std::max(weightSum, 0.001);
-    }
-
-    const double strength = std::clamp(this->strokeStabilizerStrength, 0.0, 1.0);
-    const StabilizerSample emitted{
-            .point = processed.point * (1.0 - strength) + averaged * strength,
-            .pressure = processed.pressure * (1.0 - strength) + averagedPressure * strength,
-    };
-    this->lastEmittedStrokeSample = emitted;
-    return {emitted.point, emitted.pressure};
-}
-
-void QtCanvas::resetStrokeStabilizer(const QPointF& pagePoint, double pressure) {
-    const StabilizerSample sample{.point = pagePoint, .pressure = pressure};
-    this->strokeStabilizerSamplesBuffer.clear();
-    this->strokeStabilizerSamplesBuffer.push_back(sample);
-    this->lastRawStrokeSample = sample;
-    this->lastEmittedStrokeSample = sample;
-    this->strokeStabilizerVelocity = QPointF();
-    this->strokeStabilizerDeadzoneDirection = QPointF();
-}
-
-void QtCanvas::maybeFinalizeStabilizedStroke() {
-    if (!this->documentController || !this->strokeStabilizerEnabled || !this->strokeStabilizerFinalizeStroke ||
-        !this->lastRawStrokeSample || !this->lastEmittedStrokeSample) {
-        return;
-    }
-
-    const auto raw = *this->lastRawStrokeSample;
-    const auto emitted = *this->lastEmittedStrokeSample;
-    const bool samePoint = std::abs(raw.point.x() - emitted.point.x()) < 0.01 &&
-                           std::abs(raw.point.y() - emitted.point.y()) < 0.01;
-    const bool samePressure = std::abs(raw.pressure - emitted.pressure) < 0.001;
-    if (!samePoint || !samePressure) {
-        this->documentController->updateStroke(raw.point.x(), raw.point.y(), raw.pressure);
-    }
-}
-
-void QtCanvas::finalizeActiveStroke() {
-    if (!this->documentController || !this->drawing) {
-        return;
-    }
-
-    const auto tool = this->currentToolState.activeTool;
-    std::optional<std::size_t> activePageIndex;
-    if (const auto* active = this->documentController->activeStroke()) {
-        activePageIndex = active->pageIndex;
-    }
-    bool added = false;
-    if (tool == QtToolType::LaserPointerPen || tool == QtToolType::LaserPointerHighlighter) {
-        maybeFinalizeStabilizedStroke();
-        if (const auto* active = this->documentController->activeStroke(); active && active->stroke) {
-            this->laserOverlayStrokes.push_back({.pageIndex = active->pageIndex,
-                                                 .model = vn::view::render::StrokeRenderModelFactory::fromStroke(*active->stroke),
-                                                 .createdMs = QDateTime::currentMSecsSinceEpoch()});
-            if (this->laserFadeTimer) {
-                this->laserFadeTimer->start();
-            }
-        }
-        this->documentController->cancelStroke();
-    } else {
-        maybeFinalizeStabilizedStroke();
-        const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
-        if (shouldFilterActiveStroke(nowMs)) {
-            if (this->trySelectOnStrokeFiltered) {
-                if (const auto* active = this->documentController->activeStroke();
-                    active && active->stroke && active->stroke->getPointCount() > 0U) {
-                    const auto point = active->stroke->getPoint(active->stroke->getPointCount() - 1U);
-                    this->documentController->selectElementAt(active->pageIndex, point.x, point.y,
-                                                              10.0 / std::max(0.001, this->zoomFactor));
-                    Q_EMIT selectionStateChanged();
-                }
-            }
-            this->lastFilteredStrokeMs = nowMs;
-            this->documentController->cancelStroke();
-            Q_EMIT statusHintChanged(this->doActionOnStrokeFiltered
-                                             ? QStringLiteral("Stroke filtered; legacy floating toolbox unavailable")
-                                             : QStringLiteral("Stroke filtered"));
-        } else {
-            added = this->documentController->finalizeStroke(tool == QtToolType::ShapeRecognizer,
-                                                             this->shapeRecognizerMinSize,
-                                                             this->snapRecognizedShapesEnabled);
-        }
-    }
-    this->drawing = false;
-    this->activeStrokeStartedMs = 0;
-    this->activeTouchPointId = -1;
-    this->strokeStabilizerSamplesBuffer.clear();
-    this->lastRawStrokeSample.reset();
-    this->lastEmittedStrokeSample.reset();
-    update();
-    if (added) {
-        if (activePageIndex) {
-            maybeAppendEmptyLastPageOnDraw(*activePageIndex, added);
-        }
-        Q_EMIT documentEdited();
-    }
-}
-
-auto QtCanvas::shouldFilterActiveStroke(qint64 nowMs) -> bool {
-    if (!this->strokeFilterEnabled || !this->documentController || this->strokeFilterIgnoreLengthMm <= 0.0) {
-        return false;
-    }
-    if (this->strokeFilterSuccessiveTimeMs > 0 && this->lastFilteredStrokeMs > 0 &&
-        nowMs - this->lastFilteredStrokeMs <= this->strokeFilterSuccessiveTimeMs) {
-        return false;
-    }
-
-    const auto* active = this->documentController->activeStroke();
-    if (!active || !active->stroke) {
-        return false;
-    }
-    const auto pointCount = active->stroke->getPointCount();
-    if (pointCount == 0) {
-        return true;
-    }
-
-    double lengthPoints = 0.0;
-    for (std::size_t index = 1; index < pointCount; ++index) {
-        const Point previous = active->stroke->getPoint(index - 1U);
-        const Point current = active->stroke->getPoint(index);
-        lengthPoints += std::hypot(current.x - previous.x, current.y - previous.y);
-    }
-    constexpr double millimetersPerPoint = 25.4 / 72.0;
-    const double lengthMm = lengthPoints * millimetersPerPoint;
-    const qint64 durationMs = this->activeStrokeStartedMs > 0 ? nowMs - this->activeStrokeStartedMs : 0;
-    return durationMs <= this->strokeFilterIgnoreTimeMs && lengthMm <= this->strokeFilterIgnoreLengthMm;
-}
-
-void QtCanvas::maybeAppendEmptyLastPageOnDraw(std::size_t pageIndex, bool strokeAdded) {
-    if (!strokeAdded || this->emptyLastPageAppendMode != "onDrawOfLastPage" || !this->documentController ||
-        this->documentController->hasPdfBackgroundDocument()) {
-        return;
-    }
-    const auto count = this->documentController->pageCount();
-    if (count > 0U && pageIndex + 1U == count) {
-        this->documentController->addPageAfter(pageIndex);
-    }
-}
-
-auto QtCanvas::maybeAppendEmptyLastPageOnScroll() -> bool {
-    if (this->emptyLastPageAppendMode != "onScrollOfLastPage" || !this->documentController ||
-        this->documentController->hasPdfBackgroundDocument()) {
-        return false;
-    }
-    const auto count = this->documentController->pageCount();
-    if (count == 0U || currentPageIndex() + 1U != count) {
-        return false;
-    }
-
-    const QRectF bounds = documentSceneBounds();
-    const double visibleBottom = (this->scrollY + height() / std::max(0.001, this->zoomFactor)) * this->zoomFactor;
-    const double documentBottom = bounds.bottom() * this->zoomFactor;
-    if (std::abs(documentBottom - visibleBottom) < 5.0) {
-        this->documentController->addPageAfter(count - 1U);
-        return true;
-    }
-    return false;
-}
-
-void QtCanvas::cancelActiveStroke() {
-    if (this->documentController) {
-        this->documentController->cancelStroke();
-    }
-    this->drawing = false;
-    this->activeStrokeStartedMs = 0;
-    this->activeTouchPointId = -1;
-    this->strokeStabilizerSamplesBuffer.clear();
-    this->lastRawStrokeSample.reset();
-    this->lastEmittedStrokeSample.reset();
-    update();
-}
-
-void QtCanvas::drawActiveStroke(QPainter& painter) const {
-    const auto* active = this->documentController ? this->documentController->activeStroke() : nullptr;
-    if (!active || !active->stroke || !this->pageContentRenderer) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (active->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[active->pageIndex];
-    painter.save();
-    painter.setClipRect(pageRect);
-
-    // Translate so the stroke renderer draws at page position
-    painter.translate(pageRect.x(), pageRect.y());
-
-    auto model = vn::view::render::StrokeRenderModelFactory::fromStroke(*active->stroke);
-    vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
-    this->pageContentRenderer->drawStroke(model, renderContext);
-
-    painter.restore();
-}
-
-void QtCanvas::drawLaserPointerStrokes(QPainter& painter) const {
-    if (this->laserOverlayStrokes.empty() || !this->pageContentRenderer) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    const auto now = QDateTime::currentMSecsSinceEpoch();
-    for (const auto& overlay: this->laserOverlayStrokes) {
-        if (overlay.pageIndex >= rects.size()) {
-            continue;
-        }
-
-        const auto age = std::max<qint64>(0, now - overlay.createdMs);
-        const double alpha = std::clamp(1.0 - static_cast<double>(age) / this->laserPointerFadeOutMs, 0.0, 1.0);
-        if (alpha <= 0.0) {
-            continue;
-        }
-
-        auto model = overlay.model;
-        model.color.alpha = static_cast<uint8_t>(std::round(static_cast<double>(model.color.alpha) * alpha));
-        if (model.highlighter && model.fill > 0) {
-            model.fill = static_cast<int>(std::round(static_cast<double>(model.fill) * alpha));
-        }
-
-        const QRectF& pageRect = rects[overlay.pageIndex];
-        painter.save();
-        painter.setClipRect(pageRect);
-        painter.translate(pageRect.x(), pageRect.y());
-
-        vn::view::render::QtPainterRenderContext renderContext(&painter, this->zoomFactor);
-        this->pageContentRenderer->drawStroke(model, renderContext);
-        painter.restore();
-    }
-}
-
-void QtCanvas::pruneLaserPointerStrokes() {
-    if (this->laserOverlayStrokes.empty()) {
-        return;
-    }
-
-    const auto now = QDateTime::currentMSecsSinceEpoch();
-    std::erase_if(this->laserOverlayStrokes, [this, now](const QtLaserOverlayStroke& overlay) {
-        return now - overlay.createdMs >= this->laserPointerFadeOutMs;
-    });
-}
-
-// ---------------------------------------------------------------------------
-// Eraser input
-// ---------------------------------------------------------------------------
-
-void QtCanvas::beginEraseAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    this->documentController->beginErase(*pageIdx);
-    this->erasing = true;
-    updateEraserPreviewAtScreen(screenPoint);
-
-    // Immediately erase at the press point
-    const QRectF& pageRect = rects[*pageIdx];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-    const double halfSize = currentEraserHalfSize();
-
-    const int erased = usesMaskEraser() ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
-                                        : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
-    if (erased > 0) {
-        update();
-        Q_EMIT documentEdited();
-    }
-}
-
-void QtCanvas::eraseAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController || !this->erasing) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[*pageIdx];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-    const double halfSize = currentEraserHalfSize();
-
-    updateEraserPreviewAtScreen(screenPoint);
-
-    const int erased = usesMaskEraser() ? this->documentController->eraseSegmentAt(*pageIdx, pageX, pageY, halfSize)
-                                        : this->documentController->eraseAt(*pageIdx, pageX, pageY, halfSize);
-    if (erased > 0) {
-        update();
-        Q_EMIT documentEdited();
-    }
-}
-
-void QtCanvas::finalizeErase() {
-    if (!this->documentController) {
-        this->erasing = false;
-        return;
-    }
-    this->documentController->finalizeErase();
-    this->erasing = false;
-    if (!this->temporaryRightButtonEraser && this->currentToolState.activeTool != QtToolType::Eraser) {
-        clearEraserPreview();
-    }
-    Q_EMIT documentEdited();
-}
-
-void QtCanvas::cancelErase() {
-    if (this->documentController) {
-        this->documentController->cancelErase();
-    }
-    this->erasing = false;
-    this->temporaryRightButtonEraser = false;
-    clearEraserPreview();
-}
-
-auto QtCanvas::usesMaskEraser() const -> bool {
-    return this->currentToolState.eraserMode != QtEraserMode::DeleteStroke;
-}
-
-auto QtCanvas::currentEraserHalfSize() const -> double {
-    return (this->currentToolState.eraserWidth * 1.35) / 2.0;
-}
-
-void QtCanvas::updateEraserPreviewAtScreen(const QPointF& screenPoint) {
-    const bool shouldShow = !this->spaceHeld &&
-                            (this->currentToolState.activeTool == QtToolType::Eraser || this->temporaryRightButtonEraser);
-    if (!shouldShow) {
-        clearEraserPreview();
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        clearEraserPreview();
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        clearEraserPreview();
-        return;
-    }
-
-    const QRectF& pageRect = rects[*pageIdx];
-    this->eraserPreviewPageIndex = *pageIdx;
-    this->eraserPreviewPagePoint = QPointF(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y());
-    update();
-}
-
-void QtCanvas::clearEraserPreview() {
-    if (!this->eraserPreviewPageIndex) {
-        return;
-    }
-    this->eraserPreviewPageIndex.reset();
-    update();
-}
-
-void QtCanvas::drawEraserPreview(QPainter& painter) const {
-    if (!this->eraserPreviewPageIndex) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*this->eraserPreviewPageIndex >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[*this->eraserPreviewPageIndex];
-    const double halfSize = currentEraserHalfSize();
-    const QRectF eraserRect(pageRect.x() + this->eraserPreviewPagePoint.x() - halfSize,
-                            pageRect.y() + this->eraserPreviewPagePoint.y() - halfSize, halfSize * 2.0,
-                            halfSize * 2.0);
-
-    QPen border(QColor(40, 40, 40, 255));
-    border.setWidthF(1.4 / std::max(this->zoomFactor, 0.0001));
-    painter.save();
-    painter.setPen(border);
-    painter.setBrush(QColor(255, 255, 255, 255));
-    painter.drawRect(eraserRect);
-    painter.restore();
-}
-
-// ---------------------------------------------------------------------------
-// Text editing
-// ---------------------------------------------------------------------------
-
-void QtCanvas::beginTextEditAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController) {
-        return;
-    }
-
-    // Commit any existing text edit first
-    commitTextEdit();
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[*pageIdx];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-
-    // Create text editor if needed
-    if (!this->textEditor) {
-        this->textEditor = new QtTextEditor(this);
-        this->textEditor->setTabOptions(this->useSpacesForTab, this->numberOfSpacesForTab);
-        connect(this->textEditor, &QtTextEditor::editingFinished, this, [this](bool committed) {
-            if (committed && this->textEditor->isNewText()) {
-                auto textElem = this->textEditor->newTextElement();
-                if (textElem) {
-                    this->documentController->insertTextElement(this->textEditor->editedPageIndex(),
-                                                                std::move(textElem));
-                    update();
-                    Q_EMIT documentEdited();
-                }
-            } else if (committed) {
-                update();
-                Q_EMIT documentEdited();
-            }
-        });
-    }
-
-    // Check if clicking on an existing text element
-    const double hitRadius = 20.0 / this->zoomFactor;
-    auto* existingText = this->documentController->hitTestTextElement(*pageIdx, pageX, pageY, hitRadius);
-
-    if (existingText) {
-        this->textEditor->beginEditing(existingText, pageRect, this->zoomFactor);
-    } else {
-        this->textEditor->beginNewText(*pageIdx, pageX, pageY, pageRect, this->zoomFactor,
-                                       this->currentToolState.penColor, "Sans", 12.0);
-    }
-}
-
-void QtCanvas::commitTextEdit() {
-    if (this->textEditor && this->textEditor->isEditing()) {
-        this->textEditor->commit();
-    }
-}
-
-void QtCanvas::cancelTextEdit() {
-    if (this->textEditor && this->textEditor->isEditing()) {
-        this->textEditor->cancel();
-    }
-}
-
-void QtCanvas::beginPdfTextSelectionAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[*pageIdx];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-    const auto style = this->currentToolState.activeTool == QtToolType::PdfTextRect ? PdfPageSelectionStyle::Area
-                                                                                    : PdfPageSelectionStyle::Linear;
-    if (this->documentController->beginPdfTextSelection(*pageIdx, pageX, pageY, style)) {
-        this->pdfTextSelecting = true;
-        update();
-    }
-}
-
-void QtCanvas::updatePdfTextSelectionAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController || !this->pdfTextSelecting) {
-        return;
-    }
-
-    const auto* selection = this->documentController->pdfTextSelection() ? &*this->documentController->pdfTextSelection() : nullptr;
-    if (!selection) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (selection->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const QRectF& pageRect = rects[selection->pageIndex];
-    const double pageX = scenePoint.x() - pageRect.x();
-    const double pageY = scenePoint.y() - pageRect.y();
-    if (this->documentController->updatePdfTextSelection(pageX, pageY)) {
-        update();
-    }
-}
-
-void QtCanvas::finalizePdfTextSelection() {
-    if (!this->documentController || !this->pdfTextSelecting) {
-        this->pdfTextSelecting = false;
-        return;
-    }
-
-    const auto selectedText = this->documentController->finalizePdfTextSelection();
-    this->pdfTextSelecting = false;
-    if (!selectedText.empty()) {
-        QApplication::clipboard()->setText(QString::fromStdString(selectedText));
-        Q_EMIT statusHintChanged(QStringLiteral("Copied selected PDF text"));
-    } else {
-        Q_EMIT statusHintChanged(QStringLiteral("No PDF text selected"));
-    }
-    update();
-}
-
-void QtCanvas::cancelPdfTextSelection() {
-    if (this->documentController) {
-        this->documentController->cancelPdfTextSelection();
-    }
-    this->pdfTextSelecting = false;
-    update();
-}
-
-void QtCanvas::drawCursorHighlight(QPainter& painter) const {
-    if (!this->cursorHighlightEnabled || !this->cursorHighlightVisible) {
-        return;
-    }
-
-    painter.save();
-    const QPointF scenePoint = screenToScene(this->lastCursorScreenPosition);
-    const double radius = static_cast<double>(this->cursorHighlightRadiusPixels) / std::max(0.001, this->zoomFactor);
-    const double borderWidth =
-            static_cast<double>(this->cursorHighlightBorderWidthPixels) / std::max(0.001, this->zoomFactor);
-    painter.setBrush(qColorFromColor(this->cursorHighlightFill));
-    painter.setPen(borderWidth > 0.0 ? QPen(qColorFromColor(this->cursorHighlightBorder), borderWidth)
-                                     : Qt::NoPen);
-    painter.drawEllipse(scenePoint, radius, radius);
-    painter.restore();
-}
-
-void QtCanvas::drawPdfTextSelectionOverlay(QPainter& painter) const {
-    const auto* selection = this->documentController ? (this->documentController->pdfTextSelection()
-                                                                ? &*this->documentController->pdfTextSelection()
-                                                                : nullptr)
-                                                     : nullptr;
-    if (!selection) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (selection->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const QRectF& pageRect = rects[selection->pageIndex];
-    painter.save();
-    painter.translate(pageRect.x(), pageRect.y());
-
-    QColor fill(255, 230, 90, std::clamp(this->currentToolState.pdfTextMarkerOpacity, 0, 255));
-    QColor outline(220, 170, 0, 190);
-    painter.setPen(QPen(outline, 1.0 / this->zoomFactor));
-    painter.setBrush(fill);
-
-    if (!selection->previewRects.empty()) {
-        for (const auto& rect: selection->previewRects) {
-            const QRectF qrect(QPointF(rect.x1, rect.y1), QPointF(rect.x2, rect.y2));
-            painter.drawRect(qrect.normalized());
-        }
-    } else {
-        const QRectF qrect(QPointF(selection->bounds.x1, selection->bounds.y1),
-                           QPointF(selection->bounds.x2, selection->bounds.y2));
-        painter.drawRect(qrect.normalized());
-    }
-
-    painter.restore();
-}
-
-void QtCanvas::beginVerticalSpaceAtScreen(const QPointF& screenPoint, bool moveAbove) {
-    if (!this->documentController) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    const auto rects = pageRects();
-    if (!pageIdx || *pageIdx >= rects.size()) {
-        return;
-    }
-
-    const auto& pageRect = rects[*pageIdx];
-    const double pageY = scenePoint.y() - pageRect.y();
-    if (!this->documentController->beginVerticalSpace(*pageIdx, pageY, moveAbove)) {
-        Q_EMIT statusHintChanged(QStringLiteral("No elements to move"));
-        return;
-    }
-
-    this->verticalSpacePreview = VerticalSpacePreview{
-            .pageIndex = *pageIdx, .startY = pageY, .currentY = pageY, .moveAbove = moveAbove};
-    updateDebugOverlay(moveAbove ? QStringLiteral("vertical space above") : QStringLiteral("vertical space below"));
-    update();
-}
-
-void QtCanvas::updateVerticalSpaceAtScreen(const QPointF& screenPoint) {
-    if (!this->documentController || !this->documentController->isVerticalSpacing() || !this->verticalSpacePreview) {
-        return;
-    }
-
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto rects = pageRects();
-    if (this->verticalSpacePreview->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const auto& pageRect = rects[this->verticalSpacePreview->pageIndex];
-    double pageY = scenePoint.y() - pageRect.y();
-    pageY = std::clamp(pageY, 0.0, pageRect.height());
-    if (this->gridSnapEnabled && this->snapGridSize > 0.0) {
-        pageY = std::round(pageY / this->snapGridSize) * this->snapGridSize;
-    }
-
-    this->verticalSpacePreview->currentY = pageY;
-    if (this->documentController->updateVerticalSpace(pageY)) {
-        Q_EMIT statusHintChanged(
-                QStringLiteral("Vertical space %1 pt").arg(pageY - this->verticalSpacePreview->startY, 0, 'f', 1));
-    }
-    update();
-}
-
-void QtCanvas::finalizeVerticalSpace() {
-    if (!this->documentController) {
-        this->verticalSpacePreview.reset();
-        return;
-    }
-
-    const bool changed = this->documentController->endVerticalSpace();
-    this->verticalSpacePreview.reset();
-    update();
-    if (changed) {
-        Q_EMIT documentEdited();
-        Q_EMIT statusHintChanged(QStringLiteral("Vertical space inserted"));
-    }
-}
-
-void QtCanvas::cancelVerticalSpace() {
-    if (this->documentController) {
-        this->documentController->cancelVerticalSpace();
-    }
-    this->verticalSpacePreview.reset();
-    update();
-}
-
-void QtCanvas::drawVerticalSpacePreview(QPainter& painter) const {
-    if (!this->verticalSpacePreview) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (this->verticalSpacePreview->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const auto& pageRect = rects[this->verticalSpacePreview->pageIndex];
-    const double startY = pageRect.y() + this->verticalSpacePreview->startY;
-    const double currentY = pageRect.y() + this->verticalSpacePreview->currentY;
-    const QRectF band(pageRect.x(), std::min(startY, currentY), pageRect.width(), std::abs(currentY - startY));
-
-    painter.save();
-    painter.setPen(QPen(QColor(30, 100, 220), 1.5 / this->zoomFactor, Qt::DashLine));
-    painter.setBrush(QColor(30, 100, 220, 40));
-    if (band.height() > 0.0) {
-        painter.drawRect(band);
-    }
-    painter.drawLine(QPointF(pageRect.x(), startY), QPointF(pageRect.right(), startY));
-    painter.setPen(QPen(QColor(30, 100, 220), 2.0 / this->zoomFactor));
-    painter.drawLine(QPointF(pageRect.x(), currentY), QPointF(pageRect.right(), currentY));
-    painter.restore();
-}
-
-// ---------------------------------------------------------------------------
-// Shape drawing
-// ---------------------------------------------------------------------------
-
-void QtCanvas::beginShapeAtScreen(const QPointF& screenPoint) {
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    this->shapePageIndex = *pageIdx;
-    this->shapeStartScene = QPointF(scenePoint.x() - rects[*pageIdx].x(), scenePoint.y() - rects[*pageIdx].y());
-    this->shapeCurrentScene = this->shapeStartScene;
-    this->shapeClickPoints.clear();
-    this->shapeClickPoints.push_back(this->shapeStartScene);
-    this->shapeDirectionModifiersFixed = false;
-    this->shapeDirectionModifierShift = false;
-    this->shapeDirectionModifierControl = false;
-    this->shapeEffectiveShiftModifier = false;
-    this->shapeEffectiveControlModifier = false;
-    this->shapeDrawing = true;
-    setCursor(Qt::CrossCursor);
-    update();
-}
-
-void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto rects = pageRects();
-    if (this->shapePageIndex < rects.size()) {
-        QPointF pagePoint(scenePoint.x() - rects[this->shapePageIndex].x(),
-                          scenePoint.y() - rects[this->shapePageIndex].y());
-        if (this->rotationSnapEnabled) {
-            const QPointF origin =
-                    this->shapeClickPoints.empty() ? this->shapeStartScene : this->shapeClickPoints.back();
-            pagePoint = applyRotationSnap(origin, pagePoint);
-        }
-        pagePoint = applyShapeDirectionModifiers(pagePoint);
-        this->shapeCurrentScene = pagePoint;
-    }
-    update();
-}
-
-auto QtCanvas::applyShapeDirectionModifiers(const QPointF& pagePoint) -> QPointF {
-    const auto tool = this->currentToolState.activeTool;
-    const bool supportedTool = tool == QtToolType::DrawRectangle || tool == QtToolType::DrawEllipse ||
-                               tool == QtToolType::DrawCoordinateSystem;
-    if (!supportedTool) {
-        return pagePoint;
-    }
-
-    const double dx = pagePoint.x() - this->shapeStartScene.x();
-    const double dy = pagePoint.y() - this->shapeStartScene.y();
-    const auto keyboardModifiers = QApplication::keyboardModifiers();
-    bool shift = keyboardModifiers.testFlag(Qt::ShiftModifier);
-    bool control = keyboardModifiers.testFlag(Qt::ControlModifier);
-    if (this->drawDirectionModifiersEnabled) {
-        if (!this->shapeDirectionModifiersFixed) {
-            this->shapeDirectionModifierShift = dx < 0.0;
-            this->shapeDirectionModifierControl = dy < 0.0;
-            const double lockDistance = this->drawDirectionModifiersRadiusPixels / std::max(0.001, this->zoomFactor);
-            this->shapeDirectionModifiersFixed = std::abs(dx) > lockDistance || std::abs(dy) > lockDistance;
-        }
-        shift = shift != this->shapeDirectionModifierShift;
-        control = control != this->shapeDirectionModifierControl;
-    }
-    this->shapeEffectiveShiftModifier = shift;
-    this->shapeEffectiveControlModifier = control;
-
-    double width = dx;
-    double height = dy;
-    if (shift) {
-        const double size = std::max(std::abs(width), std::abs(height));
-        width = std::copysign(size, width == 0.0 ? 1.0 : width);
-        height = std::copysign(size, height == 0.0 ? 1.0 : height);
-    }
-
-    return QPointF(this->shapeStartScene.x() + width, this->shapeStartScene.y() + height);
-}
-
-void QtCanvas::addShapeClickAtScreen(const QPointF& screenPoint) {
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto rects = pageRects();
-    if (this->shapePageIndex < rects.size()) {
-        QPointF pagePoint(scenePoint.x() - rects[this->shapePageIndex].x(),
-                          scenePoint.y() - rects[this->shapePageIndex].y());
-        if (this->rotationSnapEnabled && !this->shapeClickPoints.empty()) {
-            pagePoint = applyRotationSnap(this->shapeClickPoints.back(), pagePoint);
-        }
-        this->shapeClickPoints.push_back(pagePoint);
-        this->shapeCurrentScene = pagePoint;
-    }
-
-    // For arc: finalize after 3 clicks (center, start, end)
-    if (this->currentToolState.activeTool == QtToolType::DrawArc && this->shapeClickPoints.size() >= 3U) {
-        finalizeShape();
-        return;
-    }
-    update();
-}
-
-void QtCanvas::finalizeShape() {
-    if (!this->documentController || !this->shapeDrawing) {
-        cancelShape();
-        return;
-    }
-
-    const Color color = this->currentToolState.penColor;
-    const double width = this->currentToolState.penWidth;
-    const std::string& lineStyle = this->currentToolState.penLineStyle;
-    const int fill = this->currentToolState.fillEnabled ? this->currentToolState.fillOpacity : -1;
-    const Element* created = nullptr;
-    const auto centeredStart = [&]() {
-        return QPointF(2.0 * this->shapeStartScene.x() - this->shapeCurrentScene.x(),
-                       2.0 * this->shapeStartScene.y() - this->shapeCurrentScene.y());
-    };
-
-    switch (this->currentToolState.activeTool) {
-        case QtToolType::DrawLine:
-            created = this->documentController->createLine(this->shapePageIndex, this->shapeStartScene.x(),
-                                                           this->shapeStartScene.y(), this->shapeCurrentScene.x(),
-                                                           this->shapeCurrentScene.y(), color, width);
-            break;
-        case QtToolType::DrawRectangle: {
-            const QPointF start = this->shapeEffectiveControlModifier ? centeredStart() : this->shapeStartScene;
-            created = this->documentController->createRectangle(this->shapePageIndex, start.x(), start.y(),
-                                                                this->shapeCurrentScene.x(), this->shapeCurrentScene.y(),
-                                                                color, width);
-            break;
-        }
-        case QtToolType::DrawCircle:
-            created = this->documentController->createCircle(this->shapePageIndex, this->shapeStartScene.x(),
-                                                             this->shapeStartScene.y(), this->shapeCurrentScene.x(),
-                                                             this->shapeCurrentScene.y(), color, width);
-            break;
-        case QtToolType::DrawEllipse: {
-            const QPointF start = this->shapeEffectiveControlModifier ? centeredStart() : this->shapeStartScene;
-            created = this->documentController->createEllipse(
-                    this->shapePageIndex, start.x(), start.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, fill);
-            break;
-        }
-        case QtToolType::DrawArrow:
-            created = this->documentController->createArrow(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, false);
-            break;
-        case QtToolType::DrawDoubleArrow:
-            created = this->documentController->createArrow(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle, true);
-            break;
-        case QtToolType::DrawCoordinateSystem:
-            created = this->documentController->createCoordinateSystem(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width, lineStyle);
-            break;
-        case QtToolType::DrawArc:
-            if (this->shapeClickPoints.size() >= 3U) {
-                created = this->documentController->createArc(
-                        this->shapePageIndex, this->shapeClickPoints[0].x(), this->shapeClickPoints[0].y(),
-                        this->shapeClickPoints[1].x(), this->shapeClickPoints[1].y(),
-                        this->shapeClickPoints[2].x(), this->shapeClickPoints[2].y(), color, width);
-            }
-            break;
-        case QtToolType::DrawPolyline: {
-            std::vector<std::pair<double, double>> points;
-            points.reserve(this->shapeClickPoints.size());
-            for (const auto& pt: this->shapeClickPoints) {
-                points.emplace_back(pt.x(), pt.y());
-            }
-            created = this->documentController->createPolyline(this->shapePageIndex, points, color, width);
-            break;
-        }
-        case QtToolType::DrawSpline: {
-            std::vector<std::pair<double, double>> points;
-            points.reserve(this->shapeClickPoints.size());
-            for (const auto& pt: this->shapeClickPoints) {
-                points.emplace_back(pt.x(), pt.y());
-            }
-            created = this->documentController->createSpline(this->shapePageIndex, points, color, width, lineStyle);
-            break;
-        }
-        case QtToolType::DrawConstructionLine:
-            created = this->documentController->createConstructionLine(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width);
-            break;
-        case QtToolType::DrawConstructionCircle:
-            created = this->documentController->createConstructionCircle(
-                    this->shapePageIndex, this->shapeStartScene.x(), this->shapeStartScene.y(),
-                    this->shapeCurrentScene.x(), this->shapeCurrentScene.y(), color, width);
-            break;
-        default:
-            break;
-    }
-
-    this->shapeDrawing = false;
-    this->shapeClickPoints.clear();
-    setCursor(Qt::ArrowCursor);
-
-    if (created) {
-        Q_EMIT documentEdited();
-    }
-    update();
-}
-
-void QtCanvas::cancelShape() {
-    this->shapeDrawing = false;
-    this->shapeClickPoints.clear();
-    setCursor(Qt::ArrowCursor);
-    update();
-}
-
-void QtCanvas::drawShapePreview(QPainter& painter) const {
-    if (!this->shapeDrawing) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (this->shapePageIndex >= rects.size()) {
-        return;
-    }
-
-    painter.save();
-    const auto& pageRect = rects[this->shapePageIndex];
-    painter.translate(pageRect.x(), pageRect.y());
-
-    QPen pen(QColor(this->currentToolState.penColor.red, this->currentToolState.penColor.green,
-                    this->currentToolState.penColor.blue, 180),
-             this->currentToolState.penWidth);
-    pen.setStyle(Qt::DashLine);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
-
-    const QPointF start = this->shapeStartScene;
-    const QPointF current = this->shapeCurrentScene;
-    const auto centeredStart = [&]() {
-        return QPointF(2.0 * start.x() - current.x(), 2.0 * start.y() - current.y());
-    };
-
-    switch (this->currentToolState.activeTool) {
-        case QtToolType::DrawLine:
-        case QtToolType::DrawConstructionLine:
-            painter.drawLine(start, current);
-            break;
-        case QtToolType::DrawRectangle:
-            painter.drawRect(QRectF(this->shapeEffectiveControlModifier ? centeredStart() : start, current).normalized());
-            break;
-        case QtToolType::DrawCircle:
-        case QtToolType::DrawConstructionCircle: {
-            const double radius = std::hypot(current.x() - start.x(), current.y() - start.y());
-            painter.drawEllipse(start, radius, radius);
-            break;
-        }
-        case QtToolType::DrawEllipse:
-            painter.drawEllipse(QRectF(this->shapeEffectiveControlModifier ? centeredStart() : start, current).normalized());
-            break;
-        case QtToolType::DrawArrow:
-        case QtToolType::DrawDoubleArrow: {
-            const auto points =
-                    buildArrowPreviewPoints(start, current, this->currentToolState.penWidth,
-                                            this->currentToolState.activeTool == QtToolType::DrawDoubleArrow);
-            for (std::size_t i = 1; i < points.size(); ++i) {
-                painter.drawLine(points[i - 1], points[i]);
-            }
-            break;
-        }
-        case QtToolType::DrawCoordinateSystem: {
-            const auto points = buildCoordinateSystemPreviewPoints(start, current);
-            for (std::size_t i = 1; i < points.size(); ++i) {
-                painter.drawLine(points[i - 1], points[i]);
-            }
-            break;
-        }
-        case QtToolType::DrawArc:
-            if (this->shapeClickPoints.size() == 1U) {
-                painter.drawLine(this->shapeClickPoints[0], current);
-            } else if (this->shapeClickPoints.size() >= 2U) {
-                const QPointF& center = this->shapeClickPoints[0];
-                const QPointF& arcStart = this->shapeClickPoints[1];
-                const double radius = std::hypot(arcStart.x() - center.x(), arcStart.y() - center.y());
-                painter.drawEllipse(center, radius, radius);
-                painter.drawLine(center, current);
-            }
-            break;
-        case QtToolType::DrawPolyline:
-            for (std::size_t i = 1; i < this->shapeClickPoints.size(); ++i) {
-                painter.drawLine(this->shapeClickPoints[i - 1], this->shapeClickPoints[i]);
-            }
-            if (!this->shapeClickPoints.empty()) {
-                painter.drawLine(this->shapeClickPoints.back(), current);
-            }
-            break;
-        case QtToolType::DrawSpline: {
-            std::vector<QPointF> points = this->shapeClickPoints;
-            if (points.empty() || points.back() != current) {
-                points.push_back(current);
-            }
-            painter.drawPath(cubicSplinePath(points));
-            break;
-        }
-        default:
-            break;
-    }
-
-    // Draw vertex handles
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(qColorFromColor(this->selectionColor, 200));
-    const double handleRadius = 3.0 / painter.transform().m11();
-    for (const auto& pt: this->shapeClickPoints) {
-        painter.drawEllipse(pt, handleRadius, handleRadius);
-    }
-
-    painter.restore();
-}
-
-void QtCanvas::drawInstrumentOverlay(QPainter& painter) const {
-    const auto instrument = activeInstrumentTool();
-    if (instrument == InstrumentToolKind::None || !this->instrumentOverlay.visible) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (this->instrumentOverlay.pageIndex >= rects.size()) {
-        return;
-    }
-
-    painter.save();
-    const auto& pageRect = rects[this->instrumentOverlay.pageIndex];
-    painter.translate(pageRect.x(), pageRect.y());
-
-    QPen framePen(QColor(75, 104, 224, 190), 1.2 / std::max(0.1, this->zoomFactor));
-    framePen.setCosmetic(true);
-    painter.setPen(framePen);
-    painter.setBrush(QColor(120, 155, 255, 24));
-
-    if (instrument == InstrumentToolKind::Setsquare) {
-        const auto outline = buildSetsquareOutline(this->instrumentOverlay.origin, this->instrumentOverlay.rotation,
-                                                   this->instrumentOverlay.size);
-        QPainterPath outlinePath;
-        outlinePath.moveTo(outline.front());
-        for (std::size_t i = 1; i < outline.size(); ++i) {
-            outlinePath.lineTo(outline[i]);
-        }
-        painter.drawPath(outlinePath);
-
-        QPen guidePen(QColor(70, 70, 190, 150), 1.0 / std::max(0.1, this->zoomFactor), Qt::DashLine);
-        guidePen.setCosmetic(true);
-        painter.setPen(guidePen);
-        const double radius = setsquareRadius(this->instrumentOverlay.size);
-        painter.drawArc(QRectF(this->instrumentOverlay.origin.x() - radius, this->instrumentOverlay.origin.y() - radius,
-                               2.0 * radius, 2.0 * radius),
-                        0, 180 * 16);
-    } else {
-        const double radius = this->instrumentOverlay.size;
-        painter.drawEllipse(this->instrumentOverlay.origin, radius, radius);
-
-        QPen guidePen(QColor(70, 70, 190, 150), 1.0 / std::max(0.1, this->zoomFactor), Qt::DashLine);
-        guidePen.setCosmetic(true);
-        painter.setPen(guidePen);
-        const QPointF left = fromLocalInstrument(QPointF(0.0, 0.0), this->instrumentOverlay.origin,
-                                                 this->instrumentOverlay.rotation);
-        const QPointF right = fromLocalInstrument(QPointF(radius, 0.0), this->instrumentOverlay.origin,
-                                                  this->instrumentOverlay.rotation);
-        painter.drawLine(left, right);
-    }
-
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(45, 125, 255, 220));
-    const double handleRadius = 4.0 / std::max(0.1, this->zoomFactor);
-    painter.drawEllipse(this->instrumentOverlay.origin, handleRadius, handleRadius);
-
-    if (this->activeInstrumentStroke && this->activeInstrumentStroke->pageIndex == this->instrumentOverlay.pageIndex &&
-        this->activeInstrumentStroke->previewPoints.size() >= 2U) {
-        QPen previewPen(QColor(this->currentToolState.penColor.red, this->currentToolState.penColor.green,
-                               this->currentToolState.penColor.blue, 220),
-                        std::max(1.0, this->currentToolState.penWidth));
-        previewPen.setCosmetic(false);
-        painter.setPen(previewPen);
-        painter.setBrush(Qt::NoBrush);
-        for (std::size_t i = 1; i < this->activeInstrumentStroke->previewPoints.size(); ++i) {
-            painter.drawLine(this->activeInstrumentStroke->previewPoints[i - 1],
-                             this->activeInstrumentStroke->previewPoints[i]);
-        }
-    }
-
-    painter.restore();
-}
-
-auto QtCanvas::activeInstrumentTool() const -> InstrumentToolKind {
-    switch (this->currentToolState.activeTool) {
-        case QtToolType::Setsquare:
-            return InstrumentToolKind::Setsquare;
-        case QtToolType::Compass:
-            return InstrumentToolKind::Compass;
-        default:
-            return InstrumentToolKind::None;
-    }
-}
-
-void QtCanvas::ensureInstrumentOverlay(std::size_t pageIndex, const QPointF& pagePoint) {
-    this->instrumentOverlay.visible = true;
-    this->instrumentOverlay.pageIndex = pageIndex;
-    this->instrumentOverlay.origin = pagePoint;
-    if (this->instrumentOverlay.size <= 0.0) {
-        this->instrumentOverlay.size = instrumentDefaultSize(this->currentToolState.activeTool);
-    }
-}
-
-void QtCanvas::beginInstrumentToolAtScreen(const QPointF& screenPoint, Qt::MouseButton button) {
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto pageIdx = pageIndexAtScenePoint(scenePoint);
-    if (!pageIdx) {
-        return;
-    }
-
-    const auto rects = pageRects();
-    if (*pageIdx >= rects.size()) {
-        return;
-    }
-
-    const QPointF pagePoint(scenePoint.x() - rects[*pageIdx].x(), scenePoint.y() - rects[*pageIdx].y());
-    ensureInstrumentOverlay(*pageIdx, this->instrumentOverlay.visible && this->instrumentOverlay.pageIndex == *pageIdx
-                                              ? this->instrumentOverlay.origin
-                                              : pagePoint);
-
-    if (button == Qt::RightButton) {
-        this->movingInstrumentOverlay = true;
-        this->instrumentOverlay.pageIndex = *pageIdx;
-        this->instrumentOverlay.origin = pagePoint;
-        update();
-        return;
-    }
-
-    const QPointF local =
-            toLocalInstrument(pagePoint, this->instrumentOverlay.origin, this->instrumentOverlay.rotation);
-    if (activeInstrumentTool() == InstrumentToolKind::Setsquare) {
-        if (!insideSetsquare(local, this->instrumentOverlay.size)) {
-            this->instrumentOverlay.pageIndex = *pageIdx;
-            this->instrumentOverlay.origin = pagePoint;
-            update();
-            return;
-        }
-
-        InstrumentStrokeState state;
-        state.pageIndex = *pageIdx;
-        state.origin = this->instrumentOverlay.origin;
-        state.rotation = this->instrumentOverlay.rotation;
-        state.size = this->instrumentOverlay.size;
-        if (local.y() >= -this->instrumentOverlay.size * 0.2) {
-            state.kind = InstrumentStrokeKind::SetsquareEdge;
-            state.extentMin = local.x();
-            state.extentMax = local.x();
-            state.previewPoints =
-                    buildSetsquareStrokePoints(true, state.origin, state.rotation,
-                                               state.size, state.extentMin, state.extentMax);
-        } else {
-            state.kind = InstrumentStrokeKind::SetsquareRadial;
-            state.anchor = std::atan2(-local.y(), local.x());
-            state.extentMax = std::hypot(local.x(), local.y());
-            state.previewPoints =
-                    buildSetsquareStrokePoints(false, state.origin, state.rotation,
-                                               state.size, state.anchor, state.extentMax);
-        }
-        this->activeInstrumentStroke = std::move(state);
-    } else {
-        if (!insideCompass(local, this->instrumentOverlay.size)) {
-            this->instrumentOverlay.pageIndex = *pageIdx;
-            this->instrumentOverlay.origin = pagePoint;
-            update();
-            return;
-        }
-
-        InstrumentStrokeState state;
-        state.pageIndex = *pageIdx;
-        state.origin = this->instrumentOverlay.origin;
-        state.rotation = this->instrumentOverlay.rotation;
-        state.size = this->instrumentOverlay.size;
-        const double radius = std::hypot(local.x(), local.y());
-        if (std::abs(radius - this->instrumentOverlay.size) <= INSTRUMENT_EDGE_HIT_BAND / std::max(0.1, this->zoomFactor)) {
-            state.kind = InstrumentStrokeKind::CompassOutline;
-            state.anchor = std::atan2(-local.y(), local.x());
-            state.extentMin = state.anchor;
-            state.extentMax = state.anchor;
-            state.lastAngle = state.anchor;
-            state.previewPoints = buildCompassArcPoints(state.origin, state.rotation, state.size, state.extentMin,
-                                                        state.extentMax);
-        } else if (std::abs(local.y()) <= INSTRUMENT_INNER_BAND / std::max(0.1, this->zoomFactor) &&
-                   local.x() >= 0.0 && local.x() <= this->instrumentOverlay.size) {
-            state.kind = InstrumentStrokeKind::CompassRadius;
-            state.extentMin = local.x();
-            state.extentMax = local.x();
-            state.previewPoints = buildCompassRadiusPoints(state.origin, state.rotation, state.extentMin,
-                                                           state.extentMax);
-        } else {
-            this->instrumentOverlay.pageIndex = *pageIdx;
-            this->instrumentOverlay.origin = pagePoint;
-            update();
-            return;
-        }
-        this->activeInstrumentStroke = std::move(state);
-    }
-    update();
-}
-
-void QtCanvas::updateInstrumentToolAtScreen(const QPointF& screenPoint) {
-    const QPointF scenePoint = screenToScene(screenPoint);
-    const auto rects = pageRects();
-
-    if (this->movingInstrumentOverlay) {
-        if (this->instrumentOverlay.pageIndex < rects.size()) {
-            this->instrumentOverlay.origin = QPointF(scenePoint.x() - rects[this->instrumentOverlay.pageIndex].x(),
-                                                     scenePoint.y() - rects[this->instrumentOverlay.pageIndex].y());
-            update();
-        }
-        return;
-    }
-
-    if (!this->activeInstrumentStroke || this->activeInstrumentStroke->pageIndex >= rects.size()) {
-        return;
-    }
-
-    const QPointF pagePoint(scenePoint.x() - rects[this->activeInstrumentStroke->pageIndex].x(),
-                            scenePoint.y() - rects[this->activeInstrumentStroke->pageIndex].y());
-    const QPointF local =
-            toLocalInstrument(pagePoint, this->activeInstrumentStroke->origin, this->activeInstrumentStroke->rotation);
-    auto& state = *this->activeInstrumentStroke;
-    switch (state.kind) {
-        case InstrumentStrokeKind::SetsquareEdge:
-            state.extentMin = std::min(state.extentMin, local.x());
-            state.extentMax = std::max(state.extentMax, local.x());
-            state.previewPoints = buildSetsquareStrokePoints(true, state.origin,
-                                                             state.rotation, state.size, state.extentMin,
-                                                             state.extentMax);
-            break;
-        case InstrumentStrokeKind::SetsquareRadial:
-            state.extentMax = std::hypot(local.x(), local.y());
-            state.previewPoints = buildSetsquareStrokePoints(false, state.origin,
-                                                             state.rotation, state.size, state.anchor,
-                                                             state.extentMax);
-            break;
-        case InstrumentStrokeKind::CompassOutline: {
-            const double angle = normalizeAngleDelta(state.lastAngle, std::atan2(-local.y(), local.x()));
-            state.extentMin = std::min(state.extentMin, angle);
-            state.extentMax = std::max(state.extentMax, angle);
-            state.lastAngle = angle;
-            state.previewPoints = buildCompassArcPoints(state.origin, state.rotation, state.size, state.extentMin,
-                                                        state.extentMax);
-            break;
-        }
-        case InstrumentStrokeKind::CompassRadius:
-            state.extentMin = std::min(state.extentMin, std::max(0.0, local.x()));
-            state.extentMax = std::max(state.extentMax, std::max(0.0, local.x()));
-            state.previewPoints = buildCompassRadiusPoints(state.origin, state.rotation, state.extentMin,
-                                                           state.extentMax);
-            break;
-        default:
-            break;
-    }
-    update();
-}
-
-void QtCanvas::finalizeInstrumentTool() {
-    if (!this->documentController || !this->activeInstrumentStroke) {
-        return;
-    }
-
-    std::vector<std::pair<double, double>> points;
-    points.reserve(this->activeInstrumentStroke->previewPoints.size());
-    for (const auto& point: this->activeInstrumentStroke->previewPoints) {
-        points.emplace_back(point.x(), point.y());
-    }
-
-    const Element* created = nullptr;
-    if (this->currentToolState.activeTool == QtToolType::Setsquare) {
-        created = this->documentController->createSetsquareStroke(this->activeInstrumentStroke->pageIndex, points,
-                                                                  this->currentToolState.penColor,
-                                                                  this->currentToolState.penWidth,
-                                                                  this->currentToolState.penLineStyle);
-    } else if (this->currentToolState.activeTool == QtToolType::Compass) {
-        created = this->documentController->createCompassStroke(this->activeInstrumentStroke->pageIndex, points,
-                                                                this->currentToolState.penColor,
-                                                                this->currentToolState.penWidth,
-                                                                this->currentToolState.penLineStyle);
-    }
-
-    this->activeInstrumentStroke.reset();
-    if (created) {
-        Q_EMIT documentEdited();
-    }
-    update();
-}
-
-void QtCanvas::cancelInstrumentTool() {
-    this->activeInstrumentStroke.reset();
-    this->movingInstrumentOverlay = false;
-    update();
-}
-
-auto QtCanvas::isMultiClickShapeTool() const -> bool {
-    return this->currentToolState.activeTool == QtToolType::DrawPolyline ||
-           this->currentToolState.activeTool == QtToolType::DrawArc ||
-           this->currentToolState.activeTool == QtToolType::DrawSpline;
-}
-
-auto QtCanvas::applyRotationSnap(const QPointF& origin, const QPointF& point) const -> QPointF {
-    const QPointF delta = point - origin;
-    const double length = std::hypot(delta.x(), delta.y());
-    if (length <= 0.0001) {
-        return point;
-    }
-
-    const double angle = std::atan2(delta.y(), delta.x());
-    const double snappedAngle = std::round(angle / ROTATION_SNAP_STEP_RADIANS) * ROTATION_SNAP_STEP_RADIANS;
-    if (std::abs(angle - snappedAngle) > this->rotationSnapTolerance) {
-        return point;
-    }
-    return QPointF(origin.x() + std::cos(snappedAngle) * length, origin.y() + std::sin(snappedAngle) * length);
-}
-
-void QtCanvas::processTouchDrawing(const vn::ui::input::TouchEvent& event) {
-    const auto touchAction = this->activeTouchAction.value_or(this->buttonMatrix.touchAction);
-    if (!this->touchDrawingEnabled && touchAction == QtPointerButtonAction::None) {
-        return;
-    }
-
-    if (event.points.empty()) {
-        if (this->panning && touchAction == QtPointerButtonAction::Pan) {
-            endPan();
-            this->activeTouchPointId = -1;
-        }
-        if (this->erasing && touchAction == QtPointerButtonAction::Eraser) {
-            if (!releasePointerAction(touchAction)) {
-                finalizeErase();
-                clearEraserPreview();
-            }
-            this->activeTouchPointId = -1;
-        }
-        if (this->drawing && this->activeTouchPointId >= 0) {
-            finalizeActiveStroke();
-            this->activeTouchPointId = -1;
-        }
-        return;
-    }
-
-    const auto* touchPoint = [&]() -> const vn::ui::input::TouchPoint* {
-        if (this->activeTouchPointId >= 0) {
-            for (const auto& point: event.points) {
-                if (point.id == this->activeTouchPointId) {
-                    return &point;
-                }
-            }
-        }
-        return &event.points.front();
-    }();
-
-    if (!touchPoint) {
-        return;
-    }
-
-    const QPointF screenPoint(touchPoint->x, touchPoint->y);
-    const double pressure = touchPoint->pressure > 0.0 ? touchPoint->pressure : 0.5;
-
-    if (touchAction == QtPointerButtonAction::Pan) {
-        if (!this->panning) {
-            this->activeTouchPointId = static_cast<int>(touchPoint->id);
-            beginPan(screenPoint);
-            return;
-        }
-        if (this->activeTouchPointId == touchPoint->id) {
-            const QPointF delta = screenPoint - this->lastPanScreenPosition;
-            this->lastPanScreenPosition = screenPoint;
-            this->scrollX -= delta.x() / this->zoomFactor;
-            this->scrollY -= delta.y() / this->zoomFactor;
-            emitViewportUpdate();
-        }
-        return;
-    }
-
-    if (touchAction == QtPointerButtonAction::Eraser) {
-        if (!this->erasing) {
-            this->activeTouchPointId = static_cast<int>(touchPoint->id);
-            (void) beginPointerAction(touchAction, screenPoint, pressure);
-            return;
-        }
-        if (this->activeTouchPointId == touchPoint->id) {
-            eraseAtScreen(screenPoint);
-        }
-        return;
-    }
-
-    const bool drawTool = this->currentToolState.activeTool == QtToolType::Pen ||
-                          this->currentToolState.activeTool == QtToolType::Highlighter ||
-                          this->currentToolState.activeTool == QtToolType::LaserPointerPen ||
-                          this->currentToolState.activeTool == QtToolType::LaserPointerHighlighter ||
-                          this->currentToolState.activeTool == QtToolType::ShapeRecognizer;
-    if (!drawTool) {
-        return;
-    }
-
-    if (!this->drawing) {
-        this->activeTouchPointId = static_cast<int>(touchPoint->id);
-        beginStrokeAtScreen(screenPoint, pressure);
-        return;
-    }
-
-    if (this->activeTouchPointId == touchPoint->id) {
-        updateStrokeAtScreen(screenPoint, pressure);
-    }
-}
-
-auto QtCanvas::handleTouchGesture(const QTouchEvent& event) -> bool {
-    if (!this->zoomGesturesEnabled) {
-        return false;
-    }
-
-    const auto points = event.points();
-    if (points.size() < 2) {
-        const bool wasGesture = this->touchZoomGestureActive || this->touchZoomInitialDistance > 0.0;
-        this->touchZoomGestureActive = false;
-        this->touchZoomInitialDistance = 0.0;
-        this->touchZoomLastDistance = 0.0;
-        return wasGesture;
-    }
-
-    const QPointF first = points[0].position();
-    const QPointF second = points[1].position();
-    const QPointF center = (first + second) / 2.0;
-    const double distance = std::hypot(first.x() - second.x(), first.y() - second.y());
-    if (distance <= 0.0) {
-        return true;
-    }
-
-    if (this->touchZoomInitialDistance <= 0.0) {
-        this->touchZoomInitialDistance = distance;
-        this->touchZoomLastDistance = distance;
-        this->touchZoomLastCenter = center;
-        return true;
-    }
-
-    if (!this->touchZoomGestureActive &&
-        std::abs(distance - this->touchZoomInitialDistance) < this->touchZoomStartThreshold) {
-        this->touchZoomLastDistance = distance;
-        this->touchZoomLastCenter = center;
-        return true;
-    }
-
-    this->touchZoomGestureActive = true;
-    const double factor = distance / std::max(this->touchZoomLastDistance, 1.0);
-    const QPointF centerDelta = center - this->touchZoomLastCenter;
-    const bool moved = std::abs(centerDelta.x()) > 0.1 || std::abs(centerDelta.y()) > 0.1;
-    if (moved) {
-        this->scrollX -= centerDelta.x() / std::max(0.001, this->zoomFactor);
-        this->scrollY -= centerDelta.y() / std::max(0.001, this->zoomFactor);
-    }
-    if (std::abs(factor - 1.0) > 0.001) {
-        zoomAroundScreenPoint(factor, center);
-    } else if (moved) {
-        emitViewportUpdate();
-    }
-    this->touchZoomLastDistance = distance;
-    this->touchZoomLastCenter = center;
-    return true;
 }

@@ -22,7 +22,7 @@
 
 namespace {
 
-constexpr int QT_SHELL_LAYOUT_VERSION = 5;
+constexpr int QT_SHELL_LAYOUT_VERSION = 6;
 
 auto settingsPointerAction(QSettings& settings, const QString& key, QtPointerButtonAction fallback)
         -> QtPointerButtonAction {
@@ -206,6 +206,11 @@ void QtAppShell::loadPersistentUiState() {
             settings.value(QStringLiteral("tools/snapGridTolerance"), this->currentSettings.snapGridTolerance).toDouble();
     this->currentSettings.snapGridSize =
             settings.value(QStringLiteral("tools/snapGridSize"), this->currentSettings.snapGridSize).toDouble();
+    this->currentSettings.vertexSnapMarkerSize =
+            std::clamp(settings.value(QStringLiteral("tools/vertexSnapMarkerSize"),
+                                      this->currentSettings.vertexSnapMarkerSize)
+                               .toInt(),
+                       8, 48);
     this->currentSettings.strokeRecognizerMinSize =
             settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
                     .toDouble();

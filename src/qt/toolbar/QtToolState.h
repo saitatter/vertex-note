@@ -39,6 +39,7 @@ enum class QtToolType {
     DrawSpline,
     ShapeRecognizer,
     DrawArc,
+    DrawEdge,
     DrawPolyline,
     DrawConstructionLine,
     DrawConstructionCircle,
@@ -112,6 +113,7 @@ struct QtToolState {
             case QtToolType::DrawSpline: return "Spline";
             case QtToolType::ShapeRecognizer: return "Shape Recognizer";
             case QtToolType::DrawArc: return "Arc";
+            case QtToolType::DrawEdge: return "Edge";
             case QtToolType::DrawPolyline: return "Polyline";
             case QtToolType::DrawConstructionLine: return "Construction Line";
             case QtToolType::DrawConstructionCircle: return "Construction Circle";
@@ -131,6 +133,7 @@ struct QtToolState {
             case QtToolType::DrawSpline:
             case QtToolType::ShapeRecognizer:
             case QtToolType::DrawArc:
+            case QtToolType::DrawEdge:
             case QtToolType::DrawPolyline:
             case QtToolType::DrawConstructionLine:
             case QtToolType::DrawConstructionCircle:

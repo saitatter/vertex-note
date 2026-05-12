@@ -145,8 +145,15 @@ void writeLegacyCompatPlugin(const std::filesystem::path& searchRoot) {
         lua << "  app.scrollToPos(5, 7)\n";
         lua << "  app.scrollToPos(100, 110, false)\n";
         lua << "  if app.getSidebarPageNo() ~= 1 then error('bad sidebar page') end\n";
+        lua << "  app.setSidebarPageNo(2)\n";
+        lua << "  if app.getSidebarPageNo() ~= 2 then error('bad sidebar page after set') end\n";
         lua << "  app.setSidebarPageNo(3)\n";
+        lua << "  if app.getSidebarPageNo() ~= 3 then error('bad compatibility sidebar page') end\n";
         lua << "  app.showFloatingToolbox(12, 34)\n";
+        lua << "  if app.getActionState('show-sidebar') ~= true then error('bad show-sidebar state') end\n";
+        lua << "  if app.getActionState('paired-pages-mode') ~= false then error('bad paired-pages state') end\n";
+        lua << "  app.changeActionState('show-sidebar', false)\n";
+        lua << "  app.changeActionState('paired-pages-mode', true)\n";
         lua << "  app.uiAction({action='ACTION_PASTE'})\n";
         lua << "  app.uiAction({action='ACTION_COPY', enabled=false})\n";
         lua << "  app.layerAction('ACTION_GOTO_NEXT_LAYER')\n";
@@ -241,11 +248,16 @@ TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
 
     RecordingPluginUiBridge bridge;
     RecordingCommandHost commandHost;
-    commandHost.commandIds = {"edit.paste", "edit.copy", "layer.goto-next", "page.add", "page.move-up"};
+    commandHost.commandIds = {"edit.paste",         "edit.copy",       "layer.goto-next",
+                              "page.add",           "page.move-up",    "view.show-sidebar",
+                              "view.paired-pages"};
+    commandHost.checkedCommandIds = {"view.show-sidebar=true"};
     QtDocumentController controller;
     bool refreshed = false;
     bool dirty = false;
+    int sidebarPage = 1;
     std::vector<std::string> scrollCalls;
+    std::vector<std::string> floatingToolboxCalls;
 
     QtLuaPluginRuntime runtime(&bridge, &commandHost, nullptr);
     runtime.configurePluginSearchPaths({searchRoot});
@@ -264,6 +276,11 @@ TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
                 scrollCalls.push_back(std::to_string(static_cast<int>(x)) + "," +
                                       std::to_string(static_cast<int>(y)) + "," + (relative ? "rel" : "abs"));
             });
+    runtime.configureSidebarAccess([&]() { return sidebarPage; }, [&](int pageNo) { sidebarPage = pageNo; });
+    runtime.configureFloatingToolboxAccess([&](double x, double y) {
+        floatingToolboxCalls.push_back(std::to_string(static_cast<int>(x)) + "," +
+                                       std::to_string(static_cast<int>(y)));
+    });
 
     runtime.loadEnabledPlugins();
 
@@ -274,6 +291,10 @@ TEST(VertexNoteQtLuaPluginRuntime, supportsLegacyApplicationCompatibilityApis) {
     EXPECT_TRUE(refreshed);
     EXPECT_TRUE(dirty);
     EXPECT_EQ(scrollCalls, (std::vector<std::string>{"5,7,rel", "100,110,abs"}));
+    EXPECT_EQ(sidebarPage, 3);
+    EXPECT_EQ(floatingToolboxCalls, (std::vector<std::string>{"12,34"}));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "view.show-sidebar"));
+    EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "view.paired-pages"));
     EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "edit.paste"));
     EXPECT_TRUE(hasString(commandHost.enabledCommandIds, "edit.copy=false"));
     EXPECT_TRUE(hasString(commandHost.triggeredCommandIds, "layer.goto-next"));

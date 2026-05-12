@@ -132,7 +132,7 @@ void QtAppShell::registerToolCommands() {
              .menu = "Tools>Stroke Drawing", .checkable = true},
             [this]() { selectTool(QtToolType::DrawCoordinateSystem); });
     ch->registerCommand(
-            {.id = "tool.draw-line", .text = "Draw Line", .tooltip = "Draw a straight line", .shortcut = "Ctrl+7",
+            {.id = "tool.draw-line", .text = "Draw Line", .tooltip = "Draw a stroke-based straight line", .shortcut = "Ctrl+7",
              .menu = "Tools>Stroke Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
             [this]() { selectTool(QtToolType::DrawLine); });
     ch->registerCommand(
@@ -145,6 +145,10 @@ void QtAppShell::registerToolCommands() {
             [this]() { selectTool(QtToolType::ShapeRecognizer); });
     ch->addMenuSeparator("Tools");
     // Vertex Drawing submenu
+    ch->registerCommand(
+            {.id = "tool.draw-edge", .text = "Draw Edge", .tooltip = "Draw a vertex geometry edge", .shortcut = "Ctrl+Shift+7",
+             .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawEdge},
+            [this]() { selectTool(QtToolType::DrawEdge); });
     ch->registerCommand(
             {.id = "tool.draw-circle", .text = "Draw Vertex Circle", .tooltip = "Draw a geometry circle", .shortcut = "Ctrl+9",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
@@ -314,6 +318,67 @@ void QtAppShell::registerToolCommands() {
     ch->addMenuSeparator("Tools");
 
     // Geometry editing
+    ch->registerCommand(
+            {.id = "view.toggle-geometry-snap", .text = "Snap to Vertex",
+             .tooltip = "Snap geometry drawing and edits to vertices, edge points, and guides",
+             .menu = "Tools>Snapping", .checkable = true, .checked = this->window.canvas()->isGeometrySnapEnabled()},
+            [this]() { setGeometrySnapEnabled(!this->window.canvas()->isGeometrySnapEnabled()); });
+    ch->registerCommand(
+            {.id = "view.toggle-touch-drawing", .text = "Touch Drawing", .tooltip = "Toggle finger drawing on touch devices",
+             .menu = "Tools>Snapping", .checkable = true, .checked = this->window.canvas()->isTouchDrawingEnabled()},
+            [this]() {
+                const bool enabled = !this->window.canvas()->isTouchDrawingEnabled();
+                this->window.canvas()->setTouchDrawingEnabled(enabled);
+                this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", enabled);
+                this->window.statusBar()->showMessage(
+                        enabled ? QStringLiteral("Touch drawing enabled")
+                                : QStringLiteral("Touch drawing disabled"),
+                        2500);
+            });
+    ch->registerCommand(
+            {.id = "geometry.translate-vertices", .text = "Translate Selected Vertices...",
+             .tooltip = "Move selected geometry vertices by an exact delta",
+             .menu = "Tools>Vertex Transform", .enabled = !this->documentController.selectedVertexIds().empty()},
+            [this]() { translateSelectedVertices(); });
+    ch->addMenuSeparator("Tools");
+    ch->registerCommand(
+            {.id = "constraint.coincident", .text = "Coincident", .tooltip = "Merge vertices", .shortcut = "Ctrl+Alt+C",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Coincident); });
+    ch->registerCommand(
+            {.id = "constraint.horizontal", .text = "Horizontal", .tooltip = "Force horizontal", .shortcut = "Ctrl+Alt+H",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Horizontal); });
+    ch->registerCommand(
+            {.id = "constraint.vertical", .text = "Vertical", .tooltip = "Force vertical", .shortcut = "Ctrl+Alt+V",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Vertical); });
+    ch->registerCommand(
+            {.id = "constraint.fixed-length", .text = "Fixed Length", .tooltip = "Set fixed edge length", .shortcut = "Ctrl+Alt+L",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::FixedLength); });
+    ch->registerCommand(
+            {.id = "constraint.edit-length", .text = "Edit Fixed Length...", .tooltip = "Edit constraint value", .shortcut = "Ctrl+Alt+E",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { editFixedLengthConstraint(); });
+    ch->registerCommand(
+            {.id = "constraint.radius", .text = "Radius", .tooltip = "Set fixed radius", .shortcut = "Ctrl+Alt+R",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Radius); });
+    ch->registerCommand(
+            {.id = "constraint.parallel", .text = "Parallel", .tooltip = "Force parallel edges", .shortcut = "Ctrl+Alt+P",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Parallel); });
+    ch->registerCommand(
+            {.id = "constraint.perpendicular", .text = "Perpendicular", .tooltip = "Force perpendicular", .shortcut = "Ctrl+Alt+Shift+P",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::Perpendicular); });
+    ch->registerCommand(
+            {.id = "constraint.delete", .text = "Delete Constraints", .tooltip = "Remove constraints", .shortcut = "Ctrl+Alt+Delete",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { deleteConstraints(); });
+    ch->addMenuSeparator("Tools");
+
     ch->registerCommand(
             {.id = "edit.insert-vertex", .text = "Insert Vertex on Edge", .tooltip = "Insert vertex on selected edge",
              .shortcut = "Insert", .menu = "Tools"},

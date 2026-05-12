@@ -166,11 +166,14 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "DRAW_ARROW") { addToolbarCommand(toolbar, "tool.draw-arrow"); return; }
     if (token == "DRAW_DOUBLE_ARROW") { addToolbarCommand(toolbar, "tool.draw-double-arrow"); return; }
     if (token == "DRAW_COORDINATE_SYSTEM") { addToolbarCommand(toolbar, "tool.draw-coordinate-system"); return; }
+    if (token == "DRAW_LINE") { addToolbarCommand(toolbar, "tool.draw-line"); return; }
+    if (token == "DRAW_EDGE") { addToolbarCommand(toolbar, "tool.draw-edge"); return; }
     if (token == "RULER") {
         addToolbarCommand(toolbar, "tool.draw-line");
         return;
     }
     if (token == "DRAW_SPLINE") { addToolbarCommand(toolbar, "tool.draw-spline"); return; }
+    if (token == "DRAW_POLYLINE") { addToolbarCommand(toolbar, "tool.draw-polyline"); return; }
     if (token == "SELECT_REGION") { addToolbarCommand(toolbar, "tool.select-region"); return; }
     if (token == "SELECT_RECTANGLE") { addToolbarCommand(toolbar, "tool.select"); return; }
     if (token == "SELECT_MULTILAYER_REGION") { addToolbarCommand(toolbar, "tool.select-multilayer-region"); return; }

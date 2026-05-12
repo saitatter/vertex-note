@@ -24,6 +24,7 @@ class QLineEdit;
 class QListWidget;
 class QTableWidget;
 class QPushButton;
+class QTabWidget;
 
 struct QtAudioDeviceOption {
     int index = -1;
@@ -85,6 +86,7 @@ struct QtSettings {
     bool restoreLineWidthEnabled = false;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
+    int vertexSnapMarkerSize = 15;
     double strokeRecognizerMinSize = 40.0;
     bool snapRecognizedShapesEnabled = false;
     int laserPointerFadeOutMs = 1500;
@@ -178,6 +180,19 @@ public:
     [[nodiscard]] auto settings() const -> QtSettings;
 
 private:
+    void addToolsTab(QTabWidget* tabs, const QtSettings& current);
+    void addPageTab(QTabWidget* tabs, const QtSettings& current);
+    void addGeneralTab(QTabWidget* tabs, const QtSettings& current);
+    void addAppearanceTab(QTabWidget* tabs, const QtSettings& current);
+    void addToolbarTab(QTabWidget* tabs, const QtSettings& current,
+                       const std::vector<QtToolbarProfileOption>& toolbarProfiles);
+    void addPdfTab(QTabWidget* tabs, const QtSettings& current);
+    void addLatexTab(QTabWidget* tabs, const QtSettings& current);
+    void addAudioTab(QTabWidget* tabs, const QtSettings& current,
+                     const std::vector<QtAudioDeviceOption>& audioInputDevices,
+                     const std::vector<QtAudioDeviceOption>& audioOutputDevices);
+    void addDevicesTab(QTabWidget* tabs, const QtSettings& current);
+
     QDoubleSpinBox* penWidthSpin = nullptr;
     QDoubleSpinBox* highlighterWidthSpin = nullptr;
     QDoubleSpinBox* eraserWidthSpin = nullptr;
@@ -232,6 +247,7 @@ private:
     QCheckBox* touchDrawingCheck = nullptr;
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;
     QDoubleSpinBox* snapGridSizeSpin = nullptr;
+    QSpinBox* vertexSnapMarkerSizeSpin = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QCheckBox* snapRecognizedShapesCheck = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;

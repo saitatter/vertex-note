@@ -6,6 +6,8 @@
 
 #include "QtMainWindow.h"
 
+#include "config-paths.h"
+
 #include <algorithm>
 
 #include <QComboBox>
@@ -23,10 +25,22 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     resize(1440, 900);
     setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks | QMainWindow::GroupedDragging);
     menuBar()->setNativeMenuBar(false);
+    const QString menuCheckIconPath =
+            QString::fromUtf8(PROJECT_SOURCE_DIR) + QStringLiteral("/ui/iconsCommon/menu-check.svg");
     setStyleSheet(QStringLiteral(
             "#vertexNoteQtMainWindow { background: #d6d2c9; }"
             "QMenuBar { background: #f7f7f7; border-bottom: 1px solid #d8d8d8; }"
             "QMenuBar::item { padding: 2px 7px; }"
+            "QMenu { background: #ffffff; border: 1px solid #bdbdbd; }"
+            "QMenu::item { background: transparent; padding: 4px 26px 4px 26px; min-height: 17px; }"
+            "QMenu::item:selected { background: #e7f0ff; color: #111111; }"
+            "QMenu::item:checked { background: transparent; }"
+            "QMenu::item:disabled { color: #a9a9a9; }"
+            "QMenu::separator { height: 1px; background: #e2e2e2; margin: 4px 0px; }"
+            "QMenu::indicator { width: 13px; height: 13px; left: 5px; border: 1px solid #555555; background: #ffffff; }"
+            "QMenu::indicator:checked { background: #ffffff; image: url(\"%1\"); }"
+            "QMenu::indicator:unchecked { background: #ffffff; image: none; }"
+            "QMenu::indicator:disabled { border: 1px solid #b8b8b8; background: #ffffff; }"
             "QToolBar#vertexNoteQtDocumentToolBar, QToolBar#vertexNoteQtToolsToolBar, QToolBar#vertexNoteQtFooterToolBar,"
             " QToolBar#vertexNoteQtLeftPrimaryToolBar, QToolBar#vertexNoteQtLeftSecondaryToolBar,"
             " QToolBar#vertexNoteQtRightPrimaryToolBar, QToolBar[vertexFloatToolbar=\"true\"] {"
@@ -41,7 +55,25 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QToolBar QToolButton { margin: 0px; padding: 3px; min-width: 30px; min-height: 30px; border: 1px solid transparent; border-radius: 2px; }"
             "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
-            "#vertexNoteQtFamilyToolButton { padding-right: 10px; min-width: 34px; min-height: 30px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton {"
+            " background: transparent; padding-right: 10px; min-width: 34px; min-height: 30px;"
+            " border: 1px solid transparent; border-radius: 2px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton:checked,"
+            " QToolBar QToolButton#vertexNoteQtFamilyToolButton:on,"
+            " QToolBar QToolButton#vertexNoteQtFamilyToolButton:open { background: #dce8ff; border-color: #8db0ff; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button {"
+            " background: transparent; border: none; width: 12px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:hover,"
+            " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:pressed,"
+            " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:open { background: transparent; }"
+            "QToolBar QToolButton#vertexNoteQtToolbarColorButton {"
+            " margin: 0px 4px; padding: 0px; min-width: 20px; max-width: 20px; min-height: 20px; max-height: 20px;"
+            " border-radius: 10px; }"
+            "QToolBar QToolButton#vertexNoteQtToolbarColorSelectButton {"
+            " margin: 0px 5px; padding: 0px; min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px;"
+            " border-radius: 13px; }"
             "#vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner, #vertexNoteQtFillOpacitySpinner,"
             " #vertexNoteQtFooterPageSpin, #vertexNoteQtFooterLayerCombo {"
             " min-height: 28px; margin: 0 1px; padding: 0px 4px; border: 1px solid #c9c9c9; background: #ffffff; }"
@@ -67,7 +99,8 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " border: 1px solid transparent; border-radius: 2px; }"
             "#vertexNoteQtLayerPanel QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "#vertexNoteQtLayerPanel QToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
-            "QStatusBar { background: #f7f7f7; border-top: 1px solid #d8d8d8; }"));
+            "QStatusBar { background: #f7f7f7; border-top: 1px solid #d8d8d8; }")
+                          .arg(menuCheckIconPath));
 
     this->documentToolBar = addToolBar(QStringLiteral("Document"));
     this->documentToolBar->setObjectName(QStringLiteral("vertexNoteQtDocumentToolBar"));

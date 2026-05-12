@@ -265,6 +265,7 @@ auto legacyActionCommand(std::string_view action) -> std::string {
             {"ACTION_TOOL_DRAW_DOUBLE_ARROW", "tool.draw-double-arrow"},
             {"ACTION_TOOL_DRAW_COORDINATE_SYSTEM", "tool.draw-coordinate-system"},
             {"ACTION_RULER", "tool.draw-line"},
+            {"ACTION_TOOL_DRAW_EDGE", "tool.draw-edge"},
             {"ACTION_TOOL_DRAW_SPLINE", "tool.draw-spline"},
             {"ACTION_SHAPE_RECOGNIZER", "tool.draw-shape-recognizer"},
             {"ACTION_TOOL_SELECT_PDF_TEXT_LINEAR", "tool.select-pdf-text-linear"},
@@ -395,6 +396,29 @@ auto sidebarActionCommand(std::string_view action) -> std::string {
             {"NEW_AFTER", "page.add"},
             {"MOVE_UP", "page.move-up"},
             {"MOVE_DOWN", "page.move-down"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string() : std::string(it->second);
+}
+
+auto booleanActionStateCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"show-sidebar", "view.show-sidebar"},
+            {"ACTION_SHOW_SIDEBAR", "view.show-sidebar"},
+            {"show-toolbar", "view.show-toolbar"},
+            {"show-menubar", "view.show-menubar"},
+            {"paired-pages-mode", "view.paired-pages"},
+            {"ACTION_VIEW_PAIRED_PAGES", "view.paired-pages"},
+            {"presentation-mode", "view.presentation"},
+            {"ACTION_VIEW_PRESENTATION_MODE", "view.presentation"},
+            {"fullscreen", "view.fullscreen"},
+            {"ACTION_FULLSCREEN", "view.fullscreen"},
+            {"grid-snapping", "view.toggle-grid-snap"},
+            {"vertexnote-grid-snapping", "view.toggle-grid-snap"},
+            {"ACTION_GRID_SNAPPING", "view.toggle-grid-snap"},
+            {"vertexnote-geometry-snapping", "view.toggle-geometry-snap"},
+            {"rotation-snapping", "view.toggle-rotation-snap"},
+            {"ACTION_ROTATION_SNAPPING", "view.toggle-rotation-snap"},
     };
     const auto it = ACTIONS.find(action);
     return it == ACTIONS.end() ? std::string() : std::string(it->second);
@@ -769,6 +793,7 @@ auto luaToolConstant(QtToolType tool) -> int {
         case QtToolType::DrawCircle:
         case QtToolType::ShapeRecognizer:
         case QtToolType::DrawArc:
+        case QtToolType::DrawEdge:
         case QtToolType::DrawPolyline:
         case QtToolType::DrawConstructionLine:
         case QtToolType::DrawConstructionCircle:
@@ -809,6 +834,7 @@ auto luaDrawingTypeName(QtToolType tool) -> std::string {
         case QtToolType::DrawSpline: return "spline";
         case QtToolType::ShapeRecognizer: return "shapeRecognizer";
         case QtToolType::DrawArc: return "arc";
+        case QtToolType::DrawEdge: return "edge";
         case QtToolType::DrawPolyline: return "polyline";
         case QtToolType::DrawConstructionLine: return "constructionLine";
         case QtToolType::DrawConstructionCircle: return "constructionCircle";
@@ -1931,20 +1957,32 @@ auto luaScrollToPos(lua_State* lua) -> int {
 }
 
 auto luaGetSidebarPageNo(lua_State* lua) -> int {
-    lua_pushinteger(lua, 1);
+    auto* plugin = pluginFromLua(lua);
+    lua_pushinteger(lua, plugin && plugin->runtime ? plugin->runtime->currentSidebarPage() : 1);
     return 1;
 }
 
 auto luaSetSidebarPageNo(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
     const auto pageNo = luaL_checkinteger(lua, 1);
     if (pageNo <= 0) {
         return luaL_error(lua, "Sidebar page number must be positive");
     }
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->setSidebarPage(static_cast<int>(pageNo));
     return 0;
 }
 
 auto luaShowFloatingToolbox(lua_State* lua) -> int {
     lua_settop(lua, 2);
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->showFloatingToolbox(static_cast<double>(luaOptionalInteger(lua, 1, 0)),
+                                         static_cast<double>(luaOptionalInteger(lua, 2, 0)));
     return 0;
 }
 
@@ -2145,16 +2183,8 @@ auto luaGetActionState(lua_State* lua) -> int {
         lua_pushinteger(lua, static_cast<lua_Integer>(luaActiveToolFillOpacity(plugin->runtime->currentToolState())));
         return 1;
     }
-    if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {
-        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-grid-snap") ? 1 : 0);
-        return 1;
-    }
-    if (action == "vertexnote-geometry-snapping") {
-        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-geometry-snap") ? 1 : 0);
-        return 1;
-    }
-    if (action == "rotation-snapping") {
-        lua_pushboolean(lua, plugin->runtime->commandChecked("view.toggle-rotation-snap") ? 1 : 0);
+    if (const auto command = booleanActionStateCommand(action); !command.empty()) {
+        lua_pushboolean(lua, plugin->runtime->commandChecked(command) ? 1 : 0);
         return 1;
     }
     return luaL_error(lua, "This VertexNote plugin action state is not available in the Qt shell yet: %s",
@@ -2364,17 +2394,9 @@ auto luaChangeActionState(lua_State* lua) -> int {
         return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-btt" : "view.layout-ttb") ? 0
                                                                                                       : luaL_error(lua, "Qt shell cannot set page order");
     }
-    if (action == "grid-snapping" || action == "vertexnote-grid-snapping") {
-        return plugin->setBooleanCommand("view.toggle-grid-snap", luaOptionalBool(lua, 2)) ? 0
-                                                                                          : luaL_error(lua, "Qt shell cannot set grid snapping");
-    }
-    if (action == "vertexnote-geometry-snapping") {
-        return plugin->setBooleanCommand("view.toggle-geometry-snap", luaOptionalBool(lua, 2)) ? 0
-                                                                                              : luaL_error(lua, "Qt shell cannot set geometry snapping");
-    }
-    if (action == "rotation-snapping") {
-        return plugin->setBooleanCommand("view.toggle-rotation-snap", luaOptionalBool(lua, 2)) ? 0
-                                                                                              : luaL_error(lua, "Qt shell cannot set rotation snapping");
+    if (const auto command = booleanActionStateCommand(action); !command.empty()) {
+        return plugin->setBooleanCommand(command, luaOptionalBool(lua, 2)) ? 0
+                                                                          : luaL_error(lua, "Qt shell cannot set action state '%s'", action.c_str());
     }
     if (action == "position-highlighting") {
         return 0;
@@ -2584,64 +2606,6 @@ void QtLuaPluginRuntime::configurePluginSearchPaths(std::vector<std::filesystem:
     this->pluginSearchPaths = std::move(searchPaths);
 }
 
-void QtLuaPluginRuntime::configureDocumentAccess(QtDocumentController* controller,
-                                                 std::function<std::size_t()> currentPageProvider,
-                                                 std::function<void(std::size_t)> pageNavigator,
-                                                 std::function<void()> refreshUi, std::function<void()> markDirty) {
-    this->documentController = controller;
-    this->currentPageProvider = std::move(currentPageProvider);
-    this->pageNavigator = std::move(pageNavigator);
-    this->refreshUi = std::move(refreshUi);
-    this->markDirty = std::move(markDirty);
-}
-
-void QtLuaPluginRuntime::configureExportAccess(
-        std::function<bool(const std::filesystem::path&, std::string*)> pdfExporter,
-        std::function<bool(const std::filesystem::path&, std::string*)> pngExporter) {
-    this->pdfExporter = std::move(pdfExporter);
-    this->pngExporter = std::move(pngExporter);
-}
-
-void QtLuaPluginRuntime::configureToolAccess(
-        std::function<void(uint32_t, const std::string&, bool)> toolColorChanger,
-        std::function<QtToolState()> toolStateProvider) {
-    this->toolColorChanger = std::move(toolColorChanger);
-    this->toolStateProvider = std::move(toolStateProvider);
-}
-
-void QtLuaPluginRuntime::configureColorPaletteAccess(std::function<std::vector<QtPaletteColor>()> colorPaletteProvider) {
-    this->colorPaletteProvider = std::move(colorPaletteProvider);
-}
-
-void QtLuaPluginRuntime::configureViewAccess(std::function<double()> zoomProvider,
-                                             std::function<void(double)> zoomSetter,
-                                             std::function<int()> layoutSpanProvider) {
-    this->zoomProvider = std::move(zoomProvider);
-    this->zoomSetter = std::move(zoomSetter);
-    this->layoutSpanProvider = std::move(layoutSpanProvider);
-}
-
-void QtLuaPluginRuntime::configureDisplayAccess(std::function<int()> displayDpiProvider) {
-    this->displayDpiProvider = std::move(displayDpiProvider);
-}
-
-void QtLuaPluginRuntime::configureViewportAccess(
-        std::function<vn::ui::common::CanvasViewport()> viewportProvider,
-        std::function<void(double, double, bool)> viewportScroller) {
-    this->viewportProvider = std::move(viewportProvider);
-    this->viewportScroller = std::move(viewportScroller);
-}
-
-void QtLuaPluginRuntime::configureFontAccess(std::function<std::pair<std::string, double>()> fontProvider,
-                                             std::function<void(std::string, double)> fontSetter) {
-    this->fontProvider = std::move(fontProvider);
-    this->fontSetter = std::move(fontSetter);
-}
-
-void QtLuaPluginRuntime::configureFileAccess(std::function<bool(const std::filesystem::path&, int)> fileOpener) {
-    this->fileOpener = std::move(fileOpener);
-}
-
 void QtLuaPluginRuntime::loadEnabledPlugins() {
     for (const auto& plugin: this->plugins) {
         for (const auto& actionId: plugin->actionIds) {
@@ -2698,124 +2662,6 @@ void QtLuaPluginRuntime::saveEnabledStates(const std::vector<std::pair<std::stri
     }
     appSettings.sync();
     loadEnabledPlugins();
-}
-
-auto QtLuaPluginRuntime::parentWidget() const -> QWidget* { return this->parent; }
-
-auto QtLuaPluginRuntime::documentControllerPtr() const -> QtDocumentController* { return this->documentController; }
-
-auto QtLuaPluginRuntime::currentDocumentPageIndex() const -> std::size_t {
-    return this->currentPageProvider ? this->currentPageProvider() : 0U;
-}
-
-void QtLuaPluginRuntime::navigateToDocumentPage(std::size_t pageIndex) const {
-    if (this->pageNavigator) {
-        this->pageNavigator(pageIndex);
-    }
-}
-
-void QtLuaPluginRuntime::refreshDocumentUi() const {
-    if (this->refreshUi) {
-        this->refreshUi();
-    }
-}
-
-void QtLuaPluginRuntime::markDocumentDirty() const {
-    if (this->markDirty) {
-        this->markDirty();
-    }
-}
-
-auto QtLuaPluginRuntime::exportPdf(const std::filesystem::path& path, std::string* errorMessage) const -> bool {
-    if (!this->pdfExporter) {
-        if (errorMessage) {
-            *errorMessage = "Qt PDF export is not available";
-        }
-        return false;
-    }
-    return this->pdfExporter(path, errorMessage);
-}
-
-auto QtLuaPluginRuntime::exportPng(const std::filesystem::path& path, std::string* errorMessage) const -> bool {
-    if (!this->pngExporter) {
-        if (errorMessage) {
-            *errorMessage = "Qt PNG export is not available";
-        }
-        return false;
-    }
-    return this->pngExporter(path, errorMessage);
-}
-
-void QtLuaPluginRuntime::changeToolColor(uint32_t rgb, const std::string& tool, bool selection) const {
-    if (this->toolColorChanger) {
-        this->toolColorChanger(rgb, tool, selection);
-    }
-}
-
-auto QtLuaPluginRuntime::currentToolState() const -> QtToolState {
-    return this->toolStateProvider ? this->toolStateProvider() : QtToolState{};
-}
-
-auto QtLuaPluginRuntime::currentColorPalette() const -> std::vector<QtPaletteColor> {
-    return this->colorPaletteProvider ? this->colorPaletteProvider() : qtDefaultColorPalette();
-}
-
-auto QtLuaPluginRuntime::currentZoom() const -> double { return this->zoomProvider ? this->zoomProvider() : 1.0; }
-
-void QtLuaPluginRuntime::setZoom(double zoom) const {
-    if (this->zoomSetter) {
-        this->zoomSetter(zoom);
-    }
-}
-
-auto QtLuaPluginRuntime::currentLayoutSpan() const -> int {
-    return this->layoutSpanProvider ? this->layoutSpanProvider() : 1;
-}
-
-auto QtLuaPluginRuntime::currentDisplayDpi() const -> int {
-    if (this->displayDpiProvider) {
-        const int configuredDpi = this->displayDpiProvider();
-        if (configuredDpi > 0) {
-            return configuredDpi;
-        }
-    }
-
-    QScreen* screen = this->parent ? this->parent->screen() : QGuiApplication::primaryScreen();
-    return static_cast<int>(std::lround(screen ? screen->logicalDotsPerInch() : 96.0));
-}
-
-auto QtLuaPluginRuntime::currentViewport() const -> vn::ui::common::CanvasViewport {
-    return this->viewportProvider ? this->viewportProvider() : vn::ui::common::CanvasViewport{};
-}
-
-void QtLuaPluginRuntime::scrollViewportTo(double x, double y, bool relative) const {
-    if (this->viewportScroller) {
-        this->viewportScroller(x, y, relative);
-    }
-}
-
-auto QtLuaPluginRuntime::currentFont() const -> std::pair<std::string, double> {
-    return this->fontProvider ? this->fontProvider() : std::pair<std::string, double>{"Sans", 12.0};
-}
-
-void QtLuaPluginRuntime::setFont(std::string name, double size) const {
-    if (this->fontSetter) {
-        this->fontSetter(std::move(name), size);
-    }
-}
-
-auto QtLuaPluginRuntime::openFile(const std::filesystem::path& path, int pageIndex) const -> bool {
-    return this->fileOpener ? this->fileOpener(path, pageIndex) : false;
-}
-
-auto QtLuaPluginRuntime::commandChecked(std::string_view commandId) const -> bool {
-    return this->commandHost && this->commandHost->hasCommand(commandId) && this->commandHost->isCommandChecked(commandId);
-}
-
-void QtLuaPluginRuntime::setCommandEnabled(std::string_view commandId, bool enabled) const {
-    if (this->commandHost && this->commandHost->hasCommand(commandId)) {
-        this->commandHost->setCommandEnabled(commandId, enabled);
-    }
 }
 
 auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {

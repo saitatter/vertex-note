@@ -338,35 +338,34 @@ auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> 
     return true;
 }
 
-auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom,
-                                                               const QtSnapOptions& options) -> bool {
-    if (!this->geometryDragState || !this->document) {
-        return false;
-    }
-
-    bool changed = false;
-    this->document->lock();
-    auto* geometry = findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId);
-    auto page = this->document->getPage(this->geometryDragState->pageIndex);
-    if (!geometry || !page) {
-        this->document->unlock();
-        return false;
-    }
-
+auto QtDocumentController::snapPagePoint(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                         const QtSnapOptions& options,
+                                         std::optional<vn::geom::ObjectId> ignoredObjectId) const
+        -> QtSnapPointResult {
     vn::geom::Vec2 target{pageX, pageY};
-    this->geometryDragState->snapKind.reset();
-    this->geometryDragState->snapPoint = target;
+    QtSnapPointResult result{.pagePoint = target, .snapKind = std::nullopt, .snapped = false};
+    if (!this->document) {
+        return result;
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        this->document->unlock();
+        return result;
+    }
 
     vn::snap::SnapEngine engine;
     bool hasSnapProviders = false;
     if (options.geometryEnabled) {
         auto objects = vn::snap::collectGeometryObjects(page);
-        objects.erase(std::remove_if(objects.begin(), objects.end(),
-                                     [&](const vn::geom::GeometryObject* object) {
-                                         return !object || object->objectId() == this->geometryDragState->objectId;
-                                     }),
-                      objects.end());
-
+        if (ignoredObjectId) {
+            objects.erase(std::remove_if(objects.begin(), objects.end(),
+                                         [&](const vn::geom::GeometryObject* object) {
+                                             return !object || object->objectId() == *ignoredObjectId;
+                                         }),
+                          objects.end());
+        }
         if (!objects.empty()) {
             engine.addProvider(std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects)));
             hasSnapProviders = true;
@@ -379,15 +378,42 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
             hasSnapProviders = true;
         }
     }
+    this->document->unlock();
 
-    if (hasSnapProviders) {
-        const auto snapResult = engine.snap(vn::snap::SnapQuery{target, zoom, 8.0});
-        if (snapResult.snapped()) {
-            target = snapResult.pagePoint;
-            this->geometryDragState->snapKind =
-                    snapResult.candidate ? std::optional<vn::snap::SnapKind>(snapResult.candidate->kind) : std::nullopt;
-            this->geometryDragState->snapPoint = snapResult.pagePoint;
-        }
+    if (!hasSnapProviders) {
+        return result;
+    }
+
+    const auto snapResult = engine.snap(vn::snap::SnapQuery{target, zoom, options.screenTolerance});
+    if (!snapResult.snapped()) {
+        return result;
+    }
+
+    result.pagePoint = snapResult.pagePoint;
+    result.snapKind = snapResult.candidate ? std::optional<vn::snap::SnapKind>(snapResult.candidate->kind) : std::nullopt;
+    result.snapped = true;
+    return result;
+}
+
+auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, double zoom,
+                                                               const QtSnapOptions& options) -> bool {
+    if (!this->geometryDragState || !this->document) {
+        return false;
+    }
+
+    const auto snapped = snapPagePoint(this->geometryDragState->pageIndex, pageX, pageY, zoom, options,
+                                      this->geometryDragState->objectId);
+    vn::geom::Vec2 target = snapped.pagePoint;
+    this->geometryDragState->snapKind = snapped.snapKind;
+    this->geometryDragState->snapPoint = snapped.pagePoint;
+
+    bool changed = false;
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId);
+    auto page = this->document->getPage(this->geometryDragState->pageIndex);
+    if (!geometry || !page) {
+        this->document->unlock();
+        return false;
     }
 
     if (this->geometryDragState->vertexIds.size() <= 1U) {
@@ -457,6 +483,56 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
 
 auto QtDocumentController::activeGeometryDrag() const -> const std::optional<QtGeometryDragState>& {
     return this->geometryDragState;
+}
+
+auto QtDocumentController::translateSelectedVertices(double dx, double dy) -> bool {
+    if (!this->selectedGeometryHit || this->selectedGeometryVertexIds.empty() || !this->document ||
+        (dx == 0.0 && dy == 0.0)) {
+        return false;
+    }
+
+    bool changed = false;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    for (auto vertexId: this->selectedGeometryVertexIds) {
+        if (const auto* vertex = geometry->geometry().vertex(vertexId)) {
+            changed = geometry->setVertexPosition(vertexId, {vertex->position.x + dx, vertex->position.y + dy}) || changed;
+        }
+    }
+    if (changed && !geometry->geometry().constraints().empty()) {
+        const vn::constraints::GeometryConstraintSolver solver;
+        changed = solver.apply(geometry->geometry()).changed || changed;
+    }
+    if (changed) {
+        afterGeometry = geometry->geometry();
+        if (this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+            if (const auto* vertex = geometry->geometry().vertex(this->selectedGeometryHit->hit.vertexId)) {
+                this->selectedGeometryHit->hit.point = Point(vertex->position.x, vertex->position.y);
+            }
+        }
+    }
+    this->document->unlock();
+
+    if (!changed || !beforeGeometry || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
+                         .objectId = this->selectedGeometryHit->hit.objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = this->selectedGeometryVertexIds.size() > 1U ? "Translate geometry vertices"
+                                                                             : "Translate geometry vertex"});
+    rebuildPageSnapshots();
+    return true;
 }
 
 auto QtDocumentController::deleteSelectedGeometry() -> bool {
@@ -742,9 +818,9 @@ auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format, double gri
         case PageTypeFormat::Dotted:
         case PageTypeFormat::IsoDotted:
         case PageTypeFormat::IsoGraph:
-            return std::make_shared<vn::snap::GridSnapProvider>(gridSize, gridSize, gridTolerance);
+            return std::make_shared<vn::snap::GridSnapProvider>(gridSize, gridSize, std::max(1.0, gridTolerance));
         default:
-            return nullptr;
+            return std::make_shared<vn::snap::GridSnapProvider>(gridSize, gridSize, std::max(1.0, gridTolerance));
     }
 }
 

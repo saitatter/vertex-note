@@ -77,6 +77,7 @@ public:
                                     int averagingMethod, int preprocessor, double sigma, double deadzoneRadius,
                                     double drag, double mass, bool cuspDetection);
     void setGridSnapOptions(double gridSize, double tolerance);
+    void setVertexSnapMarkerSize(int sizePixels);
     void setEraserCursorHidden(bool hidden);
     void setInputSystemOptions(int ignoredStylusEvents, bool tpcButtonEnabled, bool drawOutsideWindowEnabled);
     void setPointerButtonActions(const QtPointerButtonMatrix& buttonMatrix);
@@ -208,6 +209,8 @@ private:
     void refreshToolCursor();
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
+    [[nodiscard]] auto snapInputPagePoint(std::size_t pageIndex, const QPointF& pagePoint,
+                                          std::optional<vn::snap::SnapKind>* snapKind = nullptr) const -> QPointF;
     [[nodiscard]] auto adjustedPressure(double pressure) const -> double;
     [[nodiscard]] auto stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double>;
     void resetStrokeStabilizer(const QPointF& pagePoint, double pressure);
@@ -266,6 +269,7 @@ private:
     // Shape drawing helpers
     void beginShapeAtScreen(const QPointF& screenPoint);
     void updateShapeAtScreen(const QPointF& screenPoint);
+    [[nodiscard]] auto snapShapePoint(std::size_t pageIndex, const QPointF& pagePoint) -> QPointF;
     [[nodiscard]] auto applyShapeDirectionModifiers(const QPointF& pagePoint) -> QPointF;
     void addShapeClickAtScreen(const QPointF& screenPoint);
     void finalizeShape();
@@ -322,6 +326,7 @@ private:
     bool strokeStabilizerCuspDetection = true;
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
+    int vertexSnapMarkerSize = 15;
     double zoomStepFactor = 1.10;
     double zoomStepScrollFactor = 1.02;
     bool zoomGesturesEnabled = true;
@@ -373,6 +378,7 @@ private:
     bool shapeDrawing = false;
     bool pdfTextSelecting = false;
     bool movingInstrumentOverlay = false;
+    bool fitWidthModeEnabled = true;
     bool deferredFitWidthPending = false;
     QPointF lastPanScreenPosition;
     struct StabilizerSample {
@@ -400,7 +406,9 @@ private:
     std::optional<VerticalSpacePreview> verticalSpacePreview;
     QPointF shapeStartScene;
     QPointF shapeCurrentScene;
+    QPointF shapeSnapPoint;
     std::vector<QPointF> shapeClickPoints;  // For multi-click tools (polyline, arc)
+    std::optional<vn::snap::SnapKind> shapeSnapKind;
     std::size_t shapePageIndex = 0U;
     InstrumentOverlayState instrumentOverlay;
     std::optional<InstrumentStrokeState> activeInstrumentStroke;

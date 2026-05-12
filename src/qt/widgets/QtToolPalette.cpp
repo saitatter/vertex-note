@@ -32,7 +32,7 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     this->quickColors = qtPaletteColorsOnly(qtDefaultColorPalette());
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(2, 0, 2, 0);
-    layout->setSpacing(2);
+    layout->setSpacing(4);
 
     // Colour swatch button
     this->colorSwatch = new QToolButton(this);
@@ -95,8 +95,12 @@ QtToolPalette::QtToolPalette(QWidget* parent): QWidget(parent) {
     layout->addWidget(this->segmentCheck);
 
     setStyleSheet(QStringLiteral(
-            "#vertexNoteQtPrimaryColorSwatch { border: 1px solid #8d8d8d; border-radius: 3px; }"
-            "#vertexNoteQtQuickColor { border-radius: 7px; border: 1px solid #a0a0a0; padding: 0px; }"
+            "#vertexNoteQtPrimaryColorSwatch {"
+            " min-width: 22px; max-width: 22px; min-height: 22px; max-height: 22px;"
+            " border: 1px solid #8d8d8d; border-radius: 11px; padding: 0px; }"
+            "#vertexNoteQtQuickColor {"
+            " min-width: 16px; max-width: 16px; min-height: 16px; max-height: 16px;"
+            " border-radius: 8px; border: 1px solid #a0a0a0; padding: 0px; }"
             "#vertexNoteQtToolMetricLabel { color: #4c4c4c; }"
             "#vertexNoteQtWidthSpinner { min-height: 24px; }"
             "#vertexNoteQtToolToggle { spacing: 4px; }"));
@@ -198,7 +202,11 @@ void QtToolPalette::pickColor() {
 }
 
 void QtToolPalette::updateSwatchColor() {
-    this->colorSwatch->setStyleSheet(QStringLiteral("#vertexNoteQtPrimaryColorSwatch { background-color: %1; }")
+    this->colorSwatch->setStyleSheet(QStringLiteral(
+                                             "#vertexNoteQtPrimaryColorSwatch {"
+                                             " background-color: %1; border-radius: 11px; border: 1px solid #8d8d8d;"
+                                             " min-width: 22px; max-width: 22px; min-height: 22px; max-height: 22px;"
+                                             " padding: 0px; }")
                                              .arg(colorToHex(this->currentColor)));
 }
 
@@ -213,7 +221,10 @@ void QtToolPalette::updatePresetButtons() {
     for (std::size_t index = 0; index < this->presetButtons.size() && index < this->quickColors.size(); ++index) {
         const bool selected = this->quickColors[index] == this->currentColor;
         this->presetButtons[index]->setStyleSheet(
-                QStringLiteral("#vertexNoteQtQuickColor { background-color: %1; border: %2; }")
+                QStringLiteral("#vertexNoteQtQuickColor {"
+                               " background-color: %1; border: %2; border-radius: 8px;"
+                               " min-width: 16px; max-width: 16px; min-height: 16px; max-height: 16px;"
+                               " padding: 0px; }")
                         .arg(colorToHex(this->quickColors[index]))
                         .arg(selected ? QStringLiteral("2px solid #2f66ff") : QStringLiteral("1px solid #a0a0a0")));
     }

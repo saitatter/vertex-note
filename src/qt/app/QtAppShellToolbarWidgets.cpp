@@ -16,6 +16,7 @@
 #include <QDoubleSpinBox>
 #include <QFont>
 #include <QFontComboBox>
+#include <QIcon>
 #include <QMenu>
 #include <QObject>
 #include <QSize>
@@ -35,6 +36,15 @@
 namespace {
 
 auto qColorFromColor(Color color) -> QColor { return QColor(color.red, color.green, color.blue, color.alpha); }
+
+void configureFamilyToolButton(QToolButton* button) {
+    button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
+    button->setPopupMode(QToolButton::MenuButtonPopup);
+    button->setArrowType(Qt::NoArrow);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setText(QString());
+    button->setAutoRaise(true);
+}
 
 }  // namespace
 
@@ -145,8 +155,7 @@ void QtAppShell::addStretchToolbarSpacer(QToolBar* toolbar) {
 auto QtAppShell::ensureSelectionToolButton() -> QToolButton* {
     if (!this->selectionToolButton) {
         this->selectionToolButton = new QToolButton(&this->window);
-        this->selectionToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        configureFamilyToolButton(this->selectionToolButton);
         this->selectionToolButton->setIcon(bundledQtIcon("xopp-combo-selection.svg"));
         auto* selectionMenu = new QMenu(this->selectionToolButton);
         for (const auto& spec: selectionToolSpecs()) {
@@ -161,8 +170,7 @@ auto QtAppShell::ensureSelectionToolButton() -> QToolButton* {
 
 auto QtAppShell::createStrokeDrawingToolButton() -> QToolButton* {
     auto* button = new QToolButton(&this->window);
-    button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-    button->setPopupMode(QToolButton::MenuButtonPopup);
+    configureFamilyToolButton(button);
     button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
     button->setToolTip(QStringLiteral("Stroke drawing tools"));
     auto* drawingMenu = new QMenu(button);
@@ -182,8 +190,7 @@ auto QtAppShell::createStrokeDrawingToolButton() -> QToolButton* {
 
 auto QtAppShell::createVertexDrawingToolButton() -> QToolButton* {
     auto* button = new QToolButton(&this->window);
-    button->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-    button->setPopupMode(QToolButton::MenuButtonPopup);
+    configureFamilyToolButton(button);
     button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
     button->setToolTip(QStringLiteral("Vertex drawing tools"));
     auto* drawingMenu = new QMenu(button);
@@ -192,7 +199,7 @@ auto QtAppShell::createVertexDrawingToolButton() -> QToolButton* {
             drawingMenu->addAction(action);
         }
     }
-    if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-circle")) {
+    if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-edge")) {
         button->setDefaultAction(action);
     }
     button->setMenu(drawingMenu);
@@ -204,8 +211,7 @@ auto QtAppShell::createVertexDrawingToolButton() -> QToolButton* {
 auto QtAppShell::ensureLaserToolButton() -> QToolButton* {
     if (!this->laserToolButton) {
         this->laserToolButton = new QToolButton(&this->window);
-        this->laserToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        configureFamilyToolButton(this->laserToolButton);
         this->laserToolButton->setIcon(bundledQtIcon("xopp-laser-pointer.svg"));
         auto* laserMenu = new QMenu(this->laserToolButton);
         for (const auto& spec: laserToolSpecs()) {
@@ -221,8 +227,7 @@ auto QtAppShell::ensureLaserToolButton() -> QToolButton* {
 auto QtAppShell::ensurePdfToolButton() -> QToolButton* {
     if (!this->pdfToolButton) {
         this->pdfToolButton = new QToolButton(&this->window);
-        this->pdfToolButton->setObjectName(QStringLiteral("vertexNoteQtFamilyToolButton"));
-        this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        configureFamilyToolButton(this->pdfToolButton);
         this->pdfToolButton->setIcon(bundledQtIcon("xopp-select-pdf-text-ht.svg"));
         auto* pdfMenu = new QMenu(this->pdfToolButton);
         for (const auto& spec: pdfToolSpecs()) {
@@ -274,8 +279,9 @@ auto QtAppShell::ensureFillOpacityWidget() -> QSpinBox* {
 
 auto QtAppShell::makeToolbarColorButton(int colorIndex) -> QToolButton* {
     auto* button = new QToolButton(&this->window);
+    button->setObjectName(QStringLiteral("vertexNoteQtToolbarColorButton"));
     button->setAutoRaise(true);
-    button->setFixedSize(20, 20);
+    button->setFixedSize(16, 16);
     button->setProperty("toolbarColorIndex", colorIndex);
     button->setToolTip(QStringLiteral("Quick colour"));
     QObject::connect(button, &QToolButton::clicked, &this->window,
@@ -287,8 +293,9 @@ auto QtAppShell::makeToolbarColorButton(int colorIndex) -> QToolButton* {
 auto QtAppShell::ensureToolbarColorSelectButton() -> QToolButton* {
     if (!this->toolbarColorSelectButton) {
         this->toolbarColorSelectButton = new QToolButton(&this->window);
+        this->toolbarColorSelectButton->setObjectName(QStringLiteral("vertexNoteQtToolbarColorSelectButton"));
         this->toolbarColorSelectButton->setAutoRaise(true);
-        this->toolbarColorSelectButton->setFixedSize(21, 21);
+        this->toolbarColorSelectButton->setFixedSize(20, 20);
         this->toolbarColorSelectButton->setToolTip(QStringLiteral("Choose colour"));
         QObject::connect(this->toolbarColorSelectButton, &QToolButton::clicked, &this->window, [this]() {
             const QColor initial = qColorFromColor(currentToolbarStrokeColor());

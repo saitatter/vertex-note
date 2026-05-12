@@ -146,6 +146,34 @@ void QtAppShell::rebuildToolbar() {
         pruneRedundantFamilyTokens(*group);
     }
 
+    const auto ensureSnapButtonsNearDrawing = [&]() {
+        auto drawAnchor = std::find_if(top2Tokens.rbegin(), top2Tokens.rend(), [](const std::string& token) {
+            return token == "DRAW_VERTEX" || token == "DRAW_STROKE" || token == "DRAW";
+        });
+        auto insertIndex = drawAnchor == top2Tokens.rend()
+                                   ? top2Tokens.size()
+                                   : static_cast<std::size_t>(std::distance(top2Tokens.begin(), drawAnchor.base()));
+
+        const auto insertTop2Token = [&](const std::string& token, std::size_t& index) {
+            top2Tokens.insert(top2Tokens.begin() + static_cast<std::ptrdiff_t>(index), token);
+            ++index;
+        };
+
+        bool inserted = false;
+        if (!tokenGroupContainsAny(toolbarTokenGroups, {"GRID_SNAPPING", "VERTEXNOTE_GRID_SNAPPING"})) {
+            insertTop2Token("GRID_SNAPPING", insertIndex);
+            inserted = true;
+        }
+        if (!tokenGroupContains(toolbarTokenGroups, "VERTEXNOTE_GEOMETRY_SNAPPING")) {
+            insertTop2Token("VERTEXNOTE_GEOMETRY_SNAPPING", insertIndex);
+            inserted = true;
+        }
+        if (inserted && insertIndex < top2Tokens.size() && top2Tokens[insertIndex] != "SEPARATOR") {
+            insertTop2Token("SEPARATOR", insertIndex);
+        }
+    };
+    ensureSnapButtonsNearDrawing();
+
     for (const auto& token: top1Tokens) {
         addToolbarToken(documentToolBar, token);
     }

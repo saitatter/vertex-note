@@ -17,6 +17,7 @@ QtCommandHost::QtCommandHost(QMainWindow* window): window(window) {}
 
 void QtCommandHost::registerCommand(vn::ui::common::CommandDescriptor descriptor, CommandHandler handler) {
     auto* action = new QAction(QString::fromStdString(descriptor.text), this->window);
+    action->setIconVisibleInMenu(false);
     action->setEnabled(descriptor.enabled);
     action->setCheckable(descriptor.checkable);
     action->setChecked(descriptor.checked);

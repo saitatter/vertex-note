@@ -13,7 +13,15 @@ void QtAppShell::updateEditCommandStates() {
     this->window.commandHost()->setCommandEnabled("edit.redo-geometry", this->window.canvas()->canRedo());
     const auto currentPage = this->window.canvas()->currentPageIndex();
     const bool hasDocument = this->documentController.hasDocument();
+    const bool hasSelection = this->documentController.selectionBounds().has_value();
     const auto pageCount = this->documentController.pageCount();
+    this->window.commandHost()->setCommandEnabled("edit.cut", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.copy", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.delete", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.bring-to-front", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.bring-forward", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.send-backward", hasSelection);
+    this->window.commandHost()->setCommandEnabled("edit.send-to-back", hasSelection);
     this->window.commandHost()->setCommandEnabled("page.add-before", hasDocument);
     this->window.commandHost()->setCommandEnabled("page.add", hasDocument);
     this->window.commandHost()->setCommandEnabled("page.add-end", hasDocument);
@@ -35,14 +43,14 @@ void QtAppShell::setGeometrySnapEnabled(bool enabled) {
     this->window.canvas()->setGeometrySnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", enabled);
     this->window.statusBar()->showMessage(
-            enabled ? QStringLiteral("Geometry snap enabled") : QStringLiteral("Geometry snap disabled"), 2500);
+            enabled ? QStringLiteral("Snap to vertex enabled") : QStringLiteral("Snap to vertex disabled"), 2500);
 }
 
 void QtAppShell::setGridSnapEnabled(bool enabled) {
     this->window.canvas()->setGridSnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", enabled);
     this->window.statusBar()->showMessage(
-            enabled ? QStringLiteral("Grid snap enabled") : QStringLiteral("Grid snap disabled"), 2500);
+            enabled ? QStringLiteral("Snap to grid enabled") : QStringLiteral("Snap to grid disabled"), 2500);
 }
 
 void QtAppShell::selectTool(QtToolType tool) {
@@ -84,9 +92,12 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.draw-spline", active == QtToolType::DrawSpline);
     this->window.commandHost()->setCommandChecked("tool.draw-shape-recognizer", active == QtToolType::ShapeRecognizer);
     this->window.commandHost()->setCommandChecked("tool.draw-arc", active == QtToolType::DrawArc);
+    this->window.commandHost()->setCommandChecked("tool.draw-edge", active == QtToolType::DrawEdge);
     this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-circle", active == QtToolType::DrawConstructionCircle);
+    this->window.commandHost()->setCommandEnabled("geometry.translate-vertices",
+                                                  !this->documentController.selectedVertexIds().empty());
     syncToolbarWidgets();
 }
 

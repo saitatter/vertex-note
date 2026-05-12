@@ -16,6 +16,12 @@
 #include <QDoubleSpinBox>
 #include <QFont>
 #include <QFontComboBox>
+#include <QIcon>
+#include <QPainter>
+#include <QPen>
+#include <QPixmap>
+#include <QRectF>
+#include <QSize>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QString>
@@ -27,6 +33,31 @@ auto toolbarSyncQColorFromColor(Color color) -> QColor {
     return QColor(color.red, color.green, color.blue, color.alpha);
 }
 
+void refreshFamilyToolButtonChrome(QToolButton* button) {
+    if (!button) {
+        return;
+    }
+    button->setText(QString());
+    button->setArrowType(Qt::NoArrow);
+    button->setPopupMode(QToolButton::MenuButtonPopup);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+}
+
+auto makeSwatchIcon(Color color, int diameter) -> QIcon {
+    const int pixmapSize = diameter + 4;
+    QPixmap pixmap(pixmapSize, pixmapSize);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    const QColor qcolor = toolbarSyncQColorFromColor(color);
+    const QColor outline = qcolor.lightness() > 220 ? QColor(110, 110, 110) : QColor(35, 35, 35, 180);
+    painter.setPen(QPen(outline, 1.0));
+    painter.setBrush(qcolor);
+    painter.drawEllipse(QRectF(2.0, 2.0, static_cast<double>(diameter), static_cast<double>(diameter)));
+    return QIcon(pixmap);
+}
+
 }  // namespace
 
 void QtAppShell::syncToolbarWidgets() {
@@ -36,7 +67,7 @@ void QtAppShell::syncToolbarWidgets() {
         if (auto* action = findActionForTool(this->window.commandHost(), selectionToolSpecs(), toolState.activeTool)) {
             this->selectionToolButton->setDefaultAction(action);
             this->selectionToolButton->setMenu(this->selectionToolButton->menu());
-            this->selectionToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            refreshFamilyToolButtonChrome(this->selectionToolButton);
         }
     }
 
@@ -44,7 +75,7 @@ void QtAppShell::syncToolbarWidgets() {
         for (auto* button: this->strokeDrawingToolButtons) {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
-            button->setPopupMode(QToolButton::MenuButtonPopup);
+            refreshFamilyToolButtonChrome(button);
             button->setToolTip(QStringLiteral("Stroke drawing tools"));
         }
     }
@@ -53,7 +84,7 @@ void QtAppShell::syncToolbarWidgets() {
         for (auto* button: this->vertexDrawingToolButtons) {
             button->setDefaultAction(action);
             button->setMenu(button->menu());
-            button->setPopupMode(QToolButton::MenuButtonPopup);
+            refreshFamilyToolButtonChrome(button);
             button->setToolTip(QStringLiteral("Vertex drawing tools"));
         }
     }
@@ -62,7 +93,7 @@ void QtAppShell::syncToolbarWidgets() {
         if (auto* action = findActionForTool(this->window.commandHost(), laserToolSpecs(), toolState.activeTool)) {
             this->laserToolButton->setDefaultAction(action);
             this->laserToolButton->setMenu(this->laserToolButton->menu());
-            this->laserToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            refreshFamilyToolButtonChrome(this->laserToolButton);
         }
     }
 
@@ -70,7 +101,7 @@ void QtAppShell::syncToolbarWidgets() {
         if (auto* action = findActionForTool(this->window.commandHost(), pdfToolSpecs(), toolState.activeTool)) {
             this->pdfToolButton->setDefaultAction(action);
             this->pdfToolButton->setMenu(this->pdfToolButton->menu());
-            this->pdfToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+            refreshFamilyToolButtonChrome(this->pdfToolButton);
         }
     }
 
@@ -120,16 +151,29 @@ void QtAppShell::syncToolbarWidgets() {
             color = this->activeColorPalette[static_cast<std::size_t>(colorIndex) % this->activeColorPalette.size()].color;
         }
         const bool selected = color == selectedColor;
+        button->setFixedSize(selected ? QSize(24, 24) : QSize(20, 20));
+        button->setIcon(makeSwatchIcon(color, selected ? 18 : 14));
+        button->setIconSize(QSize(selected ? 22 : 18, selected ? 22 : 18));
         button->setStyleSheet(QStringLiteral(
-                                      "QToolButton { background-color: %1; border-radius: 7px; border: %2; padding: 0px; }")
-                                      .arg(toolbarSyncQColorFromColor(color).name(QColor::HexArgb))
-                                      .arg(selected ? QStringLiteral("2px solid #2f66ff")
-                                                    : QStringLiteral("1px solid #a0a0a0")));
+                                      "QToolButton#vertexNoteQtToolbarColorButton {"
+                                      " background-color: %1; border-radius: %2px; border: %3; padding: 0px;"
+                                      " margin: 0px 4px;"
+                                      " min-width: %4px; max-width: %4px; min-height: %4px; max-height: %4px; }")
+                                      .arg(selected ? QStringLiteral("#dce8ff") : QStringLiteral("transparent"))
+                                      .arg(selected ? 12 : 10)
+                                      .arg(selected ? QStringLiteral("1px solid #8db0ff")
+                                                    : QStringLiteral("1px solid transparent"))
+                                      .arg(selected ? 24 : 20));
     }
 
     if (this->toolbarColorSelectButton) {
+        this->toolbarColorSelectButton->setFixedSize(26, 26);
+        this->toolbarColorSelectButton->setIcon(makeSwatchIcon(selectedColor, 18));
+        this->toolbarColorSelectButton->setIconSize(QSize(22, 22));
         this->toolbarColorSelectButton->setStyleSheet(
-                QStringLiteral("QToolButton { background-color: %1; border: 1px solid #8d8d8d; border-radius: 3px; }")
-                        .arg(toolbarSyncQColorFromColor(selectedColor).name(QColor::HexArgb)));
+                QStringLiteral("QToolButton#vertexNoteQtToolbarColorSelectButton {"
+                               " background-color: #dce8ff; border: 1px solid #8db0ff; border-radius: 13px;"
+                               " margin: 0px 5px;"
+                               " min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px; padding: 0px; }"));
     }
 }

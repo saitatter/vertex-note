@@ -39,6 +39,7 @@
 #include <QMenu>
 #include <QMetaObject>
 #include <QPlainTextEdit>
+#include <QPoint>
 #include <QPalette>
 #include <QPointer>
 #include <QSettings>
@@ -204,6 +205,34 @@ QtAppShell::QtAppShell():
                                                         relative ? viewport.scrollY + y : y);
                 updateStatusBarLabels();
             });
+    this->luaPlugins.configureSidebarAccess(
+            [this]() { return this->pluginSidebarPageNo; },
+            [this](int pageNo) {
+                this->pluginSidebarPageNo = std::max(1, pageNo);
+                applySidebarVisibility(true);
+                if (pageNo == 1) {
+                    this->window.pageSidebar()->raise();
+                } else if (pageNo == 2) {
+                    this->window.layerPanel()->raise();
+                }
+            });
+    this->luaPlugins.configureFloatingToolboxAccess([this](double x, double y) {
+        if (auto* action = this->window.commandHost()->actionForCommand("view.show-toolbar")) {
+            action->setChecked(true);
+        }
+        applyAuxiliaryToolBarVisibility(true);
+        syncFloatingToolBarsVisibility(true);
+        this->window.cascadeFloatingToolBars();
+        for (auto* floatingToolBar: this->window.floatingToolBars()) {
+            if (floatingToolBar && floatingToolBar->isVisible() && !floatingToolBar->actions().isEmpty()) {
+                if (std::isfinite(x) && std::isfinite(y) && (x != 0.0 || y != 0.0)) {
+                    floatingToolBar->move(this->window.mapToGlobal(QPoint(static_cast<int>(x), static_cast<int>(y))));
+                }
+                floatingToolBar->raise();
+                break;
+            }
+        }
+    });
     this->luaPlugins.configureFontAccess(
             [this]() {
                 const auto& toolState = this->window.canvas()->toolState();
@@ -258,8 +287,8 @@ QtAppShell::QtAppShell():
     if (!this->persistedWindowGeometry.isEmpty()) {
         this->window.restoreGeometry(this->persistedWindowGeometry);
     }
-    if (!this->persistedWindowState.isEmpty()) {
-        this->window.restoreState(this->persistedWindowState);
+    if (!this->persistedWindowState.isEmpty() && !this->window.restoreState(this->persistedWindowState)) {
+        this->persistedWindowState.clear();
     }
     for (std::size_t index = 0; index < this->window.floatingToolBars().size(); ++index) {
         auto* floatingToolBar = this->window.floatingToolBars()[index];
@@ -328,6 +357,7 @@ auto QtAppShell::nativeMainWindowHandle() const -> void* {
 
 void QtAppShell::showMainWindow() {
     this->window.show();
+    QTimer::singleShot(0, &this->window, [this]() { this->window.canvas()->fitWidth(); });
     this->window.cascadeFloatingToolBars();
     if (this->currentSettings.presentationModeDefault && !this->presentationMode) {
         togglePresentationMode();
