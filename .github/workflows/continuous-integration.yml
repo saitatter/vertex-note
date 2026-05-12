@@ -122,15 +122,6 @@ jobs:
           # Omit the tests that actually try to open files with utf8 paths, as the system's filename encoding does not match
           G_FILENAME_ENCODING=GB18030 LC_ALL=zh_CN.gb18030 CI=true ./test/test-units --gtest_filter=-ControlLoadHandler.testLoadStoreCJK:ControlLoadHandler.testRelativePath
         working-directory: ${{github.workspace}}/build
-      - name: 'Run gtk-integration tests'
-        # Todo: Port this to MacOS and Windows
-        run: |
-          sudo apt install xvfb
-          cmake .. -DCMAKE_INSTALL_PREFIX=install
-          cmake --build . --target install
-          cmake --build . --target test-gtk-integration
-          CI=true xvfb-run -a ./test/test-gtk-integration
-        working-directory: ${{github.workspace}}/build
   Windows:
     needs: ['prepare']
     strategy:

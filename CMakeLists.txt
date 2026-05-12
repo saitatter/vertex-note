@@ -4,10 +4,7 @@ cmake_policy(VERSION ${CMAKE_VERSION})
 ## The CMAKE_OSX_DEPLOYMENT_TARGET must be set before project(), so don't move the following lines further down.
 if(APPLE)
     if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        # Use the same target as the dependencies shipped by the CI
-        file(STRINGS mac-setup/jhbuild-version.lock _DEPLOY_TARGET REGEX "^deployment_target=.*")
-        string(REGEX REPLACE "^[^=]*=" "" _DEPLOY_TARGET_VALUE ${_DEPLOY_TARGET})
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "${_DEPLOY_TARGET_VALUE}" CACHE STRING "Minimum OS X deployment version" FORCE)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version" FORCE)
     endif()
     message(STATUS "MacOS X Deployment target: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
 endif()
@@ -58,7 +55,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # enable clang tidy to use correct include
 set_directory_properties(PROPERTIES EP_BASE "${PROJECT_BINARY_DIR}/external")
 
 add_definitions(-D_USE_MATH_DEFINES)
-add_definitions(-DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED)
 
 include(CheckCXXCompilerFlag)
 if (CMAKE_GENERATOR STREQUAL "Ninja")
@@ -155,26 +151,21 @@ endif()
 # other externals
 ##############################
 
-set(pkg-module-spec "")
-list(APPEND pkg-module-spec "glib-2.0 >= 2.32.0")
-list(APPEND pkg-module-spec "gtk+-3.0 >= 3.18.9")
-list(APPEND pkg-module-spec "poppler-glib >= 0.41.0")
-if (APPLE)
-  list(APPEND pkg-module-spec "poppler-cpp >= 0.41.0")
-endif (APPLE)
-list(APPEND pkg-module-spec "gthread-2.0 >= 2.4.0")
-list(APPEND pkg-module-spec "libxml-2.0 >= 2.0.0")
-list(APPEND pkg-module-spec "libzip >= 1.0.1")
-list(APPEND pkg-module-spec "librsvg-2.0 >= 2.46")
+set(common-pkg-module-spec "")
+list(APPEND common-pkg-module-spec "libxml-2.0 >= 2.0.0")
+list(APPEND common-pkg-module-spec "libzip >= 1.0.1")
+list(APPEND common-pkg-module-spec "poppler >= 0.41.0")
+list(APPEND common-pkg-module-spec "poppler-cpp >= 0.41.0")
 
 # Profiling
 option (ENABLE_PROFILING "Link with gperftools" OFF)
 if (ENABLE_PROFILING)
-  list(APPEND pkg-module-spec "libprofiler >= 2.5")
-  list(APPEND pkg-module-spec "libtcmalloc >= 2.5")
+  list(APPEND common-pkg-module-spec "libprofiler >= 2.5")
+  list(APPEND common-pkg-module-spec "libtcmalloc >= 2.5")
 endif (ENABLE_PROFILING)
 
-pkg_check_modules(ExternalModules REQUIRED IMPORTED_TARGET ${pkg-module-spec})
+pkg_check_modules(ExternalCommonModules REQUIRED IMPORTED_TARGET ${common-pkg-module-spec})
+find_package(Intl REQUIRED)
 
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
@@ -214,12 +205,16 @@ else ()
     message(STATUS "Disable VertexNote Plugins")
 endif ()
 
-option(ENABLE_GTK_SOURCEVIEW "Enable syntax highlighting in TeX editor" ON)
-if (ENABLE_GTK_SOURCEVIEW)
-    pkg_check_modules(GtkSourceView REQUIRED IMPORTED_TARGET "gtksourceview-4 >= 4.0.0")
-    message(STATUS "Enable GtkSourceView TeX syntax highlighting")
+option(ENABLE_QT_SHELL "Build the Qt Widgets shell" ON)
+if (NOT ENABLE_QT_SHELL)
+    message(FATAL_ERROR "The GTK shell has been removed; ENABLE_QT_SHELL must remain enabled.")
+endif ()
+
+if (ENABLE_QT_SHELL)
+    find_package(Qt6 REQUIRED COMPONENTS Gui Network Widgets PrintSupport)
+    message(STATUS "Enable Qt Widgets shell")
 else ()
-    message(STATUS "Disable GtkSourceView TeX syntax highlighting")
+    message(STATUS "Disable Qt Widgets shell")
 endif ()
 
 option(ENABLE_FLOAT_FROM_CHARS "Use floating point std::from_chars for parsing doubles" ON)
@@ -245,7 +240,7 @@ if (HAVE_FLOAT_FROM_CHARS)
 else()
     if (ENABLE_FLOAT_FROM_CHARS)
         message(SEND_ERROR "Floating point std::from_chars is not supported. Use a newer standard library, "
-                           "or set ENABLE_FLOAT_FROM_CHARS to OFF to fall back to g_ascii_strtod. "
+                           "or set ENABLE_FLOAT_FROM_CHARS to OFF to fall back to std::strtod. "
                            "std::from_chars offers higher performance and should be used whenever possible.")
     else()
         message(STATUS "Disable floating point std::from_chars")
@@ -276,27 +271,32 @@ else()
     find_package(X11 COMPONENTS Xi Xext)
 endif ()
 
-add_library(external_modules INTERFACE)
-target_link_libraries(external_modules INTERFACE
-        PkgConfig::ExternalModules
+add_library(external_common_modules INTERFACE)
+target_link_libraries(external_common_modules INTERFACE
+        PkgConfig::ExternalCommonModules
         $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>
-        $<$<TARGET_EXISTS:PkgConfig::GtkSourceView>:PkgConfig::GtkSourceView>
         $<$<TARGET_EXISTS:PkgConfig::ExternalAudioModules>:PkgConfig::ExternalAudioModules>
         $<$<TARGET_EXISTS:X11::Xi>:X11::Xi>
         $<$<TARGET_EXISTS:X11::X11>:X11::X11>
         $<$<TARGET_EXISTS:cpptrace::cpptrace>:cpptrace::cpptrace>
         $<$<TARGET_EXISTS:qpdf::libqpdf>:qpdf::libqpdf>
         ZLIB::ZLIB
+        Intl::Intl
         Threads::Threads
         )
 
-target_compile_definitions(external_modules INTERFACE
-        GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_40
-        GDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_18
+target_compile_definitions(external_common_modules INTERFACE
         $<$<TARGET_EXISTS:X11::X11>:X11_ENABLED>
         )
-target_link_options(external_modules INTERFACE
+target_link_options(external_common_modules INTERFACE
         $<$<AND:$<NOT:$<PLATFORM_ID:Windows>>,$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>>:-rdynamic>
+        )
+add_library(xoj::external_common_modules ALIAS external_common_modules)
+add_library(vertexnote::external_common_modules ALIAS external_common_modules)
+
+add_library(external_modules INTERFACE)
+target_link_libraries(external_modules INTERFACE
+        vertexnote::external_common_modules
         )
 add_library(xoj::external_modules ALIAS external_modules)
 add_library(vertexnote::external_modules ALIAS external_modules)
@@ -318,7 +318,6 @@ add_compile_definitions(G_LOG_DOMAIN="vertexnote")
 # Debug options
 option(DEBUG_INPUT "Input debugging, e.g. eraser events etc" OFF)
 option(DEBUG_INPUT_PRINT_ALL_MOTION_EVENTS "Input debugging, print all motion events" OFF)
-option(DEBUG_INPUT_GDK_PRINT_EVENTS "Input debugging, print all GDK events" OFF)
 option(DEBUG_RECOGNIZER "Shape recognizer debug: output score etc" OFF)
 option(DEBUG_SCHEDULER "Scheduler debug: show jobs etc" OFF)
 option(DEBUG_SHOW_ELEMENT_BOUNDS "Draw a surrounding border to all elements" OFF)
@@ -341,7 +340,7 @@ option(DEV_ENABLE_GCOV "Build with gcov support" OFF) # Enabel gcov support – 
 
 mark_as_advanced(FORCE
         DEV_TOOLBAR_CONFIG DEV_SETTINGS_XML_FILE DEV_PRINT_CONFIG_FILE DEV_METADATA_FILE
-        DEV_ENABLE_GCOV DEV_CHECK_GTK3_COMPAT
+        DEV_ENABLE_GCOV
         )
 
 configure_file(
@@ -408,6 +407,10 @@ install(DIRECTORY plugins
         )
 install(DIRECTORY resources
         DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
+        COMPONENT vertex-note
+        )
+install(FILES resources-templates/pagetemplates.ini.in
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}/resources-templates"
         COMPONENT vertex-note
         )
 install(DIRECTORY palettes
@@ -488,7 +491,7 @@ set(CPACK_DEBIAN_PACKAGE_RELEASE 2)
 set(CPACK_DEBIAN_PACKAGE_VERSION "${CPACK_PROJECT_VERSION}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "libglib2.0-0 (>= 2.32), libgtk-3-0 (>= 3.18), libpoppler-glib8 (>= 0.41.0), libxml2 (>= 2.0.0), libportaudiocpp0 (>= 12), libsndfile1 (>= 1.0.25), liblua5.3-0 | liblua5.4-0, libzip4 (>= 1.0.1) | libzip5, zlib1g, libc6, qpdf (>= 10.6.0), libgtksourceview-4-0")
+        "libpoppler-cpp0v5 (>= 0.41.0), libxml2 (>= 2.0.0), libportaudiocpp0 (>= 12), libsndfile1 (>= 1.0.25), liblua5.3-0 | liblua5.4-0, libzip4 (>= 1.0.1) | libzip5, zlib1g, libc6, qpdf (>= 10.6.0)")
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS "texlive-base, texlive-latex-extra")  # Latex tool
 # Use debian's arch scheme; we only care about x86/amd64 for now but feel free to add more
 if (${PACKAGE_ARCH} STREQUAL "x86_64")

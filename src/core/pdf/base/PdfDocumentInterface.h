@@ -12,9 +12,8 @@
 #pragma once
 
 #include <cstddef>  // for size_t
+#include <memory>
 #include <string>   // for string
-
-#include <glib.h>  // for GError, gpointer, gsize
 
 #include "PdfPage.h"  // for PdfPagePtr
 #include "filesystem.h"  // for path
@@ -31,9 +30,9 @@ public:
     virtual bool equals(PdfDocumentInterface* doc) const = 0;
 
 public:
-    virtual bool save(fs::path const& file, GError** error) const = 0;
-    virtual bool load(fs::path const& file, std::string password, GError** error) = 0;
-    virtual bool load(std::unique_ptr<std::string> data, std::string password, GError** error) = 0;
+    virtual bool save(fs::path const& file, std::string* errorMessage) const = 0;
+    virtual bool load(fs::path const& file, std::string password, std::string* errorMessage) = 0;
+    virtual bool load(std::unique_ptr<std::string> data, std::string password, std::string* errorMessage) = 0;
     virtual bool isLoaded() const = 0;
     virtual void reset() = 0;
 

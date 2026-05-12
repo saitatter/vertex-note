@@ -20,15 +20,6 @@ auto GeometryTool::getOrigin() const -> const vn::util::Point<double>& { return 
 
 void GeometryTool::setOrigin(const vn::util::Point<double>& o) { this->origin = o; }
 
-auto GeometryTool::getMatrix() const -> cairo_matrix_t {
-    cairo_matrix_t matrix;
-    cairo_matrix_init_identity(&matrix);
-    cairo_matrix_translate(&matrix, this->origin.x, this->origin.y);
-    cairo_matrix_rotate(&matrix, this->rotation);
-    cairo_matrix_scale(&matrix, CM, CM);
-    return matrix;
-}
-
 auto GeometryTool::getViewPool() const -> const std::shared_ptr<vn::util::DispatchPool<vn::view::GeometryToolView>>& {
     return viewPool;
 }

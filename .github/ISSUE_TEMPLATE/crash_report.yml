@@ -38,10 +38,10 @@ body:
     validations:
       required: true
   - type: input
-    id: gtk
+    id: qt
     attributes:
-      label: libgtk Version
-      description: What version of libgtk do you use? (This can be obtained by running `vertex-note --version`, or in the "About" window).
+      label: Qt Version
+      description: What Qt version do you use? This can be obtained from the About window or package metadata.
     validations:
       required: true
   - type: textarea

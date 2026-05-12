@@ -2,10 +2,13 @@
 
 #include <algorithm>      // for copy
 #include <array>          // for array
+#include <chrono>         // for steady_clock
 #include <cmath>          // for isnan
 #include <cstddef>        // for byte
 #include <cstdlib>        // for atoi, size_t
 #include <cstring>        // for strcmp, strlen
+#include <fstream>        // for ofstream
+#include <iostream>
 #include <iterator>       // for back_inserter
 #include <memory>         // for make_unique, make_shared...
 #include <optional>       // for optional
@@ -18,11 +21,9 @@
 #include <utility>        // for move, forward, exchange
 #include <vector>         // for vector
 
-#include <gio/gio.h>     // for g_file_get_path, g_fil...
-#include <glib.h>        // for g_message...
-#include <glibconfig.h>  // for gssize...
-#include <zip.h>         // for zip_file_t, zip_fopen,...
-#include <zipconf.h>     // for zip_int64_t, zip_uint64_t
+#include <QXmlStreamReader>
+#include <zip.h>      // for zip_file_t, zip_fopen,...
+#include <zipconf.h>  // for zip_int64_t, zip_uint64_t
 
 #include "control/xojfile/XmlParser.h"  // for XmlParser
 #include "model/BackgroundImage.h"      // for BackgroundImage
@@ -45,8 +46,6 @@
 #include "util/ZipInputStream.h"        // for ZipInputStream
 #include "util/i18n.h"                  // for _F, FS, _
 #include "util/raii/CLibrariesSPtr.h"   // for adopt
-#include "util/raii/GLibGuards.h"       // for GErrorGuard
-#include "util/raii/GObjectSPtr.h"      // for GObjectSPtr
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
 #include "vertexnote/io/GeometryXoppMetadata.h"
@@ -61,6 +60,25 @@ constexpr size_t MAX_MIMETYPE_LENGTH = 25;
 struct zip_file_deleter {
     void operator()(zip_file_t* ptr) noexcept { zip_fclose(ptr); }
 };
+
+auto makeAudioTempPath() -> fs::path {
+    std::error_code error;
+    const auto tempDirectory = fs::temp_directory_path(error);
+    if (error) {
+        return {};
+    }
+
+    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    for (auto attempt = 0; attempt < 1000; ++attempt) {
+        auto candidate = tempDirectory;
+        candidate /= "xournal_audio_" + std::to_string(timestamp) + "_" + std::to_string(attempt) + ".tmp";
+        if (!fs::exists(candidate, error) && !error) {
+            return candidate;
+        }
+        error.clear();
+    }
+    return {};
+}
 }  // namespace
 
 using zip_file_wrapper = std::unique_ptr<zip_file_t, zip_file_deleter>;
@@ -144,16 +162,18 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
         return;
     }
 
-    // Extract audio to temporary file
-    GFileIOStream* fileStream = nullptr;
-    const vn::util::GObjectSPtr<GFile> tmpFile(g_file_new_tmp("xournal_audio_XXXXXX.tmp", &fileStream, nullptr),
-                                                vn::util::adopt);
-    if (!tmpFile) {
+    const auto tmpPath = makeAudioTempPath();
+    if (tmpPath.empty()) {
         logError(_("Unable to create temporary file for audio attachment"));
         return;
     }
 
-    GOutputStream* outputStream = g_io_stream_get_output_stream(G_IO_STREAM(fileStream));
+    std::ofstream output(tmpPath, std::ios::binary | std::ios::trunc);
+    if (!output) {
+        logError(FS(_F("Could not open attachment: {1}. Error message: Could not create temporary file") %
+                    filename.u8string()));
+        return;
+    }
 
     auto data = std::make_unique<std::array<std::byte, 1024>>();
     zip_int64_t readBytes = 0;
@@ -165,9 +185,8 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
             return;
         }
 
-        const gboolean writeSuccessful = g_output_stream_write_all(outputStream, data->data(), static_cast<gsize>(read),
-                                                                   nullptr, nullptr, nullptr);
-        if (!writeSuccessful) {
+        output.write(reinterpret_cast<const char*>(data->data()), static_cast<std::streamsize>(read));
+        if (!output) {
             logError(FS(_F("Could not open attachment: {1}. Error message: Could not write temporary file") %
                         filename.u8string()));
             return;
@@ -176,8 +195,13 @@ void LoadHandler::addAudioAttachment(const fs::path& filename) {
         readBytes += read;
     }
 
-    // Map the filename to the extracted temporary file path
-    const char* tmpPath = g_file_peek_path(tmpFile.get());
+    output.close();
+    if (!output) {
+        logError(FS(_F("Could not open attachment: {1}. Error message: Could not close temporary file") %
+                    filename.u8string()));
+        return;
+    }
+
     this->audioFiles[filename] = tmpPath;
 }
 
@@ -197,11 +221,9 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
     if (this->isGzFile || !attach) {
         const fs::path fileToLoad = getAbsoluteFilepath(filename, attach);
 
-        vn::util::GErrorGuard error{};
-        img.loadFile(fileToLoad, vn::util::out_ptr(error));
-
-        if (error) {
-            logError(FS(_F("Could not read image: {1}. Error message: {2}") % fileToLoad.u8string() % error->message));
+        std::string errorMessage;
+        if (!img.loadFile(fileToLoad, &errorMessage)) {
+            logError(FS(_F("Could not read image: {1}. Error message: {2}") % fileToLoad.u8string() % errorMessage));
         }
     } else {
         // The image is stored in an attachment inside the zip archive
@@ -209,24 +231,9 @@ void LoadHandler::setBgPixmap(bool attach, const fs::path& filename) {
         if (!readResult) {
             return;
         }
-        const std::string& imgData = *readResult;  // Do not remove the const qualifier - see below
-
-        /**
-         * To avoid an unnecessary copy, the data is still managed by the std::unique_ptr<std::string> instance. The
-         * input stream assumes the data will not be modified: do not remove the const qualifier on readResult or
-         * imgData
-         */
-        const vn::util::GObjectSPtr<GInputStream> inputStream{
-                g_memory_input_stream_new_from_data(imgData.data(), static_cast<gssize>(imgData.size()), nullptr),
-                vn::util::adopt};
-
-        vn::util::GErrorGuard error{};
-        img.loadFile(inputStream.get(), filename, vn::util::out_ptr(error));
-
-        g_input_stream_close(inputStream.get(), nullptr, nullptr);
-
-        if (error) {
-            logError(FS(_F("Could not read image: {1}. Error message: {2}") % filename.u8string() % error->message));
+        std::string errorMessage;
+        if (!img.loadFile(*readResult, filename, &errorMessage)) {
+            logError(FS(_F("Could not read image: {1}. Error message: {2}") % filename.u8string() % errorMessage));
         }
     }
     img.setAttach(attach);
@@ -347,7 +354,7 @@ void LoadHandler::finalizeStroke() {
     if (this->stroke) {
         if (this->stroke->getPointCount() < 2) {
             // Strokes with less than two points can't be drawn
-            g_warning("LoadHandler: Ignoring stroke with less than two points");
+            std::cerr << "LoadHandler: Ignoring stroke with less than two points\n";
             this->stroke.reset();
             this->strokeGeometryMetadata.reset();
             return;
@@ -367,7 +374,7 @@ void LoadHandler::finalizeStroke() {
                 return;
             }
 
-            g_warning("LoadHandler: Ignoring invalid VertexNote geometry metadata: %s", error.c_str());
+            std::cerr << "LoadHandler: Ignoring invalid VertexNote geometry metadata: " << error << '\n';
         }
 
         this->layer->addElement(std::move(this->stroke));
@@ -416,7 +423,7 @@ void LoadHandler::setImageData(std::string data) {
     xoj_assert(this->image);
 
     if (this->image->hasData() && !data.empty()) {
-        g_warning("LoadHandler: Image data section found, but the image already has data");
+        std::cerr << "LoadHandler: Image data section found, but the image already has data\n";
     }
 
     this->image->setImage(std::move(data));
@@ -426,7 +433,7 @@ void LoadHandler::setImageAttachment(const fs::path& filename) {
     xoj_assert(this->image);
 
     if (this->image->hasData()) {
-        g_warning("LoadHandler: Image attachment found, but the image already has data");
+        std::cerr << "LoadHandler: Image attachment found, but the image already has data\n";
     }
 
     auto imageData = readZipAttachment(filename);
@@ -439,7 +446,7 @@ void LoadHandler::finalizeImage() {
     xoj_assert(this->image);
 
     if (!this->image->hasData()) {
-        g_warning("LoadHandler: Ignoring image with no data");
+        std::cerr << "LoadHandler: Ignoring image with no data\n";
         this->image.reset();
         return;
     }
@@ -481,7 +488,7 @@ void LoadHandler::finalizeTexImage() {
 }
 
 void LoadHandler::logError(const std::string& error) {
-    g_warning("LoadHandler: %s", error.c_str());
+    std::cerr << "LoadHandler: " << error << '\n';
     if (this->errorMessages) {
         this->errorMessages->emplace_back(error);
     }
@@ -489,7 +496,7 @@ void LoadHandler::logError(const std::string& error) {
 
 
 auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<vn::util::InputStream> {
-    this->xournalFilepath = filepath;
+    this->sourceDocumentPath = filepath;
     int zipError = 0;
     this->zipFp = zip_wrapper{zip_open(char_cast(filepath.u8string().c_str()), ZIP_RDONLY, &zipError)};
 
@@ -547,26 +554,14 @@ auto LoadHandler::openFile(fs::path const& filepath) -> std::unique_ptr<vn::util
 
 void LoadHandler::closeFile() noexcept { this->zipFp.reset(); }
 
-VN_GIO_GUARD_GENERATOR_TYPE(GMarkupParseContext, g_markup_parse_context_free);
-
 void LoadHandler::parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStream) {
     xoj_assert(xmlContentStream);
 
     XmlParser parserInterface{*this};
-    auto context = GMarkupParseContextGuard{g_markup_parse_context_new(
-            &XmlParser::interface, static_cast<GMarkupParseFlags>(0), &parserInterface, nullptr)};
-
-    const auto handleGError = [this](vn::util::GErrorGuard error) -> void {
-        if (error) {
-            logError(FS(_F("XML Parser error: {1}") % error->message));
-        }
-    };
-
+    QByteArray xmlContent;
     std::array<char, 1024> buffer{};
-    int len{};
-    vn::util::GErrorGuard error;
     while (true) {
-        len = xmlContentStream->read(buffer.data(), buffer.size());
+        const int len = xmlContentStream->read(buffer.data(), buffer.size());
         if (len < 0) {
             throw std::runtime_error{_("Failed to read from compressed file")};
         } else if (len == 0) {
@@ -574,17 +569,48 @@ void LoadHandler::parseXml(std::unique_ptr<vn::util::InputStream> xmlContentStre
             break;
         }
 
-        auto valid = g_markup_parse_context_parse(context.get(), buffer.data(), len, vn::util::out_ptr(error));
-        handleGError(std::move(error));
-        if (!valid) {
-            throw std::runtime_error{_("Invalid XML data read")};
+        xmlContent.append(buffer.data(), len);
+    }
+
+    QXmlStreamReader reader(xmlContent);
+    while (!reader.atEnd()) {
+        const auto token = reader.readNext();
+        if (token == QXmlStreamReader::StartElement) {
+            std::vector<QByteArray> attributeNameStorage;
+            std::vector<QByteArray> attributeValueStorage;
+            std::vector<const char*> attributeNames;
+            std::vector<const char*> attributeValues;
+            const auto attributes = reader.attributes();
+            attributeNameStorage.reserve(static_cast<std::size_t>(attributes.size()));
+            attributeValueStorage.reserve(static_cast<std::size_t>(attributes.size()));
+            attributeNames.reserve(static_cast<std::size_t>(attributes.size()) + 1U);
+            attributeValues.reserve(static_cast<std::size_t>(attributes.size()) + 1U);
+            for (const auto& attribute: attributes) {
+                attributeNameStorage.push_back(attribute.qualifiedName().toUtf8());
+                attributeValueStorage.push_back(attribute.value().toString().toUtf8());
+            }
+            for (std::size_t i = 0; i < attributeNameStorage.size(); ++i) {
+                attributeNames.push_back(attributeNameStorage[i].constData());
+                attributeValues.push_back(attributeValueStorage[i].constData());
+            }
+            attributeNames.push_back(nullptr);
+            attributeValues.push_back(nullptr);
+            const auto name = reader.qualifiedName().toUtf8();
+            parserInterface.startElement(name.constData(), attributeNames.data(), attributeValues.data());
+        } else if (token == QXmlStreamReader::EndElement) {
+            const auto name = reader.qualifiedName().toUtf8();
+            parserInterface.endElement(name.constData());
+        } else if (token == QXmlStreamReader::Characters) {
+            const auto text = reader.text().toString().toUtf8();
+            parserInterface.text(std::string_view{text.constData(), static_cast<std::size_t>(text.size())});
         }
     }
 
     // Sanity checks for document validity
-    if (!g_markup_parse_context_end_parse(context.get(), vn::util::out_ptr(error)) || !this->parsingComplete) {
-        handleGError(std::move(error));
-
+    if (reader.hasError() || !this->parsingComplete) {
+        if (reader.hasError()) {
+            logError(FS(_F("XML Parser error: {1}") % reader.errorString().toStdString()));
+        }
         // The end may be cut off. Attempt to recover contents by closing the remaining open nodes.
         parserInterface.closeOpenNodes();
         // If a document was created in addDocument(), finalizeDocument() must have been called now.
@@ -664,12 +690,12 @@ void LoadHandler::fixNullPressureValues(std::vector<Point> pts) {
 
     if (strokePortions.empty()) {
         // There were no valid pressure values! Delete the stroke entirely
-        g_warning("LoadHandler: Found a stroke with only non-positive pressure values! Removing this invisible stroke");
+        std::cerr << "LoadHandler: Found a stroke with only non-positive pressure values! Removing this invisible stroke\n";
         this->stroke.reset();
         return;
     }
 
-    g_warning("LoadHandler: Found a stroke with some non-positive pressure values. Removing the affected points");
+    std::cerr << "LoadHandler: Found a stroke with some non-positive pressure values. Removing the affected points\n";
     for_first_then_each(
             strokePortions, [&](std::vector<Point>& points) { this->stroke->setPointVector(std::move(points)); },
             [&](std::vector<Point>& points) {
@@ -754,13 +780,13 @@ auto LoadHandler::getAbsoluteFilepath(const fs::path& filename, bool attach) con
     if (attach) {
         // For a file xyz.xopp, the PDF background is saved in the same
         // directory as xyz.xopp.[filename]
-        absolutePath = (fs::path{this->xournalFilepath} += ".") += filename;
+        absolutePath = (fs::path{this->sourceDocumentPath} += ".") += filename;
     } else {
         // domain = "absolute" doesn't forcefully mean an absolute path
         if (filename.is_relative()) {
             // The path is relative to the .xopp file's location
             this->doc->setPathStorageMode(Util::PathStorageMode::AS_RELATIVE_PATH);
-            absolutePath = fs::path{this->xournalFilepath}.remove_filename() / filename;
+            absolutePath = fs::path{this->sourceDocumentPath}.remove_filename() / filename;
         } else {
             this->doc->setPathStorageMode(Util::PathStorageMode::AS_ABSOLUTE_PATH);
             absolutePath = filename;

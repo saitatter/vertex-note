@@ -36,7 +36,7 @@
     <true />
 
     <key>CFBundleExecutable</key>
-    <string>vertex-note-wrapper</string>
+    <string>vertex-note-qt-shell</string>
     <key>LSArchitecturePriority</key>
     <array>
       <string>x86_64</string>

@@ -16,8 +16,6 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
-#include <glib.h>  // for GKeyFile
-
 #include "model/PageType.h"  // for PageTypeFormat, PageType
 
 #include "filesystem.h"  // for path
@@ -44,7 +42,7 @@ public:
 
 private:
     bool parseIni(fs::path const& filepath);
-    void loadFormat(GKeyFile* config, const char* group);
+    void loadFormat(const std::string& name, const std::string& format, const std::string& config);
 
 private:
     std::vector<std::unique_ptr<PageTypeInfo>> types;

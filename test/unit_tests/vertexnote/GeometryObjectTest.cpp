@@ -67,6 +67,79 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackForPolyline) {
     EXPECT_DOUBLE_EQ(stroke->getPoint(2).y, 7.0);
 }
 
+TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForFullCircleArc) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 16U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 6.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 6.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 14.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
+}
+
+TEST(VertexNoteGeometryObject, createsStrokeFallbackForPartialArc) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto start = object.addVertex(Vec2{14.0, 10.0});
+    const auto end = object.addVertex(Vec2{10.0, 14.0});
+    object.addEdge(EdgeKind::Arc, start, end, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 4U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 10.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 10.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 14.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 14.0);
+}
+
+TEST(VertexNoteGeometryObject, createsStrokeFallbackForConstructionLine) {
+    GeometryObject object(42);
+
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+    auto b = object.addVertex(Vec2{5.0, 7.0});
+    object.addEdge(EdgeKind::ConstructionLine, a, b);
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+
+    ASSERT_NE(stroke, nullptr);
+    ASSERT_EQ(stroke->getPointCount(), 2U);
+    EXPECT_DOUBLE_EQ(stroke->getPoint(0).x, 1.0);
+    EXPECT_DOUBLE_EQ(stroke->getPoint(1).y, 7.0);
+}
+
+TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForConstructionCircle) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{8.0, 8.0});
+    const auto radiusPoint = object.addVertex(Vec2{12.0, 8.0});
+    object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    auto bounds = object.bounds();
+
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_GT(stroke->getPointCount(), 16U);
+    ASSERT_TRUE(bounds.has_value());
+    EXPECT_DOUBLE_EQ(bounds->minX, 4.0);
+    EXPECT_DOUBLE_EQ(bounds->minY, 4.0);
+    EXPECT_DOUBLE_EQ(bounds->maxX, 12.0);
+    EXPECT_DOUBLE_EQ(bounds->maxY, 12.0);
+}
+
 TEST(VertexNoteGeometryObject, rejectsEdgesWithMissingVertices) {
     GeometryObject object(42);
     auto a = object.addVertex(Vec2{1.0, 2.0});
@@ -120,6 +193,19 @@ TEST(VertexNoteGeometryObject, removesVertexWithDependentEdgesAndConstraints) {
 
     EXPECT_EQ(object.vertices().size(), 1U);
     EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.constraints().empty());
+}
+
+TEST(VertexNoteGeometryObject, removesEdgesAndCleansDanglingVertices) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    const auto edge = object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+    object.addConstraint(ConstraintKind::Radius, {}, {edge}, 5.0);
+
+    EXPECT_TRUE(object.removeEdge(edge));
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
     EXPECT_TRUE(object.constraints().empty());
 }
 

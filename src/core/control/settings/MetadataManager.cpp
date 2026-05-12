@@ -1,17 +1,16 @@
 #include "MetadataManager.h"
 
 #include <algorithm>  // for sort
+#include <chrono>
 #include <cstdlib>    // for strtoll, strtod
 #include <fstream>    // for operator<<, basic_ostream, basic_stringb...
+#include <iostream>
 #include <memory>     // for allocator_traits<>::value_type
 #include <sstream>    // for istringstream
 #include <string>     // for char_traits, string, getline, operator!=
 
-#include <glib.h>  // for g_get_real_time, g_message, g_warning, gint64
-
 #include "util/PathUtil.h"   // for getConfigSubfolder, getStateSubfolder
 #include "util/StringUtils.h"
-#include "util/AppMessageBox.h"  // for AppMessageBox
 #include "util/serdesstream.h"
 #include "util/utf8_view.h"
 
@@ -19,6 +18,15 @@
  * Get directory to store metadata files to
  */
 static fs::path getMetadataDirectory() { return Util::getStateSubfolder("metadata"); }
+
+static void reportMetadataErrorToUser(const std::string& msg) {
+    std::cerr << msg << '\n';
+}
+
+static auto nowMicros() -> std::int64_t {
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::microseconds>(now).count();
+}
 
 /**
  * Migrate metadata directory from legacy location
@@ -49,11 +57,11 @@ static void migrateMetadataDirectory() {
     try {
         fs::remove(legacyDir);
     } catch (const fs::filesystem_error&) {
-        g_warning("Could not delete legacy metadata directory %s", char_cast(legacyDir.u8string().c_str()));
+        std::cerr << "Could not delete legacy metadata directory " << char_cast(legacyDir.u8string()) << '\n';
     }
 
-    g_message("Migrated metadata directory from %s to %s", char_cast(legacyDir.u8string().c_str()),
-              char_cast(newDir.u8string().c_str()));
+    std::clog << "Migrated metadata directory from " << char_cast(legacyDir.u8string()) << " to "
+              << char_cast(newDir.u8string()) << '\n';
 }
 
 MetadataEntry::MetadataEntry(): zoom(1), page(0), time(0) {}
@@ -66,14 +74,14 @@ MetadataManager::~MetadataManager() { documentChanged(); }
 void MetadataManager::deleteMetadataFile(fs::path const& path) {
     // be careful, delete the Metadata file, NOT the Document!
     if (path.extension() != ".metadata") {
-        g_warning("Try to delete non-metadata file: %s", char_cast(path.u8string().c_str()));
+        std::cerr << "Try to delete non-metadata file: " << char_cast(path.u8string()) << '\n';
         return;
     }
 
     try {
         fs::remove(path);
     } catch (const fs::filesystem_error&) {
-        g_warning("Could not delete metadata file %s", char_cast(path.u8string().c_str()));
+        std::cerr << "Could not delete metadata file " << char_cast(path.u8string()) << '\n';
     }
 }
 
@@ -117,7 +125,7 @@ auto MetadataManager::loadList() -> std::vector<MetadataEntry> {
             }
         }
     } catch (const fs::filesystem_error& e) {
-        AppMessageBox::showErrorToUser(nullptr, e.what());
+        reportMetadataErrorToUser(e.what());
         return data;
     }
 
@@ -203,7 +211,7 @@ void MetadataManager::storeMetadata(const MetadataEntry& m) {
     }
 
     auto path = getMetadataDirectory();
-    gint64 time = g_get_real_time();
+    std::int64_t time = nowMicros();
     path /= std::to_string(time);
     path += ".metadata";
     writeMetadataToFile(m, path);
@@ -234,6 +242,6 @@ void MetadataManager::storeMetadata(fs::path const& file, int page, double zoom)
     metadata->path = file;
     metadata->zoom = zoom;
     metadata->page = page;
-    metadata->time = g_get_real_time();
+    metadata->time = nowMicros();
     this->mutex.unlock();
 }

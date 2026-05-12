@@ -159,10 +159,55 @@
      <attribute name="label" translatable="yes">VertexNote Geometry Snapping</attribute>
      <attribute name="action">win.vertexnote-geometry-snapping</attribute>
     </item>
-    <item>
+   <item>
      <attribute name="label" translatable="yes">VertexNote Grid Snapping</attribute>
      <attribute name="action">win.vertexnote-grid-snapping</attribute>
     </item>
+   </section>
+   <section>
+    <submenu>
+     <attribute name="label" translatable="yes">Geometry Constraints</attribute>
+     <section>
+      <item>
+       <attribute name="label" translatable="yes">Coincident</attribute>
+       <attribute name="action">win.vertexnote-constraint-coincident</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Horizontal</attribute>
+       <attribute name="action">win.vertexnote-constraint-horizontal</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Vertical</attribute>
+       <attribute name="action">win.vertexnote-constraint-vertical</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Fixed Length</attribute>
+       <attribute name="action">win.vertexnote-constraint-fixed-length</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Edit Fixed Length</attribute>
+       <attribute name="action">win.vertexnote-constraint-edit-fixed-length</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Radius</attribute>
+       <attribute name="action">win.vertexnote-constraint-radius</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Parallel</attribute>
+       <attribute name="action">win.vertexnote-constraint-parallel</attribute>
+      </item>
+      <item>
+       <attribute name="label" translatable="yes">Perpendicular</attribute>
+       <attribute name="action">win.vertexnote-constraint-perpendicular</attribute>
+      </item>
+     </section>
+     <section>
+      <item>
+       <attribute name="label" translatable="yes">Delete Matching Constraints</attribute>
+       <attribute name="action">win.vertexnote-constraint-delete</attribute>
+      </item>
+     </section>
+    </submenu>
    </section>
    <section>
     <item>
@@ -612,6 +657,25 @@
       <attribute name="label" translatable="yes">Draw Spline</attribute>
       <attribute name="action">win.tool-draw-spline</attribute>
       <attribute name="accel">&lt;Ctrl&gt;8</attribute>
+     </item>
+     <item>
+      <attribute name="label" translatable="yes">Draw Vertex Circle by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-circle</attribute>
+      <attribute name="accel">&lt;Ctrl&gt;9</attribute>
+     </item>
+     <item>
+     <attribute name="label" translatable="yes">Draw Vertex Arc by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-arc</attribute>
+      <attribute name="accel">&lt;Ctrl&gt;0</attribute>
+     </item>
+     <item>
+      <attribute name="label" translatable="yes">Draw Construction Line by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-construction-line</attribute>
+      <attribute name="accel">&lt;Ctrl&gt;&lt;Shift&gt;0</attribute>
+     </item>
+     <item>
+      <attribute name="label" translatable="yes">Draw Construction Circle by Clicks</attribute>
+      <attribute name="action">win.tool-draw-vertex-construction-circle</attribute>
      </item>
     </submenu>
    </section>

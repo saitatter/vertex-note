@@ -10,20 +10,42 @@
  */
 
 #include <config-test.h>
-#include <gtest/gtest.h>
+#include <clocale>
+#include <iostream>
+#include <locale>
+#include <stdexcept>
 
-#include "control/VertexNoteMain.h"
+#include <gtest/gtest.h>
+#include <QApplication>
+
+namespace {
+
+void initTestLocalisation() {
+    setlocale(LC_NUMERIC, "C");
+    try {
+        std::locale::global(std::locale(""));
+    } catch (const std::runtime_error& e) {
+        std::cerr << "VertexNote tests: System default locale could not be set: " << e.what() << '\n';
+    }
+    std::cout.imbue(std::locale());
+}
+
+}  // namespace
 
 class TestEnvironment: public ::testing::Environment {
 public:
     virtual void SetUp() {
         std::cout << "Setting up localisation for tests" << std::endl;
-        VertexNoteMain::initLocalisation();
+        initTestLocalisation();
     }
 };
 
 int main(int argc, char* argv[]) {
     ::testing::InitGoogleTest(&argc, argv);
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+    }
+    QApplication app(argc, argv);
     // gtest takes ownership of the TestEnvironment ptr - we don't delete it.
     ::testing::AddGlobalTestEnvironment(new TestEnvironment);
     return RUN_ALL_TESTS();

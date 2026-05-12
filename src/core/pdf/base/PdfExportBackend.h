@@ -20,7 +20,6 @@ class ExportBackend {  // Must match the order in ui/exportSettings.glade:listPd
 public:
     enum Value {
         DEFAULT,
-        CAIRO,
         QPDF,
         // Keep last
         ENUM_END

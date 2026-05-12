@@ -11,11 +11,10 @@
 
 #pragma once
 
+#include <cstdint>
 #include <mutex>  // for mutex
 #include <optional>
 #include <vector>  // for vector
-
-#include <glib.h>  // for gint64
 
 #include "filesystem.h"  // for path
 
@@ -29,7 +28,7 @@ public:
     fs::path path;
     double zoom;
     int page;
-    gint64 time;
+    std::int64_t time;
 };
 
 class MetadataManager {

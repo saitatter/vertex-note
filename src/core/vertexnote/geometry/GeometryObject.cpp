@@ -9,12 +9,58 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 #include "model/Point.h"
 #include "model/Stroke.h"
 
 namespace vn::geom {
+
+namespace {
+
+constexpr std::size_t ArcApproximationSegments = 32U;
+
+[[nodiscard]] auto distance(Vec2 a, Vec2 b) -> double { return std::hypot(a.x - b.x, a.y - b.y); }
+
+[[nodiscard]] auto appendLinePoint(std::vector<Vec2>& points, Vec2 point) -> bool {
+    if (points.empty() || !(points.back() == point)) {
+        points.push_back(point);
+        return true;
+    }
+    return false;
+}
+
+void appendArcPolyline(std::vector<Vec2>& points, Vec2 center, Vec2 start, Vec2 end, bool fullCircle) {
+    const double radius = distance(center, start);
+    if (radius == 0.0) {
+        static_cast<void>(appendLinePoint(points, start));
+        return;
+    }
+
+    const double startAngle = std::atan2(start.y - center.y, start.x - center.x);
+    double endAngle = std::atan2(end.y - center.y, end.x - center.x);
+    double sweep = 0.0;
+    if (fullCircle) {
+        sweep = 2.0 * M_PI;
+    } else {
+        if (endAngle <= startAngle) {
+            endAngle += 2.0 * M_PI;
+        }
+        sweep = endAngle - startAngle;
+    }
+
+    const auto segments =
+            std::max<std::size_t>(4U, static_cast<std::size_t>(std::ceil(ArcApproximationSegments * sweep / (2.0 * M_PI))));
+    for (std::size_t index = 0; index <= segments; ++index) {
+        const double t = static_cast<double>(index) / static_cast<double>(segments);
+        const double angle = startAngle + sweep * t;
+        static_cast<void>(
+                appendLinePoint(points, {center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius}));
+    }
+}
+
+}  // namespace
 
 GeometryObject::GeometryObject(ObjectId id): id(id) {}
 
@@ -147,6 +193,42 @@ auto GeometryObject::bounds() const -> std::optional<Bounds> {
         return std::nullopt;
     }
 
+    if (std::ranges::any_of(this->edgeList, [](const Edge& edge) {
+            return edge.kind == EdgeKind::Arc || edge.kind == EdgeKind::ConstructionCircle;
+        })) {
+        auto points = toPolyline();
+        if (points.empty()) {
+            return std::nullopt;
+        }
+
+        Bounds result{points.front().x, points.front().y, points.front().x, points.front().y};
+        for (const auto& point: points) {
+            result.minX = std::min(result.minX, point.x);
+            result.minY = std::min(result.minY, point.y);
+            result.maxX = std::max(result.maxX, point.x);
+            result.maxY = std::max(result.maxY, point.y);
+        }
+        for (const auto& edge: this->edgeList) {
+            if ((edge.kind != EdgeKind::Arc && edge.kind != EdgeKind::ConstructionCircle) || edge.start != edge.end ||
+                edge.controls.empty()) {
+                continue;
+            }
+
+            const auto* startVertex = vertex(edge.start);
+            const auto* centerVertex = vertex(edge.controls.front());
+            if (!startVertex || !centerVertex) {
+                continue;
+            }
+
+            const double radius = distance(centerVertex->position, startVertex->position);
+            result.minX = std::min(result.minX, centerVertex->position.x - radius);
+            result.minY = std::min(result.minY, centerVertex->position.y - radius);
+            result.maxX = std::max(result.maxX, centerVertex->position.x + radius);
+            result.maxY = std::max(result.maxY, centerVertex->position.y + radius);
+        }
+        return result;
+    }
+
     Bounds result{this->vertexList.front().position.x, this->vertexList.front().position.y,
                   this->vertexList.front().position.x, this->vertexList.front().position.y};
     for (const auto& vertex: this->vertexList) {
@@ -169,10 +251,17 @@ auto GeometryObject::toPolyline() const -> std::vector<Vec2> {
             continue;
         }
 
-        if (points.empty() || !(points.back() == startVertex->position)) {
-            points.push_back(startVertex->position);
+        if ((edge.kind == EdgeKind::Arc || edge.kind == EdgeKind::ConstructionCircle) && !edge.controls.empty()) {
+            const auto* centerVertex = vertex(edge.controls.front());
+            if (centerVertex) {
+                appendArcPolyline(points, centerVertex->position, startVertex->position, endVertex->position,
+                                  edge.start == edge.end);
+                continue;
+            }
         }
-        points.push_back(endVertex->position);
+
+        static_cast<void>(appendLinePoint(points, startVertex->position));
+        static_cast<void>(appendLinePoint(points, endVertex->position));
     }
 
     return points;
@@ -238,6 +327,25 @@ auto GeometryObject::removeVertex(VertexId id) -> bool {
             this->constraintList.end());
 
     this->vertexList.erase(vertexIt);
+    return true;
+}
+
+auto GeometryObject::removeEdge(EdgeId id) -> bool {
+    const auto oldSize = this->edgeList.size();
+    this->edgeList.erase(std::remove_if(this->edgeList.begin(), this->edgeList.end(),
+                                        [id](const Edge& edge) { return edge.id == id; }),
+                         this->edgeList.end());
+    if (this->edgeList.size() == oldSize) {
+        return false;
+    }
+
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [id](const Constraint& constraint) {
+                               return std::ranges::find(constraint.edges, id) != constraint.edges.end();
+                           }),
+            this->constraintList.end());
+    cleanupDanglingVertices();
     return true;
 }
 
@@ -323,6 +431,53 @@ void GeometryObject::rotate(double x0, double y0, double rotation) {
 auto GeometryObject::containsVertex(VertexId id) const -> bool { return vertex(id) != nullptr; }
 
 auto GeometryObject::containsEdge(EdgeId id) const -> bool { return edge(id) != nullptr; }
+
+void GeometryObject::cleanupDanglingVertices() {
+    std::unordered_set<VertexId> existingVertices;
+    existingVertices.reserve(this->vertexList.size());
+    for (const auto& vertex: this->vertexList) {
+        existingVertices.insert(vertex.id);
+    }
+
+    std::unordered_set<EdgeId> existingEdges;
+    existingEdges.reserve(this->edgeList.size());
+    for (const auto& edge: this->edgeList) {
+        existingEdges.insert(edge.id);
+    }
+
+    this->constraintList.erase(
+            std::remove_if(this->constraintList.begin(), this->constraintList.end(),
+                           [&existingVertices, &existingEdges](const Constraint& constraint) {
+                               return std::ranges::any_of(constraint.vertices,
+                                                          [&existingVertices](VertexId vertexId) {
+                                                              return !existingVertices.contains(vertexId);
+                                                          }) ||
+                                      std::ranges::any_of(constraint.edges, [&existingEdges](EdgeId edgeId) {
+                                          return !existingEdges.contains(edgeId);
+                                      });
+                           }),
+            this->constraintList.end());
+
+    // Build a set of all vertex IDs referenced by edges and constraints (O(E + C))
+    // so the vertex sweep below is O(V) instead of O(V * (E + C)).
+    std::unordered_set<VertexId> referenced;
+    for (const auto& edge: this->edgeList) {
+        referenced.insert(edge.start);
+        referenced.insert(edge.end);
+        for (auto cid: edge.controls) {
+            referenced.insert(cid);
+        }
+    }
+    for (const auto& constraint: this->constraintList) {
+        for (auto vid: constraint.vertices) {
+            referenced.insert(vid);
+        }
+    }
+
+    this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
+                                          [&referenced](const Vertex& v) { return !referenced.contains(v.id); }),
+                           this->vertexList.end());
+}
 
 auto GeometryObject::nextVertexId() -> VertexId { return this->nextLocalVertexId++; }
 

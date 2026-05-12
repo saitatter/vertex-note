@@ -24,8 +24,6 @@
 #include <utility>  // for move
 #include <vector>   // for vector
 
-#include <glib.h>  // for g_error
-
 #include "util/StringUtils.h"
 
 template <typename C>

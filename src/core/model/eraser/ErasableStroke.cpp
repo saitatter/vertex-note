@@ -2,11 +2,10 @@
 
 #include <algorithm>  // for max, min, copy, lower_bound
 #include <cstddef>    // for size_t, ptrdiff_t
+#include <iostream>   // for cerr
 #include <iterator>   // for next
 #include <optional>   // for optional
 #include <tuple>      // for forward_as_tuple
-
-#include <glib.h>  // for g_warning
 
 #include "model/Point.h"            // for Point
 #include "model/Stroke.h"           // for Stroke, IntersectionParameter...
@@ -91,7 +90,7 @@ void ErasableStroke::beginErasure(const IntersectionParametersContainer& paddedI
 void ErasableStroke::erase(const PaddedBox& box, Range& range) {
     size_t n = (size_t)this->stroke.getPointCount();
     if (n < 2) {
-        g_warning("Erasing empty stroke");
+        std::cerr << "Erasing empty stroke" << std::endl;
         return;
     }
 
@@ -341,35 +340,8 @@ void ErasableStroke::addOverlapsToRange(const std::vector<SubSection>& subsectio
                 if (!overlapTrees[j].isPopulated()) {
                     overlapTrees[j].populate(*it2, this->stroke);
                 }
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-                overlapTrees[i].addOverlapsToRange(overlapTrees[j], halfWidth, range, debugMask.get());
-#else
                 overlapTrees[i].addOverlapsToRange(overlapTrees[j], halfWidth, range);
-#endif
             }
         }
     }
 }
-
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-void ErasableStroke::paintDebugRect(const Rectangle<double>& rect, char color, cairo_t* cr) {
-    if (cr == nullptr) {
-        return;
-    }
-    if (color == 'r') {
-        cairo_set_source_rgba(cr, 1, 0, 0, 0.8);
-    } else if (color == 'g') {
-        cairo_set_source_rgba(cr, 0, 1, 0, 0.8);
-    } else if (color == 'b') {
-        cairo_set_source_rgba(cr, 0, 0, 1, 0.8);
-    } else {
-        cairo_set_source_rgba(cr, 0.5, 0.5, 0.5, 0.8);
-    }
-    cairo_move_to(cr, rect.x, rect.y);
-    cairo_line_to(cr, rect.x + rect.width, rect.y);
-    cairo_line_to(cr, rect.x + rect.width, rect.y + rect.height);
-    cairo_line_to(cr, rect.x, rect.y + rect.height);
-    cairo_line_to(cr, rect.x, rect.y);
-    cairo_stroke(cr);
-}
-#endif

@@ -1,43 +1,40 @@
 #include "XmlImageNode.h"
 
-#include <glib.h>  // for g_base64_encode, g_free, gchar, g_e...
+#include <QBuffer>
+#include <QByteArray>
+#include <QImage>
+#include <QImageReader>
+#include <QIODevice>
+
+#include <stdexcept>  // for runtime_error
 
 #include "control/xml/XmlNode.h"  // for XmlNode
 #include "util/OutputStream.h"    // for OutputStream
 #include "util/StringUtils.h"     // for StaticStringView
 
-XmlImageNode::XmlImageNode(StringUtils::StaticStringView tag): XmlNode(tag) {
-    this->img = nullptr;
-    this->out = nullptr;
-    this->pos = 0;
-}
+XmlImageNode::XmlImageNode(StringUtils::StaticStringView tag): XmlNode(tag) {}
 
-XmlImageNode::~XmlImageNode() {
-    if (this->img) {
-        cairo_surface_destroy(this->img);
-    }
-}
+XmlImageNode::~XmlImageNode() = default;
 
-void XmlImageNode::setImage(cairo_surface_t* img) {
-    if (this->img) {
-        cairo_surface_destroy(this->img);
-    }
-    this->img = cairo_surface_reference(img);
-}
+void XmlImageNode::setImage(std::string_view encodedImage) {
+    this->pngData.clear();
 
-auto XmlImageNode::pngWriteFunction(XmlImageNode* image, const unsigned char* data, unsigned int length)
-        -> cairo_status_t {
-    for (unsigned int i = 0; i < length; i++, image->pos++) {
-        if (image->pos == 30) {
-            gchar* base64_str = g_base64_encode(image->buffer, image->pos);
-            image->out->write(base64_str);
-            g_free(base64_str);
-            image->pos = 0;
-        }
-        image->buffer[image->pos] = data[i];
+    QByteArray source = QByteArray::fromRawData(encodedImage.data(), static_cast<qsizetype>(encodedImage.size()));
+    QBuffer sourceBuffer(&source);
+    sourceBuffer.open(QIODevice::ReadOnly);
+    QImageReader reader(&sourceBuffer);
+    reader.setAutoTransform(true);
+    const QImage image = reader.read();
+    if (image.isNull()) {
+        return;
     }
 
-    return CAIRO_STATUS_SUCCESS;
+    QByteArray pngBytes;
+    QBuffer pngBuffer(&pngBytes);
+    pngBuffer.open(QIODevice::WriteOnly);
+    if (image.save(&pngBuffer, "PNG")) {
+        this->pngData.assign(pngBytes.constData(), static_cast<std::size_t>(pngBytes.size()));
+    }
 }
 
 void XmlImageNode::writeOut(OutputStream* out) {
@@ -47,17 +44,12 @@ void XmlImageNode::writeOut(OutputStream* out) {
 
     out->write(">");
 
-    if (this->img == nullptr) {
-        g_error("XmlImageNode::writeOut(); this->img == nullptr");
+    if (this->pngData.empty()) {
+        throw std::runtime_error("XmlImageNode::writeOut(); image data is empty");
     } else {
-        this->out = out;
-        this->pos = 0;
-        cairo_surface_write_to_png_stream(this->img, reinterpret_cast<cairo_write_func_t>(&pngWriteFunction), this);
-        gchar* base64_str = g_base64_encode(this->buffer, this->pos);
-        out->write(base64_str);
-        g_free(base64_str);
-
-        this->out = nullptr;
+        const QByteArray bytes = QByteArray::fromRawData(this->pngData.data(), static_cast<qsizetype>(this->pngData.size()));
+        const QByteArray base64 = bytes.toBase64();
+        out->write(std::string_view(base64.constData(), static_cast<std::size_t>(base64.size())));
     }
 
     out->write("</");

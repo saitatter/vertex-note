@@ -3,15 +3,13 @@
 #include <algorithm>  // for min, max, copy
 #include <cmath>      // for abs, hypot, sqrt
 #include <cstdint>    // for uint64_t
+#include <iostream>   // for cerr, cout
 #include <iterator>   // for back_insert_iterator
 #include <limits>     // for numeric_limits
 #include <memory>
 #include <numeric>    // for accumulate
 #include <optional>   // for optional, nullopt
 #include <string>     // for to_string, operator<<
-
-#include <cairo.h>  // for cairo_matrix_translate
-#include <glib.h>   // for g_free, g_message
 
 #include "eraser/PaddedBox.h"                     // for PaddedBox
 #include "model/AudioElement.h"                   // for AudioElement
@@ -270,7 +268,7 @@ void Stroke::deletePointsFrom(size_t index) {
 
 auto Stroke::getPoint(size_t index) const -> Point {
     if (index < 0 || index >= this->points.size()) {
-        g_warning("Stroke::getPoint(%zu) out of bounds!", index);
+        std::cerr << "Stroke::getPoint(" << index << ") out of bounds!" << std::endl;
         return Point(0., 0., Point::NO_PRESSURE);
     }
     return points.at(index);
@@ -334,14 +332,14 @@ void Stroke::move(double dx, double dy) {
 }
 
 void Stroke::rotate(double x0, double y0, double th) {
-    cairo_matrix_t rotMatrix;
-    cairo_matrix_init_identity(&rotMatrix);
-    cairo_matrix_translate(&rotMatrix, x0, y0);
-    cairo_matrix_rotate(&rotMatrix, th);
-    cairo_matrix_translate(&rotMatrix, -x0, -y0);
+    const double cosTheta = std::cos(th);
+    const double sinTheta = std::sin(th);
 
     for (auto&& p: points) {
-        cairo_matrix_transform_point(&rotMatrix, &p.x, &p.y);
+        const double dx = p.x - x0;
+        const double dy = p.y - y0;
+        p.x = x0 + cosTheta * dx - sinTheta * dy;
+        p.y = y0 + sinTheta * dx + cosTheta * dy;
     }
     this->sizeCalculated = false;
     // Width and Height will likely be changed after this operation
@@ -349,16 +347,16 @@ void Stroke::rotate(double x0, double y0, double th) {
 
 void Stroke::scale(double x0, double y0, double fx, double fy, double rotation, bool restoreLineWidth) {
     double fz = (restoreLineWidth) ? 1 : sqrt(std::abs(fx * fy));
-    cairo_matrix_t scaleMatrix;
-    cairo_matrix_init_identity(&scaleMatrix);
-    cairo_matrix_translate(&scaleMatrix, x0, y0);
-    cairo_matrix_rotate(&scaleMatrix, rotation);
-    cairo_matrix_scale(&scaleMatrix, fx, fy);
-    cairo_matrix_rotate(&scaleMatrix, -rotation);
-    cairo_matrix_translate(&scaleMatrix, -x0, -y0);
+    const double cosTheta = std::cos(rotation);
+    const double sinTheta = std::sin(rotation);
 
     for (auto&& p: points) {
-        cairo_matrix_transform_point(&scaleMatrix, &p.x, &p.y);
+        const double dx = p.x - x0;
+        const double dy = p.y - y0;
+        const double localX = cosTheta * dx + sinTheta * dy;
+        const double localY = -sinTheta * dx + cosTheta * dy;
+        p.x = x0 + cosTheta * (fx * localX) - sinTheta * (fy * localY);
+        p.y = y0 + sinTheta * (fx * localX) + cosTheta * (fy * localY);
 
         if (p.z != Point::NO_PRESSURE) {
             p.z *= fz;
@@ -429,8 +427,8 @@ void Stroke::setSecondToLastPressure(double pressure) {
 void Stroke::setPressure(const std::vector<double>& pressure) {
     // The last pressure is not used - as there is no line drawn from this point
     if (this->points.size() - 1 != pressure.size()) {
-        g_warning("invalid pressure point count: %s, expected %s", std::to_string(pressure.size()).data(),
-                  std::to_string(this->points.size() - 1).data());
+        std::cerr << "invalid pressure point count: " << pressure.size() << ", expected " << (this->points.size() - 1)
+                  << std::endl;
     }
 
     auto max_size = std::min(pressure.size(), this->points.size() - 1);
@@ -865,11 +863,11 @@ auto Stroke::getStrokeCapStyle() const -> StrokeCapStyle { return this->capStyle
 void Stroke::setStrokeCapStyle(const StrokeCapStyle capStyle) { this->capStyle = capStyle; }
 
 void Stroke::debugPrint() const {
-    g_message("%s", FC(FORMAT_STR("Stroke {1} / hasPressure() = {2}") % (int64_t)this % this->hasPressure()));
+    std::cout << FC(FORMAT_STR("Stroke {1} / hasPressure() = {2}") % (int64_t)this % this->hasPressure()) << std::endl;
 
     for (auto&& p: points) {
-        g_message("%lf / %lf / %lf", p.x, p.y, p.z);
+        std::cout << p.x << " / " << p.y << " / " << p.z << std::endl;
     }
 
-    g_message("\n");
+    std::cout << std::endl;
 }

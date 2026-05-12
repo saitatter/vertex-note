@@ -11,11 +11,28 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "control/settings/Settings.h"
 
 TEST(SettingsTest, testLoadDoesNotThrowForNonExistingFilePath) {
     Settings settings{"non-existing-file-path"};
     EXPECT_NO_THROW(settings.load());
+}
+
+TEST(SettingsTest, loadsCommaDecimalSettings) {
+    const fs::path outPath = fs::temp_directory_path() / "vertex-note-test-units_Settings_commaDecimal.xml";
+    {
+        std::ofstream out(outPath);
+        out << R"(<?xml version="1.0" encoding="UTF-8"?>)"
+               R"(<settings><property name="pressureMultiplier" value="1,5"/></settings>)";
+    }
+
+    Settings loaded(outPath);
+    EXPECT_TRUE(loaded.load());
+    EXPECT_DOUBLE_EQ(1.5, loaded.getPressureMultiplier());
+
+    fs::remove(outPath);
 }
 
 // Rudimentary test for Settings save/load - very crude

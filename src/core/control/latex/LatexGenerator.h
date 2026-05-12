@@ -14,8 +14,6 @@
 #include <string>   // for string
 #include <variant>  // for variant
 
-#include <gio/gio.h>  // for GSubprocess
-
 #include "util/Color.h"  // for Color
 
 #include "filesystem.h"  // for path
@@ -34,16 +32,18 @@ public:
     struct GenError {
         std::string message;
     };
-    using Result = std::variant<GSubprocess*, GenError>;
+    struct GenOutput {
+        std::string output;
+        int exitStatus = 0;
+    };
+    using Result = std::variant<GenOutput, GenError>;
 
     /**
-     * Run the LaTeX command asynchronously to generate a preview for the given
-     * LaTeX file. The contents of the LaTeX file will be written to "tex.tex"
-     * in the given directory.
-     * The resultant process will have its standard error and (original) standard output
-     * combined into a single standard out stream.
+     * Run the LaTeX command to generate a preview for the given LaTeX file.
+     * The contents of the LaTeX file will be written to "tex.tex" in the given
+     * directory. Standard output and standard error are returned as one stream.
      */
-    Result asyncRun(const fs::path& texDir, const std::string& texFileContents);
+    Result run(const fs::path& texDir, const std::string& texFileContents);
 
     /**
      * Instantiate the LaTeX template.

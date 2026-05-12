@@ -4,15 +4,12 @@
 #include "audio/DeviceInfo.h"                // for DeviceInfo
 #include "audio/PortAudioConsumer.h"         // for PortAudioConsumer
 #include "audio/VorbisProducer.h"            // for VorbisProducer
-#include "control/Control.h"                 // for Control
-#include "control/actions/ActionDatabase.h"  // for ActionDatabase
-#include "gui/MainWindow.h"                  // for MainWindow
 
 class Settings;
 
-AudioPlayer::AudioPlayer(Control& control, Settings& settings):
-        control(control),
+AudioPlayer::AudioPlayer(Settings& settings, std::function<void(bool playing, bool paused)> stateObserver):
         settings(settings),
+        stateObserver(std::move(stateObserver)),
         audioQueue(std::make_unique<AudioQueue<float>>()),
         portAudioConsumer(std::make_unique<PortAudioConsumer>(*this, *audioQueue)),
         vorbisProducer(std::make_unique<VorbisProducer>(*audioQueue)) {}
@@ -33,6 +30,12 @@ auto AudioPlayer::start(fs::path const& file, unsigned int timestamp) -> bool {
 
 auto AudioPlayer::isPlaying() -> bool { return this->portAudioConsumer->isPlaying(); }
 
+void AudioPlayer::notifyPlaybackState(bool playing, bool paused) {
+    if (this->stateObserver) {
+        this->stateObserver(playing, paused);
+    }
+}
+
 void AudioPlayer::pause() {
     if (!this->portAudioConsumer->isPlaying()) {
         return;
@@ -40,6 +43,7 @@ void AudioPlayer::pause() {
 
     // Stop playing audio
     this->portAudioConsumer->stopPlaying();
+    notifyPlaybackState(false, true);
 }
 
 auto AudioPlayer::play() -> bool {
@@ -47,26 +51,25 @@ auto AudioPlayer::play() -> bool {
         return false;
     }
 
-    return this->portAudioConsumer->startPlaying();
+    const bool started = this->portAudioConsumer->startPlaying();
+    if (started) {
+        notifyPlaybackState(true, false);
+    }
+    return started;
 }
 
 void AudioPlayer::disableAudioPlaybackButtons() {
     if (this->audioQueue->hasStreamEnded()) {
-        auto* actionDB = this->control.getActionDatabase();
-        actionDB->enableAction(Action::AUDIO_PAUSE_PLAYBACK, false);
-        actionDB->enableAction(Action::AUDIO_STOP_PLAYBACK, false);
-        actionDB->enableAction(Action::AUDIO_SEEK_FORWARDS, false);
-        actionDB->enableAction(Action::AUDIO_SEEK_BACKWARDS, false);
-        actionDB->setActionState(Action::AUDIO_PAUSE_PLAYBACK, false);
+        notifyPlaybackState(false, false);
     }
 }
 
 void AudioPlayer::stop() {
-    disableAudioPlaybackButtons();
     // Stop playing audio
     this->portAudioConsumer->stopPlaying();
 
     this->audioQueue->signalEndOfStream();
+    disableAudioPlaybackButtons();
 
     // Abort libsox
     this->vorbisProducer->abort();

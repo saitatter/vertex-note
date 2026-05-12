@@ -31,11 +31,11 @@ echo "copy installed files"
 (cd $build_dir && cmake --install . --prefix "$setup_dir")
 
 echo "copy libraries"
-ldd "$build_dir/vertex-note.exe" | grep "${prefix}.*\.dll" -o | sort -u | xargs -I{} cp "{}" "$setup_dir"/bin/
+ldd "$build_dir/vertex-note-qt-shell.exe" | grep "${prefix}.*\.dll" -o | sort -u | xargs -I{} cp "{}" "$setup_dir"/bin/
 # CI workaround: copy libcrypto and libssl in case they are not already copied.
-ldd "$build_dir/vertex-note.exe" | grep -E 'lib(ssl|crypto)[^\.]*\.dll' -o | sort -u | xargs -I{} cp "${prefix}/bin/{}" "$setup_dir"/bin/
+ldd "$build_dir/vertex-note-qt-shell.exe" | grep -E 'lib(ssl|crypto)[^\.]*\.dll' -o | sort -u | xargs -I{} cp "${prefix}/bin/{}" "$setup_dir"/bin/
 
-echo "Installing GTK/Glib translations"
+echo "Installing GLib translations"
 # Copy system locale files
 for trans in "$build_dir"/po/*.gmo; do
     # Bail if there are no translations at all
@@ -45,20 +45,13 @@ for trans in "$build_dir"/po/*.gmo; do
     locale=$(basename -s .gmo $trans)
     locale_no_country=$(echo $locale | sed 's/_.*//')
 
-    # GTK / GLib Translation
-    for f in "glib20.mo" "gdk-pixbuf.mo" "gtk30.mo" "gtk30-properties.mo"; do
+    # GLib Translation
+    for f in "glib20.mo"; do
         install -Dvm644 "$prefix/share/locale/$locale/LC_MESSAGES/$f" "$setup_dir/share/locale/$locale/LC_MESSAGES/$f" \
           || ([ "$locale" != "$locale_no_country" ] \
               && install -Dvm644 "$prefix/share/locale/$locale_no_country/LC_MESSAGES/$f" "$setup_dir/share/locale/$locale_no_country/LC_MESSAGES/$f")
     done
 done
-
-echo "copy pixbuf libs"
-cp -r "$prefix"/lib/gdk-pixbuf-2.0 "$setup_dir"/lib/
-
-echo "copy pixbuf lib dependencies"
-# most of the dependencies are not linked directly, using strings to find them
-find "$prefix/lib/gdk-pixbuf-2.0" -type f -name "*.dll" -exec strings {} \; | grep "^lib.*\.dll$" | grep -v "libpixbufloader" | sort | uniq | xargs -I{} cp "$prefix/bin/{}" "$setup_dir/bin/"
 
 echo "copy icons"
 cp -r "$prefix"/share/icons "$setup_dir"/share/
@@ -69,17 +62,19 @@ cp -r "$prefix"/share/glib-2.0 "$setup_dir"/share/
 echo "copy poppler shared"
 cp -r "$prefix"/share/poppler "$setup_dir"/share/
 
-echo "copy gtksourceview shared"
-cp -r "$prefix"/share/gtksourceview-4 "$setup_dir"/share
+echo "copy Qt plugins"
+mkdir -p "$setup_dir"/share/qt6/plugins
+for plugin_dir in platforms imageformats printsupport styles; do
+    if [ -d "$prefix/share/qt6/plugins/$plugin_dir" ]; then
+        cp -r "$prefix/share/qt6/plugins/$plugin_dir" "$setup_dir"/share/qt6/plugins/
+    fi
+done
 
 echo "copy gspawn-win64-helper"
 cp "$prefix"/bin/gspawn-win64-helper{,-console}.exe "$setup_dir"/bin/
 
 echo "copy gdbus"
 cp "$prefix"/bin/gdbus.exe "$setup_dir"/bin
-
-echo "copy gtk3-demo"
-cp "$prefix"/bin/gtk3-demo.exe "$setup_dir"/bin
 
 echo "copy lua-gobject and dependencies"
 cp "$prefix"/bin/libgirepository-2.0-0.dll "$setup_dir"/bin

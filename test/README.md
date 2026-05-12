@@ -63,7 +63,7 @@ FAILED: test/test-units test/test-units[1]_tests.cmake
 
 ...
 
-dyld: Library not loaded: @rpath/libpoppler-glib.8.dylib
+dyld: Library not loaded: @rpath/libpoppler-cpp.0.dylib
   Referenced from: /Users/runner/work/1/s/build/test/test-units
   Reason: image not found
 ```

@@ -6,18 +6,15 @@
 #include <string_view>
 #include <utility>
 
-#include <glib.h>
+#include <QString>
 
-#include "util/safe_casts.h"  // for as_signed
+#include "util/Assert.h"
 
 using std::string;
 using std::vector;
 
 auto StringUtils::toLowerCase(const string& input) -> string {
-    char* lower = g_utf8_strdown(input.c_str(), as_signed(input.size()));
-    string lowerStr = lower;
-    g_free(lower);
-    return lowerStr;
+    return QString::fromUtf8(input.data(), static_cast<qsizetype>(input.size())).toLower().toUtf8().toStdString();
 }
 
 void StringUtils::replaceAllChars(string& input, const std::vector<replace_pair>& replaces) {
@@ -76,37 +73,25 @@ auto StringUtils::rtrim(std::string str) -> std::string {
 auto StringUtils::trim(std::string str) -> std::string { return ltrim(rtrim(std::move(str))); }
 
 auto StringUtils::iequals(const string& a, const string& b) -> bool {
-    gchar* ca = g_utf8_casefold(a.c_str(), as_signed(a.size()));
-    gchar* cb = g_utf8_casefold(b.c_str(), as_signed(b.size()));
-    int result = strcmp(ca, cb);
-    g_free(ca);
-    g_free(cb);
-
-
-    return result == 0;
+    return QString::compare(QString::fromUtf8(a.data(), static_cast<qsizetype>(a.size())),
+                            QString::fromUtf8(b.data(), static_cast<qsizetype>(b.size())), Qt::CaseInsensitive) == 0;
 }
 
 auto StringUtils::ellipsize(std::string_view sv, std::size_t max_width) -> std::string {
     constexpr std::string_view ELLIPSIS_STR = "...";
     xoj_assert(max_width > ELLIPSIS_STR.size());
-    const auto length = g_utf8_strlen(sv.data(), as_signed(sv.size()));
+    const auto text = QString::fromUtf8(sv.data(), static_cast<qsizetype>(sv.size()));
 
-    if (length <= as_signed(max_width)) {
+    if (text.size() <= static_cast<qsizetype>(max_width)) {
         return std::string{sv};
     }
 
-    const auto bytes_kept = static_cast<std::size_t>(
-            g_utf8_offset_to_pointer(sv.data(), as_signed(max_width - ELLIPSIS_STR.size())) - sv.data());
-    std::string str;
-    str.reserve(bytes_kept + ELLIPSIS_STR.size());
-    str.append(sv.data(), bytes_kept);
+    std::string str =
+            text.left(static_cast<qsizetype>(max_width - ELLIPSIS_STR.size())).toUtf8().toStdString();
     str.append(ELLIPSIS_STR);
     return str;
 }
 
 auto StringUtils::markup_escape(std::string_view sv) -> std::string {
-    auto escaped = g_markup_escape_text(sv.data(), as_signed(sv.size()));
-    std::string str{escaped};
-    g_free(escaped);
-    return str;
+    return QString::fromUtf8(sv.data(), static_cast<qsizetype>(sv.size())).toHtmlEscaped().toStdString();
 }

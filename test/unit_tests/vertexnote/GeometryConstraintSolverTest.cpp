@@ -83,3 +83,18 @@ TEST(VertexNoteGeometryConstraintSolver, iteratesChainedConstraintsUntilStable) 
     EXPECT_DOUBLE_EQ(object.vertex(b)->position.y, 0.0);
     EXPECT_DOUBLE_EQ(object.vertex(c)->position.y, 0.0);
 }
+
+TEST(VertexNoteGeometryConstraintSolver, appliesRadiusConstraintToCircleEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex(Vec2{0.0, 0.0});
+    const auto radiusPoint = object.addVertex(Vec2{5.0, 0.0});
+    const auto edge = object.addEdge(vn::geom::EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+    object.addConstraint(ConstraintKind::Radius, {}, {edge}, 3.0);
+
+    GeometryConstraintSolver solver;
+    auto result = solver.apply(object);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_DOUBLE_EQ(object.vertex(radiusPoint)->position.x, 3.0);
+    EXPECT_DOUBLE_EQ(object.vertex(radiusPoint)->position.y, 0.0);
+}

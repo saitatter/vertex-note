@@ -16,9 +16,6 @@
 #include <string_view>
 #include <vector>
 
-#include <glib.h>
-#include <glibconfig.h>
-
 #include "control/xojfile/DocumentBuilderInterface.h"
 #include "control/xojfile/XmlParserHelper.h"
 #include "control/xojfile/XmlTags.h"
@@ -31,15 +28,9 @@ class XmlParser {
 public:
     XmlParser(DocumentBuilderInterface& builder);
 
-    // GMarkup callbacks
-    static void parserStartElement(GMarkupParseContext* context, const gchar* elementName, const gchar** attributeNames,
-                                   const gchar** attributeValues, gpointer userdata, GError** error);
-    static void parserEndElement(GMarkupParseContext* context, const gchar* elementName, gpointer userdata,
-                                 GError** error);
-    static void parserText(GMarkupParseContext* context, const gchar* text, gsize textLen, gpointer userdata,
-                           GError** error);
-
-    static constexpr GMarkupParser interface = {parserStartElement, parserEndElement, parserText, nullptr, nullptr};
+    void startElement(const char* elementName, const char** attributeNames, const char** attributeValues);
+    void endElement(const char* elementName);
+    void text(std::string_view text);
 
     // Attempt recovery of truncated documents by closing all open nodes
     void closeOpenNodes();
@@ -85,7 +76,7 @@ private:
      * the last valid tag type. Otherwise it returns TagType::UNKNOWN, even if
      * the tag is globally known (e.g. if a page is found under a layer).
      */
-    xoj::xml_tags::Type getTagType(c_string_utf8_view name) const;
+    vn::xml_tags::Type getTagType(c_string_utf8_view name) const;
 
     /**
      * Close the top tag in the hierarchy
@@ -102,8 +93,8 @@ private:
     };
 
     // Table to dispatch parsing callbacks
-    static constexpr EnumIndexedArray<ParsingEntry, xoj::xml_tags::Type> parsingTable{
-            EnumIndexedArray<ParsingEntry, xoj::xml_tags::Type>::underlying_array_type{{
+    static constexpr EnumIndexedArray<ParsingEntry, vn::xml_tags::Type> parsingTable{
+            EnumIndexedArray<ParsingEntry, vn::xml_tags::Type>::underlying_array_type{{
                     {&XmlParser::parseUnknownTag, {}, {}},                                           // TagType::UNKNOWN
                     {&XmlParser::parseXournalTag, {}, &DocumentBuilderInterface::finalizeDocument},  // TagType::XOURNAL
                     {&XmlParser::parseMrWriterTag,
@@ -131,9 +122,9 @@ private:
     DocumentBuilderInterface& builder;
 
     // Stack containing the tag types found at every level in the document
-    std::vector<xoj::xml_tags::Type> hierarchy;
+    std::vector<vn::xml_tags::Type> hierarchy;
     // Variable to track the topmost valid tag type in the hierarchy stack
-    std::optional<xoj::xml_tags::Type> lastValidTag;
+    std::optional<vn::xml_tags::Type> lastValidTag;
 
     bool pdfFilenameParsed = false;
 

@@ -10,26 +10,19 @@
 #include <string_view>
 #include <utility>  // for move, pair
 
-#include <glib-object.h>  // for g_object_unref, G_TYPE_...
-
 #include "model/DocumentChangeType.h"         // for DOCUMENT_CHANGE_CLEARED
 #include "model/DocumentHandler.h"            // for DocumentHandler
 #include "model/PageRef.h"                    // for PageRef
 #include "model/PageType.h"                   // for PageType
-#include "pdf/base/PdfAction.h"            // for PdfAction
-#include "pdf/base/PdfBookmarkIterator.h"  // for PdfBookmarkIterator
 #include "util/Assert.h"                      // for xoj_assert
 #include "util/PathUtil.h"                    // for clearExtensions
 #include "util/PlaceholderString.h"           // for PlaceholderString
 #include "util/SaveNameUtils.h"               // for parseFilename
 #include "util/Util.h"                        // for npos
-#include "util/glib_casts.h"                  // for wrap_v
 #include "util/i18n.h"                        // for FS, _F
-#include "util/raii/GObjectSPtr.h"            // for GObjectSPtr
 #include "util/safe_casts.h"                  // for as_signed
 #include "util/utf8_view.h"                   // for utf8
 
-#include "LinkDestination.h"  // for LinkDestObject, DOCUMENT_L...
 #include "NotePage.h"          // for NotePage
 #include "filesystem.h"       // for path
 
@@ -37,31 +30,6 @@ Document::Document(DocumentHandler* handler): handler(handler) {}
 
 Document::~Document() {
     clearDocument(true);
-    freeTreeContentModel();
-}
-
-void Document::freeTreeContentModel() {
-    if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<freeTreeContentEntry>, this);
-
-        this->contentsModel.reset();
-    }
-}
-
-auto Document::freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc)
-        -> bool {
-    LinkDestObject* link = nullptr;
-    gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
-
-    if (link == nullptr) {
-        return false;
-    }
-
-    // The dispose function of LinkDestObject is not called, this workaround fixes the Memory Leak
-    delete link->dest;
-    link->dest = nullptr;
-
-    return false;
 }
 
 void Document::lock() { this->documentLock.lock(); }
@@ -72,7 +40,7 @@ void Document::unlock_shared() { this->documentLock.unlock_shared(); }
 auto Document::try_lock_shared() -> bool { return this->documentLock.try_lock_shared(); }
 
 void Document::clearDocument(bool destroy) {
-    this->preview.reset();
+    this->previewPngData.clear();
 
     if (!destroy) {
         // release lock
@@ -87,7 +55,6 @@ void Document::clearDocument(bool destroy) {
 
     this->pages.clear();
     this->pageIndex.reset();
-    freeTreeContentModel();
 
     this->filepath = fs::path{};
     this->pdfFilepath = fs::path{};
@@ -192,9 +159,9 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
     return p;
 }
 
-auto Document::getPreview() const -> vn::util::CairoSurfaceSPtr { return this->preview; }
+auto Document::getPreviewPngData() const -> const std::string& { return this->previewPngData; }
 
-void Document::setPreview(vn::util::CairoSurfaceSPtr preview) { this->preview = std::move(preview); }
+void Document::setPreviewPngData(std::string previewPngData) { this->previewPngData = std::move(previewPngData); }
 
 auto Document::getEvMetadataFilename() const -> fs::path {
     if (!this->filepath.empty()) {
@@ -219,43 +186,6 @@ auto Document::findPdfPage(size_t pdfPage) const -> size_t {
     }
 }
 
-void Document::buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter) {
-    do {
-        GtkTreeIter treeIter = {0};
-
-        PdfAction* action = iter->getAction();
-        LinkDestination* dest = new LinkDestination(*action->getDestination());
-        LinkDestObject* link = link_dest_new();
-        link->dest = dest;
-
-        if (action->getTitle().empty()) {
-            g_object_unref(link);
-            delete action;
-            continue;
-        }
-
-        link->dest->setExpand(iter->isOpen());
-
-        gtk_tree_store_append(GTK_TREE_STORE(contentsModel.get()), &treeIter, parent);
-        char* titleMarkup = g_markup_escape_text(action->getTitle().c_str(), -1);
-
-        gtk_tree_store_set(GTK_TREE_STORE(contentsModel.get()), &treeIter, DOCUMENT_LINKS_COLUMN_NAME, titleMarkup,
-                           DOCUMENT_LINKS_COLUMN_LINK, link, DOCUMENT_LINKS_COLUMN_PAGE_NUMBER, "", -1);
-
-        g_free(titleMarkup);
-        g_object_unref(link);
-
-        PdfBookmarkIterator* child = iter->getChildIter();
-        if (child) {
-            buildTreeContentsModel(&treeIter, child);
-            delete child;
-        }
-
-        delete action;
-
-    } while (iter->next());
-}
-
 void Document::indexPdfPages() {
     auto index = std::make_unique<PageIndex>();
     for (size_t i = 0; i < this->pages.size(); ++i) {
@@ -268,50 +198,8 @@ void Document::indexPdfPages() {
 }
 
 
-void Document::buildContentsModel() {
-    freeTreeContentModel();
-
-    PdfBookmarkIterator* iter = pdfDocument.getContentsIter();
-    if (iter == nullptr) {
-        // No Bookmarks
-        return;
-    }
-
-    this->contentsModel.reset(reinterpret_cast<GtkTreeModel*>(gtk_tree_store_new(4, G_TYPE_STRING, G_TYPE_OBJECT,
-                                                                                 G_TYPE_BOOLEAN, G_TYPE_STRING)),
-                              vn::util::adopt);
-    buildTreeContentsModel(nullptr, iter);
-    delete iter;
-}
-
-auto Document::getContentsModel() const -> GtkTreeModel* { return this->contentsModel.get(); }
-
-auto Document::fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc) -> bool {
-    LinkDestObject* link = nullptr;
-    gtk_tree_model_get(treeModel, iter, DOCUMENT_LINKS_COLUMN_LINK, &link, -1);
-
-    if (link == nullptr) {
-        return false;
-    }
-
-    auto page = doc->findPdfPage(link->dest->getPdfPage());
-
-    gchar* pageLabel = nullptr;
-    if (page != npos) {
-        pageLabel = g_strdup_printf("%zu", page + 1);
-    }
-    gtk_tree_store_set(GTK_TREE_STORE(treeModel), iter, DOCUMENT_LINKS_COLUMN_PAGE_NUMBER, pageLabel, -1);
-    g_free(pageLabel);
-
-    g_object_unref(link);
-    return false;
-}
-
 void Document::updateIndexPageNumbers() {
     indexPdfPages();
-    if (this->contentsModel) {
-        gtk_tree_model_foreach(this->contentsModel.get(), vn::util::wrap_v<fillPageLabels>, this);
-    }
 }
 
 void Document::setPdfAttributes(const fs::path& filename, bool attachToDocument) {
@@ -321,26 +209,20 @@ void Document::setPdfAttributes(const fs::path& filename, bool attachToDocument)
 
 auto Document::readPdf(const fs::path& filename, bool initPages, bool attachToDocument,
                        std::unique_ptr<std::string> data) -> bool {
-    GError* popplerError = nullptr;
+    std::string pdfError;
 
     lock();
 
     if (data != nullptr) {
-        if (!pdfDocument.load(std::move(data), password, &popplerError)) {
-            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % popplerError->message);
-            g_error_free(popplerError);
+        if (!pdfDocument.load(std::move(data), password, &pdfError)) {
+            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % pdfError);
             unlock();
 
             return false;
         }
     } else {
-        if (!pdfDocument.load(filename, password, &popplerError)) {
-            if (popplerError) {
-                lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % popplerError->message);
-                g_error_free(popplerError);
-            } else {
-                lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % "");
-            }
+        if (!pdfDocument.load(filename, password, &pdfError)) {
+            lastError = FS(_F("Document not loaded! ({1}), {2}") % filename.u8string() % pdfError);
             unlock();
             return false;
         }
@@ -364,7 +246,6 @@ auto Document::readPdf(const fs::path& filename, bool initPages, bool attachToDo
     }
 
     indexPdfPages();
-    buildContentsModel();
     updateIndexPageNumbers();
 
     unlock();
@@ -449,11 +330,11 @@ auto Document::operator=(const Document& doc) -> Document& {
     this->pdfFilepath = doc.pdfFilepath;
     this->filepath = doc.filepath;
     this->pages = doc.pages;
+    this->previewPngData = doc.previewPngData;
     this->attachPdf = doc.attachPdf;
     this->pathStorageMode = doc.pathStorageMode;
 
     indexPdfPages();
-    buildContentsModel();
     updateIndexPageNumbers();
 
     bool lastLock = try_lock();

@@ -1,13 +1,15 @@
 #include "PageTypeHandler.h"
 
 #include <algorithm>
+#include <array>
+#include <cctype>
+#include <fstream>
+#include <iostream>
 #include <string_view>
 #include <utility>
 
-#include "gui/GladeSearchpath.h"
+#include "config-paths.h"
 #include "util/PathUtil.h"
-#include "util/StringUtils.h"
-#include "util/AppMessageBox.h"
 #include "util/i18n.h"
 
 static void addPageTypeInfo(const std::string& name, PageTypeFormat format, const std::string& config,
@@ -20,23 +22,48 @@ static void addPageTypeInfo(const std::string& name, PageTypeFormat format, cons
     types.emplace_back(std::move(pt));
 }
 
+static void addFallbackPageTypes(std::vector<std::unique_ptr<PageTypeInfo>>& types) {
+    addPageTypeInfo(_("Plain"), PageTypeFormat::Plain, "", types);
+    addPageTypeInfo(_("Ruled"), PageTypeFormat::Ruled, "", types);
+    addPageTypeInfo(_("Ruled with vertical line"), PageTypeFormat::Lined, "", types);
+    addPageTypeInfo(_("Staves"), PageTypeFormat::Staves, "", types);
+    addPageTypeInfo(_("Graph"), PageTypeFormat::Graph, "", types);
+    addPageTypeInfo(_("Dotted"), PageTypeFormat::Dotted, "", types);
+    addPageTypeInfo(_("Isometric Dotted"), PageTypeFormat::IsoDotted, "", types);
+    addPageTypeInfo(_("Isometric Graph"), PageTypeFormat::IsoGraph, "", types);
+}
+
+static auto trim(std::string_view value) -> std::string_view {
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())) != 0) {
+        value.remove_prefix(1);
+    }
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())) != 0) {
+        value.remove_suffix(1);
+    }
+    return value;
+}
+
+static auto resolvePageTemplatesFile() -> fs::path {
+    const std::array candidates{
+            Util::getDataPath() / "resources-templates" / "pagetemplates.ini",
+            Util::getDataPath() / "resources-templates" / "pagetemplates.ini.in",
+            Util::getDataPath() / "pagetemplates.ini",
+            fs::path(PROJECT_SOURCE_DIR) / "resources-templates" / "pagetemplates.ini",
+            fs::path(PROJECT_SOURCE_DIR) / "resources-templates" / "pagetemplates.ini.in",
+    };
+    for (const auto& candidate: candidates) {
+        if (fs::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return candidates.back();
+}
+
 PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
-    auto file = gladeSearchPath->findFile("", "pagetemplates.ini");
-
-    if (!parseIni(file) || this->types.size() < 5) {
-
-        std::string msg = FS(_F("Could not load pagetemplates.ini file"));
-        AppMessageBox::showErrorToUser(nullptr, msg);
-
-        // On failure load the hardcoded and predefined values
-        addPageTypeInfo(_("Plain"), PageTypeFormat::Plain, "", types);
-        addPageTypeInfo(_("Ruled"), PageTypeFormat::Ruled, "", types);
-        addPageTypeInfo(_("Ruled with vertical line"), PageTypeFormat::Lined, "", types);
-        addPageTypeInfo(_("Staves"), PageTypeFormat::Staves, "", types);
-        addPageTypeInfo(_("Graph"), PageTypeFormat::Graph, "", types);
-        addPageTypeInfo(_("Dotted"), PageTypeFormat::Dotted, "", types);
-        addPageTypeInfo(_("Isometric Dotted"), PageTypeFormat::IsoDotted, "", types);
-        addPageTypeInfo(_("Isometric Graph"), PageTypeFormat::IsoGraph, "", types);
+    (void) gladeSearchPath;
+    if (!parseIni(resolvePageTemplatesFile()) || this->types.size() < 5) {
+        this->types.clear();
+        addFallbackPageTypes(types);
     }
 
     // Special types
@@ -47,46 +74,60 @@ PageTypeHandler::PageTypeHandler(GladeSearchpath* gladeSearchPath) {
 PageTypeHandler::~PageTypeHandler() = default;
 
 auto PageTypeHandler::parseIni(fs::path const& filepath) -> bool {
-    GKeyFile* config = g_key_file_new();
-    g_key_file_set_list_separator(config, ',');
-    if (!g_key_file_load_from_file(config, Util::toGFilename(filepath).c_str(), G_KEY_FILE_NONE, nullptr)) {
-        g_key_file_free(config);
+    if (!fs::exists(filepath)) {
         return false;
     }
 
-    gsize length = 0;
-    gchar** groups = g_key_file_get_groups(config, &length);
+    std::ifstream input(filepath);
+    if (!input) {
+        return false;
+    }
 
-    for (gsize i = 0; i < length; i++) { loadFormat(config, groups[i]); }
+    bool loadedAny = false;
+    std::string name;
+    std::string format;
+    std::string config;
+    auto flushGroup = [&]() {
+        if (!name.empty() && !format.empty()) {
+            loadFormat(name, format, config);
+            loadedAny = true;
+        }
+        name.clear();
+        format.clear();
+        config.clear();
+    };
 
-    g_strfreev(groups);
-    g_key_file_free(config);
-    return true;
+    std::string line;
+    while (std::getline(input, line)) {
+        const auto trimmedLine = trim(line);
+        if (trimmedLine.empty() || trimmedLine.front() == '#') {
+            continue;
+        }
+        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            flushGroup();
+            continue;
+        }
+
+        const auto separator = trimmedLine.find('=');
+        if (separator == std::string_view::npos) {
+            continue;
+        }
+        const auto key = trim(trimmedLine.substr(0, separator));
+        const auto value = trim(trimmedLine.substr(separator + 1));
+        if (key == "name") {
+            name = std::string(value);
+        } else if (key == "format") {
+            format = std::string(value);
+        } else if (key == "config") {
+            config = std::string(value);
+        }
+    }
+    flushGroup();
+    return loadedAny;
 }
 
-void PageTypeHandler::loadFormat(GKeyFile* config, const char* group) {
-    std::string strName;
-    gchar* name = g_key_file_get_locale_string(config, group, "name", nullptr, nullptr);
-    if (name != nullptr) {
-        strName = name;
-        g_free(name);
-    }
-
-    std::string strFormat;
-    gchar* format = g_key_file_get_string(config, group, "format", nullptr);
-    if (format != nullptr) {
-        strFormat = format;
-        g_free(format);
-    }
-
-    std::string strConfig;
-    gchar* cconfig = g_key_file_get_string(config, group, "config", nullptr);
-    if (cconfig != nullptr) {
-        strConfig = cconfig;
-        g_free(cconfig);
-    }
-
-    addPageTypeInfo(strName, getPageTypeFormatForString(strFormat), strConfig, types);
+void PageTypeHandler::loadFormat(const std::string& name, const std::string& format, const std::string& config) {
+    addPageTypeInfo(name, getPageTypeFormatForString(format), config, types);
 }
 
 auto PageTypeHandler::getPageTypes() -> const std::vector<std::unique_ptr<PageTypeInfo>>& { return this->types; }
@@ -131,9 +172,8 @@ auto PageTypeHandler::getPageTypeFormatForString(std::string_view format) -> Pag
     if (format == ":image") {
         return PageTypeFormat::Image;
     }
-    g_warning("PageTypeHandler::getPageTypeFormatForString: unknown PageType: \"" SV_FMT "\". Replacing with "
-              "PageTypeFormat::Plain",
-              SV_ARG(format));
+    std::cerr << "PageTypeHandler::getPageTypeFormatForString: unknown PageType: \"" << format
+              << "\". Replacing with PageTypeFormat::Plain\n";
     return PageTypeFormat::Plain;
 }
 
@@ -160,8 +200,7 @@ auto PageTypeHandler::getStringForPageTypeFormat(const PageTypeFormat& format) -
         case PageTypeFormat::Image:
             return ":image";
     }
-    g_warning("PageTypeHandler::getStringForPageTypeFormat: unknown PageType: %d. Replacing with "
-              "PageTypeFormat::Ruled",
-              static_cast<int>(format));
+    std::cerr << "PageTypeHandler::getStringForPageTypeFormat: unknown PageType: " << static_cast<int>(format)
+              << ". Replacing with PageTypeFormat::Ruled\n";
     return "ruled";
 }

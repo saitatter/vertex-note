@@ -22,7 +22,6 @@ Here you can find complete list of VertexNote CMake flags (sorted by categories)
 | Variable name                  | Default          | Description
 | ------------------------------ | ---------------- | -----------
 | `DEV_CALL_LOG`                 | OFF              | Call log (can take loooot of disk space and IO!)
-| `DEV_CHECK_GTK3_COMPAT` *[A]*  | OFF              | Adds a few compiler flags to check basic GTK3 upgradeability support (still compiles for GTK2!)
 | `DEV_ENABLE_GCOV` *[A]*        | OFF              | Build with gcov support
 | `DEV_METADATA_FILE` *[A]*      | metadata.ini     | Metadata file name
 | `DEV_METADATA_MAX_ITEMS` *[A]* | 50               | Maximal amount of metadata elements
@@ -30,13 +29,6 @@ Here you can find complete list of VertexNote CMake flags (sorted by categories)
 | `DEV_SETTINGS_XML_FILE` *[A]*  | settings.xml     | Settings file name
 | `DEV_TOOLBAR_CONFIG` *[A]*     | toolbar.ini      | Toolbar config file name
 | `DEV_ERRORLOG_DIR` *[A]*       | errorlogs        | Directory where errorlogfiles will be placed
-
-
-## `EXT` – add dependency basing on precompiled deb packages (UNIX only)
-
-| Variable name | Default | Description
-| ------------- | ------- | -----------
-| `EXT_GLIBMM`  | OFF     | Glibmm and Gtkmm binaries
 
 
 ## `ENABLE` – basic stable features support

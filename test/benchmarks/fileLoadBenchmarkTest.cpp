@@ -10,10 +10,10 @@
  */
 
 #include <iostream>
+#include <chrono>
 #include <memory>
 
 #include <config-test.h>
-#include <glib-2.0/glib.h>
 #include <gtest/gtest.h>
 
 #include "control/xojfile/LoadHandler.h"
@@ -27,12 +27,13 @@
 
 
 static void benchLoadFile(const fs::path& filename, int iterations) {
-    const auto start = g_get_monotonic_time();
+    const auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < iterations; ++i) {
         LoadHandler{}.loadDocument(filename);
     }
-    const auto stop = g_get_monotonic_time();
-    std::cout << "Loaded " << filename << ' ' << iterations << " times in " << (stop - start) / 1000 << "ms.\n";
+    const auto stop = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Loaded " << filename << ' ' << iterations << " times in " << elapsed.count() << "ms.\n";
 }
 
 TEST(FileLoadBenchmark, benchmarkHandwrittenText) {

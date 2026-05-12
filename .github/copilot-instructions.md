@@ -9,10 +9,13 @@
 ## Project Context
 
 - VertexNote is a long-term fork of Xournal++ for CAD-inspired technical note-taking.
-- The stack is C++, GTK3, Cairo, CMake, and the existing Xournal++ architecture.
+- The stack is C++20, Qt6 Widgets, CMake, and the existing Xournal++ architecture.
+- The Qt6 Widgets shell (`ENABLE_QT_SHELL`) provides full document editing.
+  Qt shell code lives in `src/qt/`.
 - Preserve existing Xournal++ behavior unless a change is explicitly part of the VertexNote roadmap.
 - App code lives in `src/core`; tests live in `test/unit_tests`.
 - VertexNote-specific geometry code lives under `src/core/vertexnote`.
+- Platform-neutral render/input abstractions live in `src/core/view/render/` and `src/core/ui/`.
 
 ## Architecture Rules
 
@@ -22,6 +25,16 @@
 - Do not turn `Stroke` into a general CAD object.
 - Keep geometry, snapping, constraints, and future 3D support in separable modules.
 - Maintain compatibility with existing `.xopp` documents.
+
+## Qt Shell Conventions
+
+- Qt shell uses `QtDocumentController` for all document mutations, not the GTK `Control` class.
+- Commands are registered via `QtCommandHost::registerCommand()` with `CommandDescriptor`.
+- Shortcuts are plain strings (e.g. `\"Ctrl+S\"`, `\"Alt+Left\"`), not `QKeySequence`.
+- Tool state lives in `QtToolState` struct on `QtCanvas`.
+- All editing operations must support undo/redo via `QtHistoryEntry` variants.
+- Prefer `this->window.commandHost()->` over local `host` variables in `registerBootstrapCommands()`.
+- Build: `scripts/mingw64-dev.ps1 build`; run: `scripts/mingw64-dev.ps1 run`.
 
 ## Git and Releases
 
@@ -42,19 +55,18 @@
 - Use stable IDs for VertexNote geometry objects, vertices, edges, and constraints.
 - Avoid broad cross-subsystem changes until the model API is covered by tests.
 
-## GTK/Cairo UI Rules
+## Qt UI Rules
 
-- Keep existing Xournal++ UI behavior intact while introducing VertexNote tools.
-- Avoid blocking GTK event handling during pointer interaction.
-- Use overlay views for active tool previews.
-- Use Cairo rendering paths that can be cached and invalidated by bounds.
+- Keep existing Xournal++ document behavior intact while introducing VertexNote tools.
+- Avoid blocking Qt event handling during pointer interaction.
+- Use Qt preview/render model paths that can be cached and invalidated by bounds.
 - Repaint the union of old and new bounds when geometry edits move vertices or constraints.
 
 ## Testing
 
 - Add targeted unit tests for geometry model, snapping behavior, serialization metadata, and undo actions.
 - Run focused tests first, then broader CMake targets when touching shared paths.
-- If the local machine lacks GTK/CMake dependencies, report exactly which dependency blocked validation.
+- If the local machine lacks Qt/CMake dependencies, report exactly which dependency blocked validation.
 
 ## Packaging and Updates
 

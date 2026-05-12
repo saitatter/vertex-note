@@ -221,9 +221,7 @@ static void checkStroke(const Layer* layer, size_t elementIndex, StrokeTool tool
 }
 
 static void checkImageFormat(const Image* img, const char* formatName) {
-    const auto gdkFormatName = gdk_pixbuf_format_get_name(img->getImageFormat());
-    EXPECT_STREQ(gdkFormatName, formatName);
-    g_free(gdkFormatName);
+    EXPECT_EQ(img->getImageFormatName(), formatName);
 }
 
 static void checkText(const Layer* layer, size_t elementIndex, const std::string& text, Color color) {
@@ -517,7 +515,7 @@ TEST(ControlLoadHandler, testImageZipped) {
 }
 
 TEST(ControlLoadHandler, imageLoadJpeg) {
-    // check loading of arbitrary image format (up to whatever is supported by GdkPixbuf)
+    // check loading of arbitrary image format (up to whatever is supported by the Qt image codecs)
     auto doc = loadTestDocument(GET_TESTFILE(u8"packaged_xopp/imgAttachment/doc_with_jpg.xopp"));
     ASSERT_TRUE(doc) << "doc should not be null";
 

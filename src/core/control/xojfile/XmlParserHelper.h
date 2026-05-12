@@ -12,6 +12,8 @@
 #pragma once
 
 #include <charconv>
+#include <cstdlib>
+#include <iostream>
 #include <istream>
 #include <optional>
 #include <ostream>
@@ -20,8 +22,6 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
-
-#include <glib.h>
 
 #include "util/Assert.h"
 #include "util/Color.h"
@@ -41,8 +41,9 @@ namespace XmlParserHelper {
 class AttributeMap {
 public:
     /**
-     * Build an attribute map for the current node. Names and values parameters
-     * should be directly forwarded from the GMarkup callback.
+     * Build an attribute map for the current node. Names and values are
+     * null-terminated arrays owned by the caller for the duration of parsing
+     * the current node.
      */
     AttributeMap(const char** attributeNames, const char** attributeValues);
 
@@ -105,7 +106,7 @@ std::string decodeBase64(std::string_view base64data);
  * `it` is updated to point to the first unparsed character.
  *
  * When available, we use std::from_chars, because it is about 10x faster than
- * streams and about 5x faster than g_ascii_strtod.
+ * streams and about 5x faster than std::strtod.
  * @param it  Pointer to the beginning of the string, modified to point to the
  *            first unparsed character
  * @param end Pointer to one character past the end of the string
@@ -131,9 +132,9 @@ T parseNumeric(const char*& it, const char* end) {
         // strtod requires the input to be null-terminated.
         xoj_assert(*end == '\0');
         char* ptr = nullptr;
-        value = static_cast<T>(g_ascii_strtod(it, &ptr));
+        value = static_cast<T>(std::strtod(it, &ptr));
         if (ptr == it) {
-            throw std::domain_error{"g_ascii_strtod failed"};
+            throw std::domain_error{"std::strtod failed"};
         }
         it = ptr;
     }
@@ -259,12 +260,13 @@ auto XmlParserHelper::getAttrib(std::u8string_view name, const AttributeMap& att
                 static_assert(detail::always_false<T>, "No parser defined for this type");
             }
         } catch (const std::domain_error& e) {
-            g_warning("XML parser: Attribute \"" SV_FMT "\" could not be parsed as %s: %s. The value is \"%s\"",
-                      U8SV_ARG(name), Util::demangledTypeName<T>().c_str(), e.what(), *optionalCStr);
+            std::cerr << "XML parser: Attribute \"" << char_cast(name) << "\" could not be parsed as "
+                      << Util::demangledTypeName<T>() << ": " << e.what() << ". The value is \"" << *optionalCStr
+                      << "\"\n";
             return std::nullopt;
         } catch (const detail::IncompleteParseError<T>& e) {
-            g_warning("XML parser: Attribute \"" SV_FMT "\" was not entirely parsed as %s. The value is \"%s\"",
-                      U8SV_ARG(name), Util::demangledTypeName<T>().c_str(), *optionalCStr);
+            std::cerr << "XML parser: Attribute \"" << char_cast(name) << "\" was not entirely parsed as "
+                      << Util::demangledTypeName<T>() << ". The value is \"" << *optionalCStr << "\"\n";
             return e.value();
         }
     } else {
@@ -282,10 +284,10 @@ auto XmlParserHelper::getAttribMandatory(std::u8string_view name, const Attribut
         if (warn) {
             const auto defaultValueStr = detail::toDebugString(defaultValue);
             if (defaultValueStr) {
-                g_warning("XML parser: Mandatory attribute \"" SV_FMT "\" not found. Using default value \"%s\"",
-                          U8SV_ARG(name), defaultValueStr->c_str());
+                std::cerr << "XML parser: Mandatory attribute \"" << char_cast(name)
+                          << "\" not found. Using default value \"" << *defaultValueStr << "\"\n";
             } else {
-                g_warning("XML parser: Mandatory attribute \"" SV_FMT "\" not found", U8SV_ARG(name));
+                std::cerr << "XML parser: Mandatory attribute \"" << char_cast(name) << "\" not found\n";
             }
         }
         return defaultValue;

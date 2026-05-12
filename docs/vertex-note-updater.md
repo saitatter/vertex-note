@@ -49,16 +49,20 @@ latest VertexNote release and a concise changelog inside the application.
 - `vn::update::VersionComparator`
   - strips the `vertex-note-v` prefix
   - compares semantic versions without relying on locale-sensitive parsing
-- `xoj::popup::UpdateDialog`
-  - GTK3 dialog responsible only for presentation and user actions
+- `QtUpdatePresentationService`
+  - Qt presentation layer responsible only for user-visible update actions
 
 ## Network Strategy
 
-Preferred first path: GLib/GIO async network APIs, because they are already available
-through GTK dependencies and do not require introducing a new dependency.
+Current path:
 
-Fallback path: if GIO HTTP support is not reliable on all targets, add a small optional
-dependency (`libsoup` or `curl`) in a separate commit with packaging updates.
+- Windows uses WinHTTP for the release fetch.
+- Linux and macOS use Qt Network, keeping the update checker aligned with the Qt
+  shell and avoiding runtime GIO/TLS module dependencies.
+
+Fallback path: if the non-Windows Qt Network path is not reliable on all targets,
+add a small optional dependency (`libsoup`) in a separate commit with packaging
+updates.
 
 Rules:
 

@@ -12,7 +12,7 @@
 #include <string_view>
 #include <system_error>
 
-#include <glib.h>
+#include <QByteArray>
 
 #include "control/xojfile/XmlAttrs.h"
 #include "model/LineStyle.h"
@@ -101,7 +101,7 @@ auto XmlParserHelper::getAttrib<LineStyle>(std::u8string_view name, const Attrib
 
 auto XmlParserHelper::getAttribColorMandatory(const AttributeMap& attributeMap, const Color& defaultValue, bool bg)
         -> Color {
-    const auto optColorSV = getAttrib<std::string_view>(xoj::xml_attrs::COLOR_STR, attributeMap);
+    const auto optColorSV = getAttrib<std::string_view>(vn::xml_attrs::COLOR_STR, attributeMap);
 
     if (optColorSV) {
         std::optional<Color> optColor;
@@ -121,12 +121,12 @@ auto XmlParserHelper::getAttribColorMandatory(const AttributeMap& attributeMap, 
         }
 
         // Nothing worked: fall back to default value
-        g_warning("XML parser: Unknown color \"" SV_FMT "\" found. Using default value \"%s\"", SV_ARG(*optColorSV),
-                  Util::rgb_to_hex_string(defaultValue).c_str());
+        std::cerr << "XML parser: Unknown color \"" << *optColorSV << "\" found. Using default value \""
+                  << Util::rgb_to_hex_string(defaultValue) << "\"\n";
         return defaultValue;
     } else {
-        g_warning(R"(XML parser: Mandatory attribute "color" not found. Using default value "%s")",
-                  Util::rgb_to_hex_string(defaultValue).c_str());
+        std::cerr << "XML parser: Mandatory attribute \"color\" not found. Using default value \""
+                  << Util::rgb_to_hex_string(defaultValue) << "\"\n";
         return defaultValue;
     }
 }
@@ -160,7 +160,7 @@ auto XmlParserHelper::parseColorCode(std::string_view sv) -> std::optional<Color
         uint32_t color{};
         auto [ptr, ec] = std::from_chars(sv.data() + 1, sv.data() + sv.size(), color, 16);
         if (ec != std::errc{} || ptr != (sv.data() + sv.size())) {
-            g_warning("XML parser: Unknown color code \"" SV_FMT "\".", SV_ARG(sv));
+            std::cerr << "XML parser: Unknown color code \"" << sv << "\".\n";
             return {};
         }
         // Discard alpha for now
@@ -198,18 +198,6 @@ auto XmlParserHelper::parsePredefinedColor(string_utf8_view sv) -> std::optional
 
 
 auto XmlParserHelper::decodeBase64(std::string_view base64data) -> std::string {
-    // Worst case: 3 bytes per 4 chars (round up)
-    const size_t maxDecodedSize = (base64data.size() / 4 + 1) * 3;
-    std::string result;
-    result.resize(maxDecodedSize);
-
-    // g_base64_decode requires a null-terminated C-string. Use the step decoding
-    // function instead and feed the whole string at once.
-    gint state = 0;
-    guint save = 0;
-    const size_t actualSize = g_base64_decode_step(base64data.data(), base64data.size(),
-                                                   reinterpret_cast<guchar*>(result.data()), &state, &save);
-    result.resize(actualSize);
-    result.shrink_to_fit();
-    return result;
+    const auto bytes = QByteArray::fromBase64(QByteArray(base64data.data(), static_cast<qsizetype>(base64data.size())));
+    return std::string(bytes.constData(), static_cast<std::size_t>(bytes.size()));
 }

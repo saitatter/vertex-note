@@ -2,9 +2,7 @@
 
 #include <utility>  // for move
 
-#include <glib.h>  // for g_free
-
-#include "control/jobs/ProgressListener.h"  // for ProgressListener
+#include "control/xml/ProgressListener.h"  // for ProgressListener
 #include "control/xml/Attribute.h"          // for XMLAttribute
 #include "util/OutputStream.h"              // for OutputStream
 #include "util/StringUtils.h"               // for StaticStringView

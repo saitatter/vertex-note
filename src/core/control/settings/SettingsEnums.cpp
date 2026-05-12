@@ -1,6 +1,6 @@
 #include "SettingsEnums.h"
 
-#include <glib.h>  // for g_warning
+#include <iostream>  // for cerr
 
 auto stylusCursorTypeFromString(const std::string& stylusCursorTypeStr) -> StylusCursorType {
     if (stylusCursorTypeStr == "none") {
@@ -15,7 +15,7 @@ auto stylusCursorTypeFromString(const std::string& stylusCursorTypeStr) -> Stylu
     if (stylusCursorTypeStr == "arrow") {
         return STYLUS_CURSOR_ARROW;
     }
-    g_warning("Settings::Unknown stylus cursor type: %s\n", stylusCursorTypeStr.c_str());
+    std::cerr << "Settings::Unknown stylus cursor type: " << stylusCursorTypeStr << std::endl;
     return STYLUS_CURSOR_DOT;
 }
 
@@ -32,7 +32,7 @@ auto eraserVisibilityFromString(const std::string& eraserVisibility) -> EraserVi
     if (eraserVisibility == "touch") {
         return ERASER_VISIBILITY_TOUCH;
     }
-    g_warning("Settings::Unknown eraser visibility: %s\n", eraserVisibility.c_str());
+    std::cerr << "Settings::Unknown eraser visibility: " << eraserVisibility << std::endl;
     return ERASER_VISIBILITY_ALWAYS;
 }
 
@@ -43,7 +43,7 @@ auto iconThemeFromString(const std::string& iconThemeStr) -> IconTheme {
     if (iconThemeStr == "iconsLucide") {
         return ICON_THEME_LUCIDE;
     }
-    g_warning("Settings::Unknown icon theme: %s\n", iconThemeStr.c_str());
+    std::cerr << "Settings::Unknown icon theme: " << iconThemeStr << std::endl;
     return ICON_THEME_COLOR;
 }
 
@@ -57,7 +57,7 @@ auto themeVariantFromString(const std::string& themeVariantStr) -> ThemeVariant 
     if (themeVariantStr == "forceDark") {
         return THEME_VARIANT_FORCE_DARK;
     }
-    g_warning("Settings::Unknown theme variant: %s\n", themeVariantStr.c_str());
+    std::cerr << "Settings::Unknown theme variant: " << themeVariantStr << std::endl;
     return THEME_VARIANT_USE_SYSTEM;
 }
 
@@ -72,6 +72,6 @@ auto emptyLastPageAppendFromString(const std::string& str) -> EmptyLastPageAppen
         return EmptyLastPageAppendType::OnScrollToEndOfLastPage;
     }
 
-    g_warning("Settings::Unknown empty last page append type: %s\n", str.c_str());
+    std::cerr << "Settings::Unknown empty last page append type: " << str << std::endl;
     return EmptyLastPageAppendType::Disabled;
 }

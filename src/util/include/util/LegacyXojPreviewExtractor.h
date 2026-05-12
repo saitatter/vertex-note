@@ -12,7 +12,8 @@
 
 #pragma once
 
-#include <glib.h>  // for gsize
+#include <cstddef>  // for size_t
+#include <vector>   // for vector
 
 #include "filesystem.h"  // for path
 
@@ -68,13 +69,12 @@ public:
     /**
      * @return The preview data, should be a binary PNG
      */
-    unsigned char* getData(gsize& dataLen);
+    const unsigned char* getData(size_t& dataLen) const;
 
     // Member
 private:
     /**
      * Preview data
      */
-    unsigned char* data = nullptr;
-    gsize dataLen = 0;
+    std::vector<unsigned char> data;
 };

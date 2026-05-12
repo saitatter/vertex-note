@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "view/ViewNamespaceAliases.h"
+#include "view/render/ViewNamespaceAliases.h"
 
 #include <memory>   // for unique_ptr
 #include <mutex>    // for mutex
@@ -24,14 +24,6 @@
 #include "util/Interval.h"          // for Interval
 #include "util/Rectangle.h"         // for Rectangle
 #include "util/UnionOfIntervals.h"  // for UnionOfIntervals
-
-#include "config-debug.h"  // for DEBUG_ERASABLE_STROKE_BOXES
-
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-#include <cairo.h>  // for cairo_t
-
-#include "view/Mask.h"
-#endif
 
 class Range;
 struct PaddedBox;
@@ -138,13 +130,6 @@ protected:
      */
     bool closedStroke;
     static constexpr double CLOSED_STROKE_DISTANCE = 0.3;
-
-#ifdef DEBUG_ERASABLE_STROKE_BOXES
-public:
-    mutable vn::view::Mask debugMask;
-
-    static void paintDebugRect(const vn::util::Rectangle<double>& rect, char color, cairo_t* cr);
-#endif
 
 public:
     /**

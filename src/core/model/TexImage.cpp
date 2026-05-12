@@ -1,29 +1,52 @@
 #include "TexImage.h"
 
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <limits>
 #include <memory>
 #include <utility>  // for move
 
-#include <poppler-document.h>  // for poppler_document_ge...
-#include <poppler-page.h>      // for poppler_page_get_size
+#include <poppler/cpp/poppler-document.h>
+#include <poppler/cpp/poppler-image.h>
+#include <poppler/cpp/poppler-page-renderer.h>
+#include <poppler/cpp/poppler-page.h>
 
 #include "model/Element.h"                        // for Element, ELEMENT_TE...
 #include "util/Rectangle.h"                       // for Rectangle
-#include "util/raii/GObjectSPtr.h"                // for GObjectSPtr
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
 
 using vn::util::Rectangle;
+
+namespace {
+
+auto adoptPopplerDocument(poppler::document* document) -> std::shared_ptr<poppler::document> {
+    return std::shared_ptr<poppler::document>(document, [](poppler::document* ptr) { delete ptr; });
+}
+
+auto makePopplerDocumentFromBytes(const std::string& bytes) -> std::shared_ptr<poppler::document> {
+    if (bytes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        return {};
+    }
+
+    return adoptPopplerDocument(
+            poppler::document::load_from_raw_data(bytes.data(), static_cast<int>(bytes.size())));
+}
+
+void setErrorMessage(std::string* errorMessage, std::string message) {
+    if (errorMessage) {
+        *errorMessage = std::move(message);
+    }
+}
+
+}  // namespace
 
 TexImage::TexImage(): Element(ELEMENT_TEXIMAGE) { this->sizeCalculated = true; }
 
 TexImage::~TexImage() { freeImageAndPdf(); }
 
 void TexImage::freeImageAndPdf() {
-    if (this->image) {
-        cairo_surface_destroy(this->image);
-        this->image = nullptr;
-    }
-
     this->pdf.reset();
 }
 
@@ -39,13 +62,7 @@ auto TexImage::cloneTexImage() const -> std::unique_ptr<TexImage> {
     img->snappedBounds = this->snappedBounds;
     img->sizeCalculated = this->sizeCalculated;
 
-    // Clone has a copy of our PDF.
-    img->pdf = this->pdf;
-
-    // Load a copy of our data (must be called after
-    // giving the clone a copy of our PDF -- it may change
-    // the PDF we've given it).
-    img->loadData(std::string(this->binaryData), nullptr);
+    img->loadData(std::string(this->binaryData));
 
     return img;
 }
@@ -62,17 +79,6 @@ void TexImage::setHeight(double height) {
     this->calcSize();
 }
 
-auto TexImage::cairoReadFunction(TexImage* image, unsigned char* data, unsigned int length) -> cairo_status_t {
-    for (unsigned int i = 0; i < length; i++, image->read++) {
-        if (image->read >= image->binaryData.length()) {
-            return CAIRO_STATUS_READ_ERROR;
-        }
-        data[i] = static_cast<unsigned char>(image->binaryData[image->read]);
-    }
-
-    return CAIRO_STATUS_SUCCESS;
-}
-
 /**
  * Gets the binary data, a .PNG image or a .PDF
  */
@@ -82,40 +88,76 @@ void TexImage::setText(std::string text) { this->text = std::move(text); }
 
 auto TexImage::getText() const -> std::string { return this->text; }
 
-auto TexImage::loadData(std::string&& bytes, GError** err) -> bool {
+auto TexImage::loadData(std::string&& bytes, std::string* errorMessage) -> bool {
     this->freeImageAndPdf();
     this->binaryData = bytes;
     if (this->binaryData.length() < 4) {
+        setErrorMessage(errorMessage, "LaTeX image data is too short.");
         return false;
     }
 
     const std::string type = binaryData.substr(1, 3);
     if (type == "PDF") {
-        // Note: binaryData must not be modified while pdf is live.
-        auto* bytes = g_bytes_new_with_free_func(this->binaryData.data(), this->binaryData.size(), nullptr, nullptr);
-        this->pdf.reset(poppler_document_new_from_bytes(bytes, nullptr, err), vn::util::adopt);
-        g_bytes_unref(bytes);
-
-        if (!pdf.get() || poppler_document_get_n_pages(this->pdf.get()) < 1) {
+        this->pdf = makePopplerDocumentFromBytes(this->binaryData);
+        if (!this->pdf || this->pdf->pages() < 1) {
+            setErrorMessage(errorMessage, "Could not load LaTeX PDF image.");
             return false;
         }
         if (std::abs(this->width * this->height) <= std::numeric_limits<double>::epsilon()) {
-            vn::util::GObjectSPtr<PopplerPage> page(poppler_document_get_page(this->pdf.get(), 0), vn::util::adopt);
-            poppler_page_get_size(page.get(), &this->width, &this->height);
+            std::unique_ptr<poppler::page> page(this->pdf->create_page(0));
+            if (!page) {
+                setErrorMessage(errorMessage, "Could not read LaTeX PDF page.");
+                return false;
+            }
+            const auto rect = page->page_rect();
+            this->width = rect.width();
+            this->height = rect.height();
         }
-    } else if (type == "PNG") {
-        this->image = cairo_image_surface_create_from_png_stream(
-                reinterpret_cast<cairo_read_func_t>(&cairoReadFunction), this);
-    } else {
-        g_warning("Unknown Latex image type: \"%s\"", type.c_str());
+    } else if (type != "PNG") {
+        setErrorMessage(errorMessage, "Unknown LaTeX image type: " + type);
+        std::cerr << "Unknown Latex image type: \"" << type << "\"" << std::endl;
     }
 
     return true;
 }
 
-auto TexImage::getImage() const -> cairo_surface_t* { return this->image; }
+auto TexImage::getPdf() const -> const poppler::document* { return this->pdf.get(); }
 
-auto TexImage::getPdf() const -> PopplerDocument* { return this->pdf.get(); }
+auto TexImage::renderPreviewRaster() const -> xoj::util::RasterImageData {
+    if (!this->pdf) {
+        return {};
+    }
+
+    const int pixelWidth = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->width))));
+    const int pixelHeight = std::max(1, static_cast<int>(std::lround(std::max(1.0, this->height))));
+
+    std::unique_ptr<poppler::page> page(this->pdf->create_page(0));
+    if (!page) {
+        return {};
+    }
+
+    poppler::page_renderer renderer;
+    renderer.set_render_hints(poppler::page_renderer::antialiasing | poppler::page_renderer::text_antialiasing);
+    renderer.set_image_format(poppler::image::format_argb32);
+    renderer.set_paper_color(0xffffffff);
+
+    const double xres = static_cast<double>(pixelWidth) / std::max(this->width, 1.0) * 72.0;
+    const double yres = static_cast<double>(pixelHeight) / std::max(this->height, 1.0) * 72.0;
+    const poppler::image image = renderer.render_page(page.get(), xres, yres);
+    if (!image.is_valid() || image.format() != poppler::image::format_argb32 || !image.const_data() ||
+        image.bytes_per_row() <= 0 || image.width() <= 0 || image.height() <= 0) {
+        return {};
+    }
+
+    xoj::util::RasterImageData raster;
+    raster.width = image.width();
+    raster.height = image.height();
+    raster.stride = image.bytes_per_row();
+    raster.format = xoj::util::RasterPixelFormat::Argb32Premultiplied;
+    const auto* data = reinterpret_cast<const unsigned char*>(image.const_data());
+    raster.pixels.assign(data, data + static_cast<std::size_t>(raster.stride * raster.height));
+    return raster;
+}
 
 void TexImage::scale(double x0, double y0, double fx, double fy, double rotation,
                      bool) {  // line width scaling option is not used
@@ -158,7 +200,7 @@ void TexImage::readSerialized(ObjectInputStream& in) {
     freeImageAndPdf();
 
     std::string data = in.readString();
-    this->loadData(std::move(data), nullptr);
+    this->loadData(std::move(data));
 
     in.endObject();
     this->calcSize();

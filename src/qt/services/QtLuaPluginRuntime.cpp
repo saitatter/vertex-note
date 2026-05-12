@@ -1,0 +1,2674 @@
+/*
+ * VertexNote
+ *
+ * Minimal Lua plugin runtime for the Qt shell.
+ */
+
+#include "QtLuaPluginRuntime.h"
+
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <cstdint>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <sstream>
+#include <string_view>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+
+#include <QFileDialog>
+#include <QFontDatabase>
+#include <QGuiApplication>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QScreen>
+#include <QSettings>
+#include <QString>
+#include <QStringList>
+#include <QWidget>
+
+#include "config-features.h"
+#include "config-paths.h"
+#include "config.h"
+#include "control/pagetype/PageTypeHandler.h"
+#include "filesystem.h"
+#include "model/Document.h"
+#include "model/Font.h"
+#include "model/Image.h"
+#include "model/NotePage.h"
+#include "model/SplineSegment.h"
+#include "model/Stroke.h"
+#include "model/StrokeStyle.h"
+#include "model/Text.h"
+#include "QtDocumentController.h"
+#include "ui/common/ICommandHost.h"
+#include "util/PathUtil.h"
+
+#ifdef ENABLE_PLUGINS
+extern "C" {
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+}
+#endif
+
+namespace {
+
+constexpr ptrdiff_t NO_PLUGIN_MODE = std::numeric_limits<ptrdiff_t>::max();
+
+auto toQString(const std::filesystem::path& path) -> QString { return QString::fromStdWString(path.wstring()); }
+
+auto qStringToStd(const QString& value) -> std::string { return value.toStdString(); }
+
+auto pluginSettingsKey(std::string_view name) -> QString {
+    QString key;
+    key.reserve(static_cast<int>(name.size()));
+    for (const unsigned char ch: name) {
+        key.append(std::isalnum(ch) != 0 ? QChar(static_cast<char>(ch)) : QChar('_'));
+    }
+    return key;
+}
+
+auto gtkAcceleratorToQtShortcut(std::string_view accelerator) -> std::string {
+    if (accelerator.empty()) {
+        return {};
+    }
+
+    std::string input(accelerator);
+    struct Replacement {
+        std::string_view gtk;
+        std::string_view qt;
+    };
+    constexpr Replacement replacements[] = {
+            {"<Control>", "Ctrl+"},
+            {"<Primary>", "Ctrl+"},
+            {"<Shift>", "Shift+"},
+            {"<Alt>", "Alt+"},
+            {"<Super>", "Meta+"},
+    };
+
+    for (const auto& replacement: replacements) {
+        std::string::size_type pos = 0;
+        while ((pos = input.find(replacement.gtk, pos)) != std::string::npos) {
+            input.replace(pos, replacement.gtk.size(), replacement.qt);
+            pos += replacement.qt.size();
+        }
+    }
+
+    if (!input.empty() && input.back() != '+' && input.size() >= 1U) {
+        input.back() = static_cast<char>(std::toupper(static_cast<unsigned char>(input.back())));
+    }
+    return input;
+}
+
+#ifdef ENABLE_PLUGINS
+auto luaOptionalString(lua_State* lua, int index, const char* fallback = "") -> std::string {
+    return lua_isnil(lua, index) == 1 ? std::string(fallback) : std::string(luaL_optstring(lua, index, fallback));
+}
+
+auto luaOptionalInteger(lua_State* lua, int index, ptrdiff_t fallback = 0) -> ptrdiff_t {
+    return lua_isnil(lua, index) == 1 ? fallback : static_cast<ptrdiff_t>(luaL_checkinteger(lua, index));
+}
+
+auto luaOptionalBool(lua_State* lua, int index, bool fallback = false) -> bool {
+    return lua_isnoneornil(lua, index) == 1 ? fallback : lua_toboolean(lua, index) != 0;
+}
+
+auto legacyActionCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"new-file", "app.new"},
+            {"ACTION_NEW", "app.new"},
+            {"open", "app.open"},
+            {"ACTION_OPEN", "app.open"},
+            {"annotate-pdf", "file.annotate-pdf"},
+            {"ACTION_ANNOTATE_PDF", "file.annotate-pdf"},
+            {"save", "file.save"},
+            {"ACTION_SAVE", "file.save"},
+            {"save-as", "app.save-as"},
+            {"ACTION_SAVE_AS", "app.save-as"},
+            {"export-as-pdf", "export.pdf"},
+            {"ACTION_EXPORT_AS_PDF", "export.pdf"},
+            {"export-as", "export.png"},
+            {"ACTION_EXPORT_AS", "export.png"},
+            {"print", "file.print"},
+            {"ACTION_PRINT", "file.print"},
+            {"quit", "app.quit"},
+            {"ACTION_QUIT", "app.quit"},
+            {"undo", "edit.undo-geometry"},
+            {"ACTION_UNDO", "edit.undo-geometry"},
+            {"redo", "edit.redo-geometry"},
+            {"ACTION_REDO", "edit.redo-geometry"},
+            {"cut", "edit.cut"},
+            {"ACTION_CUT", "edit.cut"},
+            {"copy", "edit.copy"},
+            {"ACTION_COPY", "edit.copy"},
+            {"paste", "edit.paste"},
+            {"ACTION_PASTE", "edit.paste"},
+            {"search", "edit.find"},
+            {"ACTION_SEARCH", "edit.find"},
+            {"select-all", "edit.select-all"},
+            {"ACTION_SELECT_ALL", "edit.select-all"},
+            {"delete", "edit.delete"},
+            {"ACTION_DELETE", "edit.delete"},
+            {"move-selection-layer-up", "edit.move-selection-layer-up"},
+            {"ACTION_MOVE_SELECTION_LAYER_UP", "edit.move-selection-layer-up"},
+            {"move-selection-layer-down", "edit.move-selection-layer-down"},
+            {"ACTION_MOVE_SELECTION_LAYER_DOWN", "edit.move-selection-layer-down"},
+            {"preferences", "app.settings"},
+            {"ACTION_SETTINGS", "app.settings"},
+            {"manage-toolbar", "app.settings"},
+            {"ACTION_MANAGE_TOOLBAR", "app.settings"},
+            {"customize-toolbar", "view.customize-toolbar"},
+            {"ACTION_CUSTOMIZE_TOOLBAR", "view.customize-toolbar"},
+            {"paired-pages-mode", "view.paired-pages"},
+            {"ACTION_VIEW_PAIRED_PAGES", "view.paired-pages"},
+            {"presentation-mode", "view.presentation"},
+            {"ACTION_VIEW_PRESENTATION_MODE", "view.presentation"},
+            {"fullscreen", "view.fullscreen"},
+            {"ACTION_FULLSCREEN", "view.fullscreen"},
+            {"show-sidebar", "view.show-sidebar"},
+            {"ACTION_SHOW_SIDEBAR", "view.show-sidebar"},
+            {"show-toolbar", "view.show-toolbar"},
+            {"show-menubar", "view.show-menubar"},
+            {"zoom-in", "view.zoom-in"},
+            {"ACTION_ZOOM_IN", "view.zoom-in"},
+            {"zoom-out", "view.zoom-out"},
+            {"ACTION_ZOOM_OUT", "view.zoom-out"},
+            {"zoom-100", "view.zoom-100"},
+            {"ACTION_ZOOM_100", "view.zoom-100"},
+            {"zoom-fit", "view.fit-page"},
+            {"ACTION_ZOOM_FIT", "view.fit-page"},
+            {"goto-first", "nav.first-page"},
+            {"ACTION_GOTO_FIRST", "nav.first-page"},
+            {"goto-previous", "nav.prev-page"},
+            {"ACTION_GOTO_BACK", "nav.prev-page"},
+            {"goto-page", "nav.goto-page"},
+            {"ACTION_GOTO_PAGE", "nav.goto-page"},
+            {"goto-next", "nav.next-page"},
+            {"ACTION_GOTO_NEXT", "nav.next-page"},
+            {"goto-last", "nav.last-page"},
+            {"ACTION_GOTO_LAST", "nav.last-page"},
+            {"goto-next-annotated-page", "nav.next-annotated"},
+            {"ACTION_GOTO_NEXT_ANNOTATED_PAGE", "nav.next-annotated"},
+            {"goto-previous-annotated-page", "nav.prev-annotated"},
+            {"ACTION_GOTO_PREVIOUS_ANNOTATED_PAGE", "nav.prev-annotated"},
+            {"new-page-before", "page.add-before"},
+            {"ACTION_NEW_PAGE_BEFORE", "page.add-before"},
+            {"new-page-after", "page.add"},
+            {"ACTION_NEW_PAGE_AFTER", "page.add"},
+            {"new-page-at-end", "page.add-end"},
+            {"ACTION_NEW_PAGE_AT_END", "page.add-end"},
+            {"duplicate-page", "page.duplicate"},
+            {"ACTION_DUPLICATE_PAGE", "page.duplicate"},
+            {"append-new-pdf-pages", "journal.append-new-pdf-pages"},
+            {"ACTION_APPEND_NEW_PDF_PAGES", "journal.append-new-pdf-pages"},
+            {"configure-page-template", "page.template"},
+            {"ACTION_CONFIGURE_PAGE_TEMPLATE", "page.template"},
+            {"delete-page", "page.delete"},
+            {"ACTION_DELETE_PAGE", "page.delete"},
+            {"paper-format", "page.format"},
+            {"ACTION_PAPER_FORMAT", "page.format"},
+            {"paper-background-color", "page.background"},
+            {"ACTION_PAPER_BACKGROUND_COLOR", "page.background"},
+            {"setsquare", "tool.setsquare"},
+            {"ACTION_SETSQUARE", "tool.setsquare"},
+            {"compass", "tool.compass"},
+            {"ACTION_COMPASS", "tool.compass"},
+            {"tool-fill", "pen.fill-toggle"},
+            {"ACTION_TOOL_FILL", "pen.fill-toggle"},
+            {"ACTION_TOOL_PEN_FILL", "pen.fill-toggle"},
+            {"layer-new-above-current", "layer.add-above"},
+            {"ACTION_NEW_LAYER", "layer.add-above"},
+            {"layer-new-below-current", "layer.add-below"},
+            {"ACTION_NEW_LAYER_BELOW_CURRENT", "layer.add-below"},
+            {"layer-copy", "layer.copy"},
+            {"layer-delete", "page.delete-layer"},
+            {"ACTION_DELETE_LAYER", "page.delete-layer"},
+            {"layer-merge-down", "layer.merge-down"},
+            {"ACTION_MERGE_LAYER_DOWN", "layer.merge-down"},
+            {"layer-rename", "layer.rename"},
+            {"ACTION_RENAME_LAYER", "layer.rename"},
+            {"layer-show-all", "layer.show-all"},
+            {"layer-hide-all", "layer.hide-all"},
+            {"layer-goto-next", "layer.goto-next"},
+            {"ACTION_GOTO_NEXT_LAYER", "layer.goto-next"},
+            {"layer-goto-previous", "layer.goto-prev"},
+            {"ACTION_GOTO_PREVIOUS_LAYER", "layer.goto-prev"},
+            {"layer-goto-top", "layer.goto-top"},
+            {"ACTION_GOTO_TOP_LAYER", "layer.goto-top"},
+            {"plugin-manager", "plugins.manager"},
+            {"ACTION_PLUGIN_MANAGER", "plugins.manager"},
+            {"help", "help.open"},
+            {"ACTION_HELP", "help.open"},
+            {"check-for-updates", "app.check-updates"},
+            {"ACTION_CHECK_FOR_UPDATES", "app.check-updates"},
+            {"about", "app.about-qt-shell"},
+            {"ACTION_ABOUT", "app.about-qt-shell"},
+            {"ACTION_TOOL_PEN", "tool.pen"},
+            {"ACTION_TOOL_ERASER", "tool.eraser"},
+            {"ACTION_TOOL_HIGHLIGHTER", "tool.highlighter"},
+            {"ACTION_TOOL_TEXT", "tool.text"},
+            {"ACTION_TOOL_SELECT_RECT", "tool.select"},
+            {"ACTION_TOOL_SELECT_REGION", "tool.select-region"},
+            {"ACTION_TOOL_SELECT_MULTILAYER_RECT", "tool.select-multilayer-rect"},
+            {"ACTION_TOOL_SELECT_MULTILAYER_REGION", "tool.select-multilayer-region"},
+            {"ACTION_TOOL_SELECT_OBJECT", "tool.select-object"},
+            {"ACTION_TOOL_VERTICAL_SPACE", "tool.vertical-space"},
+            {"ACTION_TOOL_HAND", "tool.hand"},
+            {"ACTION_TOOL_DRAW_RECT", "tool.draw-rectangle"},
+            {"ACTION_TOOL_DRAW_ELLIPSE", "tool.draw-ellipse"},
+            {"ACTION_TOOL_DRAW_ARROW", "tool.draw-arrow"},
+            {"ACTION_TOOL_DRAW_DOUBLE_ARROW", "tool.draw-double-arrow"},
+            {"ACTION_TOOL_DRAW_COORDINATE_SYSTEM", "tool.draw-coordinate-system"},
+            {"ACTION_RULER", "tool.draw-line"},
+            {"ACTION_TOOL_DRAW_EDGE", "tool.draw-edge"},
+            {"ACTION_TOOL_DRAW_SPLINE", "tool.draw-spline"},
+            {"ACTION_SHAPE_RECOGNIZER", "tool.draw-shape-recognizer"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_LINEAR", "tool.select-pdf-text-linear"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_RECT", "tool.select-pdf-text-rect"},
+            {"ACTION_TOOL_SELECT_PDF_TEXT_MARKER_OPACITY", "tool.select-pdf-text-marker-opacity"},
+            {"ACTION_TOOL_LASER_POINTER_PEN", "tool.laser-pointer-pen"},
+            {"ACTION_TOOL_LASER_POINTER_HIGHLIGHTER", "tool.laser-pointer-highlighter"},
+            {"ACTION_SIZE_VERY_FINE", "pen.size-very-fine"},
+            {"ACTION_SIZE_FINE", "pen.size-fine"},
+            {"ACTION_SIZE_MEDIUM", "pen.size-medium"},
+            {"ACTION_SIZE_THICK", "pen.size-thick"},
+            {"ACTION_SIZE_VERY_THICK", "pen.size-very-thick"},
+            {"ACTION_TOOL_PEN_SIZE_VERY_FINE", "pen.size-very-fine"},
+            {"ACTION_TOOL_PEN_SIZE_FINE", "pen.size-fine"},
+            {"ACTION_TOOL_PEN_SIZE_MEDIUM", "pen.size-medium"},
+            {"ACTION_TOOL_PEN_SIZE_THICK", "pen.size-thick"},
+            {"ACTION_TOOL_PEN_SIZE_VERY_THICK", "pen.size-very-thick"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_VERY_FINE", "highlighter.size-very-fine"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_FINE", "highlighter.size-fine"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_MEDIUM", "highlighter.size-medium"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_THICK", "highlighter.size-thick"},
+            {"ACTION_TOOL_HIGHLIGHTER_SIZE_VERY_THICK", "highlighter.size-very-thick"},
+            {"ACTION_TOOL_ERASER_SIZE_VERY_FINE", "eraser.size-very-fine"},
+            {"ACTION_TOOL_ERASER_SIZE_FINE", "eraser.size-fine"},
+            {"ACTION_TOOL_ERASER_SIZE_MEDIUM", "eraser.size-medium"},
+            {"ACTION_TOOL_ERASER_SIZE_THICK", "eraser.size-thick"},
+            {"ACTION_TOOL_ERASER_SIZE_VERY_THICK", "eraser.size-very-thick"},
+            {"ACTION_TOOL_LINE_STYLE_PLAIN", "pen.line-solid"},
+            {"ACTION_TOOL_LINE_STYLE_DASH", "pen.line-dash"},
+            {"ACTION_TOOL_LINE_STYLE_DASH_DOT", "pen.line-dashdot"},
+            {"ACTION_TOOL_LINE_STYLE_DOT", "pen.line-dot"},
+            {"ACTION_TOOL_ERASER_STANDARD", "eraser.type-standard"},
+            {"ACTION_TOOL_ERASER_DELETE_STROKE", "eraser.type-delete-stroke"},
+            {"ACTION_TOOL_ERASER_WHITEOUT", "eraser.type-whiteout"},
+            {"ACTION_GRID_SNAPPING", "view.toggle-grid-snap"},
+            {"ACTION_ROTATION_SNAPPING", "view.toggle-rotation-snap"},
+            {"ACTION_SET_LAYOUT_HORIZONTAL", "view.layout-horizontal"},
+            {"ACTION_SET_LAYOUT_VERTICAL", "view.layout-vertical"},
+            {"ACTION_SET_LAYOUT_L2R", "view.layout-ltr"},
+            {"ACTION_SET_LAYOUT_R2L", "view.layout-rtl"},
+            {"ACTION_SET_LAYOUT_T2B", "view.layout-ttb"},
+            {"ACTION_SET_LAYOUT_B2T", "view.layout-btt"},
+            {"ACTION_SET_COLUMNS_1", "view.columns-1"},
+            {"ACTION_SET_COLUMNS_2", "view.columns-2"},
+            {"ACTION_SET_COLUMNS_3", "view.columns-3"},
+            {"ACTION_SET_COLUMNS_4", "view.columns-4"},
+            {"ACTION_SET_COLUMNS_5", "view.columns-5"},
+            {"ACTION_SET_COLUMNS_6", "view.columns-6"},
+            {"ACTION_SET_COLUMNS_7", "view.columns-7"},
+            {"ACTION_SET_COLUMNS_8", "view.columns-8"},
+            {"ACTION_SET_ROWS_1", "view.rows-1"},
+            {"ACTION_SET_ROWS_2", "view.rows-2"},
+            {"ACTION_SET_ROWS_3", "view.rows-3"},
+            {"ACTION_SET_ROWS_4", "view.rows-4"},
+            {"ACTION_SET_ROWS_5", "view.rows-5"},
+            {"ACTION_SET_ROWS_6", "view.rows-6"},
+            {"ACTION_SET_ROWS_7", "view.rows-7"},
+            {"ACTION_SET_ROWS_8", "view.rows-8"},
+            {"ACTION_ARRANGE_BRING_TO_FRONT", "edit.bring-to-front"},
+            {"ACTION_ARRANGE_BRING_FORWARD", "edit.bring-forward"},
+            {"ACTION_ARRANGE_SEND_BACKWARD", "edit.send-backward"},
+            {"ACTION_ARRANGE_SEND_TO_BACK", "edit.send-to-back"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string(action) : std::string(it->second);
+}
+
+auto selectToolCommand(ptrdiff_t tool) -> std::string {
+    static const std::unordered_map<ptrdiff_t, std::string_view> TOOLS = {
+            {1, "tool.pen"},
+            {2, "tool.eraser"},
+            {3, "tool.highlighter"},
+            {4, "tool.text"},
+            {6, "tool.select"},
+            {7, "tool.select-region"},
+            {8, "tool.select-multilayer-rect"},
+            {9, "tool.select-multilayer-region"},
+            {10, "tool.select-object"},
+            {12, "tool.vertical-space"},
+            {13, "tool.hand"},
+            {14, "tool.draw-rectangle"},
+            {15, "tool.draw-ellipse"},
+            {16, "tool.draw-arrow"},
+            {17, "tool.draw-double-arrow"},
+            {18, "tool.draw-coordinate-system"},
+            {20, "tool.draw-spline"},
+            {21, "tool.select-pdf-text-linear"},
+            {22, "tool.select-pdf-text-rect"},
+            {23, "tool.laser-pointer-pen"},
+            {24, "tool.laser-pointer-highlighter"},
+    };
+    const auto it = TOOLS.find(tool);
+    return it == TOOLS.end() ? std::string() : std::string(it->second);
+}
+
+auto arrangementCommand(ptrdiff_t orderChange) -> std::string {
+    static const std::unordered_map<ptrdiff_t, std::string_view> COMMANDS = {
+            {0, "edit.bring-to-front"},
+            {1, "edit.bring-forward"},
+            {2, "edit.send-backward"},
+            {3, "edit.send-to-back"},
+    };
+    const auto it = COMMANDS.find(orderChange);
+    return it == COMMANDS.end() ? std::string() : std::string(it->second);
+}
+
+auto lineStyleCommand(std::string_view style) -> std::string {
+    if (style == "plain") {
+        return "pen.line-solid";
+    }
+    if (style == "dash") {
+        return "pen.line-dash";
+    }
+    if (style == "dashdot") {
+        return "pen.line-dashdot";
+    }
+    if (style == "dot") {
+        return "pen.line-dot";
+    }
+    return {};
+}
+
+auto sidebarActionCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"COPY", "page.duplicate"},
+            {"DELETE", "page.delete"},
+            {"NEW_BEFORE", "page.add-before"},
+            {"NEW_AFTER", "page.add"},
+            {"MOVE_UP", "page.move-up"},
+            {"MOVE_DOWN", "page.move-down"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string() : std::string(it->second);
+}
+
+auto booleanActionStateCommand(std::string_view action) -> std::string {
+    static const std::unordered_map<std::string_view, std::string_view> ACTIONS = {
+            {"show-sidebar", "view.show-sidebar"},
+            {"ACTION_SHOW_SIDEBAR", "view.show-sidebar"},
+            {"show-toolbar", "view.show-toolbar"},
+            {"show-menubar", "view.show-menubar"},
+            {"paired-pages-mode", "view.paired-pages"},
+            {"ACTION_VIEW_PAIRED_PAGES", "view.paired-pages"},
+            {"presentation-mode", "view.presentation"},
+            {"ACTION_VIEW_PRESENTATION_MODE", "view.presentation"},
+            {"fullscreen", "view.fullscreen"},
+            {"ACTION_FULLSCREEN", "view.fullscreen"},
+            {"grid-snapping", "view.toggle-grid-snap"},
+            {"vertexnote-grid-snapping", "view.toggle-grid-snap"},
+            {"ACTION_GRID_SNAPPING", "view.toggle-grid-snap"},
+            {"vertexnote-geometry-snapping", "view.toggle-geometry-snap"},
+            {"rotation-snapping", "view.toggle-rotation-snap"},
+            {"ACTION_ROTATION_SNAPPING", "view.toggle-rotation-snap"},
+    };
+    const auto it = ACTIONS.find(action);
+    return it == ACTIONS.end() ? std::string() : std::string(it->second);
+}
+#endif
+
+}  // namespace
+
+struct QtLuaPluginRuntime::Plugin {
+    std::string name;
+    std::string description;
+    std::string author;
+    std::string version;
+    std::filesystem::path path;
+    std::string mainfile;
+    bool valid = false;
+    bool defaultEnabled = false;
+    bool enabled = false;
+    bool inInitUi = false;
+    int registeredActions = 0;
+    std::string error;
+    std::vector<std::string> actionIds;
+    std::vector<std::string> placeholderIds;
+    std::unordered_map<std::string, std::string> placeholderIdsByLuaId;
+    QtLuaPluginRuntime* runtime = nullptr;
+
+#ifdef ENABLE_PLUGINS
+    struct LuaStateDeleter {
+        void operator()(lua_State* lua) const {
+            if (lua) {
+                lua_close(lua);
+            }
+        }
+    };
+    std::unique_ptr<lua_State, LuaStateDeleter> lua;
+#endif
+
+    [[nodiscard]] auto status() const -> PluginStatus {
+        return {.name = name,
+                .description = description,
+                .author = author,
+                .version = version,
+                .path = path,
+                .valid = valid,
+                .defaultEnabled = defaultEnabled,
+                .enabled = enabled,
+                .registeredActions = registeredActions,
+                .error = error};
+    }
+
+#ifdef ENABLE_PLUGINS
+    void addPluginToLuaPath() {
+        lua_getglobal(lua.get(), "package");
+        lua_getfield(lua.get(), -1, "path");
+        const char* existing = lua_tostring(lua.get(), -1);
+        const auto pluginPath = (path / "?.lua").string();
+        const std::string combinedPath = pluginPath + ";" + (existing ? existing : "");
+        lua_pop(lua.get(), 1);
+        lua_pushstring(lua.get(), combinedPath.c_str());
+        lua_setfield(lua.get(), -2, "path");
+        lua_pop(lua.get(), 1);
+    }
+
+    auto callFunction(const std::string& functionName, ptrdiff_t mode = NO_PLUGIN_MODE) -> bool {
+        if (!lua) {
+            return false;
+        }
+
+        lua_getglobal(lua.get(), functionName.c_str());
+        if (lua_isfunction(lua.get(), -1) != 1) {
+            lua_pop(lua.get(), 1);
+            error = "Missing Lua callback: " + functionName;
+            return false;
+        }
+
+        int argumentCount = 0;
+        if (mode != NO_PLUGIN_MODE) {
+            lua_pushinteger(lua.get(), static_cast<lua_Integer>(mode));
+            argumentCount = 1;
+        }
+
+        if (lua_pcall(lua.get(), argumentCount, 0, 0) != LUA_OK) {
+            const char* err = lua_tostring(lua.get(), -1);
+            error = err ? err : "Unknown Lua error";
+            lua_pop(lua.get(), 1);
+            if (runtime && runtime->parent) {
+                QMessageBox::warning(runtime->parent, QStringLiteral("Plugin Error"),
+                                     QString::fromStdString(name + ": " + error));
+            }
+            return false;
+        }
+        return true;
+    }
+
+    auto callFunctionWithString(const std::string& functionName, const std::string& value) -> bool {
+        if (!lua) {
+            return false;
+        }
+
+        lua_getglobal(lua.get(), functionName.c_str());
+        if (lua_isfunction(lua.get(), -1) != 1) {
+            lua_pop(lua.get(), 1);
+            error = "Missing Lua callback: " + functionName;
+            return false;
+        }
+
+        lua_pushstring(lua.get(), value.c_str());
+        if (lua_pcall(lua.get(), 1, 0, 0) != LUA_OK) {
+            const char* err = lua_tostring(lua.get(), -1);
+            error = err ? err : "Unknown Lua error";
+            lua_pop(lua.get(), 1);
+            if (runtime && runtime->parent) {
+                QMessageBox::warning(runtime->parent, QStringLiteral("Plugin Error"),
+                                     QString::fromStdString(name + ": " + error));
+            }
+            return false;
+        }
+        return true;
+    }
+
+    auto registerUi(std::string menu, std::string callback, ptrdiff_t mode, std::string accelerator,
+                    std::string toolbarId, std::string iconName) -> int {
+        const int menuId = registeredActions++;
+        const auto baseId = std::string("plugin.") + name + "." + std::to_string(menuId);
+        const auto shortcut = gtkAcceleratorToQtShortcut(accelerator);
+
+        auto makeDescriptor = [&](std::string id, std::string label) {
+            return vn::ui::common::PluginUiActionDescriptor{
+                    .id = std::move(id),
+                    .label = std::move(label),
+                    .tooltip = description.empty() ? "Plugin: " + name : description,
+                    .shortcut = shortcut,
+                    .callback = [this, callback, mode]() { this->callFunction(callback, mode); },
+            };
+        };
+
+        if (!menu.empty() && runtime && runtime->bridge) {
+            const auto id = baseId + ".menu";
+            runtime->bridge->registerMenuAction(makeDescriptor(id, menu));
+            actionIds.push_back(id);
+        }
+        if (!toolbarId.empty() && runtime && runtime->bridge) {
+            const auto label = iconName.empty() ? toolbarId : iconName;
+            const auto id = baseId + ".toolbar";
+            runtime->bridge->registerToolbarAction(makeDescriptor(id, label));
+            actionIds.push_back(id);
+        }
+        return menuId;
+    }
+
+    auto uniquePlaceholderId(std::string_view luaId) const -> std::string {
+        return std::string("plugin.") + name + ".placeholder." + std::string(luaId);
+    }
+
+    void registerPlaceholder(const std::string& luaId, const std::string& description) {
+        if (luaId.empty() || !runtime || !runtime->bridge) {
+            return;
+        }
+
+        const auto uniqueId = uniquePlaceholderId(luaId);
+        runtime->bridge->registerPlaceholder(uniqueId, luaId, description);
+        placeholderIdsByLuaId[luaId] = uniqueId;
+        if (std::ranges::find(placeholderIds, uniqueId) == placeholderIds.end()) {
+            placeholderIds.push_back(uniqueId);
+        }
+    }
+
+    void setPlaceholderValue(const std::string& luaId, const std::string& value) {
+        if (!runtime || !runtime->bridge) {
+            return;
+        }
+        const auto it = placeholderIdsByLuaId.find(luaId);
+        if (it == placeholderIdsByLuaId.end()) {
+            return;
+        }
+        runtime->bridge->setPlaceholderValue(it->second, value);
+    }
+
+    auto triggerCommand(std::string_view commandId) -> bool {
+        if (!runtime || !runtime->commandHost || !runtime->commandHost->hasCommand(commandId)) {
+            error = "Qt command is not available: " + std::string(commandId);
+            return false;
+        }
+        runtime->commandHost->triggerCommand(commandId);
+        return true;
+    }
+
+    auto setBooleanCommand(std::string_view commandId, bool checked) -> bool {
+        if (!runtime || !runtime->commandHost || !runtime->commandHost->hasCommand(commandId)) {
+            error = "Qt command is not available: " + std::string(commandId);
+            return false;
+        }
+        if (runtime->commandHost->isCommandChecked(commandId) != checked) {
+            runtime->commandHost->triggerCommand(commandId);
+        }
+        return true;
+    }
+#endif
+};
+
+#ifdef ENABLE_PLUGINS
+namespace {
+
+auto pluginFromLua(lua_State* lua) -> QtLuaPluginRuntime::Plugin* {
+    lua_getfield(lua, LUA_REGISTRYINDEX, "VertexNote_QtLuaPlugin");
+    auto* plugin = lua_islightuserdata(lua, -1) == 1
+                           ? static_cast<QtLuaPluginRuntime::Plugin*>(lua_touserdata(lua, -1))
+                           : nullptr;
+    lua_pop(lua, 1);
+    return plugin;
+}
+
+auto documentControllerFromLua(lua_State* lua) -> QtDocumentController* {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->documentControllerPtr() ||
+        !plugin->runtime->documentControllerPtr()->hasDocument()) {
+        return nullptr;
+    }
+    return plugin->runtime->documentControllerPtr();
+}
+
+void luaSetStringField(lua_State* lua, const char* name, const std::string& value) {
+    lua_pushstring(lua, value.c_str());
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetNumberField(lua_State* lua, const char* name, lua_Number value) {
+    lua_pushnumber(lua, value);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetIntegerField(lua_State* lua, const char* name, lua_Integer value) {
+    lua_pushinteger(lua, value);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetBoolField(lua_State* lua, const char* name, bool value) {
+    lua_pushboolean(lua, value ? 1 : 0);
+    lua_setfield(lua, -2, name);
+}
+
+void luaSetLayerFields(lua_State* lua, std::string name, bool visible, bool annotated) {
+    lua_newtable(lua);
+    luaSetStringField(lua, "name", name);
+    luaSetBoolField(lua, "isVisible", visible);
+    luaSetBoolField(lua, "isAnnotated", annotated);
+}
+
+auto clampLuaPageIndex(QtLuaPluginRuntime::Plugin* plugin, ptrdiff_t pageNumber) -> std::size_t {
+    auto* controller = plugin && plugin->runtime ? plugin->runtime->documentControllerPtr() : nullptr;
+    if (!controller || controller->pageCount() == 0) {
+        return 0U;
+    }
+    const auto zeroBased = std::max<ptrdiff_t>(0, pageNumber - 1);
+    return std::min<std::size_t>(static_cast<std::size_t>(zeroBased), controller->pageCount() - 1U);
+}
+
+auto checkedPluginScope(lua_State* lua, int index) -> std::string {
+    const auto scope = luaOptionalString(lua, index);
+    if (scope != "selection" && scope != "layer" && scope != "page" && scope != "all") {
+        luaL_error(lua, "Unsupported element scope: %s", scope.c_str());
+    }
+    return scope;
+}
+
+void luaPushRefs(lua_State* lua, const std::vector<const Element*>& elements) {
+    lua_newtable(lua);
+    int index = 1;
+    for (const auto* element: elements) {
+        lua_pushinteger(lua, index++);
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(element)));
+        lua_settable(lua, -3);
+    }
+}
+
+auto luaReadElementRefs(lua_State* lua, int index) -> std::vector<const Element*> {
+    std::vector<const Element*> refs;
+    luaL_checktype(lua, index, LUA_TTABLE);
+    lua_pushnil(lua);
+    while (lua_next(lua, index) != 0) {
+        if (lua_islightuserdata(lua, -1) == 1) {
+            refs.push_back(static_cast<const Element*>(lua_touserdata(lua, -1)));
+        }
+        lua_pop(lua, 1);
+    }
+    return refs;
+}
+
+auto luaReadDoubleArray(lua_State* lua, int index) -> std::vector<double> {
+    std::vector<double> result;
+    luaL_checktype(lua, index, LUA_TTABLE);
+    const auto count = lua_rawlen(lua, index);
+    result.reserve(count);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, index, static_cast<lua_Integer>(i));
+        result.push_back(lua_tonumber(lua, -1));
+        lua_pop(lua, 1);
+    }
+    return result;
+}
+
+auto luaReadStringArray(lua_State* lua, int index) -> std::vector<std::string> {
+    std::vector<std::string> result;
+    if (lua_istable(lua, index) != 1) {
+        return result;
+    }
+    const auto count = lua_rawlen(lua, index);
+    result.reserve(count);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, index, static_cast<lua_Integer>(i));
+        if (lua_isstring(lua, -1) == 1) {
+            result.emplace_back(lua_tostring(lua, -1));
+        }
+        lua_pop(lua, 1);
+    }
+    return result;
+}
+
+auto qtFileFilterFromPatterns(const std::vector<std::string>& patterns) -> QString {
+    if (patterns.empty()) {
+        return QStringLiteral("All Files (*)");
+    }
+
+    QStringList qtPatterns;
+    for (const auto& pattern: patterns) {
+        if (!pattern.empty()) {
+            qtPatterns.push_back(QString::fromStdString(pattern));
+        }
+    }
+    if (qtPatterns.empty()) {
+        return QStringLiteral("All Files (*)");
+    }
+    return QStringLiteral("Supported Files (%1);;All Files (*)").arg(qtPatterns.join(QChar(' ')));
+}
+
+void luaPushFont(lua_State* lua, const std::pair<std::string, double>& font) {
+    lua_newtable(lua);
+    luaSetStringField(lua, "name", font.first);
+    luaSetNumberField(lua, "size", font.second);
+}
+
+auto luaColorValue(Color color) -> lua_Integer {
+    return static_cast<lua_Integer>(static_cast<uint32_t>(color) & 0x00ffffffU);
+}
+
+auto luaToolConstant(QtToolType tool) -> int {
+    switch (tool) {
+        case QtToolType::Pen:
+        case QtToolType::DrawLine: return 1;
+        case QtToolType::Eraser: return 2;
+        case QtToolType::Highlighter: return 3;
+        case QtToolType::Text: return 4;
+        case QtToolType::SelectRect: return 6;
+        case QtToolType::SelectRegion: return 7;
+        case QtToolType::SelectMultiLayerRect: return 8;
+        case QtToolType::SelectMultiLayerRegion: return 9;
+        case QtToolType::SelectObject: return 10;
+        case QtToolType::VerticalSpace: return 12;
+        case QtToolType::Hand: return 13;
+        case QtToolType::DrawRectangle: return 14;
+        case QtToolType::DrawEllipse: return 15;
+        case QtToolType::DrawArrow: return 16;
+        case QtToolType::DrawDoubleArrow: return 17;
+        case QtToolType::DrawCoordinateSystem: return 18;
+        case QtToolType::DrawSpline: return 20;
+        case QtToolType::PdfTextLinear: return 21;
+        case QtToolType::PdfTextRect: return 22;
+        case QtToolType::LaserPointerPen: return 23;
+        case QtToolType::LaserPointerHighlighter: return 24;
+        case QtToolType::Setsquare:
+        case QtToolType::Compass:
+        case QtToolType::DrawCircle:
+        case QtToolType::ShapeRecognizer:
+        case QtToolType::DrawArc:
+        case QtToolType::DrawEdge:
+        case QtToolType::DrawPolyline:
+        case QtToolType::DrawConstructionLine:
+        case QtToolType::DrawConstructionCircle:
+            return 1;
+    }
+    return 1;
+}
+
+auto luaToolTypeName(QtToolType tool) -> std::string {
+    switch (tool) {
+        case QtToolType::Hand: return "hand";
+        case QtToolType::LaserPointerHighlighter:
+        case QtToolType::Highlighter: return "highlighter";
+        case QtToolType::Eraser: return "eraser";
+        case QtToolType::Text: return "text";
+        case QtToolType::PdfTextLinear:
+        case QtToolType::PdfTextRect:
+        case QtToolType::SelectRect:
+        case QtToolType::SelectRegion:
+        case QtToolType::SelectMultiLayerRect:
+        case QtToolType::SelectMultiLayerRegion:
+        case QtToolType::SelectObject:
+            return "select";
+        case QtToolType::VerticalSpace: return "verticalSpace";
+        default: return "pen";
+    }
+}
+
+auto luaDrawingTypeName(QtToolType tool) -> std::string {
+    switch (tool) {
+        case QtToolType::DrawLine: return "line";
+        case QtToolType::DrawRectangle: return "rectangle";
+        case QtToolType::DrawCircle: return "circle";
+        case QtToolType::DrawEllipse: return "ellipse";
+        case QtToolType::DrawArrow: return "arrow";
+        case QtToolType::DrawDoubleArrow: return "doubleArrow";
+        case QtToolType::DrawCoordinateSystem: return "coordinateSystem";
+        case QtToolType::DrawSpline: return "spline";
+        case QtToolType::ShapeRecognizer: return "shapeRecognizer";
+        case QtToolType::DrawArc: return "arc";
+        case QtToolType::DrawEdge: return "edge";
+        case QtToolType::DrawPolyline: return "polyline";
+        case QtToolType::DrawConstructionLine: return "constructionLine";
+        case QtToolType::DrawConstructionCircle: return "constructionCircle";
+        default: return "none";
+    }
+}
+
+auto luaActiveToolWidth(const QtToolState& state) -> double {
+    switch (state.activeTool) {
+        case QtToolType::Highlighter:
+        case QtToolType::LaserPointerHighlighter: return state.highlighterWidth;
+        case QtToolType::Eraser: return state.eraserWidth;
+        default: return state.penWidth;
+    }
+}
+
+auto luaActiveToolColor(const QtToolState& state) -> Color {
+    return state.activeTool == QtToolType::Highlighter || state.activeTool == QtToolType::LaserPointerHighlighter
+                   ? state.highlighterColor
+                   : state.penColor;
+}
+
+auto luaActiveToolFillEnabled(const QtToolState& state) -> bool {
+    if (state.activeTool == QtToolType::PdfTextLinear || state.activeTool == QtToolType::PdfTextRect) {
+        return state.pdfTextMarkerOpacity > 0;
+    }
+    return state.activeTool == QtToolType::Highlighter || state.activeTool == QtToolType::LaserPointerHighlighter
+                   ? state.highlighterFillEnabled
+                   : state.fillEnabled;
+}
+
+auto luaActiveToolFillOpacity(const QtToolState& state) -> int {
+    return state.activeTool == QtToolType::PdfTextLinear || state.activeTool == QtToolType::PdfTextRect
+                   ? state.pdfTextMarkerOpacity
+                   : state.fillOpacity;
+}
+
+void luaPushSize(lua_State* lua, std::string name, double value) {
+    lua_createtable(lua, 0, 2);
+    luaSetStringField(lua, "name", name);
+    luaSetNumberField(lua, "value", value);
+}
+
+auto strokeToolFromLua(std::string_view tool) -> StrokeTool::Value {
+    if (tool == "highlighter") {
+        return StrokeTool::HIGHLIGHTER;
+    }
+    if (tool == "eraser") {
+        return StrokeTool::ERASER;
+    }
+    return StrokeTool::PEN;
+}
+
+auto strokeToolToLua(StrokeTool tool) -> const char* {
+    switch (static_cast<StrokeTool::Value>(tool)) {
+        case StrokeTool::PEN:
+            return "pen";
+        case StrokeTool::ERASER:
+            return "eraser";
+        case StrokeTool::HIGHLIGHTER:
+            return "highlighter";
+    }
+    return "pen";
+}
+
+auto luaOptionalRgbColor(lua_State* lua, int index, Color fallback = Colors::black) -> Color {
+    if (lua_isinteger(lua, index) != 1) {
+        return fallback;
+    }
+    const auto rgb = static_cast<uint32_t>(lua_tointeger(lua, index)) & 0x00ffffffU;
+    return Color(rgb | 0xff000000U);
+}
+
+auto createPluginImageFromFile(const std::filesystem::path& path, std::string* errorMessage)
+        -> std::unique_ptr<Image> {
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) {
+        if (errorMessage) {
+            *errorMessage = "Error: file '" + path.string() + "' does not exist.";
+        }
+        return nullptr;
+    }
+
+    std::string data((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    auto image = std::make_unique<Image>();
+    image->setImage(std::move(data));
+    if (auto err = image->renderBuffer(); err.has_value()) {
+        if (errorMessage) {
+            *errorMessage = *err;
+        }
+        return nullptr;
+    }
+    return image;
+}
+
+void scalePluginImageToPage(Image& image, NotePage* page, int width, int height) {
+    double zoom = 1.0;
+    if (page && (image.getX() + width > page->getWidth() || image.getY() + height > page->getHeight())) {
+        const double maxZoomX = (page->getWidth() - image.getX()) / width;
+        const double maxZoomY = (page->getHeight() - image.getY()) / height;
+        zoom = std::min(maxZoomX, maxZoomY);
+    }
+    image.setWidth(width * zoom);
+    image.setHeight(height * zoom);
+}
+
+auto luaRegisterUi(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->inInitUi) {
+        return luaL_error(lua, "registerUi needs to be called within initUi()");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+
+    lua_getfield(lua, 1, "accelerator");
+    lua_getfield(lua, 1, "menu");
+    lua_getfield(lua, 1, "callback");
+    lua_getfield(lua, 1, "mode");
+    lua_getfield(lua, 1, "toolbarId");
+    lua_getfield(lua, 1, "iconName");
+
+    const auto accelerator = luaOptionalString(lua, -6);
+    const auto menu = luaOptionalString(lua, -5);
+    const char* callback = lua_isnil(lua, -4) == 1 ? nullptr : luaL_optstring(lua, -4, nullptr);
+    const ptrdiff_t mode = static_cast<ptrdiff_t>(luaL_optinteger(lua, -3, NO_PLUGIN_MODE));
+    const auto toolbarId = luaOptionalString(lua, -2);
+    const auto iconName = luaOptionalString(lua, -1);
+
+    if (!callback) {
+        return luaL_error(lua, "Missing callback function!");
+    }
+
+    const int menuId = plugin->registerUi(menu, callback, mode, accelerator, toolbarId, iconName);
+    lua_pop(lua, 6);
+
+    lua_createtable(lua, 0, 1);
+    lua_pushstring(lua, "menuId");
+    lua_pushinteger(lua, menuId);
+    lua_settable(lua, -3);
+    return 1;
+}
+
+auto luaOpenDialog(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto message = luaOptionalString(lua, 1);
+    luaL_checktype(lua, 2, LUA_TTABLE);
+    const auto callback = luaOptionalString(lua, 3);
+    const bool error = luaOptionalBool(lua, 4, false);
+
+    QMessageBox box(plugin->runtime->parentWidget());
+    box.setWindowTitle(error ? QStringLiteral("Plugin Error") : QStringLiteral("Plugin Message"));
+    box.setIcon(error ? QMessageBox::Warning : QMessageBox::Information);
+    box.setText(QString::fromStdString(message));
+
+    std::vector<QPushButton*> buttons;
+    lua_pushnil(lua);
+    while (lua_next(lua, 2) != 0) {
+        if (lua_isstring(lua, -1) == 1) {
+            buttons.push_back(box.addButton(QString::fromUtf8(lua_tostring(lua, -1)), QMessageBox::AcceptRole));
+        }
+        lua_pop(lua, 1);
+    }
+    if (buttons.empty()) {
+        buttons.push_back(box.addButton(QStringLiteral("OK"), QMessageBox::AcceptRole));
+    }
+
+    box.exec();
+    if (!callback.empty()) {
+        const auto it = std::ranges::find(buttons, box.clickedButton());
+        if (it != buttons.end()) {
+            plugin->callFunction(callback, static_cast<ptrdiff_t>(std::distance(buttons.begin(), it) + 1));
+        }
+    }
+    return 0;
+}
+
+auto luaGetDocumentStructure(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto& pages = controller->snapshotPages();
+    lua_newtable(lua);
+
+    lua_newtable(lua);
+    for (std::size_t pageIndex = 0; pageIndex < pages.size(); ++pageIndex) {
+        const auto& page = pages[pageIndex];
+        const auto& background = page.background;
+
+        lua_newtable(lua);
+        luaSetNumberField(lua, "pageWidth", page.width);
+        luaSetNumberField(lua, "pageHeight", page.height);
+        luaSetBoolField(lua, "isAnnotated", controller->isPageAnnotated(pageIndex));
+        luaSetStringField(lua, "pageTypeFormat",
+                          PageTypeHandler::getStringForPageTypeFormat(background.backgroundFormat));
+        luaSetStringField(lua, "pageTypeConfig", "");
+        luaSetIntegerField(lua, "backgroundColor",
+                           static_cast<lua_Integer>(static_cast<uint32_t>(background.backgroundColor) & 0x00ffffffU));
+        luaSetIntegerField(lua, "pdfBackgroundPageNo", static_cast<lua_Integer>(background.pdfPageNumber + 1U));
+
+        lua_newtable(lua);
+        luaSetLayerFields(lua, background.hasBackgroundName ? background.backgroundName : std::string("Background"),
+                          true, background.annotated);
+        lua_rawseti(lua, -2, 0);
+
+        const auto layers = controller->layerInfos(pageIndex);
+        for (const auto& layer: layers) {
+            luaSetLayerFields(lua, layer.name, layer.visible, layer.elementCount > 0U);
+            lua_rawseti(lua, -2, static_cast<lua_Integer>(layer.index + 1U));
+        }
+        lua_setfield(lua, -2, "layers");
+
+        luaSetIntegerField(lua, "currentLayer",
+                           static_cast<lua_Integer>(controller->selectedLayerIndex(pageIndex) + 1U));
+        lua_rawseti(lua, -2, static_cast<lua_Integer>(pageIndex + 1U));
+    }
+    lua_setfield(lua, -2, "pages");
+
+    luaSetIntegerField(lua, "currentPage",
+                       static_cast<lua_Integer>(plugin->runtime->currentDocumentPageIndex() + 1U));
+    const auto* document = controller->documentPtr();
+    luaSetStringField(lua, "pdfBackgroundFilename", document ? document->getPdfFilepath().string() : std::string());
+    luaSetStringField(lua, "xoppFilename", document ? document->getFilepath().string() : std::string());
+    return 1;
+}
+
+auto luaSetCurrentPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    plugin->runtime->navigateToDocumentPage(clampLuaPageIndex(plugin, luaOptionalInteger(lua, 1, 1)));
+    return 0;
+}
+
+auto luaScrollToPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageArgument = luaOptionalInteger(lua, 1, 1);
+    const bool relative = luaOptionalBool(lua, 2, false);
+    ptrdiff_t targetPage = pageArgument;
+    if (relative) {
+        targetPage = static_cast<ptrdiff_t>(plugin->runtime->currentDocumentPageIndex()) + 1 + pageArgument;
+    }
+    plugin->runtime->navigateToDocumentPage(clampLuaPageIndex(plugin, targetPage));
+    return 0;
+}
+
+auto luaSetCurrentLayer(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    const auto layerCount = controller->layerCount(pageIndex);
+    if (layerCount == 0U) {
+        return 0;
+    }
+
+    const auto requested = std::max<ptrdiff_t>(1, luaOptionalInteger(lua, 1, 1));
+    const auto layerIndex = std::min<std::size_t>(static_cast<std::size_t>(requested - 1), layerCount - 1U);
+    const bool changeVisibility = luaOptionalBool(lua, 2, false);
+    if (changeVisibility) {
+        for (std::size_t index = 0; index < layerCount; ++index) {
+            controller->setLayerVisible(pageIndex, index, index <= layerIndex);
+        }
+    }
+    controller->selectLayer(pageIndex, layerIndex);
+    plugin->runtime->refreshDocumentUi();
+    if (changeVisibility) {
+        plugin->runtime->markDocumentDirty();
+    }
+    return 0;
+}
+
+auto luaSetLayerVisibility(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    const auto layerIndex = controller->selectedLayerIndex(pageIndex);
+    controller->setLayerVisible(pageIndex, layerIndex, luaOptionalBool(lua, 1, true));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaSetCurrentLayerName(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageIndex = plugin->runtime->currentDocumentPageIndex();
+    controller->renameLayer(pageIndex, controller->selectedLayerIndex(pageIndex), luaOptionalString(lua, 1));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaChangeCurrentPageBackground(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto format = PageTypeHandler::getPageTypeFormatForString(luaOptionalString(lua, 1, "plain"));
+    controller->setPageBackgroundType(plugin->runtime->currentDocumentPageIndex(), format);
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaChangeBackgroundPdfPageNr(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    std::string error;
+    if (!controller->changePagePdfBackground(plugin->runtime->currentDocumentPageIndex(),
+                                             static_cast<ptrdiff_t>(luaL_checkinteger(lua, 1)),
+                                             luaOptionalBool(lua, 2, true), &error)) {
+        return luaL_error(lua, "%s", error.c_str());
+    }
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetPageLabel(lua_State* lua) -> int {
+    auto* controller = documentControllerFromLua(lua);
+    if (!controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto pageNumber = static_cast<ptrdiff_t>(luaL_checkinteger(lua, 1));
+    const auto* document = controller->documentPtr();
+    if (!document || pageNumber <= 0 || static_cast<std::size_t>(pageNumber - 1) >= document->getPdfPageCount()) {
+        lua_pushnil(lua);
+        lua_pushfstring(lua, "page nr %d is out of range", static_cast<int>(pageNumber - 1));
+        return 2;
+    }
+
+    auto pdfPage = document->getPdfPage(static_cast<std::size_t>(pageNumber - 1));
+    if (!pdfPage) {
+        lua_pushnil(lua);
+        lua_pushstring(lua, "PDF page could not be loaded");
+        return 2;
+    }
+    const auto label = pdfPage->getPageLabel();
+    lua_pushlstring(lua, label.c_str(), label.length());
+    return 1;
+}
+
+auto luaSetPageSize(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto width = luaL_checknumber(lua, 1);
+    const auto height = luaL_checknumber(lua, 2);
+    if (!controller->resizePage(plugin->runtime->currentDocumentPageIndex(), width, height)) {
+        return luaL_error(lua, "Could not resize current page");
+    }
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetStrokes(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_STROKE,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int strokeIndex = 1;
+    for (const auto& ref: refs) {
+        auto* stroke = dynamic_cast<const Stroke*>(ref.element);
+        if (!stroke) {
+            continue;
+        }
+
+        lua_pushinteger(lua, strokeIndex++);
+        lua_newtable(lua);
+
+        lua_newtable(lua);
+        int pointIndex = 1;
+        for (const auto& point: stroke->getPointVector()) {
+            lua_pushinteger(lua, pointIndex++);
+            lua_pushnumber(lua, point.x);
+            lua_settable(lua, -3);
+        }
+        lua_setfield(lua, -2, "x");
+
+        lua_newtable(lua);
+        pointIndex = 1;
+        for (const auto& point: stroke->getPointVector()) {
+            lua_pushinteger(lua, pointIndex++);
+            lua_pushnumber(lua, point.y);
+            lua_settable(lua, -3);
+        }
+        lua_setfield(lua, -2, "y");
+
+        if (stroke->hasPressure()) {
+            lua_newtable(lua);
+            pointIndex = 1;
+            for (const auto& point: stroke->getPointVector()) {
+                lua_pushinteger(lua, pointIndex++);
+                lua_pushnumber(lua, point.z);
+                lua_settable(lua, -3);
+            }
+            lua_setfield(lua, -2, "pressure");
+        }
+
+        luaSetStringField(lua, "tool", strokeToolToLua(stroke->getToolType()));
+        luaSetNumberField(lua, "width", stroke->getWidth());
+        luaSetIntegerField(lua, "color", static_cast<lua_Integer>(static_cast<uint32_t>(stroke->getColor()) & 0x00ffffffU));
+        luaSetIntegerField(lua, "fill", stroke->getFill());
+        luaSetStringField(lua, "lineStyle", StrokeStyle::formatStyle(stroke->getLineStyle()));
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(stroke)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddStrokes(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "strokes");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing stroke table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto strokeCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= strokeCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "x");
+        const auto xs = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "y");
+        const auto ys = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        if (xs.size() != ys.size()) {
+            return luaL_error(lua, "X and Y vectors are not equal length");
+        }
+
+        std::vector<double> pressure;
+        lua_getfield(lua, -1, "pressure");
+        if (lua_istable(lua, -1) == 1) {
+            pressure = luaReadDoubleArray(lua, -1);
+            if (pressure.size() != xs.size()) {
+                return luaL_error(lua, "Pressure vector is not equal length");
+            }
+        }
+        lua_pop(lua, 1);
+
+        if (xs.size() < 2U) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto stroke = std::make_unique<Stroke>();
+        for (std::size_t p = 0; p < xs.size(); ++p) {
+            stroke->addPoint(Point(xs[p], ys[p], pressure.empty() ? Point::NO_PRESSURE : pressure[p]));
+        }
+
+        lua_getfield(lua, -1, "tool");
+        stroke->setToolType(strokeToolFromLua(luaOptionalString(lua, -1, "pen")));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        stroke->setWidth(luaL_optnumber(lua, -1, 1.0));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "color");
+        stroke->setColor(luaOptionalRgbColor(lua, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "fill");
+        stroke->setFill(static_cast<int>(luaL_optinteger(lua, -1, -1)));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "lineStyle");
+        stroke->setLineStyle(StrokeStyle::parseStyle(luaOptionalString(lua, -1, "plain")));
+        lua_pop(lua, 1);
+
+        const auto* ptr = controller->insertElement(plugin->runtime->currentDocumentPageIndex(), std::move(stroke),
+                                                    "Plugin insert stroke");
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
+auto luaAddSplines(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "splines");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing spline table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto splineCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= splineCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "coordinates");
+        const auto coordinates = luaReadDoubleArray(lua, -1);
+        lua_pop(lua, 1);
+        if (coordinates.size() % 8U != 0U) {
+            return luaL_error(lua, "Spline coordinates must be divisible by 8");
+        }
+        if (coordinates.empty()) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto stroke = std::make_unique<Stroke>();
+        std::vector<Point> points;
+        points.reserve(coordinates.size());
+        for (std::size_t offset = 0; offset + 7U < coordinates.size(); offset += 8U) {
+            const Point start(coordinates[offset], coordinates[offset + 1U]);
+            const Point control1(coordinates[offset + 2U], coordinates[offset + 3U]);
+            const Point control2(coordinates[offset + 4U], coordinates[offset + 5U]);
+            const Point end(coordinates[offset + 6U], coordinates[offset + 7U]);
+            SplineSegment segment(start, control1, control2, end);
+            auto segmentPoints = segment.toPointSequence();
+            if (!points.empty() && !segmentPoints.empty()) {
+                segmentPoints.erase(segmentPoints.begin());
+            }
+            points.insert(points.end(), segmentPoints.begin(), segmentPoints.end());
+        }
+        if (points.size() < 2U) {
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        stroke->setPointVector(std::move(points));
+
+        lua_getfield(lua, -1, "tool");
+        stroke->setToolType(strokeToolFromLua(luaOptionalString(lua, -1, "pen")));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        stroke->setWidth(luaL_optnumber(lua, -1, 1.0));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "color");
+        stroke->setColor(luaOptionalRgbColor(lua, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "fill");
+        stroke->setFill(static_cast<int>(luaL_optinteger(lua, -1, -1)));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "lineStyle");
+        stroke->setLineStyle(StrokeStyle::parseStyle(luaOptionalString(lua, -1, "plain")));
+        lua_pop(lua, 1);
+        stroke->freeUnusedPointItems();
+
+        const auto* ptr = controller->insertElement(plugin->runtime->currentDocumentPageIndex(), std::move(stroke),
+                                                    "Plugin insert spline");
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
+auto luaGetImages(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_IMAGE,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int imageIndex = 1;
+    for (const auto& ref: refs) {
+        auto* image = dynamic_cast<const Image*>(ref.element);
+        if (!image) {
+            continue;
+        }
+        if (auto err = image->renderBuffer(); err.has_value()) {
+            continue;
+        }
+
+        lua_pushinteger(lua, imageIndex++);
+        lua_newtable(lua);
+        luaSetNumberField(lua, "x", image->getX());
+        luaSetNumberField(lua, "y", image->getY());
+        luaSetNumberField(lua, "width", image->getElementWidth());
+        luaSetNumberField(lua, "height", image->getElementHeight());
+        lua_pushlstring(lua, reinterpret_cast<const char*>(image->getRawData()), image->getRawDataLength());
+        lua_setfield(lua, -2, "data");
+        luaSetStringField(lua, "format", image->getImageFormatName());
+        const auto [imageWidth, imageHeight] = image->getImageSize();
+        luaSetIntegerField(lua, "imageWidth", imageWidth);
+        luaSetIntegerField(lua, "imageHeight", imageHeight);
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(image)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddImages(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_newtable(lua);
+    const int returnTable = 2;
+    lua_getfield(lua, 1, "images");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing image table");
+    }
+
+    const auto currentPageIndex = plugin->runtime->currentDocumentPageIndex();
+    auto page = controller->documentPtr() ? controller->documentPtr()->getPage(currentPageIndex) : nullptr;
+    const auto count = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= count; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "path");
+        const auto path = luaOptionalString(lua, -1);
+        const bool hasPath = lua_isnil(lua, -1) != 1 && !path.empty();
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "data");
+        size_t dataLength = 0;
+        const char* data = lua_isnil(lua, -1) == 1 ? nullptr : luaL_checklstring(lua, -1, &dataLength);
+        lua_pop(lua, 1);
+        if (hasPath == (data != nullptr)) {
+            return luaL_error(lua, "Specify exactly one of image path or data");
+        }
+
+        lua_getfield(lua, -1, "x");
+        const double x = luaL_optnumber(lua, -1, 0.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "y");
+        const double y = luaL_optnumber(lua, -1, 0.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "maxWidth");
+        int maxWidth = static_cast<int>(luaL_optinteger(lua, -1, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "maxHeight");
+        int maxHeight = static_cast<int>(luaL_optinteger(lua, -1, -1));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "scale");
+        const double scale = luaL_optnumber(lua, -1, 1.0);
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "aspectRatio");
+        const bool aspectRatio = lua_isnil(lua, -1) == 1 || lua_toboolean(lua, -1) != 0;
+        lua_pop(lua, 1);
+
+        std::unique_ptr<Image> image;
+        if (hasPath) {
+            std::string error;
+            image = createPluginImageFromFile(std::filesystem::path(path), &error);
+            if (!image) {
+                lua_pushinteger(lua, static_cast<lua_Integer>(i));
+                lua_pushstring(lua, error.c_str());
+                lua_settable(lua, returnTable);
+                lua_pop(lua, 1);
+                continue;
+            }
+        } else {
+            image = std::make_unique<Image>();
+            image->setImage(std::string(data, dataLength));
+            if (auto err = image->renderBuffer(); err.has_value()) {
+                lua_pushinteger(lua, static_cast<lua_Integer>(i));
+                lua_pushstring(lua, err->c_str());
+                lua_settable(lua, returnTable);
+                lua_pop(lua, 1);
+                continue;
+            }
+        }
+
+        lua_pushinteger(lua, static_cast<lua_Integer>(i));
+        if (!image) {
+            lua_pushstring(lua, "Error: creating the image failed");
+            lua_settable(lua, returnTable);
+            lua_pop(lua, 1);
+            continue;
+        }
+
+        auto [width, height] = image->getImageSize();
+        if (maxWidth > 0 && maxHeight > 0) {
+            if (aspectRatio) {
+                const double fitScale =
+                        std::min(static_cast<double>(maxWidth) / width, static_cast<double>(maxHeight) / height);
+                width = static_cast<int>(std::round(width * fitScale));
+                height = static_cast<int>(std::round(height * fitScale));
+            } else {
+                width = maxWidth;
+                height = maxHeight;
+            }
+        } else if (maxWidth > 0) {
+            if (aspectRatio) {
+                height = static_cast<int>(std::round(static_cast<double>(height) / width * maxWidth));
+            }
+            width = maxWidth;
+        } else if (maxHeight > 0) {
+            if (aspectRatio) {
+                width = static_cast<int>(std::round(static_cast<double>(width) / height * maxHeight));
+            }
+            height = maxHeight;
+        }
+        width = static_cast<int>(std::round(width * scale));
+        height = static_cast<int>(std::round(height * scale));
+
+        image->setX(x);
+        image->setY(y);
+        scalePluginImageToPage(*image, page.get(), width, height);
+
+        const auto* ptr = controller->insertElement(currentPageIndex, std::move(image), "Plugin insert image");
+        if (ptr) {
+            lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(ptr)));
+        } else {
+            lua_pushstring(lua, "Error: inserting the image failed");
+        }
+        lua_settable(lua, returnTable);
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 1;
+}
+
+auto luaGetTexts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    const auto scope = checkedPluginScope(lua, 1);
+    const auto refs = controller->elementsForPluginScope(scope, ELEMENT_TEXT,
+                                                         plugin->runtime->currentDocumentPageIndex());
+    lua_newtable(lua);
+    int textIndex = 1;
+    for (const auto& ref: refs) {
+        auto* text = dynamic_cast<const Text*>(ref.element);
+        if (!text) {
+            continue;
+        }
+
+        lua_pushinteger(lua, textIndex++);
+        lua_newtable(lua);
+        luaSetStringField(lua, "text", text->getText());
+        luaPushFont(lua, {text->getFontName(), text->getFontSize()});
+        lua_setfield(lua, -2, "font");
+        luaSetIntegerField(lua, "color",
+                           static_cast<lua_Integer>(static_cast<uint32_t>(text->getColor()) & 0x00ffffffU));
+        luaSetNumberField(lua, "x", text->getX());
+        luaSetNumberField(lua, "y", text->getY());
+        luaSetNumberField(lua, "width", text->getElementWidth());
+        luaSetNumberField(lua, "height", text->getElementHeight());
+        lua_pushlightuserdata(lua, const_cast<void*>(static_cast<const void*>(text)));
+        lua_setfield(lua, -2, "ref");
+        if (scope == "page" || scope == "all") {
+            luaSetIntegerField(lua, "layer", static_cast<lua_Integer>(ref.layerIndex + 1U));
+        }
+        if (scope == "all") {
+            luaSetIntegerField(lua, "page", static_cast<lua_Integer>(ref.pageIndex + 1U));
+        }
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaAddTexts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "texts");
+    if (lua_istable(lua, -1) != 1) {
+        return luaL_error(lua, "Missing text table");
+    }
+
+    std::vector<const Element*> inserted;
+    const auto defaultFont = plugin->runtime->currentFont();
+    const auto textCount = lua_rawlen(lua, -1);
+    for (std::size_t i = 1; i <= textCount; ++i) {
+        lua_rawgeti(lua, -1, static_cast<lua_Integer>(i));
+        luaL_checktype(lua, -1, LUA_TTABLE);
+
+        lua_getfield(lua, -1, "text");
+        if (lua_isstring(lua, -1) != 1) {
+            return luaL_error(lua, "Missing text");
+        }
+        auto content = std::string(lua_tostring(lua, -1));
+        lua_pop(lua, 1);
+
+        auto fontName = defaultFont.first.empty() ? std::string("Sans") : defaultFont.first;
+        auto fontSize = defaultFont.second > 0.0 ? defaultFont.second : 12.0;
+        lua_getfield(lua, -1, "font");
+        if (lua_istable(lua, -1) == 1) {
+            lua_getfield(lua, -1, "name");
+            if (lua_isstring(lua, -1) == 1) {
+                fontName = lua_tostring(lua, -1);
+            }
+            lua_pop(lua, 1);
+            lua_getfield(lua, -1, "size");
+            if (lua_isnumber(lua, -1) == 1) {
+                fontSize = lua_tonumber(lua, -1);
+            }
+            lua_pop(lua, 1);
+        } else if (lua_isnil(lua, -1) != 1) {
+            return luaL_error(lua, "'font' value must be a table");
+        }
+        lua_pop(lua, 1);
+
+        lua_getfield(lua, -1, "x");
+        if (lua_isnumber(lua, -1) != 1) {
+            return luaL_error(lua, "Missing X-Coordinate");
+        }
+        const double x = lua_tonumber(lua, -1);
+        lua_pop(lua, 1);
+
+        lua_getfield(lua, -1, "y");
+        if (lua_isnumber(lua, -1) != 1) {
+            return luaL_error(lua, "Missing Y-Coordinate");
+        }
+        const double y = lua_tonumber(lua, -1);
+        lua_pop(lua, 1);
+
+        auto text = std::make_unique<Text>();
+        text->setText(std::move(content));
+        text->setFont(NoteFont(fontName, fontSize));
+        text->setX(x);
+        text->setY(y);
+        lua_getfield(lua, -1, "color");
+        text->setColor(luaOptionalRgbColor(lua, -1, Colors::black));
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "width");
+        if (lua_isnumber(lua, -1) == 1) {
+            text->setWidth(lua_tonumber(lua, -1));
+        }
+        lua_pop(lua, 1);
+        lua_getfield(lua, -1, "height");
+        if (lua_isnumber(lua, -1) == 1) {
+            text->setHeight(lua_tonumber(lua, -1));
+        }
+        lua_pop(lua, 1);
+
+        const auto* ptr = controller->insertTextElement(plugin->runtime->currentDocumentPageIndex(), std::move(text));
+        if (ptr) {
+            inserted.push_back(ptr);
+        }
+        lua_pop(lua, 1);
+    }
+
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    luaPushRefs(lua, inserted);
+    return 1;
+}
+
+auto luaClearSelection(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    controller->clearElementSelection();
+    plugin->runtime->refreshDocumentUi();
+    return 0;
+}
+
+auto luaAddToSelection(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    const auto refs = luaReadElementRefs(lua, 1);
+    (void)controller->selectElementsByPluginRefs(plugin->runtime->currentDocumentPageIndex(), refs);
+    plugin->runtime->refreshDocumentUi();
+    return 0;
+}
+
+auto luaChangeToolColor(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "color");
+    if (lua_isinteger(lua, -1) != 1) {
+        return luaL_error(lua, "Missing integer color");
+    }
+    const auto rgb = static_cast<uint32_t>(lua_tointeger(lua, -1)) & 0x00ffffffU;
+    lua_pop(lua, 1);
+    lua_getfield(lua, 1, "tool");
+    const auto tool = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    lua_getfield(lua, 1, "selection");
+    const bool selection = lua_toboolean(lua, -1) != 0;
+    lua_pop(lua, 1);
+
+    plugin->runtime->changeToolColor(rgb, tool, selection);
+    return 0;
+}
+
+auto luaGetToolInfo(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto tool = luaOptionalString(lua, 1, "active");
+    const auto state = plugin->runtime->currentToolState();
+    lua_createtable(lua, 0, 8);
+
+    if (tool == "text") {
+        luaPushFont(lua, {state.fontName, state.fontSize});
+        lua_setfield(lua, -2, "font");
+        luaSetIntegerField(lua, "color", luaColorValue(state.penColor));
+        return 1;
+    }
+    if (tool == "eraser") {
+        luaSetStringField(lua, "type", state.eraserMode == QtEraserMode::Segment ? "segment" : "standard");
+        luaPushSize(lua, "custom", state.eraserWidth);
+        lua_setfield(lua, -2, "size");
+        return 1;
+    }
+    if (tool == "highlighter") {
+        luaPushSize(lua, "custom", state.highlighterWidth);
+        lua_setfield(lua, -2, "size");
+        luaSetIntegerField(lua, "color", luaColorValue(state.highlighterColor));
+        luaSetBoolField(lua, "filled", state.highlighterFillEnabled);
+        luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+        luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+        return 1;
+    }
+    if (tool == "pen") {
+        luaPushSize(lua, "custom", state.penWidth);
+        lua_setfield(lua, -2, "size");
+        luaSetIntegerField(lua, "color", luaColorValue(state.penColor));
+        luaSetBoolField(lua, "filled", state.fillEnabled);
+        luaSetIntegerField(lua, "fillOpacity", state.fillOpacity);
+        luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+        luaSetStringField(lua, "lineStyle", state.penLineStyle);
+        return 1;
+    }
+
+    luaSetStringField(lua, "type", luaToolTypeName(state.activeTool));
+    luaPushSize(lua, "custom", luaActiveToolWidth(state));
+    lua_setfield(lua, -2, "size");
+    luaSetIntegerField(lua, "color", luaColorValue(luaActiveToolColor(state)));
+    luaSetBoolField(lua, "filled", luaActiveToolFillEnabled(state));
+    luaSetIntegerField(lua, "fillOpacity", luaActiveToolFillOpacity(state));
+    luaSetStringField(lua, "drawingType", luaDrawingTypeName(state.activeTool));
+    luaSetStringField(lua, "lineStyle", state.penLineStyle);
+    luaSetNumberField(lua, "thickness", luaActiveToolWidth(state));
+    return 1;
+}
+
+auto luaGetColorPalette(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    lua_settop(lua, 0);
+    const auto palette = plugin ? plugin->runtime->currentColorPalette() : qtDefaultColorPalette();
+    lua_newtable(lua);
+    int index = 1;
+    for (const auto& entry: palette) {
+        lua_pushinteger(lua, index++);
+        lua_newtable(lua);
+        luaSetStringField(lua, "name", entry.name);
+        luaSetIntegerField(lua, "color", luaColorValue(entry.color));
+        lua_settable(lua, -3);
+    }
+    return 1;
+}
+
+auto luaGetFolder(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    lua_settop(lua, 1);
+    const auto type = luaOptionalString(lua, 1);
+    std::filesystem::path path;
+    if (type == "config") {
+        path = Util::getConfigSubfolder("plugin-settings");
+    } else if (type == "state") {
+        path = Util::getStateSubfolder("plugin-state");
+    } else if (type == "data") {
+        path = Util::getDataSubfolder("plugin-data");
+    } else {
+        return luaL_error(lua, "Unsupported folder type '%s'", type.c_str());
+    }
+    path /= plugin->name;
+    Util::ensureFolderExists(path);
+    lua_pushstring(lua, path.string().c_str());
+    return 1;
+}
+
+auto luaGetDisplayDpi(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    lua_pushinteger(lua, static_cast<lua_Integer>(plugin && plugin->runtime ? plugin->runtime->currentDisplayDpi() : 96));
+    return 1;
+}
+
+auto luaGetZoom(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    lua_pushnumber(lua, plugin && plugin->runtime ? plugin->runtime->currentZoom() : 1.0);
+    return 1;
+}
+
+auto luaSetZoom(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->setZoom(luaL_checknumber(lua, 1));
+    return 0;
+}
+
+auto luaGetScrollPos(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto viewport = plugin && plugin->runtime ? plugin->runtime->currentViewport()
+                                                    : vn::ui::common::CanvasViewport{};
+    lua_newtable(lua);
+    luaSetNumberField(lua, "x", viewport.scrollX);
+    luaSetNumberField(lua, "y", viewport.scrollY);
+    luaSetNumberField(lua, "width", viewport.width);
+    luaSetNumberField(lua, "height", viewport.height);
+    return 1;
+}
+
+auto luaScrollToPos(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    const double x = luaL_checknumber(lua, 1);
+    const double y = luaL_checknumber(lua, 2);
+    const bool relative = luaOptionalBool(lua, 3, true);
+    plugin->runtime->scrollViewportTo(x, y, relative);
+    return 0;
+}
+
+auto luaGetSidebarPageNo(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    lua_pushinteger(lua, plugin && plugin->runtime ? plugin->runtime->currentSidebarPage() : 1);
+    return 1;
+}
+
+auto luaSetSidebarPageNo(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto pageNo = luaL_checkinteger(lua, 1);
+    if (pageNo <= 0) {
+        return luaL_error(lua, "Sidebar page number must be positive");
+    }
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->setSidebarPage(static_cast<int>(pageNo));
+    return 0;
+}
+
+auto luaShowFloatingToolbox(lua_State* lua) -> int {
+    lua_settop(lua, 2);
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->showFloatingToolbox(static_cast<double>(luaOptionalInteger(lua, 1, 0)),
+                                         static_cast<double>(luaOptionalInteger(lua, 2, 0)));
+    return 0;
+}
+
+auto luaSetBackgroundName(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    auto* controller = documentControllerFromLua(lua);
+    if (!plugin || !plugin->runtime || !controller) {
+        return luaL_error(lua, "No active Qt document");
+    }
+    controller->setPageBackgroundName(plugin->runtime->currentDocumentPageIndex(), luaL_checkstring(lua, 1));
+    plugin->runtime->refreshDocumentUi();
+    plugin->runtime->markDocumentDirty();
+    return 0;
+}
+
+auto luaGetFonts(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto current = plugin && plugin->runtime ? plugin->runtime->currentFont().first : std::string();
+    const auto families = QFontDatabase::families();
+
+    lua_newtable(lua);
+    lua_newtable(lua);
+    int currentIndex = -1;
+    for (int i = 0; i < families.size(); ++i) {
+        const auto family = families.at(i).toStdString();
+        lua_pushstring(lua, family.c_str());
+        lua_rawseti(lua, -2, i + 1);
+        if (currentIndex < 0 && family == current) {
+            currentIndex = i + 1;
+        }
+    }
+    lua_setfield(lua, -2, "families");
+    if (currentIndex > 0) {
+        lua_pushinteger(lua, currentIndex);
+    } else {
+        lua_pushnil(lua);
+    }
+    lua_setfield(lua, -2, "current");
+    return 1;
+}
+
+auto luaGetFont(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    luaPushFont(lua, plugin && plugin->runtime ? plugin->runtime->currentFont() : std::pair<std::string, double>{"Sans", 12.0});
+    return 1;
+}
+
+auto luaSetFont(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    if (lua_gettop(lua) < 1) {
+        return luaL_error(lua, "setFont requires one argument");
+    }
+
+    auto [name, size] = plugin->runtime->currentFont();
+    if (name.empty()) {
+        name = "Sans";
+    }
+    if (size <= 0.0) {
+        size = 12.0;
+    }
+
+    if (lua_isstring(lua, 1) == 1) {
+        const NoteFont font(lua_tostring(lua, 1));
+        name = font.getName();
+        size = font.getSize();
+    } else if (lua_istable(lua, 1) == 1) {
+        lua_getfield(lua, 1, "name");
+        if (lua_isstring(lua, -1) == 1) {
+            name = lua_tostring(lua, -1);
+        }
+        lua_pop(lua, 1);
+        lua_getfield(lua, 1, "size");
+        if (lua_isnumber(lua, -1) == 1) {
+            size = lua_tonumber(lua, -1);
+        }
+        lua_pop(lua, 1);
+    } else {
+        return luaL_error(lua, "setFont requires a string or table");
+    }
+    if (name.empty() || size <= 0.0) {
+        return luaL_error(lua, "Invalid font specification");
+    }
+    plugin->runtime->setFont(std::move(name), size);
+    return 0;
+}
+
+auto luaSaveAs(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto suggested = luaOptionalString(lua, 1, "Untitled");
+    const auto filename = QFileDialog::getSaveFileName(plugin->runtime->parentWidget(), QStringLiteral("Save File"),
+                                                       QString::fromStdString(suggested));
+    if (filename.isEmpty()) {
+        return 0;
+    }
+    lua_pushstring(lua, filename.toStdString().c_str());
+    return 1;
+}
+
+auto luaGetFilePath(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto patterns = luaReadStringArray(lua, 1);
+    const auto filename = QFileDialog::getOpenFileName(plugin->runtime->parentWidget(), QStringLiteral("Open File"),
+                                                       QString(), qtFileFilterFromPatterns(patterns));
+    if (filename.isEmpty()) {
+        return 0;
+    }
+    lua_pushstring(lua, filename.toStdString().c_str());
+    return 1;
+}
+
+auto luaFileDialogOpen(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto callback = luaOptionalString(lua, 1);
+    if (callback.empty()) {
+        return luaL_error(lua, "Missing file dialog callback");
+    }
+    const auto patterns = luaReadStringArray(lua, 2);
+    const auto filename = QFileDialog::getOpenFileName(plugin->runtime->parentWidget(), QStringLiteral("Open File"),
+                                                       QString(), qtFileFilterFromPatterns(patterns));
+    plugin->callFunctionWithString(callback, filename.toStdString());
+    return 0;
+}
+
+auto luaOpenFile(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto path = std::filesystem::path(luaL_checkstring(lua, 1));
+    const auto pageNumber = static_cast<int>(luaL_optinteger(lua, 2, 1));
+    lua_pushboolean(lua, plugin->runtime->openFile(path, std::max(0, pageNumber - 1)) ? 1 : 0);
+    return 1;
+}
+
+auto luaGetActionState(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    const auto action = luaOptionalString(lua, 1);
+    if (action == "set-layout-vertical") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-vertical") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-layout-right-to-left") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-rtl") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-layout-bottom-to-top") {
+        lua_pushboolean(lua, plugin->runtime->commandChecked("view.layout-btt") ? 1 : 0);
+        return 1;
+    }
+    if (action == "set-columns-or-rows") {
+        lua_pushinteger(lua, static_cast<lua_Integer>(plugin->runtime->currentLayoutSpan()));
+        return 1;
+    }
+    if (action == "zoom") {
+        lua_pushnumber(lua, plugin->runtime->currentZoom());
+        return 1;
+    }
+    if (action == "select-tool") {
+        lua_pushinteger(lua, luaToolConstant(plugin->runtime->currentToolState().activeTool));
+        return 1;
+    }
+    if (action == "tool-color") {
+        lua_pushinteger(lua, luaColorValue(luaActiveToolColor(plugin->runtime->currentToolState())));
+        return 1;
+    }
+    if (action == "tool-pen-line-style") {
+        lua_pushstring(lua, plugin->runtime->currentToolState().penLineStyle.c_str());
+        return 1;
+    }
+    if (action == "tool-size") {
+        lua_pushnumber(lua, luaActiveToolWidth(plugin->runtime->currentToolState()));
+        return 1;
+    }
+    if (action == "tool-fill") {
+        lua_pushboolean(lua, luaActiveToolFillEnabled(plugin->runtime->currentToolState()) ? 1 : 0);
+        return 1;
+    }
+    if (action == "tool-fill-opacity") {
+        lua_pushinteger(lua, static_cast<lua_Integer>(luaActiveToolFillOpacity(plugin->runtime->currentToolState())));
+        return 1;
+    }
+    if (const auto command = booleanActionStateCommand(action); !command.empty()) {
+        lua_pushboolean(lua, plugin->runtime->commandChecked(command) ? 1 : 0);
+        return 1;
+    }
+    return luaL_error(lua, "This VertexNote plugin action state is not available in the Qt shell yet: %s",
+                      action.c_str());
+}
+
+auto luaRegisterPlaceholder(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->registerPlaceholder(luaL_checkstring(lua, 1), luaL_checkstring(lua, 2));
+    return 0;
+}
+
+auto luaSetPlaceholderValue(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->setPlaceholderValue(luaL_checkstring(lua, 1), luaL_checkstring(lua, 2));
+    return 0;
+}
+
+auto luaFileDialogSave(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime || !plugin->runtime->parentWidget()) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    const auto callback = luaOptionalString(lua, 1);
+    const auto suggested = luaOptionalString(lua, 2, "Untitled");
+    if (callback.empty()) {
+        return luaL_error(lua, "Missing file dialog callback");
+    }
+
+    const auto filename = QFileDialog::getSaveFileName(plugin->runtime->parentWidget(), QStringLiteral("Save File"),
+                                                       QString::fromStdString(suggested));
+    plugin->callFunctionWithString(callback, filename.toStdString());
+    return 0;
+}
+
+auto luaGlibRename(lua_State* lua) -> int {
+    const auto from = std::filesystem::path(luaL_checkstring(lua, 1));
+    const auto to = std::filesystem::path(luaL_checkstring(lua, 2));
+    std::error_code ec;
+    std::filesystem::rename(from, to, ec);
+    if (ec) {
+        std::filesystem::copy_file(from, to, std::filesystem::copy_options::overwrite_existing, ec);
+        if (!ec) {
+            std::filesystem::remove(from, ec);
+        }
+    }
+    if (ec) {
+        lua_pushnil(lua);
+        lua_pushstring(lua, ec.message().c_str());
+        return 2;
+    }
+    lua_pushinteger(lua, 1);
+    return 1;
+}
+
+auto luaExport(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "outputFile");
+    const auto outputFile = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    if (outputFile.empty()) {
+        return luaL_error(lua, "Missing output file");
+    }
+
+    auto path = std::filesystem::path(outputFile);
+    auto extension = path.extension().string();
+    std::ranges::transform(extension, extension.begin(),
+                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    std::string error;
+    bool ok = false;
+    if (extension == ".pdf") {
+        ok = plugin->runtime->exportPdf(path, &error);
+    } else if (extension == ".png") {
+        ok = plugin->runtime->exportPng(path, &error);
+    } else {
+        return luaL_error(lua, "Qt shell plugin export supports PDF and PNG files for now");
+    }
+    if (!ok) {
+        return luaL_error(lua, "Error exporting document: %s", error.c_str());
+    }
+    return 0;
+}
+
+auto luaRefreshPage(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+    plugin->runtime->refreshDocumentUi();
+    return 0;
+}
+
+auto luaActivateAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    std::string command;
+    if (action == "arrange-selection-order") {
+        command = arrangementCommand(luaOptionalInteger(lua, 2, -1));
+    } else {
+        command = legacyActionCommand(action);
+    }
+
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaUiAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    if (!plugin || !plugin->runtime) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    lua_settop(lua, 1);
+    luaL_checktype(lua, 1, LUA_TTABLE);
+    lua_getfield(lua, 1, "action");
+    const auto action = luaOptionalString(lua, -1);
+    lua_pop(lua, 1);
+    if (action.empty()) {
+        return luaL_error(lua, "Missing action");
+    }
+    lua_getfield(lua, 1, "enabled");
+    const bool enabled = luaOptionalBool(lua, -1, true);
+    lua_pop(lua, 1);
+
+    const auto command = legacyActionCommand(action);
+    if (command.empty()) {
+        return luaL_error(lua, "Qt shell cannot map legacy action '%s'", action.c_str());
+    }
+    if (!enabled) {
+        plugin->runtime->setCommandEnabled(command, false);
+        return 0;
+    }
+    if (!plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaLayerAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    const auto command = legacyActionCommand(action);
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate layer action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaSidebarAction(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    const auto command = sidebarActionCommand(action);
+    if (command.empty() || !plugin || !plugin->triggerCommand(command)) {
+        return luaL_error(lua, "Qt shell cannot activate sidebar action '%s'", action.c_str());
+    }
+    return 0;
+}
+
+auto luaChangeActionState(lua_State* lua) -> int {
+    auto* plugin = pluginFromLua(lua);
+    const auto action = luaOptionalString(lua, 1);
+    if (!plugin) {
+        return luaL_error(lua, "Plugin runtime is not available");
+    }
+
+    if (action == "select-tool") {
+        const auto command = selectToolCommand(luaOptionalInteger(lua, 2, 0));
+        if (command.empty() || !plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot select requested tool");
+        }
+        return 0;
+    }
+    if (action == "set-columns-or-rows") {
+        const auto value = luaOptionalInteger(lua, 2, 1);
+        if (value == 0 || std::abs(value) > 8) {
+            return luaL_error(lua, "Unsupported Qt page layout span");
+        }
+        const auto command = value > 0 ? "view.columns-" + std::to_string(value) : "view.rows-" + std::to_string(-value);
+        if (!plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot set page layout span");
+        }
+        return 0;
+    }
+    if (action == "set-layout-vertical") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-vertical" : "view.layout-horizontal") ? 0
+                                                                                                                   : luaL_error(lua, "Qt shell cannot set layout direction");
+    }
+    if (action == "set-layout-right-to-left") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-rtl" : "view.layout-ltr") ? 0
+                                                                                                      : luaL_error(lua, "Qt shell cannot set page order");
+    }
+    if (action == "set-layout-bottom-to-top") {
+        return plugin->triggerCommand(luaOptionalBool(lua, 2) ? "view.layout-btt" : "view.layout-ttb") ? 0
+                                                                                                      : luaL_error(lua, "Qt shell cannot set page order");
+    }
+    if (const auto command = booleanActionStateCommand(action); !command.empty()) {
+        return plugin->setBooleanCommand(command, luaOptionalBool(lua, 2)) ? 0
+                                                                          : luaL_error(lua, "Qt shell cannot set action state '%s'", action.c_str());
+    }
+    if (action == "position-highlighting") {
+        return 0;
+    }
+    if (action == "tool-pen-line-style") {
+        const auto command = lineStyleCommand(luaOptionalString(lua, 2));
+        if (command.empty() || !plugin->triggerCommand(command)) {
+            return luaL_error(lua, "Qt shell cannot set requested pen line style");
+        }
+        return 0;
+    }
+
+    return luaL_error(lua, "This VertexNote plugin action state is not available in the Qt shell yet: %s",
+                      action.c_str());
+}
+
+constexpr luaL_Reg QT_APP_LIB[] = {
+        {"registerUi", luaRegisterUi},
+        {"openDialog", luaOpenDialog},
+        {"msgbox", luaOpenDialog},
+        {"getDocumentStructure", luaGetDocumentStructure},
+        {"setCurrentPage", luaSetCurrentPage},
+        {"scrollToPage", luaScrollToPage},
+        {"setCurrentLayer", luaSetCurrentLayer},
+        {"setLayerVisibility", luaSetLayerVisibility},
+        {"setCurrentLayerName", luaSetCurrentLayerName},
+        {"changeCurrentPageBackground", luaChangeCurrentPageBackground},
+        {"changeBackgroundPdfPageNr", luaChangeBackgroundPdfPageNr},
+        {"getPageLabel", luaGetPageLabel},
+        {"setPageSize", luaSetPageSize},
+        {"getStrokes", luaGetStrokes},
+        {"addStrokes", luaAddStrokes},
+        {"addSplines", luaAddSplines},
+        {"getImages", luaGetImages},
+        {"addImages", luaAddImages},
+        {"getTexts", luaGetTexts},
+        {"addTexts", luaAddTexts},
+        {"clearSelection", luaClearSelection},
+        {"addToSelection", luaAddToSelection},
+        {"getColorPalette", luaGetColorPalette},
+        {"getFolder", luaGetFolder},
+        {"getDisplayDpi", luaGetDisplayDpi},
+        {"getScrollPos", luaGetScrollPos},
+        {"scrollToPos", luaScrollToPos},
+        {"getSidebarPageNo", luaGetSidebarPageNo},
+        {"setSidebarPageNo", luaSetSidebarPageNo},
+        {"getZoom", luaGetZoom},
+        {"setZoom", luaSetZoom},
+        {"showFloatingToolbox", luaShowFloatingToolbox},
+        {"setBackgroundName", luaSetBackgroundName},
+        {"getFonts", luaGetFonts},
+        {"getFont", luaGetFont},
+        {"setFont", luaSetFont},
+        {"saveAs", luaSaveAs},
+        {"getFilePath", luaGetFilePath},
+        {"fileDialogOpen", luaFileDialogOpen},
+        {"openFile", luaOpenFile},
+        {"changeToolColor", luaChangeToolColor},
+        {"getToolInfo", luaGetToolInfo},
+        {"fileDialogSave", luaFileDialogSave},
+        {"glib_rename", luaGlibRename},
+        {"export", luaExport},
+        {"refreshPage", luaRefreshPage},
+        {"uiAction", luaUiAction},
+        {"layerAction", luaLayerAction},
+        {"sidebarAction", luaSidebarAction},
+        {"changeActionState", luaChangeActionState},
+        {"activateAction", luaActivateAction},
+        {"getActionState", luaGetActionState},
+        {"registerPlaceholder", luaRegisterPlaceholder},
+        {"setPlaceholderValue", luaSetPlaceholderValue},
+        {nullptr, nullptr},
+};
+
+auto luaOpenQtApp(lua_State* lua) -> int {
+    luaL_newlib(lua, QT_APP_LIB);
+    lua_createtable(lua, 0, 32);
+    const auto addConstant = [&](const char* name, lua_Integer value) {
+        lua_pushinteger(lua, value);
+        lua_setfield(lua, -2, name);
+    };
+    addConstant("Tool_pen", 1);
+    addConstant("Tool_eraser", 2);
+    addConstant("Tool_highlighter", 3);
+    addConstant("Tool_text", 4);
+    addConstant("Tool_selectRect", 6);
+    addConstant("Tool_selectRegion", 7);
+    addConstant("Tool_selectMultiLayerRect", 8);
+    addConstant("Tool_selectMultiLayerRegion", 9);
+    addConstant("Tool_selectObject", 10);
+    addConstant("Tool_verticalSpace", 12);
+    addConstant("Tool_hand", 13);
+    addConstant("Tool_drawRect", 14);
+    addConstant("Tool_drawEllipse", 15);
+    addConstant("Tool_drawArrow", 16);
+    addConstant("Tool_drawDoubleArrow", 17);
+    addConstant("Tool_drawCoordinateSystem", 18);
+    addConstant("Tool_drawSpline", 20);
+    addConstant("Tool_selectPdfTextLinear", 21);
+    addConstant("Tool_selectPdfTextRect", 22);
+    addConstant("Tool_laserPointerPen", 23);
+    addConstant("Tool_laserPointerHighlighter", 24);
+    addConstant("OrderChange_bringToFront", 0);
+    addConstant("OrderChange_bringForward", 1);
+    addConstant("OrderChange_sendBackward", 2);
+    addConstant("OrderChange_sendToBack", 3);
+    lua_setfield(lua, -2, "C");
+    return 1;
+}
+
+void registerQtAppLib(lua_State* lua) {
+    luaL_requiref(lua, "app", luaOpenQtApp, 1);
+    lua_pop(lua, 1);
+}
+
+auto loadIni(const std::filesystem::path& pluginPath) -> std::unique_ptr<QtLuaPluginRuntime::Plugin> {
+    auto plugin = std::make_unique<QtLuaPluginRuntime::Plugin>();
+    plugin->name = pluginPath.filename().string();
+    plugin->path = pluginPath;
+
+    const auto iniPath = pluginPath / "plugin.ini";
+    if (!std::filesystem::exists(iniPath)) {
+        plugin->error = "Missing plugin.ini";
+        return plugin;
+    }
+
+    QSettings ini(toQString(iniPath), QSettings::IniFormat);
+    plugin->author = qStringToStd(ini.value(QStringLiteral("about/author")).toString());
+    plugin->description = qStringToStd(ini.value(QStringLiteral("about/description")).toString());
+    plugin->version = qStringToStd(ini.value(QStringLiteral("about/version")).toString());
+    if (plugin->version == "<vertexnote>" || plugin->version == "<vertex-note>") {
+        plugin->version = PROJECT_VERSION;
+    }
+    plugin->mainfile = qStringToStd(ini.value(QStringLiteral("plugin/mainfile")).toString());
+    plugin->defaultEnabled = ini.value(QStringLiteral("default/enabled"), false).toBool();
+    if (plugin->mainfile.empty()) {
+        plugin->error = "Missing plugin/mainfile in plugin.ini";
+        return plugin;
+    }
+    if (plugin->mainfile.find("..") != std::string::npos) {
+        plugin->error = "Unsupported plugin mainfile path: " + plugin->mainfile;
+        return plugin;
+    }
+
+    QSettings appSettings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    plugin->enabled = appSettings.value(QStringLiteral("plugins/enabled/") + pluginSettingsKey(plugin->name),
+                                        plugin->defaultEnabled)
+                              .toBool();
+    plugin->valid = true;
+    return plugin;
+}
+
+void loadPluginScript(QtLuaPluginRuntime::Plugin& plugin) {
+    if (!plugin.valid || !plugin.enabled) {
+        return;
+    }
+
+    plugin.lua.reset(luaL_newstate());
+    luaL_openlibs(plugin.lua.get());
+    registerQtAppLib(plugin.lua.get());
+    plugin.addPluginToLuaPath();
+
+    lua_pushlightuserdata(plugin.lua.get(), &plugin);
+    lua_setfield(plugin.lua.get(), LUA_REGISTRYINDEX, "VertexNote_QtLuaPlugin");
+
+    const auto luaFile = plugin.path / plugin.mainfile;
+    if (luaL_loadfile(plugin.lua.get(), luaFile.string().c_str()) != LUA_OK) {
+        const char* err = lua_tostring(plugin.lua.get(), -1);
+        plugin.error = err ? err : "Could not load Lua file";
+        lua_pop(plugin.lua.get(), 1);
+        plugin.valid = false;
+        return;
+    }
+    if (lua_pcall(plugin.lua.get(), 0, 0, 0) != LUA_OK) {
+        const char* err = lua_tostring(plugin.lua.get(), -1);
+        plugin.error = err ? err : "Could not run Lua file";
+        lua_pop(plugin.lua.get(), 1);
+        plugin.valid = false;
+        return;
+    }
+
+    plugin.inInitUi = true;
+    lua_getglobal(plugin.lua.get(), "initUi");
+    if (lua_isfunction(plugin.lua.get(), -1) == 1) {
+        if (lua_pcall(plugin.lua.get(), 0, 0, 0) != LUA_OK) {
+            const char* err = lua_tostring(plugin.lua.get(), -1);
+            plugin.error = err ? err : "initUi failed";
+            lua_pop(plugin.lua.get(), 1);
+            plugin.valid = false;
+        }
+    } else {
+        lua_pop(plugin.lua.get(), 1);
+    }
+    plugin.inInitUi = false;
+}
+
+}  // namespace
+#endif
+
+QtLuaPluginRuntime::QtLuaPluginRuntime(vn::ui::common::IPluginUiBridge* bridge,
+                                       vn::ui::common::ICommandHost* commandHost, QWidget* parent):
+        bridge(bridge), commandHost(commandHost), parent(parent) {}
+
+QtLuaPluginRuntime::~QtLuaPluginRuntime() = default;
+
+void QtLuaPluginRuntime::configurePluginSearchPaths(std::vector<std::filesystem::path> searchPaths) {
+    this->pluginSearchPaths = std::move(searchPaths);
+}
+
+void QtLuaPluginRuntime::loadEnabledPlugins() {
+    for (const auto& plugin: this->plugins) {
+        for (const auto& actionId: plugin->actionIds) {
+            if (this->bridge) {
+                this->bridge->removeAction(actionId);
+            }
+        }
+        for (const auto& placeholderId: plugin->placeholderIds) {
+            if (this->bridge) {
+                this->bridge->removePlaceholder(placeholderId);
+            }
+        }
+    }
+    this->plugins.clear();
+
+#ifdef ENABLE_PLUGINS
+    const std::vector<std::filesystem::path> defaultSearchPaths = {std::filesystem::path(PROJECT_SOURCE_DIR) / "plugins",
+                                                                   Util::getConfigSubfolder("plugins")};
+    const auto& searchPaths = this->pluginSearchPaths.empty() ? defaultSearchPaths : this->pluginSearchPaths;
+
+    for (const auto& searchPath: searchPaths) {
+        if (!std::filesystem::is_directory(searchPath)) {
+            continue;
+        }
+        for (const auto& entry: std::filesystem::directory_iterator(searchPath)) {
+            if (!entry.is_directory()) {
+                continue;
+            }
+            auto plugin = loadIni(entry.path());
+            plugin->runtime = this;
+            this->plugins.push_back(std::move(plugin));
+        }
+    }
+
+    std::ranges::sort(this->plugins, [](const auto& lhs, const auto& rhs) {
+        return std::tie(lhs->name, lhs->path) < std::tie(rhs->name, rhs->path);
+    });
+
+    for (auto& plugin: this->plugins) {
+        loadPluginScript(*plugin);
+    }
+#else
+    auto plugin = std::make_unique<Plugin>();
+    plugin->name = "Lua plugins";
+    plugin->error = "VertexNote was built without Lua plugin support.";
+    this->plugins.push_back(std::move(plugin));
+#endif
+}
+
+void QtLuaPluginRuntime::saveEnabledStates(const std::vector<std::pair<std::string, bool>>& states) {
+    QSettings appSettings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
+    for (const auto& [name, enabled]: states) {
+        appSettings.setValue(QStringLiteral("plugins/enabled/") + pluginSettingsKey(name), enabled);
+    }
+    appSettings.sync();
+    loadEnabledPlugins();
+}
+
+auto QtLuaPluginRuntime::statuses() const -> std::vector<PluginStatus> {
+    std::vector<PluginStatus> result;
+    result.reserve(this->plugins.size());
+    for (const auto& plugin: this->plugins) {
+        result.push_back(plugin->status());
+    }
+    return result;
+}

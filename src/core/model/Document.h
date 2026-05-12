@@ -20,20 +20,14 @@
 #include <unordered_map>  // for unordered_map
 #include <vector>         // for vector
 
-#include <cairo.h>    // for cairo_surface_t
-#include <glib.h>     // for gpointer, gsize
-#include <gtk/gtk.h>  // for GtkTreeModel, GtkTreeIter, GtkT...
-
 #include "pdf/base/PdfDocument.h"  // for PdfDocument
 #include "pdf/base/PdfPage.h"      // for PdfPagePtr
 #include "util/PathUtil.h"            // for PathStorageMode
-#include "util/raii/GObjectSPtr.h"    // for GObjectSptr
 
 #include "PageRef.h"     // for PageRef
 #include "filesystem.h"  // for path
 
 class DocumentHandler;
-class PdfBookmarkIterator;
 
 class Document {
 public:
@@ -84,8 +78,6 @@ public:
 
     fs::path getEvMetadataFilename() const;
 
-    GtkTreeModel* getContentsModel() const;
-
     void setCreateBackupOnSave(bool backup);
     bool shouldCreateBackupOnSave() const;
 
@@ -93,8 +85,8 @@ public:
 
     bool isAttachPdf() const;
 
-    vn::util::CairoSurfaceSPtr getPreview() const;
-    void setPreview(vn::util::CairoSurfaceSPtr preview);
+    const std::string& getPreviewPngData() const;
+    void setPreviewPngData(std::string previewPngData);
 
     void lock();
     void unlock();
@@ -107,13 +99,7 @@ public:
     inline void setPathStorageMode(Util::PathStorageMode m) { pathStorageMode = m; }
 
 private:
-    void buildContentsModel();
-    void freeTreeContentModel();
-    static bool freeTreeContentEntry(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
-
-    void buildTreeContentsModel(GtkTreeIter* parent, PdfBookmarkIterator* iter);
     void updateIndexPageNumbers();
-    static bool fillPageLabels(GtkTreeModel* treeModel, GtkTreePath* path, GtkTreeIter* iter, Document* doc);
 
 private:
     DocumentHandler* handler = nullptr;
@@ -156,19 +142,14 @@ private:
     void indexPdfPages();
 
     /**
-     * The bookmark contents model
-     */
-    vn::util::GObjectSPtr<GtkTreeModel> contentsModel;
-
-    /**
      *  create a backup before save
      */
     bool createBackupOnSave = false;
 
     /**
-     * The preview for the file
+     * The preview PNG bytes for the file
      */
-    vn::util::CairoSurfaceSPtr preview;
+    std::string previewPngData;
 
     /**
      * The lock of the document

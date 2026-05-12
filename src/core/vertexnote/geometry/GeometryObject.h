@@ -54,6 +54,7 @@ public:
 
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
     [[nodiscard]] auto removeVertex(VertexId id) -> bool;
+    [[nodiscard]] auto removeEdge(EdgeId id) -> bool;
     [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
     [[nodiscard]] auto removeConstraint(ConstraintId id) -> bool;
     [[nodiscard]] auto replaceConstraint(Constraint constraint) -> bool;
@@ -64,6 +65,7 @@ public:
 private:
     [[nodiscard]] auto containsVertex(VertexId id) const -> bool;
     [[nodiscard]] auto containsEdge(EdgeId id) const -> bool;
+    void cleanupDanglingVertices();
     [[nodiscard]] auto nextVertexId() -> VertexId;
     [[nodiscard]] auto nextEdgeId() -> EdgeId;
     [[nodiscard]] auto nextConstraintId() -> ConstraintId;

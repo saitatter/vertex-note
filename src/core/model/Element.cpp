@@ -4,8 +4,6 @@
 #include <cmath>      // for ceil, floor, NAN
 #include <cstdint>    // for uint32_t
 
-#include <glib.h>  // for gint
-
 #include "util/safe_casts.h"                      // for as_unsigned
 #include "util/serializing/ObjectInputStream.h"   // for ObjectInputStream
 #include "util/serializing/ObjectOutputStream.h"  // for ObjectOutputStream
@@ -78,19 +76,6 @@ auto Element::boundingRect() const -> Rectangle<double> {
 void Element::setColor(Color color) { this->color = color; }
 
 auto Element::getColor() const -> Color { return this->color; }
-
-auto Element::intersectsArea(const GdkRectangle* src) const -> bool {
-    // compute the smallest rectangle with integer coordinates containing the bounding box and having width, height > 0
-    auto x = getX();
-    auto y = getY();
-    auto x1 = gint(std::floor(getX()));
-    auto y1 = gint(std::floor(getY()));
-    auto x2 = gint(std::ceil(x + getElementWidth()));
-    auto y2 = gint(std::ceil(y + getElementHeight()));
-    GdkRectangle rect = {x1, y1, std::max(1, x2 - x1), std::max(1, y2 - y1)};
-
-    return gdk_rectangle_intersect(src, &rect, nullptr);
-}
 
 auto Element::intersectsArea(double x, double y, double width, double height) const -> bool {
     double dest_x = NAN, dest_y = NAN;

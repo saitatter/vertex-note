@@ -46,7 +46,7 @@ jobs:
         with:
           build_type: ${{ inputs.build_type }}
           cmake_flags: >-
-            -DCMAKE_INSTALL_PREFIX="$HOME/gtk/inst"
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/install"
           extra_cmake_flags: ${{ inputs.extra_cmake_flags }}
       - name: 'Create installer'
         id: create-installer
@@ -55,7 +55,7 @@ jobs:
           which pkg-config
           pkg-config --version
           (cd build && cmake --build . --target install)
-          (cd mac-setup && ./build-app.sh $HOME/gtk)                    # populates a folder mac-setup/VertexNote.app
+          (cd mac-setup && ./build-app.sh "${{ github.workspace }}/build/install")  # populates mac-setup/VertexNote.app
 
           export VERSION=$(cat build/VERSION | sed '1q;d')
           export OUTPUT="vertex-note-$VERSION${{ inputs.artifact_version_suffix }}-macOS-${{runner.arch}}.dmg"

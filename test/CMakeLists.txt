@@ -51,31 +51,63 @@ configure_file (
 ###############################################################################
 
 # Get all unit test source files
-file (GLOB_RECURSE test-units-sources
+file (GLOB_RECURSE test-units-sources CONFIGURE_DEPENDS
   unit_tests/*.cpp
   main.cpp
 )
+
+if (NOT ENABLE_QT_SHELL)
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtCanvasLayoutTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtColorPaletteTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtPreviewStrokeRendererTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtRecentFilesServiceTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtToolbarLayoutEngineTest\\.cpp$")
+endif ()
+
+list(FILTER test-units-sources EXCLUDE REGEX ".*ActionDatabaseTest\\.cpp$")
+list(FILTER test-units-sources EXCLUDE REGEX ".*ColorPaletteTest\\.cpp$")
 
 # Define test-units target
 add_executable (test-units EXCLUDE_FROM_ALL ${test-units-sources})
 target_link_libraries (test-units vertexnote::core vertexnote::util gtest)
 target_compile_features(test-units PRIVATE cxx_std_20)
 target_include_directories(test-units PRIVATE "${PROJECT_BINARY_DIR}/test")
-
-###############################################################################
-# Define test-gtk-integration
-###############################################################################
-
-# Get all test-gtk test source files
-file (GLOB_RECURSE test-gtk-sources
-        gtk_tests/*.cpp
-        )
-
-# Define test-gtk-integration target
-add_executable (test-gtk-integration EXCLUDE_FROM_ALL ${test-gtk-sources})
-target_link_libraries (test-gtk-integration vertexnote::core vertexnote::util gtest_main gtest)
-target_compile_features(test-gtk-integration PRIVATE cxx_std_20)
-target_include_directories(test-gtk-integration PRIVATE "${PROJECT_BINARY_DIR}/test")
+if (ENABLE_QT_SHELL)
+  target_sources(test-units PRIVATE
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas/QtCanvasLayout.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas/QtPreviewStrokeRenderer.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentController.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerEraser.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerHistory.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerLayers.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPageBackground.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPages.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerPdfText.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerSelection.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/document/QtDocumentControllerShapes.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtCommandHost.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtLuaPluginRuntime.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtLuaPluginRuntimeAccess.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtPluginUiBridge.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/services/QtRecentFilesService.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtColorPalette.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarLayoutEngine.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarProfileStore.cpp"
+  )
+  target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
+  target_link_libraries(test-units Qt6::Widgets $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>)
+  target_include_directories(test-units PRIVATE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_SOURCE_DIR}/src/qt"
+    "${PROJECT_SOURCE_DIR}/src/qt/app"
+    "${PROJECT_SOURCE_DIR}/src/qt/canvas"
+    "${PROJECT_SOURCE_DIR}/src/qt/document"
+    "${PROJECT_SOURCE_DIR}/src/qt/services"
+    "${PROJECT_SOURCE_DIR}/src/qt/toolbar"
+    "${PROJECT_SOURCE_DIR}/src/qt/widgets"
+  )
+endif ()
 
 ###############################################################################
 # Discover and Register Tests
@@ -87,22 +119,12 @@ gtest_discover_tests(test-units
   DISCOVERY_TIMEOUT 30
   PROPERTIES
     ENVIRONMENT "${TEST_ENV_VARS}"
-  $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
-    DEPENDS create-gdk-pixbuf-loader-cache>
 )
-gtest_discover_tests(test-gtk-integration
-        DISCOVERY_TIMEOUT 30
-        PROPERTIES
-        ENVIRONMENT "${TEST_ENV_VARS}"
-        $<$<NOT:$<STREQUAL:${TEST_GDK_PIXBUF_LOADER_CACHE},"">>:
-        DEPENDS create-gdk-pixbuf-loader-cache>
-)
-
 ###############################################################################
 # Define benchmarks: gtest-like app with benchmark units - not added to CTest or the `test` target
 ###############################################################################
 
-file (GLOB_RECURSE benchmarks-sources benchmarks/*.cpp)
+file (GLOB_RECURSE benchmarks-sources CONFIGURE_DEPENDS benchmarks/*.cpp)
 add_executable (benchmarks EXCLUDE_FROM_ALL ${benchmarks-sources})
 target_link_libraries (benchmarks vertexnote::core vertexnote::util gtest_main gtest)
 target_include_directories(benchmarks PRIVATE "${PROJECT_BINARY_DIR}/test")

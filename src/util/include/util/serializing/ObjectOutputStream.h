@@ -17,8 +17,6 @@
 #include <string_view>  // for string_view
 #include <vector>       // for vector
 
-#include <glib.h>  // for GString
-
 class ObjectEncoding;
 
 class ObjectOutputStream {
@@ -45,8 +43,7 @@ public:
     /// Writes the raw image data to the output stream.
     void writeImage(const std::string_view& imgData);
 
-    /// The caller takes ownership of the returned data
-    GString* stealData();
+    std::string stealData();
 
 private:
     ObjectEncoding* encoder = nullptr;

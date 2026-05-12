@@ -20,8 +20,6 @@
 #include <utility>   // for pair
 #include <vector>    // for vector
 
-#include <gdk/gdk.h>      // for GdkInputSource, GdkD...
-#include <glib.h>         // for gchar, gboolean, gint
 #include <libxml/tree.h>  // for xmlNodePtr, xmlDocPtr
 
 #include "control/tools/StrokeStabilizerEnum.h"  // for AveragingMethod, Pre...
@@ -47,6 +45,7 @@ constexpr unsigned int MAX_SPACES_FOR_TAB = 8U;
 
 class ButtonConfig;
 class InputDevice;
+enum class InputDeviceSource;
 class PageTemplateSettings;
 
 class SAttribute {
@@ -118,10 +117,10 @@ private:
     void loadDefault();
     void parseItem(xmlDocPtr doc, xmlNodePtr cur);
 
-    static xmlNodePtr savePropertyDouble(const gchar* key, double value, xmlNodePtr parent);
-    static xmlNodePtr saveProperty(const gchar* key, int value, xmlNodePtr parent);
-    static xmlNodePtr savePropertyUnsigned(const gchar* key, unsigned int value, xmlNodePtr parent);
-    static xmlNodePtr saveProperty(const gchar* key, const gchar* value, xmlNodePtr parent);
+    static xmlNodePtr savePropertyDouble(const char* key, double value, xmlNodePtr parent);
+    static xmlNodePtr saveProperty(const char* key, int value, xmlNodePtr parent);
+    static xmlNodePtr savePropertyUnsigned(const char* key, unsigned int value, xmlNodePtr parent);
+    static xmlNodePtr saveProperty(const char* key, const char* value, xmlNodePtr parent);
 
     void saveData(xmlNodePtr root, const std::string& name, SElement& elem);
 
@@ -137,7 +136,7 @@ public:
     ViewModeId getActiveViewMode() const;
 
     bool isPressureSensitivity() const;
-    void setPressureSensitivity(gboolean presureSensitivity);
+    void setPressureSensitivity(bool presureSensitivity);
 
     /**
      * Input device pressure options
@@ -468,11 +467,9 @@ public:
 
     void loadDeviceClasses();
     void saveDeviceClasses();
-    void setDeviceClassForDevice(GdkDevice* device, InputDeviceTypeOption deviceClass);
-    void setDeviceClassForDevice(const std::string& deviceName, GdkInputSource deviceSource,
+    void setDeviceClassForDevice(const std::string& deviceName, InputDeviceSource deviceSource,
                                  InputDeviceTypeOption deviceClass);
-    InputDeviceTypeOption getDeviceClassForDevice(GdkDevice* device) const;
-    InputDeviceTypeOption getDeviceClassForDevice(const std::string& deviceName, GdkInputSource deviceSource) const;
+    InputDeviceTypeOption getDeviceClassForDevice(const std::string& deviceName, InputDeviceSource deviceSource) const;
     std::vector<InputDevice> getKnownInputDevices() const;
 
     /**
@@ -1163,7 +1160,7 @@ private:
 
     bool inputSystemDrawOutsideWindow{};
 
-    std::map<std::string, std::pair<InputDeviceTypeOption, GdkInputSource>> inputDeviceClasses = {};
+    std::map<std::string, std::pair<InputDeviceTypeOption, InputDeviceSource>> inputDeviceClasses = {};
 
     /**
      * "Transaction" running, do not save until the end is reached

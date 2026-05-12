@@ -15,7 +15,6 @@
  * Input debugging, e.g. eraser events etc.
  */
 #cmakedefine DEBUG_INPUT
-#cmakedefine DEBUG_INPUT_GDK_PRINT_EVENTS
 #cmakedefine DEBUG_INPUT_PRINT_ALL_MOTION_EVENTS
 
 /**

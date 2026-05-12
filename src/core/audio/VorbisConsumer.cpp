@@ -3,13 +3,13 @@
 #include <algorithm>  // for for_each, min, max
 #include <cstddef>    // for size_t
 #include <deque>      // for _Deque_iterator
+#include <iostream>   // for cerr
 #include <iterator>   // for back_insert_iterator, back_in...
 #include <memory>     // for unique_ptr
 #include <string>     // for string
 #include <utility>    // for move
 #include <vector>     // for vector
 
-#include <glib.h>     // for g_warning
 #include <sndfile.h>  // for SF_INFO, sf_strerror, sf_writ...
 
 #include "audio/AudioQueue.h"           // for AudioQueue
@@ -22,7 +22,7 @@ auto VorbisConsumer::start(fs::path const& file) -> bool {
     auto [sampleRate, channels] = this->audioQueue.getAudioAttributes();
 
     if (sampleRate == -1) {
-        g_warning("VorbisConsumer: Timing issue - Sample rate requested before known");
+        std::cerr << "VorbisConsumer: Timing issue - Sample rate requested before known" << std::endl;
         return false;
     }
 
@@ -33,8 +33,8 @@ auto VorbisConsumer::start(fs::path const& file) -> bool {
 
     auto sfFile = vn::audio::make_snd_file(file.native(), SFM_WRITE, &sfInfo);
     if (!sfFile) {
-        g_warning("VorbisConsumer: output file \"%s\" could not be opened\ncaused by:%s",
-                  char_cast(file.u8string().c_str()), sf_strerror(sfFile.get()));
+        std::cerr << "VorbisConsumer: output file \"" << char_cast(file.u8string().c_str())
+                  << "\" could not be opened\ncaused by:" << sf_strerror(sfFile.get()) << std::endl;
         return false;
     }
 

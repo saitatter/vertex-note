@@ -163,7 +163,7 @@ void GeometrySnapProvider::rebuildLineSegments() {
             continue;
         }
         for (const auto& edge: object->edges()) {
-            if (edge.kind != geom::EdgeKind::Line) {
+            if (edge.kind != geom::EdgeKind::Line && edge.kind != geom::EdgeKind::ConstructionLine) {
                 continue;
             }
 

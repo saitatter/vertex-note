@@ -33,7 +33,7 @@ constexpr static struct RefSink {
 } refsink = RefSink();
 
 /**
- * @brief Simple template class for RAII smart pointer (aimed at Cairo/GTK/Poppler ref-counting classes)
+ * @brief Simple template class for RAII smart pointer (aimed at C-library ref-counting classes)
  * @param T The wrapper will store a pointer of type T
  * @param H Handler class containing at least
  *              static T* ref(T*):

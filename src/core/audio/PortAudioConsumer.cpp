@@ -2,10 +2,9 @@
 
 #include <algorithm>  // for for_each, transform, max
 #include <deque>      // for _Deque_iterator
+#include <iostream>   // for cerr
 #include <iterator>   // for next, prev
 #include <string>     // for to_string, string
-
-#include <glib.h>  // for g_warning
 
 #include "audio/AudioQueue.h"           // for AudioQueue
 #include "audio/DeviceInfo.h"           // for DeviceInfo
@@ -33,9 +32,9 @@ auto PortAudioConsumer::getSelectedOutputDevice() const -> DeviceInfo {
     try {
         return DeviceInfo(&sys.deviceByIndex(this->audioPlayer.getSettings().getAudioOutputDevice()), true);
     } catch (const portaudio::PaException& e) {
-        g_warning("PortAudioConsumer: Selected output device was not found - fallback to default output device\nCaused "
-                  "by: %s",
-                  e.what());
+        std::cerr << "PortAudioConsumer: Selected output device was not found - fallback to default output device\nCaused "
+                     "by: "
+                  << e.what() << std::endl;
         return DeviceInfo(&sys.defaultOutputDevice(), true);
     }
 }
@@ -51,7 +50,7 @@ auto PortAudioConsumer::startPlaying() -> bool {
     auto [sampleRate, channels] = this->audioQueue.getAudioAttributes();
 
     if (sampleRate == -1) {
-        g_warning("PortAudioConsumer: Timing issue - Sample rate requested before known");
+        std::cerr << "PortAudioConsumer: Timing issue - Sample rate requested before known" << std::endl;
         return false;
     }
 
@@ -60,13 +59,14 @@ auto PortAudioConsumer::startPlaying() -> bool {
     try {
         device = &sys.deviceByIndex(getSelectedOutputDevice().getIndex());
     } catch (const portaudio::PaException&) {
-        g_warning("PortAudioConsumer: Unable to find selected output device");
+        std::cerr << "PortAudioConsumer: Unable to find selected output device" << std::endl;
         return false;
     }
 
     if (device->maxOutputChannels() < channels) {
         this->audioQueue.signalEndOfStream();
-        g_warning("Output device has not enough channels to play audio file. (Requires at least 2 channels)");
+        std::cerr << "Output device has not enough channels to play audio file. (Requires at least 2 channels)"
+                  << std::endl;
         return false;
     }
 
@@ -81,7 +81,7 @@ auto PortAudioConsumer::startPlaying() -> bool {
                 params, *this, &PortAudioConsumer::playCallback);
     } catch (const portaudio::PaException& e) {
         this->audioQueue.signalEndOfStream();
-        g_warning("PortAudioConsumer: Unable to open stream to device\nCaused by: %s", e.what());
+        std::cerr << "PortAudioConsumer: Unable to open stream to device\nCaused by: " << e.what() << std::endl;
         return false;
     }
     // Start the recording
@@ -89,7 +89,7 @@ auto PortAudioConsumer::startPlaying() -> bool {
         this->outputStream->start();
     } catch (const portaudio::PaException& e) {
         this->audioQueue.signalEndOfStream();
-        g_warning("PortAudioConsumer: Unable to start stream\nCaused by: %s", e.what());
+        std::cerr << "PortAudioConsumer: Unable to start stream\nCaused by: " << e.what() << std::endl;
         this->outputStream.reset();
         return false;
     }
@@ -99,7 +99,7 @@ auto PortAudioConsumer::startPlaying() -> bool {
 auto PortAudioConsumer::playCallback(const void* /*inputBuffer*/, void* outputBuffer, unsigned long framesPerBuffer,
                                      const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags statusFlags) -> int {
     if (statusFlags) {
-        g_warning("PortAudioConsumer: PortAudio reported a stream warning: %s", std::to_string(statusFlags).c_str());
+        std::cerr << "PortAudioConsumer: PortAudio reported a stream warning: " << statusFlags << std::endl;
     }
 
     if (outputBuffer != nullptr) {
@@ -111,7 +111,8 @@ auto PortAudioConsumer::playCallback(const void* /*inputBuffer*/, void* outputBu
         if (midI != endI) {
             // Show underflow warning if there are not enough samples and the stream is not yet finished
             if (!this->audioQueue.hasStreamEnded()) {
-                g_warning("PortAudioConsumer: Not enough audio samples available to fill requested frame");
+                std::cerr << "PortAudioConsumer: Not enough audio samples available to fill requested frame"
+                          << std::endl;
             }
 
             if (midI > std::next(begI, this->outputChannels)) {

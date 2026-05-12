@@ -14,8 +14,6 @@
 #include <list>     // for list
 #include <utility>  // for pair
 
-#include <cairo.h>  // for cairo_t
-
 #include "model/Point.h"  // for Point
 
 
@@ -23,8 +21,6 @@
  * @brief A class to handle splines segments
  *
  * Every spline segment is defined by two knot points and two control points.
- * This contrasts to the cairo-draw command cairo_curve_to, where everything is relative to the current position of
- * another knot,
  */
 
 
@@ -47,12 +43,6 @@ public:
      * @param q the second knot
      */
     SplineSegment(const Point& p, const Point& fp, const Point& sp, const Point& q);
-
-    /**
-     * @brief draw the spline segment via the cairo_curve_to command
-     * @param cr the cairo context on which the spline segment ought to be drawn
-     */
-    void draw(cairo_t* cr) const;
 
     /**
      * @brief Convert the spline segment to a list of points.

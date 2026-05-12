@@ -2,13 +2,13 @@
 
 #include <algorithm>  // for fill_n, max
 #include <cstdio>     // for size_t, SEEK_CUR, SEEK_SET
+#include <iostream>   // for cerr
 #include <iterator>   // for begin, end
 #include <memory>     // for unique_ptr
 #include <string>     // for string
 #include <utility>    // for move
 #include <vector>     // for vector
 
-#include <glib.h>     // for g_warning
 #include <sndfile.h>  // for SF_INFO, sf_seek, sf_count_t, sf_readf...
 
 #include "audio/AudioQueue.h"  // for AudioQueue
@@ -21,8 +21,8 @@ auto VorbisProducer::start(fs::path const& file, unsigned int timestamp) -> bool
     SF_INFO sfInfo{};
     auto sfFile = vn::audio::make_snd_file(file, SFM_READ, &sfInfo);
     if (!sfFile) {
-        g_warning("VorbisProducer: input file \"%s\" could not be opened\ncaused by:%s",
-                  char_cast(file.u8string().c_str()), sf_strerror(sfFile.get()));
+        std::cerr << "VorbisProducer: input file \"" << char_cast(file.u8string().c_str())
+                  << "\" could not be opened\ncaused by:" << sf_strerror(sfFile.get()) << std::endl;
         return false;
     }
 
@@ -31,7 +31,7 @@ auto VorbisProducer::start(fs::path const& file, unsigned int timestamp) -> bool
     if (seekPosition < sfInfo.frames) {
         sf_seek(sfFile.get(), seekPosition, SEEK_SET);
     } else {
-        g_warning("VorbisProducer: Seeking outside of audio file extent");
+        std::cerr << "VorbisProducer: Seeking outside of audio file extent" << std::endl;
     }
 
     this->audioQueue.setAudioAttributes(sfInfo.samplerate, static_cast<unsigned int>(sfInfo.channels));

@@ -8,8 +8,6 @@
 #include <string>
 #include <utility>
 
-#include <glib.h>
-
 #include "model/Element.h"
 #include "util/Color.h"
 #include "util/serializing/BinObjectEncoding.h"
@@ -31,6 +29,42 @@ auto makeLineElement() -> GeometryElement {
     auto a = object.addVertex(Vec2{1.0, 2.0});
     auto b = object.addVertex(Vec2{5.0, 2.0});
     object.addLine(a, b);
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
+auto makeCircleElement() -> GeometryElement {
+    GeometryObject object(43);
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(vn::geom::EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
+auto makeConstructionLineElement() -> GeometryElement {
+    GeometryObject object(44);
+    auto a = object.addVertex(Vec2{1.0, 2.0});
+    auto b = object.addVertex(Vec2{5.0, 2.0});
+    object.addEdge(vn::geom::EdgeKind::ConstructionLine, a, b);
+
+    GeometryElement element(std::move(object));
+    element.setColor(Colors::black);
+    element.setStrokeWidth(2.0);
+    return element;
+}
+
+auto makeConstructionCircleElement() -> GeometryElement {
+    GeometryObject object(45);
+    const auto center = object.addVertex(Vec2{10.0, 10.0});
+    const auto radiusPoint = object.addVertex(Vec2{14.0, 10.0});
+    object.addEdge(vn::geom::EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
 
     GeometryElement element(std::move(object));
     element.setColor(Colors::black);
@@ -62,6 +96,36 @@ TEST(VertexNoteGeometryElement, computesDistanceToDrawnGeometry) {
     EXPECT_DOUBLE_EQ(element.distanceTo(3.0, 5.0), 2.0);
 }
 
+TEST(VertexNoteGeometryElement, computesBoundsForFullCircleArc) {
+    GeometryElement element = makeCircleElement();
+
+    EXPECT_DOUBLE_EQ(element.getX(), 5.0);
+    EXPECT_DOUBLE_EQ(element.getY(), 5.0);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 10.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 10.0);
+}
+
+TEST(VertexNoteGeometryElement, computesDistanceToInfiniteConstructionLine) {
+    GeometryElement element = makeConstructionLineElement();
+
+    EXPECT_DOUBLE_EQ(element.distanceTo(20.0, 2.0), 0.0);
+    EXPECT_DOUBLE_EQ(element.distanceTo(20.0, 5.0), 2.0);
+}
+
+TEST(VertexNoteGeometryElement, intersectsAreaAlongInfiniteConstructionLine) {
+    GeometryElement element = makeConstructionLineElement();
+
+    EXPECT_TRUE(element.intersectsArea(19.0, 1.0, 2.0, 2.0));
+    EXPECT_FALSE(element.intersectsArea(19.0, 6.0, 2.0, 2.0));
+}
+
+TEST(VertexNoteGeometryElement, computesDistanceToConstructionCircle) {
+    GeometryElement element = makeConstructionCircleElement();
+
+    EXPECT_DOUBLE_EQ(element.distanceTo(14.0, 10.0), 0.0);
+    EXPECT_DOUBLE_EQ(element.distanceTo(10.0, 10.0), 3.0);
+}
+
 TEST(VertexNoteGeometryElement, movesGeometryAndCachedBounds) {
     GeometryElement element = makeLineElement();
     static_cast<void>(element.getX());  // Populate cached bounds before moving.
@@ -82,6 +146,39 @@ TEST(VertexNoteGeometryElement, movesIndividualVertex) {
     EXPECT_DOUBLE_EQ(element.geometry().vertex(firstVertexId)->position.x, 9.0);
     EXPECT_DOUBLE_EQ(element.geometry().vertex(firstVertexId)->position.y, 11.0);
     EXPECT_FALSE(element.setVertexPosition(999, Vec2{1.0, 1.0}));
+}
+
+TEST(VertexNoteGeometryElement, insertsVertexOnEdgeAndInvalidatesBounds) {
+    GeometryElement element = makeLineElement();
+    static_cast<void>(element.getElementWidth());
+
+    const auto edgeId = element.geometry().edges().front().id;
+    auto inserted = element.insertVertexOnEdge(edgeId, Vec2{3.0, 2.0});
+
+    ASSERT_TRUE(inserted.has_value());
+    EXPECT_EQ(element.geometry().vertices().size(), 3U);
+    EXPECT_EQ(element.geometry().edges().size(), 2U);
+    EXPECT_NE(element.geometry().vertex(*inserted), nullptr);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 6.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 2.0);
+}
+
+TEST(VertexNoteGeometryElement, replacesGeometryStateAndInvalidatesBounds) {
+    GeometryElement element = makeLineElement();
+    static_cast<void>(element.getX());  // Populate cached bounds before replacing.
+
+    GeometryObject replacement(99);
+    const auto a = replacement.addVertex(Vec2{10.0, 10.0});
+    const auto b = replacement.addVertex(Vec2{16.0, 10.0});
+    replacement.addLine(a, b);
+
+    element.replaceGeometry(std::move(replacement));
+
+    EXPECT_EQ(element.geometry().objectId(), 99U);
+    EXPECT_DOUBLE_EQ(element.getX(), 9.0);
+    EXPECT_DOUBLE_EQ(element.getY(), 9.0);
+    EXPECT_DOUBLE_EQ(element.getElementWidth(), 8.0);
+    EXPECT_DOUBLE_EQ(element.getElementHeight(), 2.0);
 }
 
 TEST(VertexNoteGeometryElement, clonesGeometryState) {
@@ -108,9 +205,7 @@ TEST(VertexNoteGeometryElement, serializesClipboardGeometryState) {
 
     ObjectOutputStream out(new BinObjectEncoding);
     element.serialize(out);
-    auto* raw = out.stealData();
-    const std::string serialized(raw->str, raw->len);
-    g_string_free(raw, true);
+    const std::string serialized = out.stealData();
 
     ObjectInputStream in;
     ASSERT_TRUE(in.read(serialized.c_str(), serialized.size() + 1U));

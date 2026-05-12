@@ -1,25 +1,34 @@
 #include "LatexGenerator.h"
 
 #include <algorithm>    // for transform
+#include <cstddef>      // for size_t
+#include <fstream>
 #include <map>          // for map
 #include <regex>        // for smatch, sregex_iterator
 #include <sstream>      // for ostringstream
 #include <string_view>  // for string_view
 
-#include <glib.h>     // for GError, gchar, g_error_free
-#include <poppler.h>  // for g_object_unref
-
 #include "control/settings/LatexSettings.h"  // for LatexSettings
 #include "util/PathUtil.h"                   // for getLongPath
 #include "util/PlaceholderString.h"          // for PlaceholderString
+#include "util/StringUtils.h"                // for char_cast
 #include "util/Util.h"                       // for Util
 #include "util/i18n.h"                       // for FS, _F
-#include "util/raii/GLibGuards.h"            // for GErrorGuard, GStrvGuard
-#include "util/raii/GObjectSPtr.h"           // for GObjectSptr
-#include "util/safe_casts.h"                 // for as_signed
+
+#include <QProcess>
+#include <QByteArray>
+#include <QStandardPaths>
+#include <QString>
+#include <QStringList>
 
 
 using namespace vn::util;
+
+namespace {
+
+constexpr int LATEX_PROCESS_TIMEOUT_MS = 30000;
+
+}
 
 LatexGenerator::LatexGenerator(const LatexSettings& settings): settings(settings) {}
 
@@ -93,51 +102,64 @@ auto LatexGenerator::templateSub(const std::string& input, const std::string& te
     return output;
 }
 
-auto LatexGenerator::asyncRun(const fs::path& texDir, const std::string& texFileContents) -> Result {
+auto LatexGenerator::run(const fs::path& texDir, const std::string& texFileContents) -> Result {
     std::string cmd = this->settings.genCmd;
-    GErrorGuard err{};
-    std::string texFilePathOSEncoding = Util::GFilename(Util::getLongPath(texDir) / "tex.tex").c_str();
+    const auto texFilePath = Util::getLongPath(texDir) / "tex.tex";
+    const auto texFilePathString = std::string{char_cast(texFilePath.u8string())};
 
-    for (auto i = cmd.find("{}"); i != std::string::npos; i = cmd.find("{}", i + texFilePathOSEncoding.length())) {
-        cmd.replace(i, 2, texFilePathOSEncoding);
+    for (auto i = cmd.find("{}"); i != std::string::npos; i = cmd.find("{}", i + texFilePathString.length())) {
+        cmd.replace(i, 2, texFilePathString);
     }
-    // Todo (rolandlo): is this a todo?
-    // Windows note: g_shell_parse_argv assumes POSIX paths, so Windows paths need to be escaped.
-    GStrvGuard argv{};
-    if (!g_shell_parse_argv(cmd.c_str(), nullptr, out_ptr(argv), out_ptr(err))) {
-        return GenError{FS(_F("Failed to parse LaTeX generator command: {1}") % err->message)};
+
+    QStringList argv = QProcess::splitCommand(QString::fromStdString(cmd));
+    if (argv.empty()) {
+        return GenError{FS(_F("Failed to parse LaTeX generator command: {1}") % cmd)};
     }
-    gchar* prog = argv.get()[0];
-    if (!prog || !(prog = g_find_program_in_path(prog))) {
+
+    const QString program = argv.takeFirst();
+    const QString executable = QStandardPaths::findExecutable(program);
+    if (executable.isEmpty()) {
         if (Util::isFlatpakInstallation()) {
             return GenError{
                     FS(_F("Failed to find LaTeX generator program in PATH: {1}\n\nSince installation is detected "
                           "within Flatpak, you need to install the Flatpak freedesktop Tex Live extension. For "
                           "example, by running:\n\n$ flatpak install flathub org.freedesktop.Sdk.Extension.texlive") %
-                       argv.get()[0])};
+                       program.toStdString())};
         } else {
-            return GenError{FS(_F("Failed to find LaTeX generator program in PATH: {1}") % argv.get()[0])};
+            return GenError{FS(_F("Failed to find LaTeX generator program in PATH: {1}") % program.toStdString())};
         }
     }
-    g_free(argv.get()[0]);
-    argv.get()[0] = prog;
 
-    if (!g_file_set_contents(texFilePathOSEncoding.c_str(), texFileContents.c_str(), as_signed(texFileContents.size()),
-                             out_ptr(err))) {
-        return GenError({FS(_F("Could not save .tex file: {1}") % err->message)});
+    std::ofstream texFile(texFilePath, std::ios::binary);
+    if (!texFile) {
+        return GenError({FS(_F("Could not save .tex file: {1}") % texFilePathString)});
+    }
+    texFile.write(texFileContents.data(), static_cast<std::streamsize>(texFileContents.size()));
+    texFile.close();
+
+    QProcess process;
+    process.setProgram(executable);
+    process.setArguments(argv);
+    process.setWorkingDirectory(QString::fromStdString(std::string{char_cast(texDir.u8string())}));
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    process.start();
+
+    if (!process.waitForStarted()) {
+        return GenError({FS(_F("Could not start {1}: {2} (exit code: {3})") % executable.toStdString() %
+                            process.errorString().toStdString() % static_cast<int>(process.error()))});
+    }
+    if (!process.waitForFinished(LATEX_PROCESS_TIMEOUT_MS)) {
+        if (process.error() == QProcess::Timedout) {
+            process.kill();
+            process.waitForFinished();
+            return GenError({FS(_F("LaTeX generator command timed out after {1} seconds: {2}") %
+                                (LATEX_PROCESS_TIMEOUT_MS / 1000) % executable.toStdString())});
+        }
+        return GenError({FS(_F("LaTeX generator command failed to finish: {1}: {2} (process error: {3})") %
+                            executable.toStdString() % process.errorString().toStdString() %
+                            static_cast<int>(process.error()))});
     }
 
-    auto flags = static_cast<GSubprocessFlags>(G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE);
-    vn::util::GObjectSPtr<GSubprocessLauncher> launcher(g_subprocess_launcher_new(flags), vn::util::adopt);
-    g_subprocess_launcher_set_cwd(launcher.get(), Util::GFilename(texDir).c_str());
-    auto* proc = g_subprocess_launcher_spawnv(launcher.get(), argv.get(), out_ptr(err));
-
-    if (proc) {
-        return {proc};
-    }
-    std::ostringstream ss;
-    for (char** iter = argv.get(); iter != nullptr && *iter != nullptr; ++iter) {
-        ss << std::string_view(*iter) << ", ";
-    }
-    return GenError({FS(_F("Could not start {1}: {2} (exit code: {3})") % ss.str() % err->message % err->code)});
+    const QByteArray output = process.readAllStandardOutput();
+    return GenOutput{std::string(output.constData(), static_cast<std::size_t>(output.size())), process.exitCode()};
 }

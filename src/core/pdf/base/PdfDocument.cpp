@@ -2,15 +2,15 @@
 
 #include "pdf/base/PdfDocumentInterface.h"    // for PdfDocumentInterface
 #include "pdf/base/PdfPage.h"                 // for PdfPagePtr
-#include "pdf/popplerapi/PopplerGlibDocument.h"  // for PopplerGlibDocument
+#include "pdf/popplerapi/PopplerPdfDocument.h"  // for PopplerPdfDocument
 
 #include "filesystem.h"  // for path
 
 class PdfBookmarkIterator;
 
-PdfDocument::PdfDocument(): doc(new PopplerGlibDocument()) {}
+PdfDocument::PdfDocument(): doc(new PopplerPdfDocument()) {}
 
-PdfDocument::PdfDocument(const PdfDocument& doc): doc(new PopplerGlibDocument()) {
+PdfDocument::PdfDocument(const PdfDocument& doc): doc(new PopplerPdfDocument()) {
     this->doc->assign(doc.doc);
 }
 
@@ -30,14 +30,16 @@ void PdfDocument::assign(PdfDocumentInterface* doc) { this->doc->assign(doc); }
 
 auto PdfDocument::equals(PdfDocumentInterface* doc) const -> bool { return this->doc->equals(doc); }
 
-auto PdfDocument::save(fs::path const& file, GError** error) const -> bool { return doc->save(file, error); }
-
-auto PdfDocument::load(fs::path const& file, std::string password, GError** error) -> bool {
-    return doc->load(file, password, error);
+auto PdfDocument::save(fs::path const& file, std::string* errorMessage) const -> bool {
+    return doc->save(file, errorMessage);
 }
 
-auto PdfDocument::load(std::unique_ptr<std::string> data, std::string password, GError** error) -> bool {
-    return doc->load(std::move(data), password, error);
+auto PdfDocument::load(fs::path const& file, std::string password, std::string* errorMessage) -> bool {
+    return doc->load(file, password, errorMessage);
+}
+
+auto PdfDocument::load(std::unique_ptr<std::string> data, std::string password, std::string* errorMessage) -> bool {
+    return doc->load(std::move(data), password, errorMessage);
 }
 
 auto PdfDocument::isLoaded() const -> bool { return doc->isLoaded(); }

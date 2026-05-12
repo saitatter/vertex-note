@@ -126,12 +126,7 @@ jobs:
         uses: ./.github/actions/install_deps_ubuntu
         with:
           extra_packages: >-
-            fcitx-frontend-gtk3
-            fcitx5-frontend-gtk3
-            gcin-gtk3-immodule
-            ibus-gtk3
             uim-data
-            uim-gtk3-immodule
 
       - name: Build Linux packages
         uses: ./.github/actions/build
