@@ -20,9 +20,6 @@
 
 #include "filesystem.h"  // for path
 
-class QSettings;
-class QString;
-
 class PageTypeInfo {
 public:
     PageType page;
@@ -45,7 +42,7 @@ public:
 
 private:
     bool parseIni(fs::path const& filepath);
-    void loadFormat(QSettings& config, const QString& group);
+    void loadFormat(const std::string& name, const std::string& format, const std::string& config);
 
 private:
     std::vector<std::unique_ptr<PageTypeInfo>> types;

@@ -33,7 +33,6 @@
 
 #include "ButtonConfig.h"  // for ButtonConfig
 #include "config-dev.h"    // for PALETTE_FILE
-#include "config-dev.h"
 #include "filesystem.h"  // for path, exists
 
 
@@ -57,29 +56,46 @@ namespace {
 auto xmlText(const xmlChar* value) -> const char* { return reinterpret_cast<const char*>(value); }
 
 auto parseDouble(const char* text, char** endptr = nullptr) -> double {
+    if (!text) {
+        if (endptr) {
+            *endptr = nullptr;
+        }
+        return 0.0;
+    }
+
     const char* end = text + std::strlen(text);
     double value = 0.0;
+#if ENABLE_FLOAT_FROM_CHARS
     auto [ptr, ec] = std::from_chars(text, end, value);
-    if (ec == std::errc()) {
+    if (ec == std::errc() && (endptr || ptr == end)) {
         if (endptr) {
             *endptr = const_cast<char*>(ptr);
         }
         return value;
     }
 
-    std::string normalized(text);
-    std::replace(normalized.begin(), normalized.end(), ',', '.');
-    const char* normalizedEnd = normalized.data() + normalized.size();
-    auto [normalizedPtr, normalizedEc] = std::from_chars(normalized.data(), normalizedEnd, value);
-    if (normalizedEc == std::errc()) {
-        if (endptr) {
-            *endptr = const_cast<char*>(text + (normalizedPtr - normalized.data()));
+    if (!endptr) {
+        std::string normalized(text);
+        std::replace(normalized.begin(), normalized.end(), ',', '.');
+        const char* normalizedEnd = normalized.data() + normalized.size();
+        auto [normalizedPtr, normalizedEc] = std::from_chars(normalized.data(), normalizedEnd, value);
+        if (normalizedEc == std::errc() && normalizedPtr == normalizedEnd) {
+            return value;
         }
-        return value;
     }
+#endif
 
     char* legacyEnd = nullptr;
     value = std::strtod(text, &legacyEnd);
+    if (!endptr && legacyEnd != end) {
+        std::string normalized(text);
+        std::replace(normalized.begin(), normalized.end(), ',', '.');
+        char* normalizedLegacyEnd = nullptr;
+        const double normalizedValue = std::strtod(normalized.c_str(), &normalizedLegacyEnd);
+        if (normalizedLegacyEnd == normalized.c_str() + normalized.size()) {
+            return normalizedValue;
+        }
+    }
     if (endptr) {
         *endptr = legacyEnd;
     }
@@ -93,11 +109,13 @@ auto parseInt(const xmlChar* value) -> long long { return std::strtoll(xmlText(v
 auto parseUInt(const xmlChar* value) -> unsigned long long { return std::strtoull(xmlText(value), nullptr, 10); }
 
 auto formatDouble(double value) -> std::string {
+#if ENABLE_FLOAT_FROM_CHARS
     std::array<char, 64> buffer{};
     auto [ptr, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, 8);
     if (ec == std::errc()) {
         return std::string(buffer.data(), ptr);
     }
+#endif
 
     std::ostringstream stream;
     stream.imbue(std::locale::classic());
@@ -495,7 +513,7 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("showSidebar")) == 0) {
         this->showSidebar = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("sidebarNumberingStyle")) == 0) {
-        int num = std::stoi(reinterpret_cast<char*>(value));
+        int num = static_cast<int>(parseInt(value));
         if (num < static_cast<int>(SidebarNumberingStyle::MIN) || static_cast<int>(SidebarNumberingStyle::MAX) < num) {
             num = static_cast<int>(SidebarNumberingStyle::DEFAULT);
             std::cerr << "Settings::Invalid sidebarNumberingStyle value. Reset to default.\n";

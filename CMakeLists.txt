@@ -409,6 +409,10 @@ install(DIRECTORY resources
         DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
         COMPONENT vertex-note
         )
+install(FILES resources-templates/pagetemplates.ini.in
+        DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}/resources-templates"
+        COMPONENT vertex-note
+        )
 install(DIRECTORY palettes
         DESTINATION "share/${VERTEX_NOTE_RESOURCE_DIR}"
         COMPONENT vertex-note
