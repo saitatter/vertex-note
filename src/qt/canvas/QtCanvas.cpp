@@ -1216,6 +1216,7 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         event->accept();
         return;
     } else if (!event->isAutoRepeat() && event->key() == Qt::Key_Escape && this->documentController) {
+        bool finalizedShape = false;
         if (this->pdfTextSelecting) {
             cancelPdfTextSelection();
         }
@@ -1235,11 +1236,21 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
             cancelVerticalSpace();
         }
         if (this->shapeDrawing) {
-            cancelShape();
+            const auto tool = this->currentToolState.activeTool;
+            const bool canFinalizeMultiClickShape =
+                    ((tool == QtToolType::DrawPolyline || tool == QtToolType::DrawSpline) &&
+                     this->shapeClickPoints.size() >= 2U) ||
+                    (tool == QtToolType::DrawArc && this->shapeClickPoints.size() >= 3U);
+            if (isMultiClickShapeTool() && canFinalizeMultiClickShape) {
+                finalizeShape();
+                finalizedShape = true;
+            } else {
+                cancelShape();
+            }
         }
         this->documentController->clearElementSelection();
         this->documentController->clearInteractiveGeometryState();
-        updateDebugOverlay(QStringLiteral("operation cancelled"));
+        updateDebugOverlay(finalizedShape ? QStringLiteral("shape finalized") : QStringLiteral("operation cancelled"));
         if (!this->spaceHeld && !this->panning) {
             refreshToolCursor();
         }

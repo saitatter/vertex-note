@@ -62,6 +62,10 @@ void QtAppShell::selectTool(QtToolType tool) {
             QString::fromStdString("Tool: " + this->window.canvas()->toolState().activeToolName()), 2500);
 }
 
+void QtAppShell::toggleDrawingTool(QtToolType tool) {
+    selectTool(this->window.canvas()->activeTool() == tool ? QtToolType::Pen : tool);
+}
+
 void QtAppShell::updateToolCommandStates() {
     const auto active = this->window.canvas()->activeTool();
     this->window.commandHost()->setCommandChecked("tool.hand", active == QtToolType::Hand);

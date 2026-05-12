@@ -114,61 +114,61 @@ void QtAppShell::registerToolCommands() {
     ch->registerCommand(
             {.id = "tool.draw-rectangle", .text = "Draw Rectangle", .tooltip = "Draw a rectangle", .shortcut = "Ctrl+2",
              .menu = "Tools>Stroke Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawRectangle},
-            [this]() { selectTool(QtToolType::DrawRectangle); });
+            [this]() { toggleDrawingTool(QtToolType::DrawRectangle); });
     ch->registerCommand(
             {.id = "tool.draw-ellipse", .text = "Draw Ellipse", .tooltip = "Draw an ellipse", .shortcut = "Ctrl+3",
              .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::DrawEllipse); });
+            [this]() { toggleDrawingTool(QtToolType::DrawEllipse); });
     ch->registerCommand(
             {.id = "tool.draw-arrow", .text = "Draw Arrow", .tooltip = "Draw an arrow", .shortcut = "Ctrl+4",
              .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::DrawArrow); });
+            [this]() { toggleDrawingTool(QtToolType::DrawArrow); });
     ch->registerCommand(
             {.id = "tool.draw-double-arrow", .text = "Draw Double Arrow", .tooltip = "Draw a double-headed arrow", .shortcut = "Ctrl+5",
              .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::DrawDoubleArrow); });
+            [this]() { toggleDrawingTool(QtToolType::DrawDoubleArrow); });
     ch->registerCommand(
             {.id = "tool.draw-coordinate-system", .text = "Draw Coordinate System", .tooltip = "Draw X-Y axes", .shortcut = "Ctrl+6",
              .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::DrawCoordinateSystem); });
+            [this]() { toggleDrawingTool(QtToolType::DrawCoordinateSystem); });
     ch->registerCommand(
             {.id = "tool.draw-line", .text = "Draw Line", .tooltip = "Draw a stroke-based straight line", .shortcut = "Ctrl+7",
              .menu = "Tools>Stroke Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawLine},
-            [this]() { selectTool(QtToolType::DrawLine); });
+            [this]() { toggleDrawingTool(QtToolType::DrawLine); });
     ch->registerCommand(
             {.id = "tool.draw-spline", .text = "Draw Spline", .tooltip = "Draw a smooth spline curve", .shortcut = "Ctrl+8",
              .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::DrawSpline); });
+            [this]() { toggleDrawingTool(QtToolType::DrawSpline); });
     ch->registerCommand(
             {.id = "tool.draw-shape-recognizer", .text = "Shape Recognizer",
              .tooltip = "Recognize strokes as clean geometric shapes", .menu = "Tools>Stroke Drawing", .checkable = true},
-            [this]() { selectTool(QtToolType::ShapeRecognizer); });
+            [this]() { toggleDrawingTool(QtToolType::ShapeRecognizer); });
     ch->addMenuSeparator("Tools");
     // Vertex Drawing submenu
     ch->registerCommand(
             {.id = "tool.draw-edge", .text = "Draw Edge", .tooltip = "Draw a vertex geometry edge", .shortcut = "Ctrl+Shift+7",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawEdge},
-            [this]() { selectTool(QtToolType::DrawEdge); });
+            [this]() { toggleDrawingTool(QtToolType::DrawEdge); });
     ch->registerCommand(
             {.id = "tool.draw-circle", .text = "Draw Vertex Circle", .tooltip = "Draw a geometry circle", .shortcut = "Ctrl+9",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawCircle},
-            [this]() { selectTool(QtToolType::DrawCircle); });
+            [this]() { toggleDrawingTool(QtToolType::DrawCircle); });
     ch->registerCommand(
             {.id = "tool.draw-arc", .text = "Draw Vertex Arc", .tooltip = "Draw a geometry arc", .shortcut = "Ctrl+0",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawArc},
-            [this]() { selectTool(QtToolType::DrawArc); });
+            [this]() { toggleDrawingTool(QtToolType::DrawArc); });
     ch->registerCommand(
             {.id = "tool.draw-construction-line", .text = "Draw Construction Line", .tooltip = "Draw a construction guide line", .shortcut = "Ctrl+Shift+0",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionLine},
-            [this]() { selectTool(QtToolType::DrawConstructionLine); });
+            [this]() { toggleDrawingTool(QtToolType::DrawConstructionLine); });
     ch->registerCommand(
             {.id = "tool.draw-construction-circle", .text = "Draw Construction Circle", .tooltip = "Draw a construction guide circle",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawConstructionCircle},
-            [this]() { selectTool(QtToolType::DrawConstructionCircle); });
+            [this]() { toggleDrawingTool(QtToolType::DrawConstructionCircle); });
     ch->registerCommand(
             {.id = "tool.draw-polyline", .text = "Draw Polyline", .tooltip = "Draw a multi-segment line",
              .menu = "Tools>Vertex Drawing", .checkable = true, .checked = this->window.canvas()->activeTool() == QtToolType::DrawPolyline},
-            [this]() { selectTool(QtToolType::DrawPolyline); });
+            [this]() { toggleDrawingTool(QtToolType::DrawPolyline); });
     ch->addMenuSeparator("Tools");
 
     // Selection tools

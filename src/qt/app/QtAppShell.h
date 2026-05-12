@@ -39,6 +39,7 @@ class QAction;
 class QToolBar;
 class QToolButton;
 class QTimer;
+class QWidget;
 
 class QtAppShell: public vn::ui::common::IAppShell {
 public:
@@ -81,8 +82,8 @@ private:
     void addFillToolbarAction(QToolBar* toolbar);
     void addStretchToolbarSpacer(QToolBar* toolbar);
     [[nodiscard]] auto ensureSelectionToolButton() -> QToolButton*;
-    [[nodiscard]] auto createStrokeDrawingToolButton() -> QToolButton*;
-    [[nodiscard]] auto createVertexDrawingToolButton() -> QToolButton*;
+    [[nodiscard]] auto createStrokeDrawingToolButton() -> QWidget*;
+    [[nodiscard]] auto createVertexDrawingToolButton() -> QWidget*;
     [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
     [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
     void ensureFontToolbarWidgets();
@@ -119,6 +120,7 @@ private:
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
     void selectTool(QtToolType tool);
+    void toggleDrawingTool(QtToolType tool);
     void updateToolCommandStates();
     void updateAudioCommandStates();
     void showBackgroundDialog();

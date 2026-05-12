@@ -183,12 +183,12 @@ void applyQtCommandIcons(QtMainWindow& window) {
     setNamedIcon("tool.draw-double-arrow", "draw-double-arrow");
     setNamedIcon("tool.draw-coordinate-system", "draw-coordinate-system");
     setNamedIcon("tool.draw-spline", "draw-spline");
-    setNamedIcon("tool.draw-edge", "draw-line");
+    setNamedIcon("tool.draw-edge", "geometry-tools");
     setNamedIcon("tool.draw-circle", "draw-ellipse");
     setNamedIcon("tool.draw-arc", "draw-ellipse");
     setNamedIcon("tool.draw-construction-line", "draw-line");
     setNamedIcon("tool.draw-construction-circle", "draw-ellipse");
-    setNamedIcon("tool.draw-polyline", "draw-line");
+    setNamedIcon("tool.draw-polyline", "geometry-tools");
     setNamedIcon("tool.draw-shape-recognizer", "shape-recognizer");
     for (const auto* id: {
                  "tool.draw-line",

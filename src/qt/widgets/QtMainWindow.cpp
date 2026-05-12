@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include <QComboBox>
+#include <QIcon>
 #include <QMenuBar>
 #include <QPoint>
 #include <QSlider>
@@ -22,6 +23,8 @@
 QtMainWindow::QtMainWindow(): commandRegistry(this) {
     setObjectName("vertexNoteQtMainWindow");
     setWindowTitle("VertexNote");
+    setWindowIcon(QIcon(QString::fromUtf8(PROJECT_SOURCE_DIR) +
+                        QStringLiteral("/ui/pixmaps/app.vertexnote.VertexNote.svg")));
     resize(1440, 900);
     setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks | QMainWindow::GroupedDragging);
     menuBar()->setNativeMenuBar(false);
@@ -35,6 +38,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QMenu::item { background: transparent; padding: 4px 26px 4px 26px; min-height: 17px; }"
             "QMenu::item:selected { background: #e7f0ff; color: #111111; }"
             "QMenu::item:checked { background: transparent; }"
+            "QMenu#vertexNoteQtToolFamilyMenu::item:checked { background: #eef5ff; }"
             "QMenu::item:disabled { color: #a9a9a9; }"
             "QMenu::separator { height: 1px; background: #e2e2e2; margin: 4px 0px; }"
             "QMenu::indicator { width: 13px; height: 13px; left: 5px; border: 1px solid #555555; background: #ffffff; }"
@@ -68,6 +72,21 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:hover,"
             " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:pressed,"
             " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:open { background: transparent; }"
+            "QToolBar QWidget#vertexNoteQtFamilySplitWidget { margin: 0px 1px; padding: 0px; background: transparent; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton {"
+            " background: transparent; padding: 3px; min-width: 30px; min-height: 30px;"
+            " border: 1px solid transparent; border-top-left-radius: 2px; border-bottom-left-radius: 2px;"
+            " border-top-right-radius: 0px; border-bottom-right-radius: 0px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:checked { background: #dce8ff; border-color: #8db0ff; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton {"
+            " background: transparent; padding: 0px; min-width: 18px; max-width: 18px; min-height: 30px; max-height: 30px;"
+            " border: 1px solid transparent; border-left: 0px; border-top-left-radius: 0px; border-bottom-left-radius: 0px;"
+            " border-top-right-radius: 2px; border-bottom-right-radius: 2px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton:pressed,"
+            " QToolBar QToolButton#vertexNoteQtFamilyMenuButton:open { background: #e1e1e1; border-color: #bcbcbc; }"
             "QToolBar QToolButton#vertexNoteQtToolbarColorButton {"
             " margin: 0px 4px; padding: 0px; min-width: 20px; max-width: 20px; min-height: 20px; max-height: 20px;"
             " border-radius: 10px; }"
