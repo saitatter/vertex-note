@@ -117,6 +117,11 @@ void applyQtCommandIcons(QtMainWindow& window) {
             }
         }
     };
+    const auto showIconInMenu = [&](std::string_view id) {
+        if (auto* action = window.commandHost()->actionForCommand(id)) {
+            action->setIconVisibleInMenu(true);
+        }
+    };
 
     setNamedIcon("file.save", "document-save");
     setNamedIcon("app.save-as", "document-save");
@@ -185,6 +190,24 @@ void applyQtCommandIcons(QtMainWindow& window) {
     setNamedIcon("tool.draw-construction-circle", "draw-ellipse");
     setNamedIcon("tool.draw-polyline", "draw-line");
     setNamedIcon("tool.draw-shape-recognizer", "shape-recognizer");
+    for (const auto* id: {
+                 "tool.draw-line",
+                 "tool.draw-rectangle",
+                 "tool.draw-ellipse",
+                 "tool.draw-arrow",
+                 "tool.draw-double-arrow",
+                 "tool.draw-coordinate-system",
+                 "tool.draw-spline",
+                 "tool.draw-shape-recognizer",
+                 "tool.draw-edge",
+                 "tool.draw-circle",
+                 "tool.draw-arc",
+                 "tool.draw-construction-line",
+                 "tool.draw-construction-circle",
+                 "tool.draw-polyline",
+         }) {
+        showIconInMenu(id);
+    }
     setNamedIcon("view.toggle-geometry-snap", "snapping-vertex");
     setNamedIcon("view.toggle-grid-snap", "snapping-grid");
     setNamedIcon("constraint.coincident", "object-select");

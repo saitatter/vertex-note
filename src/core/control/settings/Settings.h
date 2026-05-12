@@ -120,6 +120,7 @@ private:
     static xmlNodePtr savePropertyDouble(const char* key, double value, xmlNodePtr parent);
     static xmlNodePtr saveProperty(const char* key, int value, xmlNodePtr parent);
     static xmlNodePtr savePropertyUnsigned(const char* key, unsigned int value, xmlNodePtr parent);
+    static xmlNodePtr savePropertyUnsigned(const char* key, unsigned long long value, xmlNodePtr parent);
     static xmlNodePtr saveProperty(const char* key, const char* value, xmlNodePtr parent);
 
     void saveData(xmlNodePtr root, const std::string& name, SElement& elem);

@@ -337,7 +337,8 @@ TEST(UtilObjectIOStream, testReadStroke) {
     strokes[7].addPoint(Point(1., 2.));
     strokes[7].setPressure({42., 1332.});
     strokes[7].setFill(-42);
-    strokes[7].setToolType(static_cast<StrokeTool::Value>(42));
+    int invalidStrokeTool = 42;
+    strokes[7].setToolType(static_cast<StrokeTool::Value>(invalidStrokeTool));
     strokes[7].setWidth(-1337.);
 
     // Test UTF8 paths

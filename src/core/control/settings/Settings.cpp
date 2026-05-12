@@ -10,6 +10,7 @@
 #include <exception>    // for exception
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <type_traits>  // for add_const<>::type
 #include <utility>      // for pair, move, make_...
@@ -107,6 +108,42 @@ auto parseDouble(const xmlChar* value) -> double { return parseDouble(xmlText(va
 auto parseInt(const xmlChar* value) -> long long { return std::strtoll(xmlText(value), nullptr, 10); }
 
 auto parseUInt(const xmlChar* value) -> unsigned long long { return std::strtoull(xmlText(value), nullptr, 10); }
+
+template <typename T>
+auto parseIntAs(const xmlChar* value) -> T {
+    const long long parsed = parseInt(value);
+    if constexpr (std::is_signed_v<T>) {
+        const auto minValue = static_cast<long long>(std::numeric_limits<T>::min());
+        const auto maxValue = static_cast<long long>(std::numeric_limits<T>::max());
+        return static_cast<T>(std::clamp(parsed, minValue, maxValue));
+    } else {
+        if (parsed <= 0) {
+            return T{};
+        }
+        const auto unsignedParsed = static_cast<unsigned long long>(parsed);
+        const auto maxValue = static_cast<unsigned long long>(std::numeric_limits<T>::max());
+        return static_cast<T>(std::min(unsignedParsed, maxValue));
+    }
+}
+
+template <typename T>
+auto parseUIntAs(const xmlChar* value) -> T {
+    const unsigned long long parsed = parseUInt(value);
+    const auto maxValue = static_cast<unsigned long long>(std::numeric_limits<T>::max());
+    return static_cast<T>(std::min(parsed, maxValue));
+}
+
+auto parseDoubleAsUInt(const xmlChar* value) -> unsigned int {
+    const double parsed = parseDouble(value);
+    if (parsed <= 0.0) {
+        return 0U;
+    }
+    const auto maxValue = static_cast<double>(std::numeric_limits<unsigned int>::max());
+    if (parsed >= maxValue) {
+        return std::numeric_limits<unsigned int>::max();
+    }
+    return static_cast<unsigned int>(parsed);
+}
 
 auto formatDouble(double value) -> std::string {
 #if ENABLE_FLOAT_FROM_CHARS
@@ -497,11 +534,11 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("zoomStepScroll")) == 0) {
         this->zoomStepScroll = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("displayDpi")) == 0) {
-        this->displayDpi = parseInt(value);
+        this->displayDpi = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("mainWndWidth")) == 0) {
-        this->mainWndWidth = parseInt(value);
+        this->mainWndWidth = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("mainWndHeight")) == 0) {
-        this->mainWndHeight = parseInt(value);
+        this->mainWndHeight = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("maximized")) == 0) {
         this->maximized = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("showToolbar")) == 0) {
@@ -513,14 +550,14 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("showSidebar")) == 0) {
         this->showSidebar = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("sidebarNumberingStyle")) == 0) {
-        int num = static_cast<int>(parseInt(value));
+        int num = parseIntAs<int>(value);
         if (num < static_cast<int>(SidebarNumberingStyle::MIN) || static_cast<int>(SidebarNumberingStyle::MAX) < num) {
             num = static_cast<int>(SidebarNumberingStyle::DEFAULT);
             std::cerr << "Settings::Invalid sidebarNumberingStyle value. Reset to default.\n";
         }
         this->sidebarNumberingStyle = static_cast<SidebarNumberingStyle>(num);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("sidebarWidth")) == 0) {
-        this->sidebarWidth = std::max<int>(parseInt(value), 50);
+        this->sidebarWidth = std::max(parseIntAs<int>(value), 50);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("sidebarOnRight")) == 0) {
         this->sidebarOnRight = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("scrollbarOnLeft")) == 0) {
@@ -528,9 +565,9 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("menubarVisible")) == 0) {
         this->menubarVisible = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("numColumns")) == 0) {
-        this->numColumns = parseInt(value);
+        this->numColumns = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("numRows")) == 0) {
-        this->numRows = parseInt(value);
+        this->numRows = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("viewFixedRows")) == 0) {
         this->viewFixedRows = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("layoutVertical")) == 0) {
@@ -544,7 +581,7 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("showPageShadow")) == 0) {
         this->showPageShadow = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("numPairsOffset")) == 0) {
-        this->numPairsOffset = parseInt(value);
+        this->numPairsOffset = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("presentationMode")) == 0) {
         this->presentationMode = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("autoloadMostRecent")) == 0) {
@@ -562,11 +599,11 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("highlightPosition")) == 0) {
         this->highlightPosition = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("cursorHighlightColor")) == 0) {
-        this->cursorHighlightColor = parseUInt(value);
+        this->cursorHighlightColor = parseUIntAs<uint32_t>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("cursorHighlightRadius")) == 0) {
         this->cursorHighlightRadius = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("cursorHighlightBorderColor")) == 0) {
-        this->cursorHighlightBorderColor = parseUInt(value);
+        this->cursorHighlightBorderColor = parseUIntAs<uint32_t>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("cursorHighlightBorderWidth")) == 0) {
         this->cursorHighlightBorderWidth = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("useStockIcons")) == 0) {
@@ -588,7 +625,7 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("autosaveEnabled")) == 0) {
         this->autosaveEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("autosaveTimeout")) == 0) {
-        this->autosaveTimeout = parseInt(value);
+        this->autosaveTimeout = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("defaultViewModeAttributes")) == 0) {
         this->viewModes.at(PresetViewModeIds::VIEW_MODE_DEFAULT) =
                 settingsStringToViewMode(reinterpret_cast<const char*>(value));
@@ -603,19 +640,19 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("pageRerenderThreshold")) == 0) {
         this->pageRerenderThreshold = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("pdfPageCacheSize")) == 0) {
-        this->pdfPageCacheSize = parseInt(value);
+        this->pdfPageCacheSize = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("preloadPagesBefore")) == 0) {
-        this->preloadPagesBefore = parseUInt(value);
+        this->preloadPagesBefore = parseUIntAs<unsigned int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("preloadPagesAfter")) == 0) {
-        this->preloadPagesAfter = parseUInt(value);
+        this->preloadPagesAfter = parseUIntAs<unsigned int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("eagerPageCleanup")) == 0) {
         this->eagerPageCleanup = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("selectionBorderColor")) == 0) {
-        this->selectionBorderColor = Color(parseUInt(value));
+        this->selectionBorderColor = Color(parseUIntAs<uint32_t>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("selectionMarkerColor")) == 0) {
-        this->selectionMarkerColor = Color(parseUInt(value));
+        this->selectionMarkerColor = Color(parseUIntAs<uint32_t>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("activeSelectionColor")) == 0) {
-        this->activeSelectionColor = Color(parseUInt(value));
+        this->activeSelectionColor = Color(parseUIntAs<uint32_t>(value));
 
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("recolor.enabled")) == 0) {
         this->recolorParameters.recolorizeMainView = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
@@ -624,47 +661,41 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
                 xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("recolor.light")) == 0) {
         this->recolorParameters.recolor =
-                Recolor(ColorU8(parseUInt(value)),
+                Recolor(ColorU8(parseUIntAs<uint32_t>(value)),
                         this->recolorParameters.recolor.getDark());
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("recolor.dark")) == 0) {
         this->recolorParameters.recolor =
                 Recolor(this->recolorParameters.recolor.getLight(),
-                        ColorU8(parseUInt(value)));
+                        ColorU8(parseUIntAs<uint32_t>(value)));
 
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("backgroundColor")) == 0) {
-        this->backgroundColor = Color(parseUInt(value));
+        this->backgroundColor = Color(parseUIntAs<uint32_t>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addHorizontalSpace")) == 0) {
         this->addHorizontalSpace = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addHorizontalSpaceAmount")) == 0) {
-        const int oldHorizontalAmount =
-                static_cast<int>(parseInt(value));
+        const int oldHorizontalAmount = parseIntAs<int>(value);
         this->addHorizontalSpaceAmountLeft = oldHorizontalAmount;
         this->addHorizontalSpaceAmountRight = oldHorizontalAmount;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addHorizontalSpaceAmountRight")) == 0) {
-        this->addHorizontalSpaceAmountRight =
-                static_cast<int>(parseInt(value));
+        this->addHorizontalSpaceAmountRight = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpace")) == 0) {
         this->addVerticalSpace = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpaceAmount")) == 0) {
-        const int oldVerticalAmount =
-                static_cast<int>(parseInt(value));
+        const int oldVerticalAmount = parseIntAs<int>(value);
         this->addHorizontalSpaceAmountLeft = oldVerticalAmount;
         this->addHorizontalSpaceAmountRight = oldVerticalAmount;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpaceAmountAbove")) == 0) {
-        this->addVerticalSpaceAmountAbove =
-                static_cast<int>(parseInt(value));
+        this->addVerticalSpaceAmountAbove = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addHorizontalSpaceAmountLeft")) == 0) {
-        this->addHorizontalSpaceAmountLeft =
-                static_cast<int>(parseInt(value));
+        this->addHorizontalSpaceAmountLeft = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpaceAmountBelow")) == 0) {
-        this->addVerticalSpaceAmountBelow =
-                static_cast<int>(parseInt(value));
+        this->addVerticalSpaceAmountBelow = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("unlimitedScrolling")) == 0) {
         this->unlimitedScrolling = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("drawDirModsEnabled")) == 0) {
         this->drawDirModsEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("drawDirModsRadius")) == 0) {
-        this->drawDirModsRadius = parseInt(value);
+        this->drawDirModsRadius = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("snapRotation")) == 0) {
         this->snapRotation = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("snapRotationTolerance")) == 0) {
@@ -709,15 +740,15 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("audioGain")) == 0) {
         this->audioGain = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("defaultSeekTime")) == 0) {
-        this->defaultSeekTime = parseDouble(value);
+        this->defaultSeekTime = parseDoubleAsUInt(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("audioInputDevice")) == 0) {
-        this->audioInputDevice = parseInt(value);
+        this->audioInputDevice = parseIntAs<PaDeviceIndex>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("audioOutputDevice")) == 0) {
-        this->audioOutputDevice = parseInt(value);
+        this->audioOutputDevice = parseIntAs<PaDeviceIndex>(value);
 #endif
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("numIgnoredStylusEvents")) == 0) {
         this->numIgnoredStylusEvents =
-                std::max<int>(parseInt(value), 0);
+                std::max(parseIntAs<int>(value), 0);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("inputSystemTPCButton")) == 0) {
         this->inputSystemTPCButton = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("inputSystemDrawOutsideWindow")) == 0) {
@@ -725,11 +756,11 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("emptyLastPageAppend")) == 0) {
         this->emptyLastPageAppend = emptyLastPageAppendFromString(reinterpret_cast<char*>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeFilterIgnoreTime")) == 0) {
-        this->strokeFilterIgnoreTime = parseInt(value);
+        this->strokeFilterIgnoreTime = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeFilterIgnoreLength")) == 0) {
         this->strokeFilterIgnoreLength = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeFilterSuccessiveTime")) == 0) {
-        this->strokeFilterSuccessiveTime = parseInt(value);
+        this->strokeFilterSuccessiveTime = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("strokeFilterEnabled")) == 0) {
         this->strokeFilterEnabled = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("doActionOnStrokeFiltered")) == 0) {
@@ -775,22 +806,20 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("useSpacesForTab")) == 0) {
         this->setUseSpacesAsTab(xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("numberOfSpacesForTab")) == 0) {
-        this->setNumberOfSpacesForTab(
-                static_cast<unsigned int>(parseUInt(value)));
+        this->setNumberOfSpacesForTab(parseUIntAs<unsigned int>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("laserPointerFadeOutTime")) == 0) {
-        this->laserPointerFadeOutTime =
-                static_cast<unsigned int>(parseUInt(value));
+        this->laserPointerFadeOutTime = parseUIntAs<unsigned int>(value);
         /**
          * Stabilizer related settings
          */
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("stabilizerAveragingMethod")) == 0) {
         this->stabilizerAveragingMethod =
-                (StrokeStabilizer::AveragingMethod)parseInt(value);
+                static_cast<StrokeStabilizer::AveragingMethod>(parseIntAs<int>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("stabilizerPreprocessor")) == 0) {
         this->stabilizerPreprocessor =
-                (StrokeStabilizer::Preprocessor)parseInt(value);
+                static_cast<StrokeStabilizer::Preprocessor>(parseIntAs<int>(value));
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("stabilizerBuffersize")) == 0) {
-        this->stabilizerBuffersize = parseUInt(value);
+        this->stabilizerBuffersize = parseUIntAs<size_t>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("stabilizerSigma")) == 0) {
         this->stabilizerSigma = parseDouble(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("stabilizerDeadzoneRadius")) == 0) {
@@ -970,6 +999,12 @@ auto Settings::saveProperty(const char* key, int value, xmlNodePtr parent) -> xm
 }
 
 auto Settings::savePropertyUnsigned(const char* key, unsigned int value, xmlNodePtr parent) -> xmlNodePtr {
+    auto text = std::to_string(value);
+    xmlNodePtr xmlNode = saveProperty(key, text.c_str(), parent);
+    return xmlNode;
+}
+
+auto Settings::savePropertyUnsigned(const char* key, unsigned long long value, xmlNodePtr parent) -> xmlNodePtr {
     auto text = std::to_string(value);
     xmlNodePtr xmlNode = saveProperty(key, text.c_str(), parent);
     return xmlNode;
@@ -1268,7 +1303,7 @@ void Settings::save() {
      */
     saveProperty("stabilizerAveragingMethod", static_cast<int>(stabilizerAveragingMethod), root);
     saveProperty("stabilizerPreprocessor", static_cast<int>(stabilizerPreprocessor), root);
-    SAVE_UINT_PROP(stabilizerBuffersize);
+    xmlNode = savePropertyUnsigned("stabilizerBuffersize", static_cast<unsigned long long>(stabilizerBuffersize), root);
     SAVE_DOUBLE_PROP(stabilizerSigma);
     SAVE_DOUBLE_PROP(stabilizerDeadzoneRadius);
     SAVE_DOUBLE_PROP(stabilizerDrag);
