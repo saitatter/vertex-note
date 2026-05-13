@@ -12,6 +12,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <unordered_map>
 #include <variant>
 #include <unordered_set>
 #include <utility>
@@ -104,6 +105,106 @@ constexpr double PI = 3.14159265358979323846;
         }
     }
     return best;
+}
+
+[[nodiscard]] auto mergedGeometryForEdgeWeld(const vn::geom::GeometryObject& source,
+                                             const vn::geom::GeometryObject& target,
+                                             vn::geom::EdgeId targetEdgeId,
+                                             vn::geom::VertexId weldVertexId)
+        -> std::optional<vn::geom::GeometryObject> {
+    const auto* targetEdge = target.edge(targetEdgeId);
+    if (!targetEdge || !source.vertex(weldVertexId) ||
+        (targetEdge->kind != vn::geom::EdgeKind::Line && targetEdge->kind != vn::geom::EdgeKind::ConstructionLine)) {
+        return std::nullopt;
+    }
+
+    vn::geom::GeometryObject merged = source;
+    std::unordered_map<vn::geom::VertexId, vn::geom::VertexId> vertexMap;
+    std::unordered_map<vn::geom::EdgeId, std::vector<vn::geom::EdgeId>> edgeMap;
+
+    try {
+        for (const auto& vertex: target.vertices()) {
+            vertexMap[vertex.id] = merged.addVertex(vertex.position, vertex.flags);
+        }
+
+        const auto splitTargetEdge = [&](const vn::geom::Edge& edge) -> bool {
+            const auto startIt = vertexMap.find(edge.start);
+            const auto endIt = vertexMap.find(edge.end);
+            if (startIt == vertexMap.end() || endIt == vertexMap.end()) {
+                return false;
+            }
+            const auto first = merged.addEdge(edge.kind, startIt->second, weldVertexId);
+            const auto second = merged.addEdge(edge.kind, weldVertexId, endIt->second);
+            edgeMap[edge.id] = {first, second};
+            return true;
+        };
+
+        for (const auto& edge: target.edges()) {
+            if (edge.id == targetEdgeId) {
+                if (!splitTargetEdge(edge)) {
+                    return std::nullopt;
+                }
+                continue;
+            }
+
+            const auto startIt = vertexMap.find(edge.start);
+            const auto endIt = vertexMap.find(edge.end);
+            if (startIt == vertexMap.end() || endIt == vertexMap.end()) {
+                continue;
+            }
+            std::vector<vn::geom::VertexId> controls;
+            controls.reserve(edge.controls.size());
+            bool validControls = true;
+            for (const auto controlId: edge.controls) {
+                const auto controlIt = vertexMap.find(controlId);
+                if (controlIt == vertexMap.end()) {
+                    validControls = false;
+                    break;
+                }
+                controls.push_back(controlIt->second);
+            }
+            if (!validControls) {
+                continue;
+            }
+            edgeMap[edge.id] = {merged.addEdge(edge.kind, startIt->second, endIt->second, std::move(controls))};
+        }
+
+        for (const auto& constraint: target.constraints()) {
+            std::vector<vn::geom::VertexId> vertices;
+            vertices.reserve(constraint.vertices.size());
+            bool valid = true;
+            for (const auto vertexId: constraint.vertices) {
+                const auto vertexIt = vertexMap.find(vertexId);
+                if (vertexIt == vertexMap.end()) {
+                    valid = false;
+                    break;
+                }
+                vertices.push_back(vertexIt->second);
+            }
+            if (!valid) {
+                continue;
+            }
+
+            std::vector<vn::geom::EdgeId> edges;
+            edges.reserve(constraint.edges.size());
+            for (const auto edgeId: constraint.edges) {
+                const auto edgeIt = edgeMap.find(edgeId);
+                if (edgeIt == edgeMap.end() || edgeIt->second.size() != 1U) {
+                    valid = false;
+                    break;
+                }
+                edges.push_back(edgeIt->second.front());
+            }
+            if (!valid) {
+                continue;
+            }
+            merged.addConstraint(constraint.kind, std::move(vertices), std::move(edges), constraint.value);
+        }
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    }
+
+    return merged;
 }
 
 }  // namespace
@@ -553,6 +654,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
         if (auto* geometry =
                     findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId)) {
             std::vector<QtGeometryHistoryObjectState> linkedObjects;
+            std::vector<QtGeometryHistoryRemovedElement> removedElements;
             const auto edgeSnapKind = this->geometryDragState->snapKind;
             const auto edgeSnapCandidate = this->geometryDragState->snapCandidate;
             if (edgeSnapCandidate && edgeSnapCandidate->edge != vn::geom::InvalidEdgeId &&
@@ -568,8 +670,18 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                         }
                     } else {
                         const auto beforeTarget = targetGeometry->geometry();
-                        if (targetGeometry->insertVertexOnEdge(edgeSnapCandidate->edge,
-                                                               this->geometryDragState->snapPoint)) {
+                        if (auto merged = mergedGeometryForEdgeWeld(geometry->geometry(), beforeTarget,
+                                                                    edgeSnapCandidate->edge,
+                                                                    this->geometryDragState->vertexId);
+                            merged) {
+                            if (auto removedTarget = removeGeometryElement(this->geometryDragState->pageIndex,
+                                                                           edgeSnapCandidate->object)) {
+                                geometry->replaceGeometry(std::move(*merged));
+                                changed = true;
+                                removedElements.push_back(std::move(*removedTarget));
+                            }
+                        } else if (targetGeometry->insertVertexOnEdge(edgeSnapCandidate->edge,
+                                                                       this->geometryDragState->snapPoint)) {
                             changed = true;
                             linkedObjects.push_back(QtGeometryHistoryObjectState{
                                     .pageIndex = this->geometryDragState->pageIndex,
@@ -593,6 +705,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                                  .before = this->geometryDragState->beforeGeometry,
                                  .after = geometry->geometry(),
                                  .linkedObjects = std::move(linkedObjects),
+                                 .removedElements = std::move(removedElements),
                                  .text = this->geometryDragState->vertexIds.size() > 1U ? "Move geometry vertices"
                                                                                         : "Move geometry vertex"});
         }
@@ -1082,7 +1195,7 @@ void QtDocumentController::pushGeometryHistory(QtGeometryHistoryEntry entry) {
     pushHistory(QtHistoryEntry{.data = std::move(entry)});
 }
 
-auto QtDocumentController::applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState)
+auto QtDocumentController::applyGeometryHistoryEntry(QtGeometryHistoryEntry& entry, bool useAfterState)
         -> bool {
     if (!this->document) {
         return false;
@@ -1103,6 +1216,65 @@ auto QtDocumentController::applyGeometryHistoryEntry(const QtGeometryHistoryEntr
             return false;
         }
         linkedGeometry->replaceGeometry(useAfterState ? linked.after : linked.before);
+    }
+    if (useAfterState) {
+        for (auto& removed: entry.removedElements) {
+            if (removed.removed.e) {
+                continue;
+            }
+            if (removed.pageIndex >= this->document->getPageCount() || !removed.element) {
+                this->document->unlock();
+                return false;
+            }
+            auto page = this->document->getPage(removed.pageIndex);
+            if (!page) {
+                this->document->unlock();
+                return false;
+            }
+            auto& layers = page->getLayers();
+            if (removed.layerIndex >= layers.size() || !layers[removed.layerIndex]) {
+                this->document->unlock();
+                return false;
+            }
+            auto detached = layers[removed.layerIndex]->removeElement(removed.element);
+            if (!detached.e) {
+                this->document->unlock();
+                return false;
+            }
+            removed.element = detached.e.get();
+            removed.removed = std::move(detached);
+        }
+    } else {
+        std::ranges::sort(entry.removedElements, [](const auto& lhs, const auto& rhs) {
+            if (lhs.pageIndex != rhs.pageIndex) {
+                return lhs.pageIndex < rhs.pageIndex;
+            }
+            if (lhs.layerIndex != rhs.layerIndex) {
+                return lhs.layerIndex < rhs.layerIndex;
+            }
+            return lhs.removed.pos < rhs.removed.pos;
+        });
+        for (auto& removed: entry.removedElements) {
+            if (!removed.removed.e) {
+                continue;
+            }
+            if (removed.pageIndex >= this->document->getPageCount()) {
+                this->document->unlock();
+                return false;
+            }
+            auto page = this->document->getPage(removed.pageIndex);
+            if (!page) {
+                this->document->unlock();
+                return false;
+            }
+            auto& layers = page->getLayers();
+            if (removed.layerIndex >= layers.size() || !layers[removed.layerIndex]) {
+                this->document->unlock();
+                return false;
+            }
+            removed.element = removed.removed.e.get();
+            layers[removed.layerIndex]->insertElement(std::move(removed.removed.e), removed.removed.pos);
+        }
     }
     this->document->unlock();
 
@@ -1136,6 +1308,46 @@ auto QtDocumentController::findMutableGeometryElement(std::size_t pageIndex, vn:
     }
 
     return nullptr;
+}
+
+auto QtDocumentController::removeGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
+        -> std::optional<QtGeometryHistoryRemovedElement> {
+    if (!this->document || pageIndex >= this->document->getPageCount()) {
+        return std::nullopt;
+    }
+
+    auto page = this->document->getPage(pageIndex);
+    if (!page) {
+        return std::nullopt;
+    }
+
+    auto& layers = page->getLayers();
+    for (std::size_t layerIndex = 0U; layerIndex < layers.size(); ++layerIndex) {
+        auto* layer = layers[layerIndex];
+        if (!layer) {
+            continue;
+        }
+        for (const auto& element: layer->getElements()) {
+            const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element.get());
+            if (!geometry || geometry->geometry().objectId() != objectId) {
+                continue;
+            }
+
+            auto removed = layer->removeElement(geometry);
+            if (!removed.e) {
+                return std::nullopt;
+            }
+            const auto* removedPtr = removed.e.get();
+            return QtGeometryHistoryRemovedElement{
+                    .pageIndex = pageIndex,
+                    .layerIndex = layerIndex,
+                    .removed = std::move(removed),
+                    .element = removedPtr,
+            };
+        }
+    }
+
+    return std::nullopt;
 }
 
 auto QtDocumentController::gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)

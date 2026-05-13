@@ -98,12 +98,20 @@ struct QtGeometryHistoryObjectState {
     vn::geom::GeometryObject after;
 };
 
+struct QtGeometryHistoryRemovedElement {
+    std::size_t pageIndex = 0U;
+    std::size_t layerIndex = 0U;
+    InsertionPosition removed;
+    const Element* element = nullptr;
+};
+
 struct QtGeometryHistoryEntry {
     std::size_t pageIndex = 0U;
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
     vn::geom::GeometryObject before;
     vn::geom::GeometryObject after;
     std::vector<QtGeometryHistoryObjectState> linkedObjects;
+    std::vector<QtGeometryHistoryRemovedElement> removedElements;
     std::string text;
 };
 
@@ -527,11 +535,13 @@ private:
     void clearPdfRasterCache();
     void clearGeometryHistory();
     void pushGeometryHistory(QtGeometryHistoryEntry entry);
-    [[nodiscard]] auto applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState) -> bool;
+    [[nodiscard]] auto applyGeometryHistoryEntry(QtGeometryHistoryEntry& entry, bool useAfterState) -> bool;
     [[nodiscard]] auto selectedGeometryTransformVertexIds(const vn::geom::GeometryObject& object) const
             -> std::vector<vn::geom::VertexId>;
     [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> vn::geom::GeometryElement*;
+    [[nodiscard]] auto removeGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
+            -> std::optional<QtGeometryHistoryRemovedElement>;
     [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)
             -> std::shared_ptr<const vn::snap::ISnapProvider>;
     void clearHistory();
