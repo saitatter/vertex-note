@@ -14,7 +14,6 @@
 #include <cstddef>
 #include <iterator>
 #include <limits>
-#include <type_traits>
 #include <utility>
 
 #include <QCursor>
@@ -144,6 +143,32 @@ auto snapColor(std::optional<vn::snap::SnapKind> kind) -> QColor {
             return QColor(203, 30, 203);
         case vn::snap::SnapKind::ConstraintGuide:
             return QColor(0, 153, 191);
+    }
+
+    return QColor(45, 125, 255);
+}
+
+auto geometrySelectionModeName(QtGeometrySelectionMode mode) -> QString {
+    switch (mode) {
+        case QtGeometrySelectionMode::Vertex:
+            return QStringLiteral("Vertex");
+        case QtGeometrySelectionMode::Edge:
+            return QStringLiteral("Edge");
+        case QtGeometrySelectionMode::Object:
+            return QStringLiteral("Object");
+    }
+
+    return QStringLiteral("Geometry");
+}
+
+auto geometrySelectionModeAccent(QtGeometrySelectionMode mode) -> QColor {
+    switch (mode) {
+        case QtGeometrySelectionMode::Vertex:
+            return QColor(245, 130, 32);
+        case QtGeometrySelectionMode::Edge:
+            return QColor(0, 145, 220);
+        case QtGeometrySelectionMode::Object:
+            return QColor(132, 85, 214);
     }
 
     return QColor(45, 125, 255);
@@ -1657,7 +1682,8 @@ void QtCanvas::updateGeometryHover(const QPointF& screenPoint) {
         if (!this->spaceHeld && !this->panning) {
             setCursor(vertexMode ? Qt::CrossCursor : Qt::PointingHandCursor);
         }
-        updateDebugOverlay(QStringLiteral("geometry hover page=%1 object=%2")
+        updateDebugOverlay(QStringLiteral("%1 hover page=%2 object=%3")
+                                   .arg(geometrySelectionModeName(this->currentToolState.geometrySelectionMode))
                                    .arg(static_cast<int>(hit->pageIndex + 1))
                                    .arg(static_cast<qulonglong>(hit->hit.objectId)));
     } else if (!this->spaceHeld && !this->panning) {
@@ -1685,10 +1711,12 @@ void QtCanvas::selectHoveredGeometry(bool additive) {
         this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry(), additive);
     }
     if (!this->documentController->selectedGeometry()) {
-        updateDebugOverlay(QStringLiteral("selection cleared"));
+        updateDebugOverlay(QStringLiteral("%1 selection cleared")
+                                   .arg(geometrySelectionModeName(this->currentToolState.geometrySelectionMode)));
     } else {
         const auto& hit = *this->documentController->selectedGeometry();
-        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2 vertices=%3 edges=%4")
+        updateDebugOverlay(QStringLiteral("%1 selected page=%2 object=%3 vertices=%4 edges=%5")
+                                   .arg(geometrySelectionModeName(this->currentToolState.geometrySelectionMode))
                                    .arg(static_cast<int>(hit.pageIndex + 1))
                                    .arg(static_cast<qulonglong>(hit.hit.objectId))
                                    .arg(static_cast<int>(this->documentController->selectedVertexIds().size()))
@@ -2028,30 +2056,43 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
     const auto& hovered = this->documentController->hoveredGeometry();
     const auto& selected = this->documentController->selectedGeometry();
     const auto& selectedVertexIds = this->documentController->selectedVertexIds();
+    const auto& selectedEdgeIds = this->documentController->selectedEdgeIds();
     const auto& drag = this->documentController->activeGeometryDrag();
+    const auto selectionMode = this->currentToolState.geometrySelectionMode;
+    const QColor modeAccent = geometrySelectionModeAccent(selectionMode);
+    const QColor selectedEdgeColor = geometrySelectionModeAccent(QtGeometrySelectionMode::Edge);
+    const QColor objectColor = geometrySelectionModeAccent(QtGeometrySelectionMode::Object);
 
-    const auto drawEdgeOverlay = [&](const QtGeometryHit& geometryHit, const QColor& color, double extraWidth) {
-        if (geometryHit.pageIndex != pageIndex || geometryHit.hit.type != vn::view::render::GeometryHitType::Edge) {
+    const auto drawGeometryEdgesOverlay = [&](vn::geom::ObjectId objectId, const std::vector<vn::geom::EdgeId>* edgeIds,
+                                              const QColor& color, double extraWidth) {
+        if (edgeIds && edgeIds->empty()) {
             return;
         }
 
         for (const auto& drawable: pageInfo.drawables) {
             const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
-            if (!geometry || geometry->objectId != geometryHit.hit.objectId) {
+            if (!geometry || geometry->objectId != objectId) {
                 continue;
             }
 
-            auto edgeIt = std::find_if(geometry->edges.begin(), geometry->edges.end(), [&](const auto& edge) {
-                return edge.id == geometryHit.hit.edgeId;
-            });
-            if (edgeIt == geometry->edges.end()) {
-                continue;
+            std::vector<vn::view::render::GeometryEdgeRenderModel> overlayEdges;
+            if (edgeIds) {
+                for (const auto& edge: geometry->edges) {
+                    if (std::find(edgeIds->begin(), edgeIds->end(), edge.id) != edgeIds->end()) {
+                        overlayEdges.push_back(edge);
+                    }
+                }
+            } else {
+                overlayEdges = geometry->edges;
+            }
+            if (overlayEdges.empty()) {
+                break;
             }
 
             vn::view::render::GeometryRenderModel overlay;
             overlay.objectId = geometry->objectId;
             overlay.vertices = geometry->vertices;
-            overlay.edges = {*edgeIt};
+            overlay.edges = std::move(overlayEdges);
             overlay.color = Color(static_cast<uint8_t>(color.red()), static_cast<uint8_t>(color.green()),
                                   static_cast<uint8_t>(color.blue()));
             overlay.strokeWidth = geometry->strokeWidth + extraWidth;
@@ -2060,11 +2101,26 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
         }
     };
 
-    if (selected) {
-        drawEdgeOverlay(*selected, qColorFromColor(this->selectionColor, 215), 2.2);
+    const auto drawSingleEdgeOverlay = [&](const QtGeometryHit& geometryHit, const QColor& color, double extraWidth) {
+        if (geometryHit.pageIndex != pageIndex || geometryHit.hit.type != vn::view::render::GeometryHitType::Edge ||
+            geometryHit.hit.edgeId == vn::geom::InvalidEdgeId) {
+            return;
+        }
+        const std::vector<vn::geom::EdgeId> edgeIds{geometryHit.hit.edgeId};
+        drawGeometryEdgesOverlay(geometryHit.hit.objectId, &edgeIds, color, extraWidth);
+    };
+
+    if (selected && selected->pageIndex == pageIndex) {
+        if (selectionMode == QtGeometrySelectionMode::Object) {
+            drawGeometryEdgesOverlay(selected->hit.objectId, nullptr, objectColor, 2.4);
+        } else if (!selectedEdgeIds.empty()) {
+            drawGeometryEdgesOverlay(selected->hit.objectId, &selectedEdgeIds, selectedEdgeColor, 2.4);
+        } else {
+            drawSingleEdgeOverlay(*selected, selectedEdgeColor, 2.2);
+        }
     }
     if (hovered) {
-        drawEdgeOverlay(*hovered, qColorFromColor(this->selectionColor, 190).lighter(120), 1.2);
+        drawSingleEdgeOverlay(*hovered, modeAccent.lighter(125), 1.2);
     }
 
     std::optional<vn::geom::ObjectId> focusObject;
@@ -2084,6 +2140,23 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
             continue;
         }
 
+        const bool isObjectSelected = selected && selected->pageIndex == pageIndex &&
+                                      selectionMode == QtGeometrySelectionMode::Object &&
+                                      selected->hit.objectId == geometry->objectId;
+        if (isObjectSelected) {
+            const auto bounds = selectedGeometrySceneBounds();
+            if (bounds && bounds->pageIndex == pageIndex) {
+                QPen boundsPen(objectColor, 1.2 / std::max(this->zoomFactor, 0.001));
+                boundsPen.setStyle(Qt::DashLine);
+                painter.setPen(boundsPen);
+                painter.setBrush(QColor(objectColor.red(), objectColor.green(), objectColor.blue(), 18));
+                painter.drawRect(bounds->bounds.adjusted(-3.0 / std::max(this->zoomFactor, 0.001),
+                                                         -3.0 / std::max(this->zoomFactor, 0.001),
+                                                         3.0 / std::max(this->zoomFactor, 0.001),
+                                                         3.0 / std::max(this->zoomFactor, 0.001)));
+            }
+        }
+
         for (const auto& vertex: geometry->vertices) {
             const bool isSelected = selected && selected->pageIndex == pageIndex && selected->hit.objectId == geometry->objectId &&
                                     std::find(selectedVertexIds.begin(), selectedVertexIds.end(), vertex.id) !=
@@ -2096,11 +2169,12 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
             const double size = (isHovered ? 9.0 : isSelected ? 8.0 : 6.5) / zoomScale;
             const QRectF handle(rect.x() + vertex.position.x - size / 2.0, rect.y() + vertex.position.y - size / 2.0,
                                 size, size);
-            const QColor selection = qColorFromColor(this->selectionColor);
             const QColor selectedVertexColor(245, 130, 32);
-            const QColor markerColor = isSelected ? selectedVertexColor : selection;
+            const QColor markerColor = isSelected ? selectedVertexColor : isObjectSelected ? objectColor : modeAccent;
             painter.setPen(QPen(markerColor, (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
-            painter.setBrush(isSelected ? QBrush(QColor(255, 168, 68, 230)) : QBrush(QColor(255, 255, 255, 240)));
+            painter.setBrush(isSelected ? QBrush(QColor(255, 168, 68, 230))
+                                        : isObjectSelected ? QBrush(QColor(132, 85, 214, 46))
+                                                           : QBrush(QColor(255, 255, 255, 240)));
             painter.drawRect(handle);
             if (isSelected || isHovered) {
                 painter.setPen(Qt::NoPen);
