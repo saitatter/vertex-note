@@ -232,6 +232,7 @@ TEST(VertexNoteQtDocumentControllerShapeTools, translatingSelectedEdgeMovesOnlyE
     controller.setSelectedGeometry(*hit);
 
     ASSERT_TRUE(controller.translateSelectedVertices(0.0, 20.0));
+    EXPECT_EQ("Move geometry edge", controller.undoText());
     auto translated = geometries(controller.snapshotPages().front());
     ASSERT_EQ(1U, translated.size());
     ASSERT_EQ(3U, translated.front().vertices.size());
@@ -425,6 +426,7 @@ TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOwnVertexWeldsT
             {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
              .screenTolerance = 18.0}));
     ASSERT_TRUE(controller.endGeometryVertexDrag());
+    EXPECT_EQ("Geometry welded", controller.lastGeometryDragMessage());
 
     auto welded = geometries(controller.snapshotPages().front());
     ASSERT_EQ(1U, welded.size());
@@ -572,6 +574,7 @@ TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeomet
     EXPECT_FALSE(controller.elementSelection());
 
     ASSERT_TRUE(controller.translateSelectedVertices(0.0, 10.0));
+    EXPECT_EQ("Move geometry object", controller.undoText());
     auto translated = geometries(controller.snapshotPages().front());
     ASSERT_EQ(1U, translated.size());
     EXPECT_DOUBLE_EQ(20.0, translated.front().vertices[0].position.y);
@@ -591,6 +594,30 @@ TEST(VertexNoteQtDocumentControllerShapeTools, deletesSelectedGeometryObjectWith
     EXPECT_EQ(1U, geometryCount(controller.snapshotPages().front()));
     ASSERT_TRUE(controller.redo());
     EXPECT_EQ(0U, geometryCount(controller.snapshotPages().front()));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, deletesMultipleSelectedGeometryEdgesWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createPolyline(0U, {{10.0, 10.0}, {40.0, 10.0}, {70.0, 10.0}, {100.0, 10.0}},
+                                                Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 5.0, 5.0, 60.0, 10.0));
+    ASSERT_EQ(2U, controller.selectedEdgeIds().size());
+    ASSERT_TRUE(controller.deleteSelectedGeometry());
+    EXPECT_EQ("Delete geometry edges", controller.undoText());
+
+    auto afterDelete = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, afterDelete.size());
+    EXPECT_EQ(2U, afterDelete.front().vertices.size());
+    ASSERT_EQ(1U, afterDelete.front().edges.size());
+    EXPECT_DOUBLE_EQ(70.0, afterDelete.front().edges.front().start.x);
+    EXPECT_DOUBLE_EQ(100.0, afterDelete.front().edges.front().end.x);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(4U, undone.front().vertices.size());
+    EXPECT_EQ(3U, undone.front().edges.size());
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifiedUndoRedo) {

@@ -12,6 +12,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <string_view>
 #include <unordered_map>
 #include <variant>
 #include <unordered_set>
@@ -611,6 +612,7 @@ auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> 
         return false;
     }
 
+    this->lastGeometryDragStatus.clear();
     const bool preserveSelection = this->selectedGeometryHit && this->selectedGeometryHit->pageIndex == hit.pageIndex &&
                                    this->selectedGeometryHit->hit.objectId == hit.hit.objectId &&
                                    std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
@@ -792,6 +794,7 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
 
 auto QtDocumentController::endGeometryVertexDrag() -> bool {
     bool changed = this->geometryDragState && this->geometryDragState->changed;
+    this->lastGeometryDragStatus.clear();
     if (this->document && this->geometryDragState) {
         this->document->lock();
         if (auto* geometry =
@@ -800,6 +803,9 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
             std::vector<QtGeometryHistoryRemovedElement> removedElements;
             const auto snapKind = this->geometryDragState->snapKind;
             const auto snapCandidate = this->geometryDragState->snapCandidate;
+            bool welded = false;
+            bool splitEdge = false;
+            bool failedCrossObjectEdgeWeld = false;
             if (snapCandidate && snapCandidate->vertex != vn::geom::InvalidVertexId &&
                 snapCandidate->object != vn::geom::InvalidObjectId &&
                 snapKind == vn::snap::SnapKind::ExplicitVertex) {
@@ -809,6 +815,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                         if (geometry->geometry().mergeVertexInto(this->geometryDragState->vertexId,
                                                                  snapCandidate->vertex)) {
                             changed = true;
+                            welded = true;
                         }
                     } else if (auto merged =
                                        mergedGeometryForVertexWeld(geometry->geometry(), targetGeometry->geometry(),
@@ -819,6 +826,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                                     removeGeometryElement(this->geometryDragState->pageIndex, snapCandidate->object)) {
                             geometry->replaceGeometry(std::move(*merged));
                             changed = true;
+                            welded = true;
                             removedElements.push_back(std::move(*removedTarget));
                         }
                     }
@@ -833,6 +841,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                         if (targetGeometry->geometry().splitEdgeAtVertex(snapCandidate->edge,
                                                                          this->geometryDragState->vertexId)) {
                             changed = true;
+                            splitEdge = true;
                         }
                     } else {
                         const auto beforeTarget = targetGeometry->geometry();
@@ -844,8 +853,11 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                                                                            snapCandidate->object)) {
                                 geometry->replaceGeometry(std::move(*merged));
                                 changed = true;
+                                welded = true;
                                 removedElements.push_back(std::move(*removedTarget));
                             }
+                        } else {
+                            failedCrossObjectEdgeWeld = true;
                         }
                     }
                 }
@@ -865,6 +877,17 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                                  .removedElements = std::move(removedElements),
                                  .text = this->geometryDragState->vertexIds.size() > 1U ? "Move geometry vertices"
                                                                                         : "Move geometry vertex"});
+            if (welded) {
+                this->lastGeometryDragStatus = "Geometry welded";
+            } else if (splitEdge) {
+                this->lastGeometryDragStatus = "Geometry edge split";
+            } else if (failedCrossObjectEdgeWeld) {
+                this->lastGeometryDragStatus = "Edge weld failed; moved vertex only";
+            } else {
+                this->lastGeometryDragStatus =
+                        this->geometryDragState->vertexIds.size() > 1U ? "Moved geometry vertices"
+                                                                       : "Moved geometry vertex";
+            }
         }
         this->document->unlock();
     }
@@ -877,6 +900,10 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
 
 auto QtDocumentController::activeGeometryDrag() const -> const std::optional<QtGeometryDragState>& {
     return this->geometryDragState;
+}
+
+auto QtDocumentController::lastGeometryDragMessage() const -> const std::string& {
+    return this->lastGeometryDragStatus;
 }
 
 auto QtDocumentController::selectedGeometryTransformVertexIds(const vn::geom::GeometryObject& object) const
@@ -957,6 +984,11 @@ auto QtDocumentController::beginSelectedGeometryTransform() -> bool {
     center.y /= static_cast<double>(count);
 
     const bool transformedWholeObject = vertexIds.size() == geometry->geometry().vertices().size();
+    const QtGeometryTransformSelectionKind selectionKind =
+            this->selectedGeometryEdgeIds.empty()
+                    ? (transformedWholeObject ? QtGeometryTransformSelectionKind::Object
+                                              : QtGeometryTransformSelectionKind::Vertices)
+                    : QtGeometryTransformSelectionKind::Edges;
     this->geometryTransformState = QtGeometryTransformState{
             .pageIndex = this->selectedGeometryHit->pageIndex,
             .objectId = this->selectedGeometryHit->hit.objectId,
@@ -965,6 +997,7 @@ auto QtDocumentController::beginSelectedGeometryTransform() -> bool {
             .currentGeometry = geometry->geometry(),
             .center = center,
             .transformedWholeObject = transformedWholeObject,
+            .selectionKind = selectionKind,
     };
     this->document->unlock();
     return true;
@@ -1031,14 +1064,25 @@ auto QtDocumentController::endSelectedGeometryTransform() -> bool {
     const bool rotated = std::abs(state.currentDegrees) > 1e-6;
     const bool translated = std::abs(state.currentDx) > 1e-6 || std::abs(state.currentDy) > 1e-6;
     std::string text = "Transform geometry";
+    const auto selectionLabel = [&state](std::string_view objectText, std::string_view edgeText,
+                                         std::string_view edgesText, std::string_view vertexText,
+                                         std::string_view verticesText) -> std::string {
+        switch (state.selectionKind) {
+            case QtGeometryTransformSelectionKind::Object:
+                return std::string(objectText);
+            case QtGeometryTransformSelectionKind::Edges:
+                return std::string(state.vertexIds.size() > 2U ? edgesText : edgeText);
+            case QtGeometryTransformSelectionKind::Vertices:
+                return std::string(state.vertexIds.size() > 1U ? verticesText : vertexText);
+        }
+        return std::string(objectText);
+    };
     if (rotated && !translated) {
-        text = state.transformedWholeObject ? "Rotate geometry"
-                                            : (state.vertexIds.size() > 1U ? "Rotate geometry vertices"
-                                                                           : "Rotate geometry vertex");
+        text = selectionLabel("Rotate geometry object", "Rotate geometry edge", "Rotate geometry edges",
+                              "Rotate geometry vertex", "Rotate geometry vertices");
     } else if (!rotated && translated) {
-        text = state.transformedWholeObject ? "Translate geometry"
-                                            : (state.vertexIds.size() > 1U ? "Translate geometry vertices"
-                                                                           : "Translate geometry vertex");
+        text = selectionLabel("Move geometry object", "Move geometry edge", "Move geometry edges",
+                              "Move geometry vertex", "Move geometry vertices");
     }
 
     pushGeometryHistory({.pageIndex = state.pageIndex,
@@ -1118,19 +1162,24 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
 
     if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
         this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
-        if (this->selectedGeometryVertexIds.size() > 1U) {
-            for (auto vertexId: this->selectedGeometryVertexIds) {
-                changed = geometry->removeVertex(vertexId) || changed;
-            }
-            actionText = "Delete geometry vertices";
-        } else {
-            changed = geometry->removeVertex(this->selectedGeometryHit->hit.vertexId);
-            actionText = "Delete geometry vertex";
+        std::vector<vn::geom::VertexId> vertexIds = this->selectedGeometryVertexIds;
+        if (vertexIds.empty()) {
+            vertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
         }
+        for (auto vertexId: vertexIds) {
+            changed = geometry->removeVertex(vertexId) || changed;
+        }
+        actionText = vertexIds.size() > 1U ? "Delete geometry vertices" : "Delete geometry vertex";
     } else if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
                this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
-        changed = geometry->removeEdge(this->selectedGeometryHit->hit.edgeId);
-        actionText = "Delete geometry edge";
+        std::vector<vn::geom::EdgeId> edgeIds = this->selectedGeometryEdgeIds;
+        if (edgeIds.empty()) {
+            edgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
+        }
+        for (auto edgeId: edgeIds) {
+            changed = geometry->removeEdge(edgeId) || changed;
+        }
+        actionText = edgeIds.size() > 1U ? "Delete geometry edges" : "Delete geometry edge";
     } else if (this->selectedGeometryVertexIds.empty() && this->selectedGeometryEdgeIds.empty()) {
         if (auto removed = removeGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId)) {
             removedElements.push_back(std::move(*removed));

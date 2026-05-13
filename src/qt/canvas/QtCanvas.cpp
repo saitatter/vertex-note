@@ -1006,6 +1006,10 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
     }
     if (event->button() == Qt::LeftButton && this->documentController && this->documentController->activeGeometryDrag()) {
         const bool changed = this->documentController->endGeometryVertexDrag();
+        const auto& dragMessage = this->documentController->lastGeometryDragMessage();
+        if (!dragMessage.empty()) {
+            updateDebugOverlay(QString::fromStdString(dragMessage));
+        }
         if (!this->spaceHeld) {
             setCursor(Qt::CrossCursor);
         }

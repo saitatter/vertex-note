@@ -62,6 +62,12 @@ struct QtGeometryDragState {
     bool changed = false;
 };
 
+enum class QtGeometryTransformSelectionKind {
+    Vertices,
+    Edges,
+    Object,
+};
+
 struct QtGeometryTransformState {
     std::size_t pageIndex = 0U;
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
@@ -73,6 +79,7 @@ struct QtGeometryTransformState {
     double currentDy = 0.0;
     double currentDegrees = 0.0;
     bool transformedWholeObject = false;
+    QtGeometryTransformSelectionKind selectionKind = QtGeometryTransformSelectionKind::Vertices;
     bool changed = false;
 };
 
@@ -330,6 +337,7 @@ public:
                                                 const QtSnapOptions& options) -> bool;
     [[nodiscard]] auto endGeometryVertexDrag() -> bool;
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtGeometryDragState>&;
+    [[nodiscard]] auto lastGeometryDragMessage() const -> const std::string&;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
@@ -582,6 +590,7 @@ private:
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;
     std::vector<vn::geom::EdgeId> selectedGeometryEdgeIds;
     std::optional<QtGeometryDragState> geometryDragState;
+    std::string lastGeometryDragStatus;
     std::optional<QtGeometryTransformState> geometryTransformState;
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
