@@ -156,7 +156,7 @@ Q_SIGNALS:
 private:
     enum class InstrumentToolKind { None, Setsquare, Compass };
     enum class InstrumentStrokeKind { None, SetsquareEdge, SetsquareRadial, CompassOutline, CompassRadius };
-    enum class GeometryTransformHandle { None, TranslateXY, TranslateX, TranslateY, RotateZ };
+    enum class GeometryTransformHandle { None, TranslateXY, TranslateX, TranslateY, RotateZ, ScaleUniform };
 
     struct InstrumentOverlayState {
         bool visible = false;
@@ -185,6 +185,7 @@ private:
         QPointF startPagePoint;
         QPointF centerPagePoint;
         double startAngle = 0.0;
+        double startRadius = 1.0;
     };
 
     struct GeometrySelectionSceneBounds {

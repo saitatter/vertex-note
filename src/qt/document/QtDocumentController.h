@@ -78,6 +78,8 @@ struct QtGeometryTransformState {
     double currentDx = 0.0;
     double currentDy = 0.0;
     double currentDegrees = 0.0;
+    double currentScaleX = 1.0;
+    double currentScaleY = 1.0;
     bool transformedWholeObject = false;
     QtGeometryTransformSelectionKind selectionKind = QtGeometryTransformSelectionKind::Vertices;
     bool changed = false;
@@ -342,8 +344,10 @@ public:
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
     [[nodiscard]] auto rotateSelectedGeometry(double degrees) -> bool;
+    [[nodiscard]] auto scaleSelectedGeometry(double scaleX, double scaleY) -> bool;
     [[nodiscard]] auto beginSelectedGeometryTransform() -> bool;
-    [[nodiscard]] auto updateSelectedGeometryTransform(double dx, double dy, double degrees) -> bool;
+    [[nodiscard]] auto updateSelectedGeometryTransform(double dx, double dy, double degrees, double scaleX = 1.0,
+                                                       double scaleY = 1.0) -> bool;
     [[nodiscard]] auto endSelectedGeometryTransform() -> bool;
     void cancelSelectedGeometryTransform();
     [[nodiscard]] auto activeGeometryTransform() const -> const std::optional<QtGeometryTransformState>&;

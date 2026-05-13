@@ -1003,13 +1003,15 @@ auto QtDocumentController::beginSelectedGeometryTransform() -> bool {
     return true;
 }
 
-auto QtDocumentController::updateSelectedGeometryTransform(double dx, double dy, double degrees) -> bool {
+auto QtDocumentController::updateSelectedGeometryTransform(double dx, double dy, double degrees, double scaleX,
+                                                           double scaleY) -> bool {
     if (!this->geometryTransformState || !this->document) {
         return false;
     }
 
     auto& state = *this->geometryTransformState;
-    const bool changed = std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6 || std::abs(degrees) > 1e-6;
+    const bool changed = std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6 || std::abs(degrees) > 1e-6 ||
+                         std::abs(scaleX - 1.0) > 1e-6 || std::abs(scaleY - 1.0) > 1e-6;
 
     this->document->lock();
     auto* geometry = findMutableGeometryElement(state.pageIndex, state.objectId);
@@ -1026,6 +1028,8 @@ auto QtDocumentController::updateSelectedGeometryTransform(double dx, double dy,
                     .pivot = state.center,
                     .translation = vn::geom::Vec2{.x = dx, .y = dy},
                     .rotationRadians = radians,
+                    .scaleX = scaleX,
+                    .scaleY = scaleY,
             });
 
     geometry->replaceGeometry(transformed);
@@ -1033,6 +1037,8 @@ auto QtDocumentController::updateSelectedGeometryTransform(double dx, double dy,
     state.currentDx = dx;
     state.currentDy = dy;
     state.currentDegrees = degrees;
+    state.currentScaleX = scaleX;
+    state.currentScaleY = scaleY;
     state.changed = changed;
 
     if (this->selectedGeometryHit) {
@@ -1063,6 +1069,7 @@ auto QtDocumentController::endSelectedGeometryTransform() -> bool {
 
     const bool rotated = std::abs(state.currentDegrees) > 1e-6;
     const bool translated = std::abs(state.currentDx) > 1e-6 || std::abs(state.currentDy) > 1e-6;
+    const bool scaled = std::abs(state.currentScaleX - 1.0) > 1e-6 || std::abs(state.currentScaleY - 1.0) > 1e-6;
     std::string text = "Transform geometry";
     const auto selectionLabel = [&state](std::string_view objectText, std::string_view edgeText,
                                          std::string_view edgesText, std::string_view vertexText,
@@ -1077,10 +1084,13 @@ auto QtDocumentController::endSelectedGeometryTransform() -> bool {
         }
         return std::string(objectText);
     };
-    if (rotated && !translated) {
+    if (scaled && !rotated && !translated) {
+        text = selectionLabel("Scale geometry object", "Scale geometry edge", "Scale geometry edges",
+                              "Scale geometry vertex", "Scale geometry vertices");
+    } else if (rotated && !translated && !scaled) {
         text = selectionLabel("Rotate geometry object", "Rotate geometry edge", "Rotate geometry edges",
                               "Rotate geometry vertex", "Rotate geometry vertices");
-    } else if (!rotated && translated) {
+    } else if (!rotated && translated && !scaled) {
         text = selectionLabel("Move geometry object", "Move geometry edge", "Move geometry edges",
                               "Move geometry vertex", "Move geometry vertices");
     }
@@ -1135,6 +1145,21 @@ auto QtDocumentController::rotateSelectedGeometry(double degrees) -> bool {
         return false;
     }
     if (!updateSelectedGeometryTransform(0.0, 0.0, degrees)) {
+        cancelSelectedGeometryTransform();
+        return false;
+    }
+    return endSelectedGeometryTransform();
+}
+
+auto QtDocumentController::scaleSelectedGeometry(double scaleX, double scaleY) -> bool {
+    if (!this->selectedGeometryHit || !this->document || (scaleX == 1.0 && scaleY == 1.0) || scaleX <= 0.0 ||
+        scaleY <= 0.0) {
+        return false;
+    }
+    if (!beginSelectedGeometryTransform()) {
+        return false;
+    }
+    if (!updateSelectedGeometryTransform(0.0, 0.0, 0.0, scaleX, scaleY)) {
         cancelSelectedGeometryTransform();
         return false;
     }

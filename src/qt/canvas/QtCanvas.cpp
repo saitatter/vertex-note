@@ -1834,6 +1834,7 @@ auto QtCanvas::geometryTransformHandleAtScreen(const QPointF& screenPoint) const
     const double rotationRadius = 48.0 / zoomScale;
     const QPointF xEnd(bounds->center.x() + axisLength, bounds->center.y());
     const QPointF yEnd(bounds->center.x(), bounds->center.y() - axisLength);
+    const QPointF scaleHandle = bounds->bounds.bottomRight();
 
     const auto withinCircle = [](const QPointF& point, const QPointF& center, double radius) {
         const double dx = point.x() - center.x();
@@ -1855,6 +1856,9 @@ auto QtCanvas::geometryTransformHandleAtScreen(const QPointF& screenPoint) const
 
     const QPointF radial = scenePoint - bounds->center;
     const double radialDistance = std::sqrt(QPointF::dotProduct(radial, radial));
+    if (withinCircle(scenePoint, scaleHandle, hitRadius * 1.35)) {
+        return GeometryTransformHandle::ScaleUniform;
+    }
     if (std::abs(radialDistance - rotationRadius) <= hitRadius) {
         return GeometryTransformHandle::RotateZ;
     }
@@ -1898,6 +1902,8 @@ auto QtCanvas::beginGeometryTransformAtScreen(GeometryTransformHandle handle, co
             .startPagePoint = pagePoint,
             .centerPagePoint = centerPagePoint,
             .startAngle = std::atan2(pagePoint.y() - centerPagePoint.y(), pagePoint.x() - centerPagePoint.x()),
+            .startRadius = std::max(1e-6, std::hypot(pagePoint.x() - centerPagePoint.x(),
+                                                     pagePoint.y() - centerPagePoint.y())),
     };
     if (handle == GeometryTransformHandle::TranslateX) {
         setCursor(Qt::SizeHorCursor);
@@ -1905,6 +1911,8 @@ auto QtCanvas::beginGeometryTransformAtScreen(GeometryTransformHandle handle, co
         setCursor(Qt::SizeVerCursor);
     } else if (handle == GeometryTransformHandle::TranslateXY) {
         setCursor(Qt::SizeAllCursor);
+    } else if (handle == GeometryTransformHandle::ScaleUniform) {
+        setCursor(Qt::SizeFDiagCursor);
     } else {
         setCursor(Qt::CrossCursor);
     }
@@ -1929,6 +1937,7 @@ void QtCanvas::updateGeometryTransformAtScreen(const QPointF& screenPoint) {
     double dx = 0.0;
     double dy = 0.0;
     double degrees = 0.0;
+    double scale = 1.0;
     if (interaction.handle == GeometryTransformHandle::TranslateXY ||
         interaction.handle == GeometryTransformHandle::TranslateX ||
         interaction.handle == GeometryTransformHandle::TranslateY) {
@@ -1951,9 +1960,13 @@ void QtCanvas::updateGeometryTransformAtScreen(const QPointF& screenPoint) {
             radians = std::round(radians / ROTATION_SNAP_STEP_RADIANS) * ROTATION_SNAP_STEP_RADIANS;
         }
         degrees = radians * 180.0 / M_PI;
+    } else if (interaction.handle == GeometryTransformHandle::ScaleUniform) {
+        const double radius = std::hypot(pagePoint.x() - interaction.centerPagePoint.x(),
+                                         pagePoint.y() - interaction.centerPagePoint.y());
+        scale = std::clamp(radius / interaction.startRadius, 0.05, 20.0);
     }
 
-    static_cast<void>(this->documentController->updateSelectedGeometryTransform(dx, dy, degrees));
+    static_cast<void>(this->documentController->updateSelectedGeometryTransform(dx, dy, degrees, scale, scale));
     update();
 }
 
@@ -1996,9 +2009,11 @@ void QtCanvas::drawGeometryTransformGizmo(QPainter& painter) const {
     const double axisLength = 64.0 / zoomScale;
     const double arrowSize = 8.0 / zoomScale;
     const double rotationRadius = 48.0 / zoomScale;
+    const double scaleHandleSize = 9.0 / zoomScale;
     const QPointF center = bounds->center;
     const QPointF xEnd(center.x() + axisLength, center.y());
     const QPointF yEnd(center.x(), center.y() - axisLength);
+    const QPointF scaleHandle = bounds->bounds.bottomRight();
 
     QPen ringPen(zColor, 1.5 / zoomScale);
     ringPen.setCosmetic(false);
@@ -2042,6 +2057,13 @@ void QtCanvas::drawGeometryTransformGizmo(QPainter& painter) const {
     painter.setPen(QPen(zColor, 1.3 / zoomScale));
     painter.setBrush(QColor(255, 255, 255, 240));
     painter.drawEllipse(zHandle, 6.5 / zoomScale, 6.5 / zoomScale);
+
+    painter.setPen(QPen(QColor(132, 85, 214), 1.4 / zoomScale));
+    painter.setBrush(QColor(255, 255, 255, 240));
+    painter.drawRect(QRectF(scaleHandle.x() - scaleHandleSize / 2.0, scaleHandle.y() - scaleHandleSize / 2.0,
+                            scaleHandleSize, scaleHandleSize));
+    painter.setPen(QPen(QColor(132, 85, 214, 150), 1.0 / zoomScale));
+    painter.drawLine(center, scaleHandle);
     painter.restore();
 }
 

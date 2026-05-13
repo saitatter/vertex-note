@@ -288,6 +288,34 @@ TEST(VertexNoteQtDocumentControllerShapeTools, rotatesSelectedGeometryObjectWith
     EXPECT_NEAR(30.0, redone.vertices[1].position.y, 0.0001);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, scalesSelectedGeometryObjectWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 20.0, 30.0, 20.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 20.0, 20.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometryObject(*hit);
+
+    ASSERT_TRUE(controller.scaleSelectedGeometry(2.0, 2.0));
+    EXPECT_EQ("Scale geometry object", controller.undoText());
+    const auto& scaled = lastGeometry(controller.snapshotPages().front());
+    ASSERT_EQ(2U, scaled.vertices.size());
+    EXPECT_NEAR(0.0, scaled.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(20.0, scaled.vertices[0].position.y, 0.0001);
+    EXPECT_NEAR(40.0, scaled.vertices[1].position.x, 0.0001);
+    EXPECT_NEAR(20.0, scaled.vertices[1].position.y, 0.0001);
+
+    ASSERT_TRUE(controller.undoGeometryEdit());
+    const auto& undone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_NEAR(10.0, undone.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(30.0, undone.vertices[1].position.x, 0.0001);
+
+    ASSERT_TRUE(controller.redoGeometryEdit());
+    const auto& redone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_NEAR(0.0, redone.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(40.0, redone.vertices[1].position.x, 0.0001);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, transformStatePreservesGeometryTopology) {
     QtDocumentController controller;
     ASSERT_NE(nullptr,
