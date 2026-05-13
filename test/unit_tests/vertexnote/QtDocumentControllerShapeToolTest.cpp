@@ -579,6 +579,20 @@ TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeomet
     EXPECT_DOUBLE_EQ(20.0, translated.front().vertices[2].position.y);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, deletesSelectedGeometryObjectWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryObjectInRect(0U, 45.0, 5.0, 10.0, 10.0));
+    ASSERT_TRUE(controller.deleteSelectedGeometry());
+    EXPECT_EQ(0U, geometryCount(controller.snapshotPages().front()));
+    ASSERT_TRUE(controller.undo());
+    EXPECT_EQ(1U, geometryCount(controller.snapshotPages().front()));
+    ASSERT_TRUE(controller.redo());
+    EXPECT_EQ(0U, geometryCount(controller.snapshotPages().front()));
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifiedUndoRedo) {
     QtDocumentController controller;
     constexpr std::size_t PageIndex = 0U;

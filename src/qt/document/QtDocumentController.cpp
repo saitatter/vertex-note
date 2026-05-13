@@ -1112,8 +1112,10 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
     }
 
     bool changed = false;
+    bool removesPrimaryObject = false;
     std::optional<vn::geom::GeometryObject> beforeGeometry;
     std::optional<vn::geom::GeometryObject> afterGeometry;
+    std::vector<QtGeometryHistoryRemovedElement> removedElements;
     std::string actionText = "Edit geometry topology";
     this->document->lock();
     auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
@@ -1138,8 +1140,15 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
                this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
         changed = geometry->removeEdge(this->selectedGeometryHit->hit.edgeId);
         actionText = "Delete geometry edge";
+    } else if (this->selectedGeometryVertexIds.empty() && this->selectedGeometryEdgeIds.empty()) {
+        if (auto removed = removeGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId)) {
+            removedElements.push_back(std::move(*removed));
+            changed = true;
+            removesPrimaryObject = true;
+            actionText = "Delete geometry object";
+        }
     }
-    if (changed) {
+    if (changed && !removesPrimaryObject) {
         afterGeometry = geometry->geometry();
     }
     this->document->unlock();
@@ -1148,7 +1157,9 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
         pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
                              .objectId = this->selectedGeometryHit->hit.objectId,
                              .before = std::move(*beforeGeometry),
-                             .after = std::move(*afterGeometry),
+                             .after = afterGeometry ? std::move(*afterGeometry) : *beforeGeometry,
+                             .removedElements = std::move(removedElements),
+                             .removesPrimaryObject = removesPrimaryObject,
                              .text = std::move(actionText)});
         clearInteractiveGeometryState();
         rebuildPageSnapshots();
@@ -1369,12 +1380,14 @@ auto QtDocumentController::applyGeometryHistoryEntry(QtGeometryHistoryEntry& ent
 
     this->document->lock();
     auto* geometry = findMutableGeometryElement(entry.pageIndex, entry.objectId);
-    if (!geometry) {
+    if (!geometry && !entry.removesPrimaryObject) {
         this->document->unlock();
         return false;
     }
 
-    geometry->replaceGeometry(useAfterState ? entry.after : entry.before);
+    if (geometry && !entry.removesPrimaryObject) {
+        geometry->replaceGeometry(useAfterState ? entry.after : entry.before);
+    }
     for (const auto& linked: entry.linkedObjects) {
         auto* linkedGeometry = findMutableGeometryElement(linked.pageIndex, linked.objectId);
         if (!linkedGeometry) {

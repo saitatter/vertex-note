@@ -112,6 +112,7 @@ struct QtGeometryHistoryEntry {
     vn::geom::GeometryObject after;
     std::vector<QtGeometryHistoryObjectState> linkedObjects;
     std::vector<QtGeometryHistoryRemovedElement> removedElements;
+    bool removesPrimaryObject = false;
     std::string text;
 };
 
