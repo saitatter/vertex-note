@@ -1707,29 +1707,47 @@ auto QtCanvas::selectedGeometrySceneBounds() const -> std::optional<GeometrySele
     }
 
     const auto& selectedVertexIds = this->documentController->selectedVertexIds();
+    const auto& selectedEdgeIds = this->documentController->selectedEdgeIds();
     bool hasVertex = false;
     double minX = std::numeric_limits<double>::max();
     double minY = std::numeric_limits<double>::max();
     double maxX = std::numeric_limits<double>::lowest();
     double maxY = std::numeric_limits<double>::lowest();
+    const auto includePoint = [&](const Point& point) {
+        minX = std::min(minX, point.x);
+        minY = std::min(minY, point.y);
+        maxX = std::max(maxX, point.x);
+        maxY = std::max(maxY, point.y);
+        hasVertex = true;
+    };
 
     for (const auto& drawable: pages[selected.pageIndex].drawables) {
         const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
         if (!geometry || geometry->objectId != selected.hit.objectId) {
             continue;
         }
-        for (const auto& vertex: geometry->vertices) {
-            const bool include = selectedVertexIds.empty() ||
-                                 std::find(selectedVertexIds.begin(), selectedVertexIds.end(), vertex.id) !=
-                                         selectedVertexIds.end();
-            if (!include) {
-                continue;
+        if (!selectedVertexIds.empty()) {
+            for (const auto& vertex: geometry->vertices) {
+                if (std::find(selectedVertexIds.begin(), selectedVertexIds.end(), vertex.id) !=
+                    selectedVertexIds.end()) {
+                    includePoint(vertex.position);
+                }
             }
-            minX = std::min(minX, vertex.position.x);
-            minY = std::min(minY, vertex.position.y);
-            maxX = std::max(maxX, vertex.position.x);
-            maxY = std::max(maxY, vertex.position.y);
-            hasVertex = true;
+        } else if (!selectedEdgeIds.empty()) {
+            for (const auto& edge: geometry->edges) {
+                if (std::find(selectedEdgeIds.begin(), selectedEdgeIds.end(), edge.id) == selectedEdgeIds.end()) {
+                    continue;
+                }
+                includePoint(edge.start);
+                includePoint(edge.end);
+                for (const auto& control: edge.controls) {
+                    includePoint(control);
+                }
+            }
+        } else {
+            for (const auto& vertex: geometry->vertices) {
+                includePoint(vertex.position);
+            }
         }
         break;
     }
