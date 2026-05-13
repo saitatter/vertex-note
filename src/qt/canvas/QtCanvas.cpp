@@ -1812,10 +1812,12 @@ auto QtCanvas::selectedGeometrySceneBounds() const -> std::optional<GeometrySele
     QRectF bounds(pageRect.x() + minX, pageRect.y() + minY, std::max(0.0, maxX - minX), std::max(0.0, maxY - minY));
     const double minVisualSize = 18.0 / std::max(this->zoomFactor, 0.001);
     if (bounds.width() < minVisualSize) {
-        bounds.adjust(-minVisualSize / 2.0, 0.0, minVisualSize / 2.0, 0.0);
+        const double delta = minVisualSize - bounds.width();
+        bounds.adjust(-delta / 2.0, 0.0, delta / 2.0, 0.0);
     }
     if (bounds.height() < minVisualSize) {
-        bounds.adjust(0.0, -minVisualSize / 2.0, 0.0, minVisualSize / 2.0);
+        const double delta = minVisualSize - bounds.height();
+        bounds.adjust(0.0, -delta / 2.0, 0.0, delta / 2.0);
     }
 
     return GeometrySelectionSceneBounds{.pageIndex = selected.pageIndex, .bounds = bounds, .center = bounds.center()};

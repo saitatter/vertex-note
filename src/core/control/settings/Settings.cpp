@@ -135,14 +135,8 @@ auto parseUIntAs(const xmlChar* value) -> T {
 
 auto parseDoubleAsUInt(const xmlChar* value) -> unsigned int {
     const double parsed = parseDouble(value);
-    if (parsed <= 0.0) {
-        return 0U;
-    }
     const auto maxValue = static_cast<double>(std::numeric_limits<unsigned int>::max());
-    if (parsed >= maxValue) {
-        return std::numeric_limits<unsigned int>::max();
-    }
-    return static_cast<unsigned int>(parsed);
+    return static_cast<unsigned int>(std::clamp(parsed, 0.0, maxValue));
 }
 
 auto formatDouble(double value) -> std::string {
