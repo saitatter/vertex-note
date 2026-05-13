@@ -222,6 +222,20 @@ TEST(VertexNoteGeometryObject, mergeRemovesNewlyDegenerateArcEdges) {
     EXPECT_TRUE(object.vertices().empty());
 }
 
+TEST(VertexNoteGeometryObject, mergeRemovesNewlyDegenerateBezierEdges) {
+    GeometryObject object(42);
+    const auto start = object.addVertex({0.0, 0.0});
+    const auto controlA = object.addVertex({2.0, 4.0});
+    const auto controlB = object.addVertex({4.0, 4.0});
+    const auto end = object.addVertex({6.0, 0.0});
+    object.addEdge(EdgeKind::CubicBezier, start, end, {controlA, controlB});
+
+    EXPECT_TRUE(object.mergeVertexInto(start, end));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+}
+
 TEST(VertexNoteGeometryObject, mergePreservesExistingFullCircleArcEdges) {
     GeometryObject object(42);
     const auto center = object.addVertex({0.0, 0.0});

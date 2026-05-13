@@ -412,6 +412,9 @@ auto GeometryObject::mergeVertexInto(VertexId source, VertexId target) -> bool {
                                             if (edge.kind == EdgeKind::Line || edge.kind == EdgeKind::ConstructionLine) {
                                                 return true;
                                             }
+                                            if (edge.kind == EdgeKind::CubicBezier) {
+                                                return true;
+                                            }
                                             if (edge.kind != EdgeKind::Arc &&
                                                 edge.kind != EdgeKind::ConstructionCircle) {
                                                 return false;
