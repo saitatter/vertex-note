@@ -142,9 +142,13 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
     time_t curtime = time(nullptr);
     tm localTime{};
 #ifdef _WIN32
-    static_cast<void>(localtime_s(&localTime, &curtime));
+    if (localtime_s(&localTime, &curtime) != 0) {
+        return {};
+    }
 #else
-    static_cast<void>(localtime_r(&curtime, &localTime));
+    if (localtime_r(&curtime, &localTime) == nullptr) {
+        return {};
+    }
 #endif
     ss << std::put_time(&localTime, format.c_str());
     auto filename = ss.str();

@@ -676,8 +676,8 @@ void Settings::parseItem(xmlDocPtr doc, xmlNodePtr cur) {
         this->addVerticalSpace = xmlStrcmp(value, reinterpret_cast<const xmlChar*>("true")) == 0;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpaceAmount")) == 0) {
         const int oldVerticalAmount = parseIntAs<int>(value);
-        this->addHorizontalSpaceAmountLeft = oldVerticalAmount;
-        this->addHorizontalSpaceAmountRight = oldVerticalAmount;
+        this->addVerticalSpaceAmountAbove = oldVerticalAmount;
+        this->addVerticalSpaceAmountBelow = oldVerticalAmount;
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addVerticalSpaceAmountAbove")) == 0) {
         this->addVerticalSpaceAmountAbove = parseIntAs<int>(value);
     } else if (xmlStrcmp(name, reinterpret_cast<const xmlChar*>("addHorizontalSpaceAmountLeft")) == 0) {
