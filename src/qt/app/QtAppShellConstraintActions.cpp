@@ -129,3 +129,26 @@ void QtAppShell::rotateSelectedGeometry() {
         this->window.statusBar()->showMessage(QStringLiteral("No geometry rotation applied"), 3000);
     }
 }
+
+void QtAppShell::scaleSelectedGeometry() {
+    if (!this->documentController.hasDocument() || !this->documentController.selectedGeometry()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Select geometry first"), 3000);
+        return;
+    }
+
+    bool ok = false;
+    const double factor = QInputDialog::getDouble(&this->window, QStringLiteral("Scale Selected Geometry"),
+                                                  QStringLiteral("Scale factor:"), 1.25, 0.05, 20.0, 3, &ok);
+    if (!ok) {
+        return;
+    }
+
+    if (this->documentController.scaleSelectedGeometry(factor, factor)) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        updateEditCommandStates();
+        this->window.statusBar()->showMessage(QStringLiteral("Scaled selected geometry"), 3000);
+    } else {
+        this->window.statusBar()->showMessage(QStringLiteral("No geometry scale applied"), 3000);
+    }
+}

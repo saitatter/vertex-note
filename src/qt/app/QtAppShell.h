@@ -146,6 +146,7 @@ private:
     void editFixedLengthConstraint();
     void translateSelectedVertices();
     void rotateSelectedGeometry();
+    void scaleSelectedGeometry();
     void toggleAudioRecording();
     void toggleAudioPausePlayback();
     void stopAudioPlayback();

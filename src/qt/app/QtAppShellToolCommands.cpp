@@ -364,6 +364,11 @@ void QtAppShell::registerToolCommands() {
              .tooltip = "Rotate selected geometry vertices or the selected geometry object",
              .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
             [this]() { rotateSelectedGeometry(); });
+    ch->registerCommand(
+            {.id = "geometry.scale-selection", .text = "Scale Selected Geometry...",
+             .tooltip = "Scale selected geometry vertices or the selected geometry object",
+             .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() { scaleSelectedGeometry(); });
     ch->addMenuSeparator("Tools");
     ch->registerCommand(
             {.id = "constraint.coincident", .text = "Coincident", .tooltip = "Merge vertices", .shortcut = "Ctrl+Alt+C",

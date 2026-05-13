@@ -128,6 +128,7 @@ void QtAppShell::updateToolCommandStates() {
     const bool hasGeometrySelection = this->documentController.selectedGeometry().has_value();
     this->window.commandHost()->setCommandEnabled("geometry.translate-vertices", hasGeometrySelection);
     this->window.commandHost()->setCommandEnabled("geometry.rotate-selection", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.scale-selection", hasGeometrySelection);
     syncToolbarWidgets();
 }
 

@@ -224,6 +224,7 @@ void applyQtCommandIcons(QtMainWindow& window) {
     setNamedIcon("constraint.delete", "edit-delete");
     setNamedIcon("geometry.translate-vertices", "geometry-tools");
     setNamedIcon("geometry.rotate-selection", "geometry-tools");
+    setNamedIcon("geometry.scale-selection", "geometry-tools");
     setNamedIcon("edit.select-font", "combo-selection");
     setNamedIcon("edit.delete-geometry", "edit-delete");
     setNamedIcon("edit.insert-vertex", "go-to");

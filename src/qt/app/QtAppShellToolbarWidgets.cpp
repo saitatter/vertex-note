@@ -262,6 +262,9 @@ auto QtAppShell::createGeometryTransformToolButton() -> QWidget* {
     if (auto* action = this->window.commandHost()->actionForCommand("geometry.rotate-selection")) {
         transformMenu->addAction(action);
     }
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.scale-selection")) {
+        transformMenu->addAction(action);
+    }
     menuButton->setMenu(transformMenu);
     return createFamilySplitWidget(&this->window, button, menuButton);
 }

@@ -82,7 +82,7 @@ void QtAppShell::showToolbarCustomizeDialog() {
             "VERY_FINE", "FINE", "MEDIUM", "THICK", "VERY_THICK", "COLOR_SELECT", "CONSTRAINT_COINCIDENT",
             "CONSTRAINT_HORIZONTAL", "CONSTRAINT_VERTICAL", "CONSTRAINT_FIXED_LENGTH", "CONSTRAINT_EDIT_FIXED_LENGTH",
             "CONSTRAINT_PARALLEL", "CONSTRAINT_PERPENDICULAR", "CONSTRAINT_DELETE", "GEOMETRY_TRANSLATE",
-            "GEOMETRY_ROTATE", "SPACER", "SEPARATOR"};
+            "GEOMETRY_ROTATE", "GEOMETRY_SCALE", "SPACER", "SEPARATOR"};
     const std::unordered_set<std::string> knownToolbarKeys(QT_TOOLBAR_KEYS.begin(), QT_TOOLBAR_KEYS.end());
 
     QtToolbarProfile customProfile;
