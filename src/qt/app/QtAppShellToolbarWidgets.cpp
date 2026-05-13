@@ -83,6 +83,7 @@ void QtAppShell::resetToolbarWidgetState() {
     this->selectionToolButton = nullptr;
     this->strokeDrawingToolButtons.clear();
     this->vertexDrawingToolButtons.clear();
+    this->geometryTransformButton = nullptr;
     this->laserToolButton = nullptr;
     this->pdfToolButton = nullptr;
     this->fontFamilyCombo = nullptr;
@@ -241,6 +242,25 @@ auto QtAppShell::createVertexDrawingToolButton() -> QWidget* {
     menuButton->setMenu(drawingMenu);
     this->vertexDrawingToolButtons.push_back(button);
     return createFamilySplitWidget(&this->window, button, menuButton);
+}
+
+auto QtAppShell::ensureGeometryTransformButton() -> QToolButton* {
+    if (!this->geometryTransformButton) {
+        this->geometryTransformButton = new QToolButton(&this->window);
+        configureFamilyToolButton(this->geometryTransformButton);
+        this->geometryTransformButton->setPopupMode(QToolButton::InstantPopup);
+        this->geometryTransformButton->setIcon(bundledQtIcon("xopp-geometry-tools.svg"));
+        this->geometryTransformButton->setToolTip(QStringLiteral("Geometry transforms"));
+        auto* transformMenu = new QMenu(this->geometryTransformButton);
+        if (auto* action = this->window.commandHost()->actionForCommand("geometry.translate-vertices")) {
+            transformMenu->addAction(action);
+        }
+        if (auto* action = this->window.commandHost()->actionForCommand("geometry.rotate-selection")) {
+            transformMenu->addAction(action);
+        }
+        this->geometryTransformButton->setMenu(transformMenu);
+    }
+    return this->geometryTransformButton;
 }
 
 auto QtAppShell::ensureLaserToolButton() -> QToolButton* {

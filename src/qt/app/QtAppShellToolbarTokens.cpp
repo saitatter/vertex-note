@@ -106,6 +106,10 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     }
     if (token == "DRAW_STROKE") { toolbar->addWidget(createStrokeDrawingToolButton()); return; }
     if (token == "DRAW_VERTEX") { toolbar->addWidget(createVertexDrawingToolButton()); return; }
+    if (token == "GEOMETRY_TRANSFORM" || token == "VERTEX_TRANSFORM") {
+        toolbar->addWidget(ensureGeometryTransformButton());
+        return;
+    }
     if (token == "ROTATION_SNAPPING") {
         addToolbarCommand(toolbar, "view.toggle-rotation-snap");
         return;
@@ -196,6 +200,8 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "CONSTRAINT_PARALLEL") { addToolbarCommand(toolbar, "constraint.parallel"); return; }
     if (token == "CONSTRAINT_PERPENDICULAR") { addToolbarCommand(toolbar, "constraint.perpendicular"); return; }
     if (token == "CONSTRAINT_DELETE") { addToolbarCommand(toolbar, "constraint.delete"); return; }
+    if (token == "GEOMETRY_TRANSLATE") { addToolbarCommand(toolbar, "geometry.translate-vertices"); return; }
+    if (token == "GEOMETRY_ROTATE") { addToolbarCommand(toolbar, "geometry.rotate-selection"); return; }
     if (token == "VERY_FINE") { addGenericSizeToolbarAction(toolbar, "Very Fine", "xopp-thickness-finer.svg", 0); return; }
     if (token == "FINE") { addGenericSizeToolbarAction(toolbar, "Fine", "xopp-thickness-fine.svg", 1); return; }
     if (token == "MEDIUM") { addGenericSizeToolbarAction(toolbar, "Medium", "xopp-thickness-medium.svg", 2); return; }

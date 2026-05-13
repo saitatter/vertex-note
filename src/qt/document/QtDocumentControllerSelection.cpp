@@ -109,6 +109,64 @@ void QtDocumentController::selectElementsInRect(std::size_t pageIndex, double x,
     }
 }
 
+auto QtDocumentController::selectGeometryVerticesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                        bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& vertex: geometry->vertices) {
+            if (vertex.position.x < left || vertex.position.x > right || vertex.position.y < top ||
+                vertex.position.y > bottom) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Vertex;
+            hit.objectId = geometry->objectId;
+            hit.vertexId = vertex.id;
+            hit.point = vertex.position;
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
 void QtDocumentController::clearElementSelection() { this->currentSelection.reset(); }
 
 auto QtDocumentController::elementSelection() const -> const std::optional<QtElementSelection>& {

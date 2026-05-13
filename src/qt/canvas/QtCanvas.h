@@ -156,6 +156,7 @@ Q_SIGNALS:
 private:
     enum class InstrumentToolKind { None, Setsquare, Compass };
     enum class InstrumentStrokeKind { None, SetsquareEdge, SetsquareRadial, CompassOutline, CompassRadius };
+    enum class GeometryTransformHandle { None, TranslateXY, TranslateX, TranslateY, RotateZ };
 
     struct InstrumentOverlayState {
         bool visible = false;
@@ -178,6 +179,20 @@ private:
         std::vector<QPointF> previewPoints;
     };
 
+    struct GeometryTransformInteraction {
+        GeometryTransformHandle handle = GeometryTransformHandle::None;
+        std::size_t pageIndex = 0U;
+        QPointF startPagePoint;
+        QPointF centerPagePoint;
+        double startAngle = 0.0;
+    };
+
+    struct GeometrySelectionSceneBounds {
+        std::size_t pageIndex = 0U;
+        QRectF bounds;
+        QPointF center;
+    };
+
     void updateDebugOverlay(QString summary);
     void emitViewportUpdate(bool edited = true);
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
@@ -189,6 +204,7 @@ private:
     void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
                                         const vn::view::render::PageRenderSnapshot& pageInfo,
                                         std::size_t pageIndex) const;
+    void drawGeometryTransformGizmo(QPainter& painter) const;
     void drawOverlayHud(QPainter& painter) const;
     void drawCursorHighlight(QPainter& painter) const;
     [[nodiscard]] auto screenToScene(const QPointF& screenPoint) const -> QPointF;
@@ -196,6 +212,13 @@ private:
     void updateGeometryHover(const QPointF& screenPoint);
     void clearGeometryHover();
     void selectHoveredGeometry(bool additive = false);
+    [[nodiscard]] auto selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds>;
+    [[nodiscard]] auto geometryTransformHandleAtScreen(const QPointF& screenPoint) const -> GeometryTransformHandle;
+    [[nodiscard]] auto beginGeometryTransformAtScreen(GeometryTransformHandle handle, const QPointF& screenPoint)
+            -> bool;
+    void updateGeometryTransformAtScreen(const QPointF& screenPoint);
+    void finalizeGeometryTransform();
+    void cancelGeometryTransform();
     void beginPan(const QPointF& position);
     void endPan();
     [[nodiscard]] auto pointerButtonMatrixForDevice(const QInputDevice* device) const -> const QtPointerButtonMatrix&;
@@ -210,7 +233,8 @@ private:
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
     [[nodiscard]] auto snapInputPagePoint(std::size_t pageIndex, const QPointF& pagePoint,
-                                          std::optional<vn::snap::SnapKind>* snapKind = nullptr) const -> QPointF;
+                                          std::optional<vn::snap::SnapKind>* snapKind = nullptr,
+                                          bool geometrySnapAllowed = true, bool gridSnapAllowed = true) const -> QPointF;
     [[nodiscard]] auto adjustedPressure(double pressure) const -> double;
     [[nodiscard]] auto stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double>;
     void resetStrokeStabilizer(const QPointF& pagePoint, double pressure);
@@ -375,6 +399,7 @@ private:
     bool rubberBanding = false;
     bool movingSelection = false;
     bool scalingSelection = false;
+    std::optional<GeometryTransformInteraction> geometryTransformInteraction;
     bool shapeDrawing = false;
     bool pdfTextSelecting = false;
     bool movingInstrumentOverlay = false;

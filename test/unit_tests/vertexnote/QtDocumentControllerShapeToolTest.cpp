@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 
 #include "QtDocumentController.h"
+#include "QtToolState.h"
+#include "vertexnote/geometry/SurfaceMesh.h"
 #include "view/render/Renderers.h"
 
 namespace {
@@ -36,6 +38,17 @@ auto geometryCount(const vn::view::render::PageRenderSnapshot& snapshot) -> std:
         }
     }
     return count;
+}
+
+auto geometries(const vn::view::render::PageRenderSnapshot& snapshot)
+        -> std::vector<vn::view::render::GeometryRenderModel> {
+    std::vector<vn::view::render::GeometryRenderModel> result;
+    for (const auto& drawable: snapshot.drawables) {
+        if (const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable)) {
+            result.push_back(*geometry);
+        }
+    }
+    return result;
 }
 
 auto lastStroke(const vn::view::render::PageRenderSnapshot& snapshot)
@@ -135,6 +148,53 @@ TEST(VertexNoteQtDocumentControllerShapeTools, snapsPagePointsToGeometryVertices
     EXPECT_DOUBLE_EQ(50.0, snapped.pagePoint.y);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, surfaceMeshValidatesGeometryTopology) {
+    vn::geom::GeometryObject object(42U);
+    const auto a = object.addVertex({10.0, 10.0});
+    const auto b = object.addVertex({50.0, 10.0});
+    ASSERT_NE(vn::geom::InvalidEdgeId, object.addLine(a, b));
+
+    const auto mesh = vn::geom::SurfaceMesh::fromGeometryObject(object);
+    EXPECT_EQ(42U, mesh.objectId);
+    EXPECT_TRUE(mesh.validate().valid);
+    EXPECT_TRUE(vn::geom::validateGeometryTopology(object).valid);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, classifiesSnapFamiliesForDrawingTools) {
+    constexpr std::array strokeTools = {
+            QtToolType::DrawLine,
+            QtToolType::DrawRectangle,
+            QtToolType::DrawEllipse,
+            QtToolType::DrawArrow,
+            QtToolType::DrawDoubleArrow,
+            QtToolType::DrawCoordinateSystem,
+            QtToolType::DrawSpline,
+            QtToolType::ShapeRecognizer,
+    };
+    constexpr std::array vertexTools = {
+            QtToolType::DrawEdge,
+            QtToolType::DrawCircle,
+            QtToolType::DrawArc,
+            QtToolType::DrawPolyline,
+            QtToolType::DrawConstructionLine,
+            QtToolType::DrawConstructionCircle,
+    };
+
+    QtToolState state;
+    for (const auto tool: strokeTools) {
+        state.activeTool = tool;
+        EXPECT_TRUE(state.isShapeDrawingTool());
+        EXPECT_TRUE(state.isStrokeDrawingTool());
+        EXPECT_FALSE(state.isVertexDrawingTool());
+    }
+    for (const auto tool: vertexTools) {
+        state.activeTool = tool;
+        EXPECT_TRUE(state.isShapeDrawingTool());
+        EXPECT_FALSE(state.isStrokeDrawingTool());
+        EXPECT_TRUE(state.isVertexDrawingTool());
+    }
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, translatesSelectedVerticesWithUndoRedo) {
     QtDocumentController controller;
     ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 50.0, 120.0, 50.0, Colors::black, 1.0));
@@ -159,6 +219,250 @@ TEST(VertexNoteQtDocumentControllerShapeTools, translatesSelectedVerticesWithUnd
     const auto& redone = lastGeometry(controller.snapshotPages().front());
     EXPECT_DOUBLE_EQ(57.0, redone.vertices.front().position.x);
     EXPECT_DOUBLE_EQ(47.0, redone.vertices.front().position.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, translatingSelectedEdgeMovesOnlyEdgeVerticesAndKeepsMeshAttached) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 30.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.translateSelectedVertices(0.0, 20.0));
+    auto translated = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, translated.size());
+    ASSERT_EQ(3U, translated.front().vertices.size());
+    ASSERT_EQ(2U, translated.front().edges.size());
+
+    EXPECT_DOUBLE_EQ(10.0, translated.front().edges[0].start.x);
+    EXPECT_DOUBLE_EQ(30.0, translated.front().edges[0].start.y);
+    EXPECT_DOUBLE_EQ(50.0, translated.front().edges[0].end.x);
+    EXPECT_DOUBLE_EQ(30.0, translated.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(50.0, translated.front().edges[1].start.x);
+    EXPECT_DOUBLE_EQ(30.0, translated.front().edges[1].start.y);
+    EXPECT_DOUBLE_EQ(90.0, translated.front().edges[1].end.x);
+    EXPECT_DOUBLE_EQ(10.0, translated.front().edges[1].end.y);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[0].start.y);
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[1].start.y);
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[1].end.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, rotatesSelectedGeometryObjectWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 20.0, 30.0, 20.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 20.0, 20.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.rotateSelectedGeometry(90.0));
+    const auto& rotated = lastGeometry(controller.snapshotPages().front());
+    ASSERT_EQ(2U, rotated.vertices.size());
+    EXPECT_NEAR(20.0, rotated.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(10.0, rotated.vertices[0].position.y, 0.0001);
+    EXPECT_NEAR(20.0, rotated.vertices[1].position.x, 0.0001);
+    EXPECT_NEAR(30.0, rotated.vertices[1].position.y, 0.0001);
+
+    ASSERT_TRUE(controller.undoGeometryEdit());
+    const auto& undone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_NEAR(10.0, undone.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(20.0, undone.vertices[0].position.y, 0.0001);
+    EXPECT_NEAR(30.0, undone.vertices[1].position.x, 0.0001);
+    EXPECT_NEAR(20.0, undone.vertices[1].position.y, 0.0001);
+
+    ASSERT_TRUE(controller.redoGeometryEdit());
+    const auto& redone = lastGeometry(controller.snapshotPages().front());
+    EXPECT_NEAR(20.0, redone.vertices[0].position.x, 0.0001);
+    EXPECT_NEAR(10.0, redone.vertices[0].position.y, 0.0001);
+    EXPECT_NEAR(20.0, redone.vertices[1].position.x, 0.0001);
+    EXPECT_NEAR(30.0, redone.vertices[1].position.y, 0.0001);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, transformStatePreservesGeometryTopology) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+    ASSERT_TRUE(controller.beginSelectedGeometryTransform());
+    ASSERT_TRUE(controller.updateSelectedGeometryTransform(5.0, 10.0, 35.0));
+    ASSERT_TRUE(controller.endSelectedGeometryTransform());
+
+    auto transformed = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, transformed.size());
+    ASSERT_EQ(3U, transformed.front().vertices.size());
+    ASSERT_EQ(2U, transformed.front().edges.size());
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[0].position.x, transformed.front().edges[0].start.x);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[0].position.y, transformed.front().edges[0].start.y);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[1].position.x, transformed.front().edges[0].end.x);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[1].position.y, transformed.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[1].position.x, transformed.front().edges[1].start.x);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[1].position.y, transformed.front().edges[1].start.y);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[2].position.x, transformed.front().edges[1].end.x);
+    EXPECT_DOUBLE_EQ(transformed.front().vertices[2].position.y, transformed.front().edges[1].end.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, directVertexDragKeepsConnectedEdgesAttachedAndUndoable) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            50.0, 40.0, 1.0,
+            {.geometryEnabled = false, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+
+    auto preview = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, preview.size());
+    ASSERT_EQ(2U, preview.front().edges.size());
+    EXPECT_DOUBLE_EQ(50.0, preview.front().edges[0].end.x);
+    EXPECT_DOUBLE_EQ(40.0, preview.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(50.0, preview.front().edges[1].start.x);
+    EXPECT_DOUBLE_EQ(40.0, preview.front().edges[1].start.y);
+
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+    ASSERT_TRUE(controller.canUndo());
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_DOUBLE_EQ(50.0, undone.front().edges[0].end.x);
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(50.0, undone.front().edges[1].start.x);
+    EXPECT_DOUBLE_EQ(10.0, undone.front().edges[1].start.y);
+
+    ASSERT_TRUE(controller.canRedo());
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_DOUBLE_EQ(50.0, redone.front().edges[0].end.x);
+    EXPECT_DOUBLE_EQ(40.0, redone.front().edges[0].end.y);
+    EXPECT_DOUBLE_EQ(50.0, redone.front().edges[1].start.x);
+    EXPECT_DOUBLE_EQ(40.0, redone.front().edges[1].start.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOwnEdgeSplitsEdgeWithoutDuplicatingVertex) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createRectangle(0U, 10.0, 10.0, 90.0, 90.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 10.0, 90.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    const auto draggedVertex = hit->hit.vertexId;
+
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            50.0, 12.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto attached = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, attached.size());
+    EXPECT_EQ(4U, attached.front().vertices.size());
+    EXPECT_EQ(5U, attached.front().edges.size());
+
+    const auto movedVertex =
+            std::ranges::find(attached.front().vertices, draggedVertex, &vn::view::render::GeometryVertexRenderModel::id);
+    ASSERT_NE(attached.front().vertices.end(), movedVertex);
+    EXPECT_DOUBLE_EQ(50.0, movedVertex->position.x);
+    EXPECT_DOUBLE_EQ(10.0, movedVertex->position.y);
+
+    const auto samePoint = [](const Point& lhs, const Point& rhs) {
+        return lhs.x == rhs.x && lhs.y == rhs.y;
+    };
+    const auto incidentSplitEdges = std::ranges::count_if(attached.front().edges, [&](const auto& edge) {
+        return (samePoint(edge.start, movedVertex->position) && edge.end.y == 10.0) ||
+               (samePoint(edge.end, movedVertex->position) && edge.start.y == 10.0);
+    });
+    EXPECT_GE(incidentSplitEdges, 2);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(4U, undone.front().vertices.size());
+    EXPECT_EQ(4U, undone.front().edges.size());
+    const auto undoneVertex =
+            std::ranges::find(undone.front().vertices, draggedVertex, &vn::view::render::GeometryVertexRenderModel::id);
+    ASSERT_NE(undone.front().vertices.end(), undoneVertex);
+    EXPECT_DOUBLE_EQ(10.0, undoneVertex->position.x);
+    EXPECT_DOUBLE_EQ(90.0, undoneVertex->position.y);
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(4U, redone.front().vertices.size());
+    EXPECT_EQ(5U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoEdgeInsertsTargetVertexWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 10.0, 110.0, 10.0, Colors::black, 1.0));
+    ASSERT_NE(nullptr, controller.createEdge(0U, 40.0, 50.0, 80.0, 50.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 40.0, 50.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            60.0, 12.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto after = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, after.size());
+    EXPECT_EQ(3U, after[0].vertices.size());
+    EXPECT_EQ(2U, after[0].edges.size());
+    EXPECT_EQ(2U, after[1].vertices.size());
+    EXPECT_DOUBLE_EQ(60.0, after[1].vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(10.0, after[1].vertices.front().position.y);
+
+    ASSERT_TRUE(controller.undoGeometryEdit());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+    EXPECT_EQ(2U, undone[0].vertices.size());
+    EXPECT_EQ(1U, undone[0].edges.size());
+    EXPECT_DOUBLE_EQ(40.0, undone[1].vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(50.0, undone[1].vertices.front().position.y);
+
+    ASSERT_TRUE(controller.redoGeometryEdit());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, redone.size());
+    EXPECT_EQ(3U, redone[0].vertices.size());
+    EXPECT_EQ(2U, redone[0].edges.size());
+    EXPECT_DOUBLE_EQ(60.0, redone[1].vertices.front().position.x);
+    EXPECT_DOUBLE_EQ(10.0, redone[1].vertices.front().position.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionTargetsGeometryVerticesInsteadOfWholeShape) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryVerticesInRect(0U, 45.0, 5.0, 10.0, 10.0));
+    ASSERT_TRUE(controller.selectedGeometry());
+    EXPECT_EQ(vn::view::render::GeometryHitType::Vertex, controller.selectedGeometry()->hit.type);
+    ASSERT_EQ(1U, controller.selectedVertexIds().size());
+    EXPECT_FALSE(controller.elementSelection());
+
+    ASSERT_TRUE(controller.selectGeometryVerticesInRect(0U, 0.0, 0.0, 100.0, 20.0));
+    EXPECT_EQ(3U, controller.selectedVertexIds().size());
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifiedUndoRedo) {

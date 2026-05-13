@@ -57,7 +57,22 @@ struct QtGeometryDragState {
     std::vector<vn::geom::Vec2> currentPositions;
     vn::geom::GeometryObject beforeGeometry;
     std::optional<vn::snap::SnapKind> snapKind;
+    std::optional<vn::snap::SnapCandidate> snapCandidate;
     vn::geom::Vec2 snapPoint;
+    bool changed = false;
+};
+
+struct QtGeometryTransformState {
+    std::size_t pageIndex = 0U;
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    std::vector<vn::geom::VertexId> vertexIds;
+    vn::geom::GeometryObject beforeGeometry;
+    vn::geom::GeometryObject currentGeometry;
+    vn::geom::Vec2 center;
+    double currentDx = 0.0;
+    double currentDy = 0.0;
+    double currentDegrees = 0.0;
+    bool transformedWholeObject = false;
     bool changed = false;
 };
 
@@ -72,7 +87,15 @@ struct QtSnapOptions {
 struct QtSnapPointResult {
     vn::geom::Vec2 pagePoint;
     std::optional<vn::snap::SnapKind> snapKind;
+    std::optional<vn::snap::SnapCandidate> snapCandidate;
     bool snapped = false;
+};
+
+struct QtGeometryHistoryObjectState {
+    std::size_t pageIndex = 0U;
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    vn::geom::GeometryObject before;
+    vn::geom::GeometryObject after;
 };
 
 struct QtGeometryHistoryEntry {
@@ -80,6 +103,7 @@ struct QtGeometryHistoryEntry {
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
     vn::geom::GeometryObject before;
     vn::geom::GeometryObject after;
+    std::vector<QtGeometryHistoryObjectState> linkedObjects;
     std::string text;
 };
 
@@ -296,6 +320,12 @@ public:
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
+    [[nodiscard]] auto rotateSelectedGeometry(double degrees) -> bool;
+    [[nodiscard]] auto beginSelectedGeometryTransform() -> bool;
+    [[nodiscard]] auto updateSelectedGeometryTransform(double dx, double dy, double degrees) -> bool;
+    [[nodiscard]] auto endSelectedGeometryTransform() -> bool;
+    void cancelSelectedGeometryTransform();
+    [[nodiscard]] auto activeGeometryTransform() const -> const std::optional<QtGeometryTransformState>&;
 
     // Geometry constraints
     [[nodiscard]] auto applyConstraint(vn::geom::ConstraintKind kind) -> bool;
@@ -373,6 +403,8 @@ public:
             -> const Element*;
     void selectElementAt(std::size_t pageIndex, double pageX, double pageY, double maxDistance, bool additive = false);
     void selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h);
+    [[nodiscard]] auto selectGeometryVerticesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                    bool additive = false) -> bool;
     void clearElementSelection();
     [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
     [[nodiscard]] auto selectionBounds() const -> std::optional<QtSelectionBounds>;
@@ -496,6 +528,8 @@ private:
     void clearGeometryHistory();
     void pushGeometryHistory(QtGeometryHistoryEntry entry);
     [[nodiscard]] auto applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState) -> bool;
+    [[nodiscard]] auto selectedGeometryTransformVertexIds(const vn::geom::GeometryObject& object) const
+            -> std::vector<vn::geom::VertexId>;
     [[nodiscard]] auto findMutableGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> vn::geom::GeometryElement*;
     [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)
@@ -529,6 +563,7 @@ private:
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;
     std::vector<vn::geom::EdgeId> selectedGeometryEdgeIds;
     std::optional<QtGeometryDragState> geometryDragState;
+    std::optional<QtGeometryTransformState> geometryTransformState;
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;
     std::deque<QtGeometryHistoryEntry> geometryRedoHistory;
     std::optional<QtActiveStroke> currentStroke;

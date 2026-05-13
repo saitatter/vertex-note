@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -752,6 +753,7 @@ void QtCanvas::paintEvent(QPaintEvent* event) {
     drawVerticalSpacePreview(painter);
     drawShapePreview(painter);
     drawInstrumentOverlay(painter);
+    drawGeometryTransformGizmo(painter);
     drawEraserPreview(painter);
     drawCursorHighlight(painter);
 
@@ -837,7 +839,36 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
             event->accept();
             return;
         }
+        if (tool == QtToolType::SelectObject) {
+            const auto transformHandle = geometryTransformHandleAtScreen(event->position());
+            if (transformHandle != GeometryTransformHandle::None &&
+                beginGeometryTransformAtScreen(transformHandle, event->position())) {
+                event->accept();
+                return;
+            }
+            updateGeometryHover(event->position());
+            if (this->documentController && this->documentController->hoveredGeometry()) {
+                selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
+                this->documentController->clearElementSelection();
+                if (this->documentController->selectedGeometry() &&
+                    this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
+                    if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
+                        setCursor(Qt::ClosedHandCursor);
+                    }
+                }
+            } else {
+                selectElementAtScreen(event->position(), event->modifiers().testFlag(Qt::ShiftModifier));
+            }
+            event->accept();
+            return;
+        }
         if (tool == QtToolType::SelectRect) {
+            const auto transformHandle = geometryTransformHandleAtScreen(event->position());
+            if (transformHandle != GeometryTransformHandle::None &&
+                beginGeometryTransformAtScreen(transformHandle, event->position())) {
+                event->accept();
+                return;
+            }
             if (this->documentController && this->documentController->elementSelection()) {
                 const int handleIndex = selectionScaleHandleAtScreen(event->position());
                 if (handleIndex >= 0) {
@@ -958,6 +989,11 @@ void QtCanvas::mouseReleaseEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (event->button() == Qt::LeftButton && this->geometryTransformInteraction) {
+        finalizeGeometryTransform();
+        event->accept();
+        return;
+    }
     if (event->button() == Qt::LeftButton && this->rubberBanding) {
         finalizeRubberBand();
         event->accept();
@@ -1037,6 +1073,12 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+    if (this->geometryTransformInteraction) {
+        updateEdgePanAtScreen(event->position());
+        updateGeometryTransformAtScreen(event->position());
+        event->accept();
+        return;
+    }
     if (this->rubberBanding) {
         updateEdgePanAtScreen(event->position());
         updateRubberBand(event->position());
@@ -1068,12 +1110,25 @@ void QtCanvas::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
     stopEdgePan();
-    if (this->currentToolState.activeTool == QtToolType::SelectRect && selectionScaleHandleAtScreen(event->position()) >= 0) {
+    const bool selectionTool = this->currentToolState.activeTool == QtToolType::SelectRect ||
+                               this->currentToolState.activeTool == QtToolType::SelectObject;
+    updateGeometryHover(event->position());
+    const auto transformHandle = selectionTool ? geometryTransformHandleAtScreen(event->position())
+                                               : GeometryTransformHandle::None;
+    if (transformHandle == GeometryTransformHandle::TranslateXY) {
+        setCursor(Qt::SizeAllCursor);
+    } else if (transformHandle == GeometryTransformHandle::TranslateX) {
+        setCursor(Qt::SizeHorCursor);
+    } else if (transformHandle == GeometryTransformHandle::TranslateY) {
+        setCursor(Qt::SizeVerCursor);
+    } else if (transformHandle == GeometryTransformHandle::RotateZ) {
+        setCursor(Qt::CrossCursor);
+    } else if (this->currentToolState.activeTool == QtToolType::SelectRect &&
+               selectionScaleHandleAtScreen(event->position()) >= 0) {
         setCursor(Qt::SizeFDiagCursor);
     } else if (this->currentToolState.activeTool == QtToolType::SelectRect) {
         setCursor(Qt::ArrowCursor);
     }
-    updateGeometryHover(event->position());
     QWidget::mouseMoveEvent(event);
 }
 
@@ -1231,6 +1286,9 @@ void QtCanvas::keyPressEvent(QKeyEvent* event) {
         }
         if (this->scalingSelection) {
             cancelScaleSelection();
+        }
+        if (this->geometryTransformInteraction) {
+            cancelGeometryTransform();
         }
         if (this->documentController->isVerticalSpacing()) {
             cancelVerticalSpace();
@@ -1450,7 +1508,7 @@ auto QtCanvas::screenToScene(const QPointF& screenPoint) const -> QPointF {
 
 auto QtCanvas::hasEdgePanDrag() const -> bool {
     return this->drawing || this->erasing || this->movingSelection || this->scalingSelection || this->rubberBanding ||
-           this->pdfTextSelecting || this->shapeDrawing ||
+           this->pdfTextSelecting || this->shapeDrawing || this->geometryTransformInteraction ||
            (this->documentController && (this->documentController->isVerticalSpacing() ||
                                          this->documentController->activeGeometryDrag()));
 }
@@ -1633,6 +1691,288 @@ void QtCanvas::selectHoveredGeometry(bool additive) {
                                    .arg(static_cast<int>(this->documentController->selectedVertexIds().size())));
     }
     update();
+    Q_EMIT selectionStateChanged();
+}
+
+auto QtCanvas::selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds> {
+    if (!this->documentController || !this->documentController->selectedGeometry()) {
+        return std::nullopt;
+    }
+
+    const auto& selected = *this->documentController->selectedGeometry();
+    const auto rects = pageRects();
+    const auto pages = this->documentController->snapshotPages();
+    if (selected.pageIndex >= rects.size() || selected.pageIndex >= pages.size()) {
+        return std::nullopt;
+    }
+
+    const auto& selectedVertexIds = this->documentController->selectedVertexIds();
+    bool hasVertex = false;
+    double minX = std::numeric_limits<double>::max();
+    double minY = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double maxY = std::numeric_limits<double>::lowest();
+
+    for (const auto& drawable: pages[selected.pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry || geometry->objectId != selected.hit.objectId) {
+            continue;
+        }
+        for (const auto& vertex: geometry->vertices) {
+            const bool include = selectedVertexIds.empty() ||
+                                 std::find(selectedVertexIds.begin(), selectedVertexIds.end(), vertex.id) !=
+                                         selectedVertexIds.end();
+            if (!include) {
+                continue;
+            }
+            minX = std::min(minX, vertex.position.x);
+            minY = std::min(minY, vertex.position.y);
+            maxX = std::max(maxX, vertex.position.x);
+            maxY = std::max(maxY, vertex.position.y);
+            hasVertex = true;
+        }
+        break;
+    }
+
+    if (!hasVertex) {
+        return std::nullopt;
+    }
+
+    const QRectF& pageRect = rects[selected.pageIndex];
+    QRectF bounds(pageRect.x() + minX, pageRect.y() + minY, std::max(0.0, maxX - minX), std::max(0.0, maxY - minY));
+    const double minVisualSize = 18.0 / std::max(this->zoomFactor, 0.001);
+    if (bounds.width() < minVisualSize) {
+        bounds.adjust(-minVisualSize / 2.0, 0.0, minVisualSize / 2.0, 0.0);
+    }
+    if (bounds.height() < minVisualSize) {
+        bounds.adjust(0.0, -minVisualSize / 2.0, 0.0, minVisualSize / 2.0);
+    }
+
+    return GeometrySelectionSceneBounds{.pageIndex = selected.pageIndex, .bounds = bounds, .center = bounds.center()};
+}
+
+auto QtCanvas::geometryTransformHandleAtScreen(const QPointF& screenPoint) const -> GeometryTransformHandle {
+    const auto bounds = selectedGeometrySceneBounds();
+    if (!bounds) {
+        return GeometryTransformHandle::None;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const double zoomScale = std::max(this->zoomFactor, 0.001);
+    const double hitRadius = 8.0 / zoomScale;
+    const double axisLength = 64.0 / zoomScale;
+    const double rotationRadius = 48.0 / zoomScale;
+    const QPointF xEnd(bounds->center.x() + axisLength, bounds->center.y());
+    const QPointF yEnd(bounds->center.x(), bounds->center.y() - axisLength);
+
+    const auto withinCircle = [](const QPointF& point, const QPointF& center, double radius) {
+        const double dx = point.x() - center.x();
+        const double dy = point.y() - center.y();
+        return dx * dx + dy * dy <= radius * radius;
+    };
+    const auto distanceToSegment = [](const QPointF& point, const QPointF& a, const QPointF& b) {
+        const QPointF ab = b - a;
+        const double len2 = QPointF::dotProduct(ab, ab);
+        if (len2 <= 1e-9) {
+            const QPointF delta = point - a;
+            return std::sqrt(QPointF::dotProduct(delta, delta));
+        }
+        const double t = std::clamp(QPointF::dotProduct(point - a, ab) / len2, 0.0, 1.0);
+        const QPointF projection = a + ab * t;
+        const QPointF delta = point - projection;
+        return std::sqrt(QPointF::dotProduct(delta, delta));
+    };
+
+    const QPointF radial = scenePoint - bounds->center;
+    const double radialDistance = std::sqrt(QPointF::dotProduct(radial, radial));
+    if (std::abs(radialDistance - rotationRadius) <= hitRadius) {
+        return GeometryTransformHandle::RotateZ;
+    }
+    if (withinCircle(scenePoint, xEnd, hitRadius * 1.25) ||
+        distanceToSegment(scenePoint, bounds->center, xEnd) <= hitRadius) {
+        return GeometryTransformHandle::TranslateX;
+    }
+    if (withinCircle(scenePoint, yEnd, hitRadius * 1.25) ||
+        distanceToSegment(scenePoint, bounds->center, yEnd) <= hitRadius) {
+        return GeometryTransformHandle::TranslateY;
+    }
+    if (withinCircle(scenePoint, bounds->center, 10.0 / zoomScale)) {
+        return GeometryTransformHandle::TranslateXY;
+    }
+    return GeometryTransformHandle::None;
+}
+
+auto QtCanvas::beginGeometryTransformAtScreen(GeometryTransformHandle handle, const QPointF& screenPoint) -> bool {
+    if (!this->documentController || handle == GeometryTransformHandle::None) {
+        return false;
+    }
+
+    const auto bounds = selectedGeometrySceneBounds();
+    if (!bounds || !this->documentController->beginSelectedGeometryTransform()) {
+        return false;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const auto rects = pageRects();
+    if (bounds->pageIndex >= rects.size()) {
+        this->documentController->cancelSelectedGeometryTransform();
+        return false;
+    }
+
+    const QPointF pagePoint(scenePoint.x() - rects[bounds->pageIndex].x(), scenePoint.y() - rects[bounds->pageIndex].y());
+    const QPointF centerPagePoint(bounds->center.x() - rects[bounds->pageIndex].x(),
+                                  bounds->center.y() - rects[bounds->pageIndex].y());
+    this->geometryTransformInteraction = GeometryTransformInteraction{
+            .handle = handle,
+            .pageIndex = bounds->pageIndex,
+            .startPagePoint = pagePoint,
+            .centerPagePoint = centerPagePoint,
+            .startAngle = std::atan2(pagePoint.y() - centerPagePoint.y(), pagePoint.x() - centerPagePoint.x()),
+    };
+    if (handle == GeometryTransformHandle::TranslateX) {
+        setCursor(Qt::SizeHorCursor);
+    } else if (handle == GeometryTransformHandle::TranslateY) {
+        setCursor(Qt::SizeVerCursor);
+    } else if (handle == GeometryTransformHandle::TranslateXY) {
+        setCursor(Qt::SizeAllCursor);
+    } else {
+        setCursor(Qt::CrossCursor);
+    }
+    return true;
+}
+
+void QtCanvas::updateGeometryTransformAtScreen(const QPointF& screenPoint) {
+    if (!this->documentController || !this->geometryTransformInteraction) {
+        return;
+    }
+
+    const auto rects = pageRects();
+    auto& interaction = *this->geometryTransformInteraction;
+    if (interaction.pageIndex >= rects.size()) {
+        return;
+    }
+
+    const QPointF scenePoint = screenToScene(screenPoint);
+    const QPointF pagePoint(scenePoint.x() - rects[interaction.pageIndex].x(),
+                            scenePoint.y() - rects[interaction.pageIndex].y());
+
+    double dx = 0.0;
+    double dy = 0.0;
+    double degrees = 0.0;
+    if (interaction.handle == GeometryTransformHandle::TranslateXY ||
+        interaction.handle == GeometryTransformHandle::TranslateX ||
+        interaction.handle == GeometryTransformHandle::TranslateY) {
+        dx = pagePoint.x() - interaction.startPagePoint.x();
+        dy = pagePoint.y() - interaction.startPagePoint.y();
+        if (interaction.handle == GeometryTransformHandle::TranslateX) {
+            dy = 0.0;
+        } else if (interaction.handle == GeometryTransformHandle::TranslateY) {
+            dx = 0.0;
+        }
+        if (this->gridSnapEnabled) {
+            dx = std::round(dx / std::max(this->snapGridSize, 0.001)) * this->snapGridSize;
+            dy = std::round(dy / std::max(this->snapGridSize, 0.001)) * this->snapGridSize;
+        }
+    } else if (interaction.handle == GeometryTransformHandle::RotateZ) {
+        const double angle = std::atan2(pagePoint.y() - interaction.centerPagePoint.y(),
+                                        pagePoint.x() - interaction.centerPagePoint.x());
+        double radians = angle - interaction.startAngle;
+        if (this->rotationSnapEnabled && this->rotationSnapTolerance > 0.0) {
+            radians = std::round(radians / ROTATION_SNAP_STEP_RADIANS) * ROTATION_SNAP_STEP_RADIANS;
+        }
+        degrees = radians * 180.0 / M_PI;
+    }
+
+    static_cast<void>(this->documentController->updateSelectedGeometryTransform(dx, dy, degrees));
+    update();
+}
+
+void QtCanvas::finalizeGeometryTransform() {
+    if (!this->documentController) {
+        this->geometryTransformInteraction.reset();
+        return;
+    }
+
+    const bool changed = this->documentController->endSelectedGeometryTransform();
+    this->geometryTransformInteraction.reset();
+    setCursor(Qt::ArrowCursor);
+    update();
+    if (changed) {
+        Q_EMIT documentEdited();
+    }
+}
+
+void QtCanvas::cancelGeometryTransform() {
+    if (this->documentController) {
+        this->documentController->cancelSelectedGeometryTransform();
+    }
+    this->geometryTransformInteraction.reset();
+    setCursor(Qt::ArrowCursor);
+    update();
+}
+
+void QtCanvas::drawGeometryTransformGizmo(QPainter& painter) const {
+    const auto bounds = selectedGeometrySceneBounds();
+    if (!bounds) {
+        return;
+    }
+
+    painter.save();
+    const double zoomScale = std::max(this->zoomFactor, 0.001);
+    const QColor xColor(225, 62, 62);
+    const QColor yColor(45, 175, 78);
+    const QColor zColor(58, 126, 245);
+    const QColor orange(245, 130, 32);
+    const double axisLength = 64.0 / zoomScale;
+    const double arrowSize = 8.0 / zoomScale;
+    const double rotationRadius = 48.0 / zoomScale;
+    const QPointF center = bounds->center;
+    const QPointF xEnd(center.x() + axisLength, center.y());
+    const QPointF yEnd(center.x(), center.y() - axisLength);
+
+    QPen ringPen(zColor, 1.5 / zoomScale);
+    ringPen.setCosmetic(false);
+    painter.setPen(ringPen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(center, rotationRadius, rotationRadius);
+
+    auto drawAxis = [&](const QPointF& end, const QColor& color, bool horizontal) {
+        QPen pen(color, 3.0 / zoomScale);
+        pen.setCapStyle(Qt::RoundCap);
+        painter.setPen(pen);
+        painter.drawLine(center, end);
+        QPainterPath arrow;
+        if (horizontal) {
+            arrow.moveTo(end);
+            arrow.lineTo(QPointF(end.x() - arrowSize, end.y() - arrowSize * 0.65));
+            arrow.lineTo(QPointF(end.x() - arrowSize, end.y() + arrowSize * 0.65));
+        } else {
+            arrow.moveTo(end);
+            arrow.lineTo(QPointF(end.x() - arrowSize * 0.65, end.y() + arrowSize));
+            arrow.lineTo(QPointF(end.x() + arrowSize * 0.65, end.y() + arrowSize));
+        }
+        arrow.closeSubpath();
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPath(arrow);
+    };
+
+    drawAxis(xEnd, xColor, true);
+    drawAxis(yEnd, yColor, false);
+
+    painter.setPen(QPen(orange, 1.4 / zoomScale));
+    painter.setBrush(QColor(255, 255, 255, 240));
+    painter.drawRect(QRectF(center.x() - 7.0 / zoomScale, center.y() - 7.0 / zoomScale, 14.0 / zoomScale,
+                            14.0 / zoomScale));
+    painter.setBrush(QColor(orange.red(), orange.green(), orange.blue(), 36));
+    painter.drawEllipse(center, 4.0 / zoomScale, 4.0 / zoomScale);
+
+    const QPointF zHandle(center.x() + rotationRadius * std::cos(-M_PI / 4.0),
+                          center.y() + rotationRadius * std::sin(-M_PI / 4.0));
+    painter.setPen(QPen(zColor, 1.3 / zoomScale));
+    painter.setBrush(QColor(255, 255, 255, 240));
+    painter.drawEllipse(zHandle, 6.5 / zoomScale, 6.5 / zoomScale);
+    painter.restore();
 }
 
 void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
@@ -1715,12 +2055,14 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
             const QRectF handle(rect.x() + vertex.position.x - size / 2.0, rect.y() + vertex.position.y - size / 2.0,
                                 size, size);
             const QColor selection = qColorFromColor(this->selectionColor);
-            painter.setPen(QPen(selection, (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
-            painter.setBrush(isSelected ? QBrush(selection) : QBrush(QColor(255, 255, 255, 240)));
+            const QColor selectedVertexColor(245, 130, 32);
+            const QColor markerColor = isSelected ? selectedVertexColor : selection;
+            painter.setPen(QPen(markerColor, (isHovered ? 2.1 : isSelected ? 1.9 : 1.4) / zoomScale));
+            painter.setBrush(isSelected ? QBrush(QColor(255, 168, 68, 230)) : QBrush(QColor(255, 255, 255, 240)));
             painter.drawRect(handle);
             if (isSelected || isHovered) {
                 painter.setPen(Qt::NoPen);
-                painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : selection);
+                painter.setBrush(isSelected && !isHovered ? QColor(255, 255, 255) : markerColor);
                 painter.drawEllipse(QPointF(rect.x() + vertex.position.x, rect.y() + vertex.position.y),
                                     1.8 / zoomScale, 1.8 / zoomScale);
             }

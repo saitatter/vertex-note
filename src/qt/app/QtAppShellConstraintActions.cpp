@@ -63,13 +63,13 @@ void QtAppShell::editFixedLengthConstraint() {
 }
 
 void QtAppShell::translateSelectedVertices() {
-    if (!this->documentController.hasDocument() || this->documentController.selectedVertexIds().empty()) {
-        this->window.statusBar()->showMessage(QStringLiteral("Select one or more vertices first"), 3000);
+    if (!this->documentController.hasDocument() || !this->documentController.selectedGeometry()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Select geometry first"), 3000);
         return;
     }
 
     QDialog dialog(&this->window);
-    dialog.setWindowTitle(QStringLiteral("Translate Selected Vertices"));
+    dialog.setWindowTitle(QStringLiteral("Translate Selected Geometry"));
     auto* layout = new QVBoxLayout(&dialog);
     auto* form = new QFormLayout();
 
@@ -104,5 +104,28 @@ void QtAppShell::translateSelectedVertices() {
         this->window.statusBar()->showMessage(QStringLiteral("Translated selected vertices"), 3000);
     } else {
         this->window.statusBar()->showMessage(QStringLiteral("No vertex translation applied"), 3000);
+    }
+}
+
+void QtAppShell::rotateSelectedGeometry() {
+    if (!this->documentController.hasDocument() || !this->documentController.selectedGeometry()) {
+        this->window.statusBar()->showMessage(QStringLiteral("Select geometry first"), 3000);
+        return;
+    }
+
+    bool ok = false;
+    const double degrees = QInputDialog::getDouble(&this->window, QStringLiteral("Rotate Selected Geometry"),
+                                                   QStringLiteral("Angle:"), 15.0, -360.0, 360.0, 2, &ok);
+    if (!ok) {
+        return;
+    }
+
+    if (this->documentController.rotateSelectedGeometry(degrees)) {
+        this->window.canvas()->update();
+        markSessionDirty();
+        updateEditCommandStates();
+        this->window.statusBar()->showMessage(QStringLiteral("Rotated selected geometry"), 3000);
+    } else {
+        this->window.statusBar()->showMessage(QStringLiteral("No geometry rotation applied"), 3000);
     }
 }

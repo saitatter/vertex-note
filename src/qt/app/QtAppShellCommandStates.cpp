@@ -100,8 +100,9 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-circle", active == QtToolType::DrawConstructionCircle);
-    this->window.commandHost()->setCommandEnabled("geometry.translate-vertices",
-                                                  !this->documentController.selectedVertexIds().empty());
+    const bool hasGeometrySelection = this->documentController.selectedGeometry().has_value();
+    this->window.commandHost()->setCommandEnabled("geometry.translate-vertices", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.rotate-selection", hasGeometrySelection);
     syncToolbarWidgets();
 }
 

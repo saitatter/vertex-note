@@ -142,4 +142,34 @@ struct QtToolState {
                 return false;
         }
     }
+
+    [[nodiscard]] auto isStrokeDrawingTool() const -> bool {
+        switch (activeTool) {
+            case QtToolType::DrawLine:
+            case QtToolType::DrawRectangle:
+            case QtToolType::DrawEllipse:
+            case QtToolType::DrawArrow:
+            case QtToolType::DrawDoubleArrow:
+            case QtToolType::DrawCoordinateSystem:
+            case QtToolType::DrawSpline:
+            case QtToolType::ShapeRecognizer:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    [[nodiscard]] auto isVertexDrawingTool() const -> bool {
+        switch (activeTool) {
+            case QtToolType::DrawCircle:
+            case QtToolType::DrawArc:
+            case QtToolType::DrawEdge:
+            case QtToolType::DrawPolyline:
+            case QtToolType::DrawConstructionLine:
+            case QtToolType::DrawConstructionCircle:
+                return true;
+            default:
+                return false;
+        }
+    }
 };

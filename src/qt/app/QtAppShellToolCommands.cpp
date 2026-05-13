@@ -336,10 +336,15 @@ void QtAppShell::registerToolCommands() {
                         2500);
             });
     ch->registerCommand(
-            {.id = "geometry.translate-vertices", .text = "Translate Selected Vertices...",
-             .tooltip = "Move selected geometry vertices by an exact delta",
-             .menu = "Tools>Vertex Transform", .enabled = !this->documentController.selectedVertexIds().empty()},
+            {.id = "geometry.translate-vertices", .text = "Translate Selected Geometry...",
+             .tooltip = "Move selected vertices or the selected geometry object by an exact delta",
+             .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
             [this]() { translateSelectedVertices(); });
+    ch->registerCommand(
+            {.id = "geometry.rotate-selection", .text = "Rotate Selected Geometry...",
+             .tooltip = "Rotate selected geometry vertices or the selected geometry object",
+             .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() { rotateSelectedGeometry(); });
     ch->addMenuSeparator("Tools");
     ch->registerCommand(
             {.id = "constraint.coincident", .text = "Coincident", .tooltip = "Merge vertices", .shortcut = "Ctrl+Alt+C",

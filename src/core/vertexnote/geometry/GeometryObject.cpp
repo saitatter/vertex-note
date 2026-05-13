@@ -363,6 +363,21 @@ auto GeometryObject::insertVertexOnEdge(EdgeId edgeId, Vec2 position) -> std::op
     return inserted;
 }
 
+auto GeometryObject::splitEdgeAtVertex(EdgeId edgeId, VertexId vertexId) -> bool {
+    auto* target = edge(edgeId);
+    if (!target || !containsVertex(vertexId) || !containsVertex(target->start) || !containsVertex(target->end) ||
+        target->start == vertexId || target->end == vertexId ||
+        (target->kind != EdgeKind::Line && target->kind != EdgeKind::ConstructionLine)) {
+        return false;
+    }
+
+    const VertexId originalEnd = target->end;
+    const EdgeKind edgeKind = target->kind;
+    target->end = vertexId;
+    addEdge(edgeKind, vertexId, originalEnd);
+    return true;
+}
+
 auto GeometryObject::removeConstraint(ConstraintId id) -> bool {
     const auto oldSize = this->constraintList.size();
     this->constraintList.erase(std::remove_if(this->constraintList.begin(), this->constraintList.end(),

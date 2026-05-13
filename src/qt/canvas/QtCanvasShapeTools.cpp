@@ -290,7 +290,11 @@ void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
 }
 
 auto QtCanvas::snapShapePoint(std::size_t pageIndex, const QPointF& pagePoint) -> QPointF {
-    this->shapeSnapPoint = snapInputPagePoint(pageIndex, pagePoint, &this->shapeSnapKind);
+    const bool vertexWorkflow = this->currentToolState.isVertexDrawingTool();
+    const bool strokeWorkflow = this->currentToolState.isStrokeDrawingTool();
+    this->shapeSnapPoint =
+            snapInputPagePoint(pageIndex, pagePoint, &this->shapeSnapKind, vertexWorkflow,
+                               vertexWorkflow || strokeWorkflow);
     return this->shapeSnapPoint;
 }
 

@@ -12,6 +12,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <variant>
 #include <unordered_set>
 #include <utility>
 
@@ -30,12 +31,82 @@
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
+#include "vertexnote/geometry/GeometryTransform.h"
+#include "vertexnote/geometry/SurfaceMesh.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
 #include "vertexnote/snapping/GridSnapProvider.h"
 #include "vertexnote/snapping/ISnapProvider.h"
 #include "vertexnote/snapping/PageGeometryCollector.h"
 #include "vertexnote/snapping/SnapEngine.h"
 #include "view/render/PageRasterPreviewFactory.h"
+
+namespace {
+
+constexpr double PI = 3.14159265358979323846;
+
+[[nodiscard]] auto distance(vn::geom::Vec2 lhs, vn::geom::Vec2 rhs) -> double {
+    return std::hypot(rhs.x - lhs.x, rhs.y - lhs.y);
+}
+
+[[nodiscard]] auto projectionOnSegment(vn::geom::Vec2 point, vn::geom::Vec2 start, vn::geom::Vec2 end)
+        -> std::optional<vn::geom::Vec2> {
+    const double dx = end.x - start.x;
+    const double dy = end.y - start.y;
+    const double lengthSquared = dx * dx + dy * dy;
+    if (lengthSquared <= 1e-9) {
+        return std::nullopt;
+    }
+
+    const double t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared;
+    if (t < 0.0 || t > 1.0) {
+        return std::nullopt;
+    }
+    return vn::geom::Vec2{.x = start.x + t * dx, .y = start.y + t * dy};
+}
+
+[[nodiscard]] auto containsVertexId(const std::vector<vn::geom::VertexId>& vertices, vn::geom::VertexId vertex) -> bool {
+    return std::find(vertices.begin(), vertices.end(), vertex) != vertices.end();
+}
+
+[[nodiscard]] auto snapToEditableSelfEdge(const vn::geom::GeometryObject& object,
+                                          const std::vector<vn::geom::VertexId>& movingVertices,
+                                          vn::geom::Vec2 queryPoint, double zoom, double maxScreenDistance)
+        -> std::optional<vn::snap::SnapCandidate> {
+    std::optional<vn::snap::SnapCandidate> best;
+    for (const auto& edge: object.edges()) {
+        if ((edge.kind != vn::geom::EdgeKind::Line && edge.kind != vn::geom::EdgeKind::ConstructionLine) ||
+            containsVertexId(movingVertices, edge.start) || containsVertexId(movingVertices, edge.end)) {
+            continue;
+        }
+
+        const auto* start = object.vertex(edge.start);
+        const auto* end = object.vertex(edge.end);
+        if (!start || !end) {
+            continue;
+        }
+        auto projection = projectionOnSegment(queryPoint, start->position, end->position);
+        if (!projection) {
+            continue;
+        }
+
+        const double screenDistance = distance(queryPoint, *projection) * zoom;
+        if (screenDistance > maxScreenDistance) {
+            continue;
+        }
+        if (!best || screenDistance < best->screenDistance) {
+            best = vn::snap::SnapCandidate{.kind = vn::snap::SnapKind::EdgeProjection,
+                                           .pagePoint = *projection,
+                                           .screenDistance = screenDistance,
+                                           .priority = 50.0,
+                                           .object = object.objectId(),
+                                           .vertex = vn::geom::InvalidVertexId,
+                                           .edge = edge.id};
+        }
+    }
+    return best;
+}
+
+}  // namespace
 
 QtDocumentController::QtDocumentController() { newBlankDocument(); }
 
@@ -280,6 +351,7 @@ void QtDocumentController::clearInteractiveGeometryState() {
     this->selectedGeometryVertexIds.clear();
     this->selectedGeometryEdgeIds.clear();
     this->geometryDragState.reset();
+    this->geometryTransformState.reset();
 }
 
 auto QtDocumentController::hoveredGeometry() const -> const std::optional<QtGeometryHit>& {
@@ -391,6 +463,7 @@ auto QtDocumentController::snapPagePoint(std::size_t pageIndex, double pageX, do
 
     result.pagePoint = snapResult.pagePoint;
     result.snapKind = snapResult.candidate ? std::optional<vn::snap::SnapKind>(snapResult.candidate->kind) : std::nullopt;
+    result.snapCandidate = snapResult.candidate;
     result.snapped = true;
     return result;
 }
@@ -405,9 +478,9 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
                                       this->geometryDragState->objectId);
     vn::geom::Vec2 target = snapped.pagePoint;
     this->geometryDragState->snapKind = snapped.snapKind;
+    this->geometryDragState->snapCandidate = snapped.snapCandidate;
     this->geometryDragState->snapPoint = snapped.pagePoint;
 
-    bool changed = false;
     this->document->lock();
     auto* geometry = findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId);
     auto page = this->document->getPage(this->geometryDragState->pageIndex);
@@ -416,19 +489,30 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
         return false;
     }
 
-    if (this->geometryDragState->vertexIds.size() <= 1U) {
-        changed = geometry->setVertexPosition(this->geometryDragState->vertexId, target);
-    } else {
-        const vn::geom::Vec2 delta{target.x - this->geometryDragState->originalPosition.x,
-                                   target.y - this->geometryDragState->originalPosition.y};
-        for (std::size_t index = 0; index < this->geometryDragState->vertexIds.size() &&
-                                     index < this->geometryDragState->originalPositions.size();
-             ++index) {
-            const auto position = vn::geom::Vec2{this->geometryDragState->originalPositions[index].x + delta.x,
-                                                 this->geometryDragState->originalPositions[index].y + delta.y};
-            changed = geometry->setVertexPosition(this->geometryDragState->vertexIds[index], position) || changed;
+    if (options.geometryEnabled) {
+        if (auto selfSnap = snapToEditableSelfEdge(geometry->geometry(), this->geometryDragState->vertexIds, target,
+                                                  zoom, options.screenTolerance);
+            selfSnap && (!snapped.snapped || selfSnap->screenDistance < snapped.snapCandidate->screenDistance)) {
+            target = selfSnap->pagePoint;
+            this->geometryDragState->snapKind = selfSnap->kind;
+            this->geometryDragState->snapCandidate = selfSnap;
+            this->geometryDragState->snapPoint = selfSnap->pagePoint;
         }
     }
+
+    const vn::geom::Vec2 delta{target.x - this->geometryDragState->originalPosition.x,
+                               target.y - this->geometryDragState->originalPosition.y};
+    bool changed = std::abs(delta.x) > 1e-6 || std::abs(delta.y) > 1e-6;
+    auto transformed = vn::geom::transformedGeometry(
+            this->geometryDragState->beforeGeometry, this->geometryDragState->vertexIds,
+            vn::geom::GeometryTransform2D{
+                    .pivot = this->geometryDragState->originalPosition,
+                    .translation = delta,
+            });
+    if (this->geometryDragState->vertexIds.size() <= 1U) {
+        changed = transformed.setVertexPosition(this->geometryDragState->vertexId, target) || changed;
+    }
+    geometry->replaceGeometry(std::move(transformed));
     if (!geometry->geometry().constraints().empty()) {
         const vn::constraints::GeometryConstraintSolver solver;
         changed = solver.apply(geometry->geometry()).changed || changed;
@@ -463,21 +547,61 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
 }
 
 auto QtDocumentController::endGeometryVertexDrag() -> bool {
-    const bool changed = this->geometryDragState && this->geometryDragState->changed;
-    if (changed && this->document && this->geometryDragState) {
+    bool changed = this->geometryDragState && this->geometryDragState->changed;
+    if (this->document && this->geometryDragState) {
         this->document->lock();
         if (auto* geometry =
                     findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId)) {
+            std::vector<QtGeometryHistoryObjectState> linkedObjects;
+            const auto edgeSnapKind = this->geometryDragState->snapKind;
+            const auto edgeSnapCandidate = this->geometryDragState->snapCandidate;
+            if (edgeSnapCandidate && edgeSnapCandidate->edge != vn::geom::InvalidEdgeId &&
+                edgeSnapCandidate->object != vn::geom::InvalidObjectId &&
+                (edgeSnapKind == vn::snap::SnapKind::EdgeProjection ||
+                 edgeSnapKind == vn::snap::SnapKind::Midpoint)) {
+                if (auto* targetGeometry =
+                            findMutableGeometryElement(this->geometryDragState->pageIndex, edgeSnapCandidate->object)) {
+                    if (edgeSnapCandidate->object == this->geometryDragState->objectId) {
+                        if (targetGeometry->geometry().splitEdgeAtVertex(edgeSnapCandidate->edge,
+                                                                         this->geometryDragState->vertexId)) {
+                            changed = true;
+                        }
+                    } else {
+                        const auto beforeTarget = targetGeometry->geometry();
+                        if (targetGeometry->insertVertexOnEdge(edgeSnapCandidate->edge,
+                                                               this->geometryDragState->snapPoint)) {
+                            changed = true;
+                            linkedObjects.push_back(QtGeometryHistoryObjectState{
+                                    .pageIndex = this->geometryDragState->pageIndex,
+                                    .objectId = edgeSnapCandidate->object,
+                                    .before = beforeTarget,
+                                    .after = targetGeometry->geometry(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (!changed) {
+                this->document->unlock();
+                this->geometryDragState.reset();
+                return false;
+            }
+
             pushGeometryHistory({.pageIndex = this->geometryDragState->pageIndex,
                                  .objectId = this->geometryDragState->objectId,
                                  .before = this->geometryDragState->beforeGeometry,
                                  .after = geometry->geometry(),
+                                 .linkedObjects = std::move(linkedObjects),
                                  .text = this->geometryDragState->vertexIds.size() > 1U ? "Move geometry vertices"
-                                                                                         : "Move geometry vertex"});
+                                                                                        : "Move geometry vertex"});
         }
         this->document->unlock();
     }
     this->geometryDragState.reset();
+    if (changed) {
+        rebuildPageSnapshots();
+    }
     return changed;
 }
 
@@ -485,54 +609,222 @@ auto QtDocumentController::activeGeometryDrag() const -> const std::optional<QtG
     return this->geometryDragState;
 }
 
-auto QtDocumentController::translateSelectedVertices(double dx, double dy) -> bool {
-    if (!this->selectedGeometryHit || this->selectedGeometryVertexIds.empty() || !this->document ||
-        (dx == 0.0 && dy == 0.0)) {
+auto QtDocumentController::selectedGeometryTransformVertexIds(const vn::geom::GeometryObject& object) const
+        -> std::vector<vn::geom::VertexId> {
+    std::vector<vn::geom::VertexId> vertexIds;
+    if (!this->selectedGeometryVertexIds.empty()) {
+        vertexIds.reserve(this->selectedGeometryVertexIds.size());
+        for (auto vertexId: this->selectedGeometryVertexIds) {
+            if (object.vertex(vertexId) &&
+                std::find(vertexIds.begin(), vertexIds.end(), vertexId) == vertexIds.end()) {
+                vertexIds.push_back(vertexId);
+            }
+        }
+        return vertexIds;
+    }
+
+    if (!this->selectedGeometryEdgeIds.empty()) {
+        vertexIds.reserve(this->selectedGeometryEdgeIds.size() * 2U);
+        const auto appendVertex = [&](vn::geom::VertexId vertexId) {
+            if (object.vertex(vertexId) && std::find(vertexIds.begin(), vertexIds.end(), vertexId) == vertexIds.end()) {
+                vertexIds.push_back(vertexId);
+            }
+        };
+        for (auto edgeId: this->selectedGeometryEdgeIds) {
+            const auto* edge = object.edge(edgeId);
+            if (!edge) {
+                continue;
+            }
+            appendVertex(edge->start);
+            appendVertex(edge->end);
+            for (auto controlId: edge->controls) {
+                appendVertex(controlId);
+            }
+        }
+        return vertexIds;
+    }
+
+    vertexIds.reserve(object.vertices().size());
+    for (const auto& vertex: object.vertices()) {
+        vertexIds.push_back(vertex.id);
+    }
+    return vertexIds;
+}
+
+auto QtDocumentController::beginSelectedGeometryTransform() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
         return false;
     }
 
-    bool changed = false;
-    std::optional<vn::geom::GeometryObject> beforeGeometry;
-    std::optional<vn::geom::GeometryObject> afterGeometry;
     this->document->lock();
-    auto* geometry = findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
+    auto* geometry =
+            findMutableGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId);
     if (!geometry) {
         this->document->unlock();
         return false;
     }
 
-    beforeGeometry = geometry->geometry();
-    for (auto vertexId: this->selectedGeometryVertexIds) {
+    auto vertexIds = selectedGeometryTransformVertexIds(geometry->geometry());
+    if (vertexIds.empty()) {
+        this->document->unlock();
+        return false;
+    }
+
+    vn::geom::Vec2 center{};
+    std::size_t count = 0U;
+    for (auto vertexId: vertexIds) {
         if (const auto* vertex = geometry->geometry().vertex(vertexId)) {
-            changed = geometry->setVertexPosition(vertexId, {vertex->position.x + dx, vertex->position.y + dy}) || changed;
+            center.x += vertex->position.x;
+            center.y += vertex->position.y;
+            ++count;
         }
     }
-    if (changed && !geometry->geometry().constraints().empty()) {
-        const vn::constraints::GeometryConstraintSolver solver;
-        changed = solver.apply(geometry->geometry()).changed || changed;
+    if (count == 0U) {
+        this->document->unlock();
+        return false;
     }
-    if (changed) {
-        afterGeometry = geometry->geometry();
+    center.x /= static_cast<double>(count);
+    center.y /= static_cast<double>(count);
+
+    const bool transformedWholeObject = vertexIds.size() == geometry->geometry().vertices().size();
+    this->geometryTransformState = QtGeometryTransformState{
+            .pageIndex = this->selectedGeometryHit->pageIndex,
+            .objectId = this->selectedGeometryHit->hit.objectId,
+            .vertexIds = std::move(vertexIds),
+            .beforeGeometry = geometry->geometry(),
+            .currentGeometry = geometry->geometry(),
+            .center = center,
+            .transformedWholeObject = transformedWholeObject,
+    };
+    this->document->unlock();
+    return true;
+}
+
+auto QtDocumentController::updateSelectedGeometryTransform(double dx, double dy, double degrees) -> bool {
+    if (!this->geometryTransformState || !this->document) {
+        return false;
+    }
+
+    auto& state = *this->geometryTransformState;
+    const bool changed = std::abs(dx) > 1e-6 || std::abs(dy) > 1e-6 || std::abs(degrees) > 1e-6;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(state.pageIndex, state.objectId);
+    if (!geometry) {
+        this->document->unlock();
+        this->geometryTransformState.reset();
+        return false;
+    }
+
+    const double radians = degrees * PI / 180.0;
+    auto transformed = vn::geom::transformedGeometry(
+            state.beforeGeometry, state.vertexIds,
+            vn::geom::GeometryTransform2D{
+                    .pivot = state.center,
+                    .translation = vn::geom::Vec2{.x = dx, .y = dy},
+                    .rotationRadians = radians,
+            });
+
+    geometry->replaceGeometry(transformed);
+    state.currentGeometry = geometry->geometry();
+    state.currentDx = dx;
+    state.currentDy = dy;
+    state.currentDegrees = degrees;
+    state.changed = changed;
+
+    if (this->selectedGeometryHit) {
         if (this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
             if (const auto* vertex = geometry->geometry().vertex(this->selectedGeometryHit->hit.vertexId)) {
                 this->selectedGeometryHit->hit.point = Point(vertex->position.x, vertex->position.y);
             }
+        } else {
+            this->selectedGeometryHit->hit.point = Point(state.center.x + dx, state.center.y + dy);
         }
     }
     this->document->unlock();
 
-    if (!changed || !beforeGeometry || !afterGeometry) {
+    rebuildPageSnapshots();
+    return changed;
+}
+
+auto QtDocumentController::endSelectedGeometryTransform() -> bool {
+    if (!this->geometryTransformState) {
         return false;
     }
 
-    pushGeometryHistory({.pageIndex = this->selectedGeometryHit->pageIndex,
-                         .objectId = this->selectedGeometryHit->hit.objectId,
-                         .before = std::move(*beforeGeometry),
-                         .after = std::move(*afterGeometry),
-                         .text = this->selectedGeometryVertexIds.size() > 1U ? "Translate geometry vertices"
-                                                                             : "Translate geometry vertex"});
-    rebuildPageSnapshots();
+    auto state = std::move(*this->geometryTransformState);
+    this->geometryTransformState.reset();
+    if (!state.changed) {
+        return false;
+    }
+
+    const bool rotated = std::abs(state.currentDegrees) > 1e-6;
+    const bool translated = std::abs(state.currentDx) > 1e-6 || std::abs(state.currentDy) > 1e-6;
+    std::string text = "Transform geometry";
+    if (rotated && !translated) {
+        text = state.transformedWholeObject ? "Rotate geometry"
+                                            : (state.vertexIds.size() > 1U ? "Rotate geometry vertices"
+                                                                           : "Rotate geometry vertex");
+    } else if (!rotated && translated) {
+        text = state.transformedWholeObject ? "Translate geometry"
+                                            : (state.vertexIds.size() > 1U ? "Translate geometry vertices"
+                                                                           : "Translate geometry vertex");
+    }
+
+    pushGeometryHistory({.pageIndex = state.pageIndex,
+                         .objectId = state.objectId,
+                         .before = std::move(state.beforeGeometry),
+                         .after = std::move(state.currentGeometry),
+                         .text = std::move(text)});
     return true;
+}
+
+void QtDocumentController::cancelSelectedGeometryTransform() {
+    if (!this->geometryTransformState || !this->document) {
+        this->geometryTransformState.reset();
+        return;
+    }
+
+    auto state = std::move(*this->geometryTransformState);
+    this->geometryTransformState.reset();
+    this->document->lock();
+    if (auto* geometry = findMutableGeometryElement(state.pageIndex, state.objectId)) {
+        geometry->replaceGeometry(std::move(state.beforeGeometry));
+    }
+    this->document->unlock();
+    rebuildPageSnapshots();
+}
+
+auto QtDocumentController::activeGeometryTransform() const -> const std::optional<QtGeometryTransformState>& {
+    return this->geometryTransformState;
+}
+
+auto QtDocumentController::translateSelectedVertices(double dx, double dy) -> bool {
+    if (!this->selectedGeometryHit || !this->document || (dx == 0.0 && dy == 0.0)) {
+        return false;
+    }
+    if (!beginSelectedGeometryTransform()) {
+        return false;
+    }
+    if (!updateSelectedGeometryTransform(dx, dy, 0.0)) {
+        cancelSelectedGeometryTransform();
+        return false;
+    }
+    return endSelectedGeometryTransform();
+}
+
+auto QtDocumentController::rotateSelectedGeometry(double degrees) -> bool {
+    if (!this->selectedGeometryHit || !this->document || degrees == 0.0) {
+        return false;
+    }
+    if (!beginSelectedGeometryTransform()) {
+        return false;
+    }
+    if (!updateSelectedGeometryTransform(0.0, 0.0, degrees)) {
+        cancelSelectedGeometryTransform();
+        return false;
+    }
+    return endSelectedGeometryTransform();
 }
 
 auto QtDocumentController::deleteSelectedGeometry() -> bool {
@@ -639,19 +931,44 @@ auto QtDocumentController::insertVertexOnSelectedEdge() -> bool {
     return changed;
 }
 
-auto QtDocumentController::canUndoGeometryEdit() const -> bool { return !this->geometryUndoHistory.empty(); }
+auto QtDocumentController::canUndoGeometryEdit() const -> bool {
+    return !this->geometryUndoHistory.empty() ||
+           (!this->undoHistory.empty() && std::holds_alternative<QtGeometryHistoryEntry>(this->undoHistory.back().data));
+}
 
-auto QtDocumentController::canRedoGeometryEdit() const -> bool { return !this->geometryRedoHistory.empty(); }
+auto QtDocumentController::canRedoGeometryEdit() const -> bool {
+    return !this->geometryRedoHistory.empty() ||
+           (!this->redoHistory.empty() && std::holds_alternative<QtGeometryHistoryEntry>(this->redoHistory.back().data));
+}
 
 auto QtDocumentController::undoGeometryEditText() const -> std::string {
-    return this->geometryUndoHistory.empty() ? std::string{} : this->geometryUndoHistory.back().text;
+    if (!this->geometryUndoHistory.empty()) {
+        return this->geometryUndoHistory.back().text;
+    }
+    if (!this->undoHistory.empty()) {
+        if (const auto* entry = std::get_if<QtGeometryHistoryEntry>(&this->undoHistory.back().data)) {
+            return entry->text;
+        }
+    }
+    return {};
 }
 
 auto QtDocumentController::redoGeometryEditText() const -> std::string {
-    return this->geometryRedoHistory.empty() ? std::string{} : this->geometryRedoHistory.back().text;
+    if (!this->geometryRedoHistory.empty()) {
+        return this->geometryRedoHistory.back().text;
+    }
+    if (!this->redoHistory.empty()) {
+        if (const auto* entry = std::get_if<QtGeometryHistoryEntry>(&this->redoHistory.back().data)) {
+            return entry->text;
+        }
+    }
+    return {};
 }
 
 auto QtDocumentController::undoGeometryEdit() -> bool {
+    if (!this->undoHistory.empty() && std::holds_alternative<QtGeometryHistoryEntry>(this->undoHistory.back().data)) {
+        return undo();
+    }
     if (this->geometryUndoHistory.empty()) {
         return false;
     }
@@ -668,6 +985,9 @@ auto QtDocumentController::undoGeometryEdit() -> bool {
 }
 
 auto QtDocumentController::redoGeometryEdit() -> bool {
+    if (!this->redoHistory.empty() && std::holds_alternative<QtGeometryHistoryEntry>(this->redoHistory.back().data)) {
+        return redo();
+    }
     if (this->geometryRedoHistory.empty()) {
         return false;
     }
@@ -759,8 +1079,7 @@ void QtDocumentController::clearGeometryHistory() {
 }
 
 void QtDocumentController::pushGeometryHistory(QtGeometryHistoryEntry entry) {
-    this->geometryRedoHistory.clear();
-    this->geometryUndoHistory.push_back(std::move(entry));
+    pushHistory(QtHistoryEntry{.data = std::move(entry)});
 }
 
 auto QtDocumentController::applyGeometryHistoryEntry(const QtGeometryHistoryEntry& entry, bool useAfterState)
@@ -777,6 +1096,14 @@ auto QtDocumentController::applyGeometryHistoryEntry(const QtGeometryHistoryEntr
     }
 
     geometry->replaceGeometry(useAfterState ? entry.after : entry.before);
+    for (const auto& linked: entry.linkedObjects) {
+        auto* linkedGeometry = findMutableGeometryElement(linked.pageIndex, linked.objectId);
+        if (!linkedGeometry) {
+            this->document->unlock();
+            return false;
+        }
+        linkedGeometry->replaceGeometry(useAfterState ? linked.after : linked.before);
+    }
     this->document->unlock();
 
     clearInteractiveGeometryState();

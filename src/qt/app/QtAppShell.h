@@ -84,6 +84,7 @@ private:
     [[nodiscard]] auto ensureSelectionToolButton() -> QToolButton*;
     [[nodiscard]] auto createStrokeDrawingToolButton() -> QWidget*;
     [[nodiscard]] auto createVertexDrawingToolButton() -> QWidget*;
+    [[nodiscard]] auto ensureGeometryTransformButton() -> QToolButton*;
     [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
     [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
     void ensureFontToolbarWidgets();
@@ -143,6 +144,7 @@ private:
     void deleteConstraints();
     void editFixedLengthConstraint();
     void translateSelectedVertices();
+    void rotateSelectedGeometry();
     void toggleAudioRecording();
     void toggleAudioPausePlayback();
     void stopAudioPlayback();
@@ -253,6 +255,7 @@ private:
     QToolButton* selectionToolButton = nullptr;
     std::vector<QToolButton*> strokeDrawingToolButtons;
     std::vector<QToolButton*> vertexDrawingToolButtons;
+    QToolButton* geometryTransformButton = nullptr;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
