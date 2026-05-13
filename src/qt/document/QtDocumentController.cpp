@@ -107,6 +107,33 @@ constexpr double PI = 3.14159265358979323846;
     return best;
 }
 
+[[nodiscard]] auto snapToEditableSelfVertex(const vn::geom::GeometryObject& object,
+                                            const std::vector<vn::geom::VertexId>& movingVertices,
+                                            vn::geom::Vec2 queryPoint, double zoom, double maxScreenDistance)
+        -> std::optional<vn::snap::SnapCandidate> {
+    std::optional<vn::snap::SnapCandidate> best;
+    for (const auto& vertex: object.vertices()) {
+        if (containsVertexId(movingVertices, vertex.id)) {
+            continue;
+        }
+
+        const double screenDistance = distance(queryPoint, vertex.position) * zoom;
+        if (screenDistance > maxScreenDistance) {
+            continue;
+        }
+        if (!best || screenDistance < best->screenDistance) {
+            best = vn::snap::SnapCandidate{.kind = vn::snap::SnapKind::ExplicitVertex,
+                                           .pagePoint = vertex.position,
+                                           .screenDistance = screenDistance,
+                                           .priority = 100.0,
+                                           .object = object.objectId(),
+                                           .vertex = vertex.id,
+                                           .edge = vn::geom::InvalidEdgeId};
+        }
+    }
+    return best;
+}
+
 [[nodiscard]] auto mergedGeometryForEdgeWeld(const vn::geom::GeometryObject& source,
                                              const vn::geom::GeometryObject& target,
                                              vn::geom::EdgeId targetEdgeId,
@@ -194,6 +221,95 @@ constexpr double PI = 3.14159265358979323846;
                     break;
                 }
                 edges.push_back(edgeIt->second.front());
+            }
+            if (!valid) {
+                continue;
+            }
+            merged.addConstraint(constraint.kind, std::move(vertices), std::move(edges), constraint.value);
+        }
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    }
+
+    return merged;
+}
+
+[[nodiscard]] auto mergedGeometryForVertexWeld(const vn::geom::GeometryObject& source,
+                                               const vn::geom::GeometryObject& target,
+                                               vn::geom::VertexId targetVertexId,
+                                               vn::geom::VertexId weldVertexId)
+        -> std::optional<vn::geom::GeometryObject> {
+    if (!source.vertex(weldVertexId) || !target.vertex(targetVertexId)) {
+        return std::nullopt;
+    }
+
+    vn::geom::GeometryObject merged = source;
+    std::unordered_map<vn::geom::VertexId, vn::geom::VertexId> vertexMap;
+    std::unordered_map<vn::geom::EdgeId, vn::geom::EdgeId> edgeMap;
+    vertexMap[targetVertexId] = weldVertexId;
+
+    try {
+        for (const auto& vertex: target.vertices()) {
+            if (vertex.id == targetVertexId) {
+                continue;
+            }
+            vertexMap[vertex.id] = merged.addVertex(vertex.position, vertex.flags);
+        }
+
+        for (const auto& edge: target.edges()) {
+            const auto startIt = vertexMap.find(edge.start);
+            const auto endIt = vertexMap.find(edge.end);
+            if (startIt == vertexMap.end() || endIt == vertexMap.end() ||
+                (startIt->second == endIt->second &&
+                 (edge.kind == vn::geom::EdgeKind::Line || edge.kind == vn::geom::EdgeKind::ConstructionLine))) {
+                continue;
+            }
+
+            std::vector<vn::geom::VertexId> controls;
+            controls.reserve(edge.controls.size());
+            bool validControls = true;
+            for (const auto controlId: edge.controls) {
+                const auto controlIt = vertexMap.find(controlId);
+                if (controlIt == vertexMap.end()) {
+                    validControls = false;
+                    break;
+                }
+                controls.push_back(controlIt->second);
+            }
+            if (!validControls) {
+                continue;
+            }
+            edgeMap[edge.id] = merged.addEdge(edge.kind, startIt->second, endIt->second, std::move(controls));
+        }
+
+        for (const auto& constraint: target.constraints()) {
+            std::vector<vn::geom::VertexId> vertices;
+            vertices.reserve(constraint.vertices.size());
+            bool valid = true;
+            for (const auto vertexId: constraint.vertices) {
+                const auto vertexIt = vertexMap.find(vertexId);
+                if (vertexIt == vertexMap.end()) {
+                    valid = false;
+                    break;
+                }
+                vertices.push_back(vertexIt->second);
+            }
+            if (!valid) {
+                continue;
+            }
+
+            std::ranges::sort(vertices);
+            vertices.erase(std::unique(vertices.begin(), vertices.end()), vertices.end());
+
+            std::vector<vn::geom::EdgeId> edges;
+            edges.reserve(constraint.edges.size());
+            for (const auto edgeId: constraint.edges) {
+                const auto edgeIt = edgeMap.find(edgeId);
+                if (edgeIt == edgeMap.end()) {
+                    valid = false;
+                    break;
+                }
+                edges.push_back(edgeIt->second);
             }
             if (!valid) {
                 continue;
@@ -591,9 +707,17 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
     }
 
     if (options.geometryEnabled) {
-        if (auto selfSnap = snapToEditableSelfEdge(geometry->geometry(), this->geometryDragState->vertexIds, target,
-                                                  zoom, options.screenTolerance);
-            selfSnap && (!snapped.snapped || selfSnap->screenDistance < snapped.snapCandidate->screenDistance)) {
+        std::optional<vn::snap::SnapCandidate> selfSnap;
+        if (auto vertexSnap = snapToEditableSelfVertex(geometry->geometry(), this->geometryDragState->vertexIds, target,
+                                                       zoom, options.screenTolerance)) {
+            selfSnap = vertexSnap;
+        }
+        if (auto edgeSnap = snapToEditableSelfEdge(geometry->geometry(), this->geometryDragState->vertexIds, target,
+                                                   zoom, options.screenTolerance);
+            edgeSnap && (!selfSnap || edgeSnap->screenDistance < selfSnap->screenDistance)) {
+            selfSnap = edgeSnap;
+        }
+        if (selfSnap && (!snapped.snapped || selfSnap->screenDistance < snapped.snapCandidate->screenDistance)) {
             target = selfSnap->pagePoint;
             this->geometryDragState->snapKind = selfSnap->kind;
             this->geometryDragState->snapCandidate = selfSnap;
@@ -655,37 +779,60 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                     findMutableGeometryElement(this->geometryDragState->pageIndex, this->geometryDragState->objectId)) {
             std::vector<QtGeometryHistoryObjectState> linkedObjects;
             std::vector<QtGeometryHistoryRemovedElement> removedElements;
-            const auto edgeSnapKind = this->geometryDragState->snapKind;
-            const auto edgeSnapCandidate = this->geometryDragState->snapCandidate;
-            if (edgeSnapCandidate && edgeSnapCandidate->edge != vn::geom::InvalidEdgeId &&
-                edgeSnapCandidate->object != vn::geom::InvalidObjectId &&
-                (edgeSnapKind == vn::snap::SnapKind::EdgeProjection ||
-                 edgeSnapKind == vn::snap::SnapKind::Midpoint)) {
+            const auto snapKind = this->geometryDragState->snapKind;
+            const auto snapCandidate = this->geometryDragState->snapCandidate;
+            if (snapCandidate && snapCandidate->vertex != vn::geom::InvalidVertexId &&
+                snapCandidate->object != vn::geom::InvalidObjectId &&
+                snapKind == vn::snap::SnapKind::ExplicitVertex) {
                 if (auto* targetGeometry =
-                            findMutableGeometryElement(this->geometryDragState->pageIndex, edgeSnapCandidate->object)) {
-                    if (edgeSnapCandidate->object == this->geometryDragState->objectId) {
-                        if (targetGeometry->geometry().splitEdgeAtVertex(edgeSnapCandidate->edge,
+                            findMutableGeometryElement(this->geometryDragState->pageIndex, snapCandidate->object)) {
+                    if (snapCandidate->object == this->geometryDragState->objectId) {
+                        if (geometry->geometry().mergeVertexInto(this->geometryDragState->vertexId,
+                                                                 snapCandidate->vertex)) {
+                            changed = true;
+                        }
+                    } else if (auto merged =
+                                       mergedGeometryForVertexWeld(geometry->geometry(), targetGeometry->geometry(),
+                                                                   snapCandidate->vertex,
+                                                                   this->geometryDragState->vertexId);
+                               merged) {
+                        if (auto removedTarget =
+                                    removeGeometryElement(this->geometryDragState->pageIndex, snapCandidate->object)) {
+                            geometry->replaceGeometry(std::move(*merged));
+                            changed = true;
+                            removedElements.push_back(std::move(*removedTarget));
+                        }
+                    }
+                }
+            } else if (snapCandidate && snapCandidate->edge != vn::geom::InvalidEdgeId &&
+                       snapCandidate->object != vn::geom::InvalidObjectId &&
+                       (snapKind == vn::snap::SnapKind::EdgeProjection ||
+                        snapKind == vn::snap::SnapKind::Midpoint)) {
+                if (auto* targetGeometry =
+                            findMutableGeometryElement(this->geometryDragState->pageIndex, snapCandidate->object)) {
+                    if (snapCandidate->object == this->geometryDragState->objectId) {
+                        if (targetGeometry->geometry().splitEdgeAtVertex(snapCandidate->edge,
                                                                          this->geometryDragState->vertexId)) {
                             changed = true;
                         }
                     } else {
                         const auto beforeTarget = targetGeometry->geometry();
                         if (auto merged = mergedGeometryForEdgeWeld(geometry->geometry(), beforeTarget,
-                                                                    edgeSnapCandidate->edge,
+                                                                    snapCandidate->edge,
                                                                     this->geometryDragState->vertexId);
                             merged) {
                             if (auto removedTarget = removeGeometryElement(this->geometryDragState->pageIndex,
-                                                                           edgeSnapCandidate->object)) {
+                                                                           snapCandidate->object)) {
                                 geometry->replaceGeometry(std::move(*merged));
                                 changed = true;
                                 removedElements.push_back(std::move(*removedTarget));
                             }
-                        } else if (targetGeometry->insertVertexOnEdge(edgeSnapCandidate->edge,
+                        } else if (targetGeometry->insertVertexOnEdge(snapCandidate->edge,
                                                                        this->geometryDragState->snapPoint)) {
                             changed = true;
                             linkedObjects.push_back(QtGeometryHistoryObjectState{
                                     .pageIndex = this->geometryDragState->pageIndex,
-                                    .objectId = edgeSnapCandidate->object,
+                                    .objectId = snapCandidate->object,
                                     .before = beforeTarget,
                                     .after = targetGeometry->geometry(),
                             });

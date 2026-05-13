@@ -410,6 +410,44 @@ TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOwnEdgeSplitsEd
     EXPECT_EQ(5U, redone.front().edges.size());
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOwnVertexWeldsTopologyWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 10.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            49.0, 10.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto welded = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, welded.size());
+    EXPECT_EQ(2U, welded.front().vertices.size());
+    EXPECT_EQ(1U, welded.front().edges.size());
+    EXPECT_DOUBLE_EQ(50.0, welded.front().edges.front().start.x);
+    EXPECT_DOUBLE_EQ(10.0, welded.front().edges.front().start.y);
+    EXPECT_DOUBLE_EQ(90.0, welded.front().edges.front().end.x);
+    EXPECT_DOUBLE_EQ(10.0, welded.front().edges.front().end.y);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(3U, undone.front().vertices.size());
+    EXPECT_EQ(2U, undone.front().edges.size());
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(2U, redone.front().vertices.size());
+    EXPECT_EQ(1U, redone.front().edges.size());
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOtherObjectEdgeWeldsIntoOneMeshWithUndoRedo) {
     QtDocumentController controller;
     ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 10.0, 110.0, 10.0, Colors::black, 1.0));
@@ -452,6 +490,43 @@ TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOtherObjectEdge
     ASSERT_EQ(1U, redone.size());
     EXPECT_EQ(4U, redone.front().vertices.size());
     EXPECT_EQ(3U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOtherObjectVertexWeldsIntoOneMeshWithUndoRedo) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 10.0, 110.0, 10.0, Colors::black, 1.0));
+    ASSERT_NE(nullptr, controller.createEdge(0U, 40.0, 50.0, 80.0, 50.0, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 40.0, 50.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            11.0, 10.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto welded = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, welded.size());
+    EXPECT_EQ(3U, welded.front().vertices.size());
+    EXPECT_EQ(2U, welded.front().edges.size());
+    const auto incidentEdges = std::ranges::count_if(welded.front().edges, [](const auto& edge) {
+        return (edge.start.x == 10.0 && edge.start.y == 10.0) || (edge.end.x == 10.0 && edge.end.y == 10.0);
+    });
+    EXPECT_GE(incidentEdges, 2);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+    EXPECT_EQ(2U, undone[0].vertices.size());
+    EXPECT_EQ(2U, undone[1].vertices.size());
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(3U, redone.front().vertices.size());
+    EXPECT_EQ(2U, redone.front().edges.size());
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionTargetsGeometryVerticesInsteadOfWholeShape) {

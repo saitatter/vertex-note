@@ -378,6 +378,51 @@ auto GeometryObject::splitEdgeAtVertex(EdgeId edgeId, VertexId vertexId) -> bool
     return true;
 }
 
+auto GeometryObject::mergeVertexInto(VertexId source, VertexId target) -> bool {
+    if (source == target || !containsVertex(source) || !containsVertex(target)) {
+        return false;
+    }
+
+    for (auto& edge: this->edgeList) {
+        if (edge.start == source) {
+            edge.start = target;
+        }
+        if (edge.end == source) {
+            edge.end = target;
+        }
+        for (auto& control: edge.controls) {
+            if (control == source) {
+                control = target;
+            }
+        }
+    }
+
+    this->edgeList.erase(std::remove_if(this->edgeList.begin(), this->edgeList.end(),
+                                        [](const Edge& edge) {
+                                            return edge.start == edge.end &&
+                                                   (edge.kind == EdgeKind::Line ||
+                                                    edge.kind == EdgeKind::ConstructionLine);
+                                        }),
+                         this->edgeList.end());
+
+    for (auto& constraint: this->constraintList) {
+        for (auto& vertex: constraint.vertices) {
+            if (vertex == source) {
+                vertex = target;
+            }
+        }
+        std::ranges::sort(constraint.vertices);
+        constraint.vertices.erase(std::unique(constraint.vertices.begin(), constraint.vertices.end()),
+                                  constraint.vertices.end());
+    }
+
+    this->vertexList.erase(std::remove_if(this->vertexList.begin(), this->vertexList.end(),
+                                          [source](const Vertex& vertex) { return vertex.id == source; }),
+                           this->vertexList.end());
+    cleanupDanglingVertices();
+    return true;
+}
+
 auto GeometryObject::removeConstraint(ConstraintId id) -> bool {
     const auto oldSize = this->constraintList.size();
     this->constraintList.erase(std::remove_if(this->constraintList.begin(), this->constraintList.end(),

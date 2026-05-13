@@ -57,6 +57,7 @@ public:
     [[nodiscard]] auto removeEdge(EdgeId id) -> bool;
     [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
     [[nodiscard]] auto splitEdgeAtVertex(EdgeId edge, VertexId vertex) -> bool;
+    [[nodiscard]] auto mergeVertexInto(VertexId source, VertexId target) -> bool;
     [[nodiscard]] auto removeConstraint(ConstraintId id) -> bool;
     [[nodiscard]] auto replaceConstraint(Constraint constraint) -> bool;
     void move(double dx, double dy);
