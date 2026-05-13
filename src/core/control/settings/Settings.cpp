@@ -3,6 +3,7 @@
 #include <algorithm>    // for max
 #include <array>
 #include <charconv>
+#include <cctype>
 #include <cstdint>      // for uint32_t, int32_t
 #include <cstdio>       // for sscanf, size_t
 #include <cstdlib>      // for atoi
@@ -109,18 +110,29 @@ auto parseInt(const xmlChar* value) -> long long { return std::strtoll(xmlText(v
 
 auto parseUInt(const xmlChar* value) -> unsigned long long { return std::strtoull(xmlText(value), nullptr, 10); }
 
+auto startsWithMinus(const xmlChar* value) -> bool {
+    const char* text = xmlText(value);
+    if (!text) {
+        return false;
+    }
+    while (*text != '\0' && std::isspace(static_cast<unsigned char>(*text)) != 0) {
+        ++text;
+    }
+    return *text == '-';
+}
+
 template <typename T>
 auto parseIntAs(const xmlChar* value) -> T {
-    const long long parsed = parseInt(value);
     if constexpr (std::is_signed_v<T>) {
+        const long long parsed = parseInt(value);
         const auto minValue = static_cast<long long>(std::numeric_limits<T>::min());
         const auto maxValue = static_cast<long long>(std::numeric_limits<T>::max());
         return static_cast<T>(std::clamp(parsed, minValue, maxValue));
     } else {
-        if (parsed <= 0) {
+        if (startsWithMinus(value)) {
             return T{};
         }
-        const auto unsignedParsed = static_cast<unsigned long long>(parsed);
+        const auto unsignedParsed = parseUInt(value);
         const auto maxValue = static_cast<unsigned long long>(std::numeric_limits<T>::max());
         return static_cast<T>(std::min(unsignedParsed, maxValue));
     }
@@ -128,6 +140,9 @@ auto parseIntAs(const xmlChar* value) -> T {
 
 template <typename T>
 auto parseUIntAs(const xmlChar* value) -> T {
+    if (startsWithMinus(value)) {
+        return T{};
+    }
     const unsigned long long parsed = parseUInt(value);
     const auto maxValue = static_cast<unsigned long long>(std::numeric_limits<T>::max());
     return static_cast<T>(std::min(parsed, maxValue));
