@@ -87,6 +87,7 @@ struct QtSettings {
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     int vertexSnapMarkerSize = 15;
+    QtGeometrySelectionMode geometrySelectionModeDefault = QtGeometrySelectionMode::Vertex;
     double strokeRecognizerMinSize = 40.0;
     bool snapRecognizedShapesEnabled = false;
     int laserPointerFadeOutMs = 1500;
@@ -248,6 +249,7 @@ private:
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;
     QDoubleSpinBox* snapGridSizeSpin = nullptr;
     QSpinBox* vertexSnapMarkerSizeSpin = nullptr;
+    QComboBox* geometrySelectionModeCombo = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QCheckBox* snapRecognizedShapesCheck = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;

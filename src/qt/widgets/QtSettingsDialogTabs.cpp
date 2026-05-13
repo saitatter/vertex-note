@@ -295,6 +295,16 @@ void QtSettingsDialog::addToolsTab(QTabWidget* tabs, const QtSettings& current) 
     this->vertexSnapMarkerSizeSpin->setValue(current.vertexSnapMarkerSize);
     this->vertexSnapMarkerSizeSpin->setSuffix(QStringLiteral(" px"));
     vertexToolsLayout->addRow(QStringLiteral("Vertex snap marker size:"), this->vertexSnapMarkerSizeSpin);
+
+    this->geometrySelectionModeCombo = new QComboBox(vertexToolsGroup);
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Vertex"), static_cast<int>(QtGeometrySelectionMode::Vertex));
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Edge"), static_cast<int>(QtGeometrySelectionMode::Edge));
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Object"), static_cast<int>(QtGeometrySelectionMode::Object));
+    const int geometrySelectionModeIndex =
+            this->geometrySelectionModeCombo->findData(static_cast<int>(current.geometrySelectionModeDefault));
+    this->geometrySelectionModeCombo->setCurrentIndex(std::max(0, geometrySelectionModeIndex));
+    vertexToolsLayout->addRow(QStringLiteral("Default selection mode:"), this->geometrySelectionModeCombo);
+
     vertexToolsGroup->setLayout(vertexToolsLayout);
     toolsLayout->addRow(vertexToolsGroup);
 

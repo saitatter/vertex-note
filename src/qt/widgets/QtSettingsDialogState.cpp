@@ -139,6 +139,8 @@ auto QtSettingsDialog::settings() const -> QtSettings {
             .snapGridTolerance = this->snapGridToleranceSpin->value(),
             .snapGridSize = this->snapGridSizeSpin->value(),
             .vertexSnapMarkerSize = this->vertexSnapMarkerSizeSpin->value(),
+            .geometrySelectionModeDefault = static_cast<QtGeometrySelectionMode>(
+                    this->geometrySelectionModeCombo->currentData().toInt()),
             .strokeRecognizerMinSize = this->strokeRecognizerMinSizeSpin->value(),
             .snapRecognizedShapesEnabled = this->snapRecognizedShapesCheck->isChecked(),
             .laserPointerFadeOutMs = this->laserPointerFadeOutSpin->value(),

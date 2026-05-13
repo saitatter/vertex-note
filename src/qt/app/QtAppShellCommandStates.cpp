@@ -56,6 +56,7 @@ void QtAppShell::setGridSnapEnabled(bool enabled) {
 void QtAppShell::setGeometrySelectionMode(QtGeometrySelectionMode mode) {
     auto& toolState = this->window.canvas()->toolState();
     toolState.geometrySelectionMode = mode;
+    this->currentSettings.geometrySelectionModeDefault = mode;
     if (toolState.activeTool != QtToolType::SelectObject && toolState.activeTool != QtToolType::SelectRect) {
         this->window.canvas()->setActiveTool(QtToolType::SelectObject);
         this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());

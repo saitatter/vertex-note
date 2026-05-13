@@ -78,6 +78,7 @@ void QtAppShell::showSettingsDialog() {
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", this->currentSettings.gridSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", this->currentSettings.rotationSnapDefault);
     this->window.commandHost()->setCommandChecked("view.toggle-touch-drawing", this->currentSettings.touchDrawingDefault);
+    updateToolCommandStates();
 
     this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
     if (this->currentSettings.toolbarProfileId != previousToolbarProfileId ||

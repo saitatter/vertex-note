@@ -140,6 +140,7 @@ void QtAppShell::applyRuntimeSettings() {
     ts.fontSize = this->currentSettings.defaultFontSize;
     ts.pressureSensitive = this->currentSettings.defaultPressureSensitive;
     ts.eraserMode = this->currentSettings.defaultEraserMode;
+    ts.geometrySelectionMode = this->currentSettings.geometrySelectionModeDefault;
 
     canvas->setPressureOptions(this->currentSettings.minimumPressure, this->currentSettings.pressureMultiplier,
                                this->currentSettings.pressureGuessing);

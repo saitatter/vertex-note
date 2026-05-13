@@ -29,6 +29,16 @@ auto settingsPointerAction(QSettings& settings, const QString& key, QtPointerBut
     return static_cast<QtPointerButtonAction>(settings.value(key, static_cast<int>(fallback)).toInt());
 }
 
+auto settingsGeometrySelectionMode(QSettings& settings, const QString& key,
+                                   QtGeometrySelectionMode fallback) -> QtGeometrySelectionMode {
+    const int value = settings.value(key, static_cast<int>(fallback)).toInt();
+    if (value < static_cast<int>(QtGeometrySelectionMode::Vertex) ||
+        value > static_cast<int>(QtGeometrySelectionMode::Object)) {
+        return fallback;
+    }
+    return static_cast<QtGeometrySelectionMode>(value);
+}
+
 void applyQtPreferredLocale(const std::string& preferredLocale) {
     qputenv("LANGUAGE", QByteArray(preferredLocale.c_str(), static_cast<qsizetype>(preferredLocale.size())));
 }
@@ -211,6 +221,9 @@ void QtAppShell::loadPersistentUiState() {
                                       this->currentSettings.vertexSnapMarkerSize)
                                .toInt(),
                        8, 48);
+    this->currentSettings.geometrySelectionModeDefault =
+            settingsGeometrySelectionMode(settings, QStringLiteral("tools/geometrySelectionMode"),
+                                          this->currentSettings.geometrySelectionModeDefault);
     this->currentSettings.strokeRecognizerMinSize =
             settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
                     .toDouble();
