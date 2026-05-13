@@ -850,12 +850,7 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
             if (this->documentController && this->documentController->hoveredGeometry()) {
                 selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
                 this->documentController->clearElementSelection();
-                if (this->documentController->selectedGeometry() &&
-                    this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
-                    if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
-                        setCursor(Qt::ClosedHandCursor);
-                    }
-                }
+                static_cast<void>(beginSelectedGeometryMoveAtScreen(event->position()));
             } else {
                 selectElementAtScreen(event->position(), event->modifiers().testFlag(Qt::ShiftModifier));
             }
@@ -910,12 +905,7 @@ void QtCanvas::mousePressEvent(QMouseEvent* event) {
         }
         updateGeometryHover(event->position());
         selectHoveredGeometry(event->modifiers().testFlag(Qt::ShiftModifier));
-        if (this->documentController && this->documentController->selectedGeometry() &&
-            this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
-            if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
-                setCursor(Qt::ClosedHandCursor);
-            }
-        }
+        static_cast<void>(beginSelectedGeometryMoveAtScreen(event->position()));
         event->accept();
         return;
     }
@@ -1702,6 +1692,26 @@ void QtCanvas::selectHoveredGeometry(bool additive) {
     }
     update();
     Q_EMIT selectionStateChanged();
+}
+
+auto QtCanvas::beginSelectedGeometryMoveAtScreen(const QPointF& screenPoint) -> bool {
+    if (!this->documentController || !this->documentController->selectedGeometry()) {
+        return false;
+    }
+
+    if (this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Vertex &&
+        this->documentController->selectedGeometry()->hit.type == vn::view::render::GeometryHitType::Vertex) {
+        if (this->documentController->beginGeometryVertexDrag(*this->documentController->selectedGeometry())) {
+            setCursor(Qt::ClosedHandCursor);
+            return true;
+        }
+        return false;
+    }
+
+    if (beginGeometryTransformAtScreen(GeometryTransformHandle::TranslateXY, screenPoint)) {
+        return true;
+    }
+    return false;
 }
 
 auto QtCanvas::selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds> {

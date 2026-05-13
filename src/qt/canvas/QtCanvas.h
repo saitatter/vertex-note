@@ -212,6 +212,7 @@ private:
     void updateGeometryHover(const QPointF& screenPoint);
     void clearGeometryHover();
     void selectHoveredGeometry(bool additive = false);
+    [[nodiscard]] auto beginSelectedGeometryMoveAtScreen(const QPointF& screenPoint) -> bool;
     [[nodiscard]] auto selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds>;
     [[nodiscard]] auto geometryTransformHandleAtScreen(const QPointF& screenPoint) const -> GeometryTransformHandle;
     [[nodiscard]] auto beginGeometryTransformAtScreen(GeometryTransformHandle handle, const QPointF& screenPoint)
