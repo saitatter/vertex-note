@@ -84,7 +84,7 @@ private:
     [[nodiscard]] auto ensureSelectionToolButton() -> QToolButton*;
     [[nodiscard]] auto createStrokeDrawingToolButton() -> QWidget*;
     [[nodiscard]] auto createVertexDrawingToolButton() -> QWidget*;
-    [[nodiscard]] auto ensureGeometryTransformButton() -> QToolButton*;
+    [[nodiscard]] auto createGeometryTransformToolButton() -> QWidget*;
     [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
     [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
     void ensureFontToolbarWidgets();
@@ -256,7 +256,6 @@ private:
     QToolButton* selectionToolButton = nullptr;
     std::vector<QToolButton*> strokeDrawingToolButtons;
     std::vector<QToolButton*> vertexDrawingToolButtons;
-    QToolButton* geometryTransformButton = nullptr;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;

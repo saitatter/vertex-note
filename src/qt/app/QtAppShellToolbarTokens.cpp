@@ -107,7 +107,7 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "DRAW_STROKE") { toolbar->addWidget(createStrokeDrawingToolButton()); return; }
     if (token == "DRAW_VERTEX") { toolbar->addWidget(createVertexDrawingToolButton()); return; }
     if (token == "GEOMETRY_TRANSFORM" || token == "VERTEX_TRANSFORM") {
-        toolbar->addWidget(ensureGeometryTransformButton());
+        toolbar->addWidget(createGeometryTransformToolButton());
         return;
     }
     if (token == "ROTATION_SNAPPING") {
