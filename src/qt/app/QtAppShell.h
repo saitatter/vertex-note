@@ -120,6 +120,7 @@ private:
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
+    void setGeometrySelectionMode(QtGeometrySelectionMode mode);
     void selectTool(QtToolType tool);
     void toggleDrawingTool(QtToolType tool);
     void updateToolCommandStates();

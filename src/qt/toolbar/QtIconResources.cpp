@@ -210,6 +210,9 @@ void applyQtCommandIcons(QtMainWindow& window) {
     }
     setNamedIcon("view.toggle-geometry-snap", "snapping-vertex");
     setNamedIcon("view.toggle-grid-snap", "snapping-grid");
+    setNamedIcon("geometry.selection-mode-vertex", "snapping-vertex");
+    setNamedIcon("geometry.selection-mode-edge", "geometry-tools");
+    setNamedIcon("geometry.selection-mode-object", "object-select");
     setNamedIcon("constraint.coincident", "object-select");
     setNamedIcon("constraint.horizontal", "draw-line");
     setNamedIcon("constraint.vertical", "draw-line");

@@ -53,6 +53,19 @@ void QtAppShell::setGridSnapEnabled(bool enabled) {
             enabled ? QStringLiteral("Snap to grid enabled") : QStringLiteral("Snap to grid disabled"), 2500);
 }
 
+void QtAppShell::setGeometrySelectionMode(QtGeometrySelectionMode mode) {
+    auto& toolState = this->window.canvas()->toolState();
+    toolState.geometrySelectionMode = mode;
+    updateToolCommandStates();
+    QString label = QStringLiteral("Vertex");
+    if (mode == QtGeometrySelectionMode::Edge) {
+        label = QStringLiteral("Edge");
+    } else if (mode == QtGeometrySelectionMode::Object) {
+        label = QStringLiteral("Object");
+    }
+    this->window.statusBar()->showMessage(QStringLiteral("Geometry selection: %1 mode").arg(label), 2500);
+}
+
 void QtAppShell::selectTool(QtToolType tool) {
     this->window.canvas()->setActiveTool(tool);
     updateToolCommandStates();
@@ -100,6 +113,13 @@ void QtAppShell::updateToolCommandStates() {
     this->window.commandHost()->setCommandChecked("tool.draw-polyline", active == QtToolType::DrawPolyline);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-line", active == QtToolType::DrawConstructionLine);
     this->window.commandHost()->setCommandChecked("tool.draw-construction-circle", active == QtToolType::DrawConstructionCircle);
+    const auto geometrySelectionMode = this->window.canvas()->toolState().geometrySelectionMode;
+    this->window.commandHost()->setCommandChecked("geometry.selection-mode-vertex",
+                                                  geometrySelectionMode == QtGeometrySelectionMode::Vertex);
+    this->window.commandHost()->setCommandChecked("geometry.selection-mode-edge",
+                                                  geometrySelectionMode == QtGeometrySelectionMode::Edge);
+    this->window.commandHost()->setCommandChecked("geometry.selection-mode-object",
+                                                  geometrySelectionMode == QtGeometrySelectionMode::Object);
     const bool hasGeometrySelection = this->documentController.selectedGeometry().has_value();
     this->window.commandHost()->setCommandEnabled("geometry.translate-vertices", hasGeometrySelection);
     this->window.commandHost()->setCommandEnabled("geometry.rotate-selection", hasGeometrySelection);

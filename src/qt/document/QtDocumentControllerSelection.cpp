@@ -167,6 +167,123 @@ auto QtDocumentController::selectGeometryVerticesInRect(std::size_t pageIndex, d
     return true;
 }
 
+auto QtDocumentController::selectGeometryEdgesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                     bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+    const auto pointInRect = [&](const Point& point) {
+        return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+    };
+    const auto edgeTouchesRect = [&](const vn::view::render::GeometryEdgeRenderModel& edge) {
+        if (pointInRect(edge.start) || pointInRect(edge.end)) {
+            return true;
+        }
+        for (const auto& control: edge.controls) {
+            if (pointInRect(control)) {
+                return true;
+            }
+        }
+        const double edgeLeft = std::min(edge.start.x, edge.end.x);
+        const double edgeRight = std::max(edge.start.x, edge.end.x);
+        const double edgeTop = std::min(edge.start.y, edge.end.y);
+        const double edgeBottom = std::max(edge.start.y, edge.end.y);
+        return edgeRight >= left && edgeLeft <= right && edgeBottom >= top && edgeTop <= bottom;
+    };
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& edge: geometry->edges) {
+            if (!edgeTouchesRect(edge)) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Edge;
+            hit.objectId = geometry->objectId;
+            hit.edgeId = edge.id;
+            hit.point = Point((edge.start.x + edge.end.x) / 2.0, (edge.start.y + edge.end.y) / 2.0);
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
+auto QtDocumentController::selectGeometryObjectInRect(std::size_t pageIndex, double x, double y, double w, double h)
+        -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        setSelectedGeometryObject(std::nullopt);
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry || geometry->vertices.empty()) {
+            continue;
+        }
+        bool intersects = false;
+        for (const auto& vertex: geometry->vertices) {
+            if (vertex.position.x >= left && vertex.position.x <= right && vertex.position.y >= top &&
+                vertex.position.y <= bottom) {
+                intersects = true;
+                break;
+            }
+        }
+        if (!intersects) {
+            continue;
+        }
+
+        vn::view::render::GeometryHitResult hit;
+        hit.type = vn::view::render::GeometryHitType::Edge;
+        hit.objectId = geometry->objectId;
+        hit.point = geometry->vertices.front().position;
+        setSelectedGeometryObject(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        clearElementSelection();
+        return true;
+    }
+
+    setSelectedGeometryObject(std::nullopt);
+    return false;
+}
+
 void QtDocumentController::clearElementSelection() { this->currentSelection.reset(); }
 
 auto QtDocumentController::elementSelection() const -> const std::optional<QtElementSelection>& {

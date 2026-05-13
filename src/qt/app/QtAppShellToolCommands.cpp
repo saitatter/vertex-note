@@ -319,6 +319,25 @@ void QtAppShell::registerToolCommands() {
 
     // Geometry editing
     ch->registerCommand(
+            {.id = "geometry.selection-mode-vertex", .text = "Vertex Mode",
+             .tooltip = "Select and transform geometry vertices",
+             .menu = "Tools>Geometry Selection", .checkable = true,
+             .checked = this->window.canvas()->toolState().geometrySelectionMode == QtGeometrySelectionMode::Vertex},
+            [this]() { setGeometrySelectionMode(QtGeometrySelectionMode::Vertex); });
+    ch->registerCommand(
+            {.id = "geometry.selection-mode-edge", .text = "Edge Mode",
+             .tooltip = "Select and transform geometry edges",
+             .menu = "Tools>Geometry Selection", .checkable = true,
+             .checked = this->window.canvas()->toolState().geometrySelectionMode == QtGeometrySelectionMode::Edge},
+            [this]() { setGeometrySelectionMode(QtGeometrySelectionMode::Edge); });
+    ch->registerCommand(
+            {.id = "geometry.selection-mode-object", .text = "Object Mode",
+             .tooltip = "Select and transform whole geometry objects",
+             .menu = "Tools>Geometry Selection", .checkable = true,
+             .checked = this->window.canvas()->toolState().geometrySelectionMode == QtGeometrySelectionMode::Object},
+            [this]() { setGeometrySelectionMode(QtGeometrySelectionMode::Object); });
+    ch->addMenuSeparator("Tools>Geometry Selection");
+    ch->registerCommand(
             {.id = "view.toggle-geometry-snap", .text = "Snap to Vertex",
              .tooltip = "Snap geometry drawing and edits to vertices, edge points, and guides",
              .menu = "Tools>Snapping", .checkable = true, .checked = this->window.canvas()->isGeometrySnapEnabled()},

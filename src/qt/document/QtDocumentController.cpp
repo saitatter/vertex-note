@@ -497,6 +497,12 @@ auto QtDocumentController::titleText() const -> std::string {
 auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                                        double maxScreenDistance) const
         -> std::optional<QtGeometryHit> {
+    return hitTestGeometry(pageIndex, pageX, pageY, zoom, maxScreenDistance, true, true);
+}
+
+auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                           double maxScreenDistance, bool includeVertices, bool includeEdges) const
+        -> std::optional<QtGeometryHit> {
     if (pageIndex >= this->pageSnapshots.size()) {
         return std::nullopt;
     }
@@ -508,7 +514,14 @@ auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, 
             continue;
         }
 
-        auto hit = vn::view::render::hitTestGeometry(*geometry, pageX, pageY, zoom, maxScreenDistance);
+        auto filteredGeometry = *geometry;
+        if (!includeVertices) {
+            filteredGeometry.vertices.clear();
+        }
+        if (!includeEdges) {
+            filteredGeometry.edges.clear();
+        }
+        auto hit = vn::view::render::hitTestGeometry(filteredGeometry, pageX, pageY, zoom, maxScreenDistance);
         if (!hit) {
             continue;
         }
@@ -560,6 +573,12 @@ void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit,
             this->selectedGeometryEdgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
         }
     }
+}
+
+void QtDocumentController::setSelectedGeometryObject(std::optional<QtGeometryHit> hit) {
+    this->selectedGeometryHit = std::move(hit);
+    this->selectedGeometryVertexIds.clear();
+    this->selectedGeometryEdgeIds.clear();
 }
 
 void QtDocumentController::clearInteractiveGeometryState() {

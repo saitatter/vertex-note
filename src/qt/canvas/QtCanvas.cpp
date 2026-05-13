@@ -1652,11 +1652,16 @@ void QtCanvas::updateGeometryHover(const QPointF& screenPoint) {
     const auto& pageRect = rects[*pageIndex];
     const double pageX = scenePoint.x() - pageRect.x();
     const double pageY = scenePoint.y() - pageRect.y();
-    auto hit = this->documentController->hitTestGeometry(*pageIndex, pageX, pageY, this->zoomFactor, GEOMETRY_HIT_RADIUS_PIXELS);
+    const bool vertexMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Vertex;
+    const bool edgeMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Edge;
+    const bool objectMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Object;
+    auto hit = this->documentController->hitTestGeometry(*pageIndex, pageX, pageY, this->zoomFactor,
+                                                         GEOMETRY_HIT_RADIUS_PIXELS, vertexMode || objectMode,
+                                                         edgeMode || objectMode);
     this->documentController->setHoveredGeometry(hit);
     if (hit) {
         if (!this->spaceHeld && !this->panning) {
-            setCursor(hit->hit.type == vn::view::render::GeometryHitType::Vertex ? Qt::CrossCursor : Qt::PointingHandCursor);
+            setCursor(vertexMode ? Qt::CrossCursor : Qt::PointingHandCursor);
         }
         updateDebugOverlay(QStringLiteral("geometry hover page=%1 object=%2")
                                    .arg(static_cast<int>(hit->pageIndex + 1))
@@ -1680,15 +1685,20 @@ void QtCanvas::selectHoveredGeometry(bool additive) {
         return;
     }
 
-    this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry(), additive);
+    if (this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Object) {
+        this->documentController->setSelectedGeometryObject(this->documentController->hoveredGeometry());
+    } else {
+        this->documentController->setSelectedGeometry(this->documentController->hoveredGeometry(), additive);
+    }
     if (!this->documentController->selectedGeometry()) {
         updateDebugOverlay(QStringLiteral("selection cleared"));
     } else {
         const auto& hit = *this->documentController->selectedGeometry();
-        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2 vertices=%3")
+        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2 vertices=%3 edges=%4")
                                    .arg(static_cast<int>(hit.pageIndex + 1))
                                    .arg(static_cast<qulonglong>(hit.hit.objectId))
-                                   .arg(static_cast<int>(this->documentController->selectedVertexIds().size())));
+                                   .arg(static_cast<int>(this->documentController->selectedVertexIds().size()))
+                                   .arg(static_cast<int>(this->documentController->selectedEdgeIds().size())));
     }
     update();
     Q_EMIT selectionStateChanged();

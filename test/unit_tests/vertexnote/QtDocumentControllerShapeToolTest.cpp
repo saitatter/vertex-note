@@ -544,6 +544,41 @@ TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionTargetsGeometry
     EXPECT_EQ(3U, controller.selectedVertexIds().size());
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeometryEdges) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 5.0, 5.0, 30.0, 10.0));
+    ASSERT_TRUE(controller.selectedGeometry());
+    EXPECT_EQ(vn::view::render::GeometryHitType::Edge, controller.selectedGeometry()->hit.type);
+    EXPECT_TRUE(controller.selectedVertexIds().empty());
+    ASSERT_EQ(1U, controller.selectedEdgeIds().size());
+    EXPECT_FALSE(controller.elementSelection());
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 0.0, 0.0, 100.0, 20.0));
+    EXPECT_EQ(2U, controller.selectedEdgeIds().size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeometryObject) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryObjectInRect(0U, 45.0, 5.0, 10.0, 10.0));
+    ASSERT_TRUE(controller.selectedGeometry());
+    EXPECT_TRUE(controller.selectedVertexIds().empty());
+    EXPECT_TRUE(controller.selectedEdgeIds().empty());
+    EXPECT_FALSE(controller.elementSelection());
+
+    ASSERT_TRUE(controller.translateSelectedVertices(0.0, 10.0));
+    auto translated = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, translated.size());
+    EXPECT_DOUBLE_EQ(20.0, translated.front().vertices[0].position.y);
+    EXPECT_DOUBLE_EQ(20.0, translated.front().vertices[1].position.y);
+    EXPECT_DOUBLE_EQ(20.0, translated.front().vertices[2].position.y);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, shapeCreationParticipatesInUnifiedUndoRedo) {
     QtDocumentController controller;
     constexpr std::size_t PageIndex = 0U;

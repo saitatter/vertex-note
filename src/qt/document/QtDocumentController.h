@@ -309,8 +309,12 @@ public:
     [[nodiscard]] auto titleText() const -> std::string;
     [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                        double maxScreenDistance = 8.0) const -> std::optional<QtGeometryHit>;
+    [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                       double maxScreenDistance, bool includeVertices, bool includeEdges) const
+            -> std::optional<QtGeometryHit>;
     void setHoveredGeometry(std::optional<QtGeometryHit> hit);
     void setSelectedGeometry(std::optional<QtGeometryHit> hit, bool additive = false);
+    void setSelectedGeometryObject(std::optional<QtGeometryHit> hit);
     void clearInteractiveGeometryState();
     [[nodiscard]] auto hoveredGeometry() const -> const std::optional<QtGeometryHit>&;
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtGeometryHit>&;
@@ -413,6 +417,10 @@ public:
     void selectElementsInRect(std::size_t pageIndex, double x, double y, double w, double h);
     [[nodiscard]] auto selectGeometryVerticesInRect(std::size_t pageIndex, double x, double y, double w, double h,
                                                     bool additive = false) -> bool;
+    [[nodiscard]] auto selectGeometryEdgesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                 bool additive = false) -> bool;
+    [[nodiscard]] auto selectGeometryObjectInRect(std::size_t pageIndex, double x, double y, double w, double h)
+            -> bool;
     void clearElementSelection();
     [[nodiscard]] auto elementSelection() const -> const std::optional<QtElementSelection>&;
     [[nodiscard]] auto selectionBounds() const -> std::optional<QtSelectionBounds>;

@@ -46,6 +46,7 @@ enum class QtToolType {
 };
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 enum class QtPointerButtonAction { None = 0, Pan = 1, Eraser = 2 };
+enum class QtGeometrySelectionMode { Vertex, Edge, Object };
 
 struct QtPointerButtonMatrix {
     QtPointerButtonAction eraserTipAction = QtPointerButtonAction::Eraser;
@@ -83,6 +84,7 @@ struct QtToolState {
     int pdfTextMarkerOpacity = 60;
     std::string fontName = "Sans";
     double fontSize = 12.0;
+    QtGeometrySelectionMode geometrySelectionMode = QtGeometrySelectionMode::Vertex;
 
     [[nodiscard]] auto activeToolName() const -> std::string {
         switch (activeTool) {

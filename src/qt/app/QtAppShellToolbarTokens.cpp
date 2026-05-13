@@ -200,6 +200,9 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "CONSTRAINT_PARALLEL") { addToolbarCommand(toolbar, "constraint.parallel"); return; }
     if (token == "CONSTRAINT_PERPENDICULAR") { addToolbarCommand(toolbar, "constraint.perpendicular"); return; }
     if (token == "CONSTRAINT_DELETE") { addToolbarCommand(toolbar, "constraint.delete"); return; }
+    if (token == "GEOMETRY_SELECT_VERTEX") { addToolbarCommand(toolbar, "geometry.selection-mode-vertex"); return; }
+    if (token == "GEOMETRY_SELECT_EDGE") { addToolbarCommand(toolbar, "geometry.selection-mode-edge"); return; }
+    if (token == "GEOMETRY_SELECT_OBJECT") { addToolbarCommand(toolbar, "geometry.selection-mode-object"); return; }
     if (token == "GEOMETRY_TRANSLATE") { addToolbarCommand(toolbar, "geometry.translate-vertices"); return; }
     if (token == "GEOMETRY_ROTATE") { addToolbarCommand(toolbar, "geometry.rotate-selection"); return; }
     if (token == "VERY_FINE") { addGenericSizeToolbarAction(toolbar, "Very Fine", "xopp-thickness-finer.svg", 0); return; }
