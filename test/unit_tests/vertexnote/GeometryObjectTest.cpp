@@ -209,6 +209,46 @@ TEST(VertexNoteGeometryObject, removesEdgesAndCleansDanglingVertices) {
     EXPECT_TRUE(object.constraints().empty());
 }
 
+TEST(VertexNoteGeometryObject, mergeRemovesNewlyDegenerateArcEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto start = object.addVertex({5.0, 0.0});
+    const auto end = object.addVertex({0.0, 5.0});
+    object.addEdge(EdgeKind::Arc, start, end, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(start, end));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+}
+
+TEST(VertexNoteGeometryObject, mergePreservesExistingFullCircleArcEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    const auto spare = object.addVertex({10.0, 0.0});
+    object.addEdge(EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(spare, center));
+
+    ASSERT_EQ(object.edges().size(), 1U);
+    EXPECT_EQ(object.edge(object.edges().front().id)->kind, EdgeKind::Arc);
+    EXPECT_EQ(object.edge(object.edges().front().id)->start, radiusPoint);
+    EXPECT_EQ(object.edge(object.edges().front().id)->end, radiusPoint);
+}
+
+TEST(VertexNoteGeometryObject, mergeRemovesZeroRadiusFullCircleEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(center, radiusPoint));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+}
+
 TEST(VertexNoteGeometryObject, replacesAndRemovesConstraints) {
     GeometryObject object(42);
     auto a = object.addVertex({0.0, 0.0});

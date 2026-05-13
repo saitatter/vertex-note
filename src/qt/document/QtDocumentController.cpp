@@ -846,15 +846,6 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
                                 changed = true;
                                 removedElements.push_back(std::move(*removedTarget));
                             }
-                        } else if (targetGeometry->insertVertexOnEdge(snapCandidate->edge,
-                                                                       this->geometryDragState->snapPoint)) {
-                            changed = true;
-                            linkedObjects.push_back(QtGeometryHistoryObjectState{
-                                    .pageIndex = this->geometryDragState->pageIndex,
-                                    .objectId = snapCandidate->object,
-                                    .before = beforeTarget,
-                                    .after = targetGeometry->geometry(),
-                            });
                         }
                     }
                 }

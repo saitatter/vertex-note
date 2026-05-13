@@ -383,6 +383,13 @@ auto GeometryObject::mergeVertexInto(VertexId source, VertexId target) -> bool {
         return false;
     }
 
+    std::unordered_set<EdgeId> existingClosedCurveEdges;
+    for (const auto& edge: this->edgeList) {
+        if (edge.start == edge.end && (edge.kind == EdgeKind::Arc || edge.kind == EdgeKind::ConstructionCircle)) {
+            existingClosedCurveEdges.insert(edge.id);
+        }
+    }
+
     for (auto& edge: this->edgeList) {
         if (edge.start == source) {
             edge.start = target;
@@ -398,10 +405,21 @@ auto GeometryObject::mergeVertexInto(VertexId source, VertexId target) -> bool {
     }
 
     this->edgeList.erase(std::remove_if(this->edgeList.begin(), this->edgeList.end(),
-                                        [](const Edge& edge) {
-                                            return edge.start == edge.end &&
-                                                   (edge.kind == EdgeKind::Line ||
-                                                    edge.kind == EdgeKind::ConstructionLine);
+                                        [&existingClosedCurveEdges](const Edge& edge) {
+                                            if (edge.start != edge.end) {
+                                                return false;
+                                            }
+                                            if (edge.kind == EdgeKind::Line || edge.kind == EdgeKind::ConstructionLine) {
+                                                return true;
+                                            }
+                                            if (edge.kind != EdgeKind::Arc &&
+                                                edge.kind != EdgeKind::ConstructionCircle) {
+                                                return false;
+                                            }
+                                            if (edge.controls.empty() || edge.controls.front() == edge.start) {
+                                                return true;
+                                            }
+                                            return !existingClosedCurveEdges.contains(edge.id);
                                         }),
                          this->edgeList.end());
 
