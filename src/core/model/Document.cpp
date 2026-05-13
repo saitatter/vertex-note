@@ -1,7 +1,7 @@
 #include "Document.h"
 
 #include <cstddef>
-#include <ctime>  // for size_t, localtime, strf...
+#include <ctime>  // for size_t, strf...
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -140,7 +140,13 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
     // Todo (cpp20): use <format>
     std::ostringstream ss;
     time_t curtime = time(nullptr);
-    ss << std::put_time(localtime(&curtime), format.c_str());
+    tm localTime{};
+#ifdef _WIN32
+    static_cast<void>(localtime_s(&localTime, &curtime));
+#else
+    static_cast<void>(localtime_r(&curtime, &localTime));
+#endif
+    ss << std::put_time(&localTime, format.c_str());
     auto filename = ss.str();
     // Todo (cpp20): use <ranges>
     for (auto& c: filename) {
