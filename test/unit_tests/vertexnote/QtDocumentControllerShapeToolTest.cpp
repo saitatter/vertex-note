@@ -562,6 +562,19 @@ TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeomet
     EXPECT_EQ(2U, controller.selectedEdgeIds().size());
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionRequiresActualGeometryEdgeIntersection) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createPolyline(0U, {{0.0, 0.0}, {100.0, 100.0}}, Colors::black, 1.0));
+
+    EXPECT_FALSE(controller.selectGeometryEdgesInRect(0U, 0.0, 90.0, 10.0, 10.0));
+    EXPECT_FALSE(controller.selectedGeometry());
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 45.0, 45.0, 10.0, 10.0));
+    ASSERT_TRUE(controller.selectedGeometry());
+    EXPECT_EQ(vn::view::render::GeometryHitType::Edge, controller.selectedGeometry()->hit.type);
+    ASSERT_EQ(1U, controller.selectedEdgeIds().size());
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionCanTargetGeometryObject) {
     QtDocumentController controller;
     ASSERT_NE(nullptr,
