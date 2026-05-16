@@ -310,7 +310,7 @@ auto QtAppShell::createGeometryTransformToolButton() -> QWidget* {
         transformMenu->addAction(action);
     }
     transformMenu->addSeparator();
-    for (const auto* commandId: {"geometry.create-3d-box", "geometry.project-3d-isometric",
+    for (const auto* commandId: {"geometry.create-3d-vertex", "geometry.create-3d-box", "geometry.project-3d-isometric",
                                 "geometry.project-3d-front", "geometry.project-3d-top",
                                 "geometry.nudge-z-up", "geometry.nudge-z-down"}) {
         if (auto* action = this->window.commandHost()->actionForCommand(commandId)) {

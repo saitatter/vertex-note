@@ -566,6 +566,36 @@ auto QtDocumentController::createWireframeBox3D(std::size_t pageIndex, double ce
     return ptr;
 }
 
+auto QtDocumentController::createVertex3D(std::size_t pageIndex, vn::geom::Vec3 modelPosition,
+                                          const vn::geom::ProjectionCamera& camera, Color color, double width)
+        -> std::optional<QtGeometryHit> {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    const auto objectId = object.objectId();
+    const auto projected = vn::geom::projectPoint(modelPosition, camera).pagePosition;
+    const auto vertexId = object.addVertex3D(modelPosition, projected);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (!ptr) {
+        return std::nullopt;
+    }
+
+    pushHistory(QtHistoryEntry{QtStrokeHistoryEntry{.pageIndex = pageIndex,
+                                                    .element = ptr,
+                                                    .text = "Draw 3D vertex"}});
+    rebuildPageSnapshots();
+
+    vn::view::render::GeometryHitResult hit;
+    hit.type = vn::view::render::GeometryHitType::Vertex;
+    hit.objectId = objectId;
+    hit.vertexId = vertexId;
+    hit.point = Point(projected.x, projected.y);
+    return QtGeometryHit{.pageIndex = pageIndex, .hit = hit};
+}
+
 auto QtDocumentController::createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2,
                                            Color color, double width, int fill) -> const Element* {
     vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());

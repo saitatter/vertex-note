@@ -121,6 +121,7 @@ public:
     void setGeometryFaceSplitPreview(std::optional<QtGeometryFaceDiagonal> diagonal);
     void clearGeometryFaceSplitPreview();
     [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto createVertex3D() -> bool;
     [[nodiscard]] auto createWireframeBox3D() -> bool;
     [[nodiscard]] auto projectSelectedGeometry3DIsometric() -> bool;
     [[nodiscard]] auto projectSelectedGeometry3DFront() -> bool;

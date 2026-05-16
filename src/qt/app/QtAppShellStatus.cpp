@@ -237,9 +237,12 @@ void QtAppShell::updateStatusBarLabels() {
     double modelZ = 0.0;
     bool modelEditorEnabled = false;
     if (const auto range = this->documentController.selectedGeometryModelRange()) {
-        depthText = std::abs(range->minZ - range->maxZ) <= 1e-6
+        const bool singleVertexSelection = vertexCount == 1U && edgeCount == 0U && faceCount == 0U;
+        const QString zText = std::abs(range->minZ - range->maxZ) <= 1e-6
                             ? QStringLiteral("Z %1").arg(range->minZ, 0, 'f', 1)
                             : QStringLiteral("Z %1..%2").arg(range->minZ, 0, 'f', 1).arg(range->maxZ, 0, 'f', 1);
+        depthText = singleVertexSelection ? QStringLiteral("vertex %1").arg(zText)
+                                          : QStringLiteral("center %1").arg(zText);
         modelX = (range->minX + range->maxX) * 0.5;
         modelY = (range->minY + range->maxY) * 0.5;
         modelZ = (range->minZ + range->maxZ) * 0.5;

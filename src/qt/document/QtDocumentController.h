@@ -408,6 +408,9 @@ public:
     [[nodiscard]] auto splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool;
     [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
+    [[nodiscard]] auto createVertex3D(std::size_t pageIndex, vn::geom::Vec3 modelPosition,
+                                      const vn::geom::ProjectionCamera& camera, Color color, double width)
+            -> std::optional<QtGeometryHit>;
     [[nodiscard]] auto createWireframeBox3D(std::size_t pageIndex, double centerX, double centerY, double size,
                                             double depth, Color color, double width, int fill = -1) -> const Element*;
     [[nodiscard]] auto projectSelectedGeometry3D(const vn::geom::ProjectionCamera& camera) -> bool;

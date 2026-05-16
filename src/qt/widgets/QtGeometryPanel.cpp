@@ -95,7 +95,7 @@ QtGeometryPanel::QtGeometryPanel(QWidget* parent): QDockWidget(QStringLiteral("W
     this->topologyStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("Topology -"));
     this->viewStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("View -"));
     this->projectionStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("3D view Iso"));
-    this->depthStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("Depth -"));
+    this->depthStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("Model -"));
     this->modelXSpinBox = makeModelSpinBox(summaryFrame, QStringLiteral("vertexNoteQtGeometryPanelModelXSpin"),
                                            QStringLiteral("X "));
     this->modelYSpinBox = makeModelSpinBox(summaryFrame, QStringLiteral("vertexNoteQtGeometryPanelModelYSpin"),
@@ -248,9 +248,12 @@ void QtGeometryPanel::rebuildContent() {
             break;
         case QtWorkspacePanelMode::ThreeD:
             setWindowTitle(QStringLiteral("3D Workspace"));
-            addSection(QStringLiteral("3D Projection"),
-                       {{"geometry.create-3d-box", "Box"},
-                        {"geometry.project-3d-isometric", "Iso"},
+            addSection(QStringLiteral("Create"),
+                       {{"geometry.create-3d-vertex", "Vertex"},
+                        {"geometry.create-3d-box", "Box"}},
+                       2);
+            addSection(QStringLiteral("Projection"),
+                       {{"geometry.project-3d-isometric", "Iso"},
                         {"geometry.project-3d-front", "Front"},
                         {"geometry.project-3d-top", "Top"},
                         {"geometry.nudge-z-up", "Z +"},
@@ -320,7 +323,7 @@ void QtGeometryPanel::setStatusSummary(const QString& mode, const QString& snap,
         this->projectionStatusLabel->setText(QStringLiteral("3D view %1").arg(projection));
     }
     if (this->depthStatusLabel) {
-        this->depthStatusLabel->setText(QStringLiteral("Depth %1").arg(depth));
+        this->depthStatusLabel->setText(QStringLiteral("Model %1").arg(depth));
     }
     updateSummaryVisibility();
 }

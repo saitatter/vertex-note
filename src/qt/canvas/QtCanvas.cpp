@@ -871,6 +871,78 @@ auto QtCanvas::triangulateSelectedGeometryFace() -> bool {
     return changed;
 }
 
+auto QtCanvas::createVertex3D() -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const auto pageIndex = currentPageIndex();
+    const auto& pages = this->documentController->snapshotPages();
+    if (pageIndex >= pages.size()) {
+        return false;
+    }
+
+    const auto cameraAt = [&](vn::geom::Vec2 offset) {
+        switch (this->geometryProjectionView) {
+            case GeometryProjectionView::Isometric:
+                return vn::geom::ProjectionCamera{.yaw = 0.7853981633974483,
+                                                  .pitch = -0.5235987755982988,
+                                                  .roll = 0.0,
+                                                  .zoom = 1.0,
+                                                  .offset = offset};
+            case GeometryProjectionView::Front:
+                return vn::geom::ProjectionCamera{.yaw = 0.0,
+                                                  .pitch = 0.0,
+                                                  .roll = 0.0,
+                                                  .zoom = 1.0,
+                                                  .offset = offset};
+            case GeometryProjectionView::Top:
+                return vn::geom::ProjectionCamera{.yaw = 0.0,
+                                                  .pitch = -1.5707963267948966,
+                                                  .roll = 0.0,
+                                                  .zoom = 1.0,
+                                                  .offset = offset};
+        }
+        return vn::geom::ProjectionCamera{.yaw = 0.7853981633974483,
+                                          .pitch = -0.5235987755982988,
+                                          .roll = 0.0,
+                                          .zoom = 1.0,
+                                          .offset = offset};
+    };
+
+    vn::geom::Vec3 modelPosition{0.0, 0.0, 0.0};
+    std::optional<vn::geom::ProjectionCamera> camera;
+    if (this->documentController->selectedGeometry() &&
+        this->documentController->selectedGeometry()->pageIndex == pageIndex) {
+        if (const auto range = this->documentController->selectedGeometryModelRange()) {
+            modelPosition = vn::geom::Vec3{(range->minX + range->maxX) * 0.5,
+                                           (range->minY + range->maxY) * 0.5,
+                                           (range->minZ + range->maxZ) * 0.5};
+        }
+        camera = geometryProjectionCameraForActiveView();
+    }
+    if (!camera) {
+        const auto& page = pages[pageIndex];
+        camera = cameraAt(vn::geom::Vec2{page.width * 0.5, page.height * 0.42});
+    }
+
+    auto created = this->documentController->createVertex3D(pageIndex, modelPosition, *camera,
+                                                            this->currentToolState.penColor,
+                                                            this->currentToolState.penWidth);
+    if (!created) {
+        return false;
+    }
+
+    this->documentController->setSelectedGeometry(*created);
+    this->documentController->clearElementSelection();
+    updateDebugOverlay(QStringLiteral("created 3D vertex"));
+    Q_EMIT statusHintChanged(QStringLiteral("Created 3D vertex; edit X/Y/Z in the 3D panel"));
+    update();
+    Q_EMIT selectionStateChanged();
+    Q_EMIT documentEdited();
+    return true;
+}
+
 auto QtCanvas::createWireframeBox3D() -> bool {
     if (!this->documentController) {
         return false;

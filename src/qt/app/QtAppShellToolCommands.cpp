@@ -381,6 +381,16 @@ void QtAppShell::registerToolCommands() {
              .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
             [this]() { scaleSelectedGeometry(); });
     ch->registerCommand(
+            {.id = "geometry.create-3d-vertex", .text = "3D Vertex",
+             .tooltip = "Create a selectable 3D vertex at the current projection center",
+             .menu = "Tools>3D Geometry"},
+            [this]() {
+                if (this->window.canvas()->createVertex3D()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Created 3D vertex"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
             {.id = "geometry.create-3d-box", .text = "3D Box",
              .tooltip = "Create an isometric 3D wireframe box on the current page",
              .menu = "Tools>3D Geometry"},

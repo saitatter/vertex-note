@@ -77,6 +77,7 @@ TEST(VertexNoteQtToolbarProfileStore, exposesGeometryWorkspaceProfiles) {
     const auto* modelingTop = modelingProfile->itemsFor("toolbarTop1");
     ASSERT_NE(modelingTop, nullptr);
     EXPECT_NE(std::ranges::find(*modelingTop, "WORKSPACE"), modelingTop->end());
+    EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_3D_VERTEX"), modelingTop->end());
     EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_3D_BOX"), modelingTop->end());
     EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_PROJECT_ISO"), modelingTop->end());
 }

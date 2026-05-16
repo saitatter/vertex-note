@@ -239,6 +239,7 @@ void applyQtCommandIcons(QtMainWindow& window) {
     setNamedIcon("geometry.delete-face", "edit-delete");
     setNamedIcon("geometry.split-face", "draw-line");
     setNamedIcon("geometry.triangulate-face", "draw-coordinate-system");
+    setNamedIcon("geometry.create-3d-vertex", "vertex-select");
     setNamedIcon("geometry.create-3d-box", "draw-coordinate-system");
     setNamedIcon("geometry.project-3d-isometric", "geometry-rotate");
     setNamedIcon("geometry.project-3d-front", "vertex-object-select");
