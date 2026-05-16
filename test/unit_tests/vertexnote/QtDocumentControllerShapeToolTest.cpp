@@ -206,6 +206,33 @@ TEST(VertexNoteQtDocumentControllerShapeTools, createsSelectable3DVertexGeometry
     EXPECT_NEAR(range->minZ, 5.0, 1e-6);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, createsSelectable3DEdgeGeometry) {
+    QtDocumentController controller;
+    const vn::geom::ProjectionCamera camera{.yaw = 0.7853981633974483,
+                                            .pitch = -0.5235987755982988,
+                                            .offset = vn::geom::Vec2{100.0, 120.0}};
+
+    auto hit = controller.createEdge3D(0U, vn::geom::Vec3{1.0, 2.0, 3.0},
+                                       vn::geom::Vec3{41.0, 2.0, 15.0}, camera, Colors::black, 1.5);
+    ASSERT_TRUE(hit.has_value());
+    EXPECT_EQ(hit->hit.type, vn::view::render::GeometryHitType::Edge);
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_EQ(geometry.vertices.size(), 2U);
+    ASSERT_EQ(geometry.edges.size(), 1U);
+    EXPECT_TRUE(geometry.faces.empty());
+    EXPECT_EQ(geometry.edges.front().id, hit->hit.edgeId);
+
+    controller.setSelectedGeometry(*hit);
+    const auto range = controller.selectedGeometryModelRange();
+    ASSERT_TRUE(range.has_value());
+    EXPECT_EQ(range->vertexCount, 2U);
+    EXPECT_NEAR(range->minX, 1.0, 1e-6);
+    EXPECT_NEAR(range->maxX, 41.0, 1e-6);
+    EXPECT_NEAR(range->minY, 2.0, 1e-6);
+    EXPECT_NEAR(range->maxZ, 15.0, 1e-6);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, reportsSelected3DDepthRange) {
     QtDocumentController controller;
     ASSERT_NE(nullptr, controller.createWireframeBox3D(0U, 100.0, 120.0, 80.0, 60.0, Colors::black, 1.5, 72));

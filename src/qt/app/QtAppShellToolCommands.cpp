@@ -391,6 +391,16 @@ void QtAppShell::registerToolCommands() {
                 }
             });
     ch->registerCommand(
+            {.id = "geometry.create-3d-edge", .text = "3D Edge",
+             .tooltip = "Create a selectable 3D edge in the active projection",
+             .menu = "Tools>3D Geometry"},
+            [this]() {
+                if (this->window.canvas()->createEdge3D()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Created 3D edge"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
             {.id = "geometry.create-3d-box", .text = "3D Box",
              .tooltip = "Create an isometric 3D wireframe box on the current page",
              .menu = "Tools>3D Geometry"},

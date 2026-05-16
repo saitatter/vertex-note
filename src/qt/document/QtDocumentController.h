@@ -411,6 +411,9 @@ public:
     [[nodiscard]] auto createVertex3D(std::size_t pageIndex, vn::geom::Vec3 modelPosition,
                                       const vn::geom::ProjectionCamera& camera, Color color, double width)
             -> std::optional<QtGeometryHit>;
+    [[nodiscard]] auto createEdge3D(std::size_t pageIndex, vn::geom::Vec3 startModel, vn::geom::Vec3 endModel,
+                                    const vn::geom::ProjectionCamera& camera, Color color, double width)
+            -> std::optional<QtGeometryHit>;
     [[nodiscard]] auto createWireframeBox3D(std::size_t pageIndex, double centerX, double centerY, double size,
                                             double depth, Color color, double width, int fill = -1) -> const Element*;
     [[nodiscard]] auto projectSelectedGeometry3D(const vn::geom::ProjectionCamera& camera) -> bool;

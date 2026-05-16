@@ -250,6 +250,7 @@ void QtGeometryPanel::rebuildContent() {
             setWindowTitle(QStringLiteral("3D Workspace"));
             addSection(QStringLiteral("Create"),
                        {{"geometry.create-3d-vertex", "Vertex"},
+                        {"geometry.create-3d-edge", "Edge"},
                         {"geometry.create-3d-box", "Box"}},
                        2);
             addSection(QStringLiteral("Projection"),

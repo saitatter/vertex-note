@@ -80,7 +80,8 @@ auto isGeometryFamilyToken(const std::string& token) -> bool {
            token == "GEOMETRY_TRANSLATE" || token == "GEOMETRY_ROTATE" || token == "GEOMETRY_SCALE" ||
            token == "GEOMETRY_WELD" || token == "GEOMETRY_DETACH" || token == "GEOMETRY_FILL_FACE" ||
            token == "GEOMETRY_DELETE_FACE" || token == "GEOMETRY_SPLIT_FACE" ||
-           token == "GEOMETRY_TRIANGULATE_FACE" || token == "GEOMETRY_3D_VERTEX" || token == "GEOMETRY_3D_BOX" ||
+           token == "GEOMETRY_TRIANGULATE_FACE" || token == "GEOMETRY_3D_VERTEX" ||
+           token == "GEOMETRY_3D_EDGE" || token == "GEOMETRY_3D_BOX" ||
            token == "GEOMETRY_PROJECT_ISO" || token == "GEOMETRY_PROJECT_FRONT" ||
            token == "GEOMETRY_PROJECT_TOP" || token == "GEOMETRY_Z_UP" || token == "GEOMETRY_Z_DOWN" ||
            token == "GEOMETRY_PANEL" || token == "GEOMETRY_VIEW_WIREFRAME" || token == "GEOMETRY_VIEW_VERTICES" ||

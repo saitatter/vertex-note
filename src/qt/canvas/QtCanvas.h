@@ -122,6 +122,7 @@ public:
     void clearGeometryFaceSplitPreview();
     [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
     [[nodiscard]] auto createVertex3D() -> bool;
+    [[nodiscard]] auto createEdge3D() -> bool;
     [[nodiscard]] auto createWireframeBox3D() -> bool;
     [[nodiscard]] auto projectSelectedGeometry3DIsometric() -> bool;
     [[nodiscard]] auto projectSelectedGeometry3DFront() -> bool;
@@ -246,6 +247,8 @@ private:
     void selectHoveredGeometry(bool additive = false);
     [[nodiscard]] auto beginSelectedGeometryMoveAtScreen(const QPointF& screenPoint) -> bool;
     [[nodiscard]] auto selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds>;
+    [[nodiscard]] auto geometryProjectionCameraAtPagePoint(vn::geom::Vec2 offset) const
+            -> vn::geom::ProjectionCamera;
     [[nodiscard]] auto geometryProjectionCameraForSelection(double yaw, double pitch, double roll = 0.0) const
             -> std::optional<vn::geom::ProjectionCamera>;
     [[nodiscard]] auto geometryProjectionCameraForActiveView() const

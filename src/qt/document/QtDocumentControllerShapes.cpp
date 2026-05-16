@@ -596,6 +596,43 @@ auto QtDocumentController::createVertex3D(std::size_t pageIndex, vn::geom::Vec3 
     return QtGeometryHit{.pageIndex = pageIndex, .hit = hit};
 }
 
+auto QtDocumentController::createEdge3D(std::size_t pageIndex, vn::geom::Vec3 startModel,
+                                        vn::geom::Vec3 endModel, const vn::geom::ProjectionCamera& camera,
+                                        Color color, double width) -> std::optional<QtGeometryHit> {
+    if (startModel.x == endModel.x && startModel.y == endModel.y && startModel.z == endModel.z) {
+        return std::nullopt;
+    }
+
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    const auto objectId = object.objectId();
+    const auto startProjected = vn::geom::projectPoint(startModel, camera).pagePosition;
+    const auto endProjected = vn::geom::projectPoint(endModel, camera).pagePosition;
+    const auto startId = object.addVertex3D(startModel, startProjected);
+    const auto endId = object.addVertex3D(endModel, endProjected);
+    const auto edgeId = object.addLine(startId, endId);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
+    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
+    if (!ptr) {
+        return std::nullopt;
+    }
+
+    pushHistory(QtHistoryEntry{QtStrokeHistoryEntry{.pageIndex = pageIndex,
+                                                    .element = ptr,
+                                                    .text = "Draw 3D edge"}});
+    rebuildPageSnapshots();
+
+    vn::view::render::GeometryHitResult hit;
+    hit.type = vn::view::render::GeometryHitType::Edge;
+    hit.objectId = objectId;
+    hit.edgeId = edgeId;
+    hit.point = Point((startProjected.x + endProjected.x) * 0.5, (startProjected.y + endProjected.y) * 0.5);
+    return QtGeometryHit{.pageIndex = pageIndex, .hit = hit};
+}
+
 auto QtDocumentController::createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2,
                                            Color color, double width, int fill) -> const Element* {
     vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());

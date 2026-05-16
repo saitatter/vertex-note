@@ -233,6 +233,7 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "GEOMETRY_SPLIT_FACE") { addToolbarCommand(toolbar, "geometry.split-face"); return; }
     if (token == "GEOMETRY_TRIANGULATE_FACE") { addToolbarCommand(toolbar, "geometry.triangulate-face"); return; }
     if (token == "GEOMETRY_3D_VERTEX") { addToolbarCommand(toolbar, "geometry.create-3d-vertex"); return; }
+    if (token == "GEOMETRY_3D_EDGE") { addToolbarCommand(toolbar, "geometry.create-3d-edge"); return; }
     if (token == "GEOMETRY_3D_BOX") { addToolbarCommand(toolbar, "geometry.create-3d-box"); return; }
     if (token == "GEOMETRY_PROJECT_ISO") { addToolbarCommand(toolbar, "geometry.project-3d-isometric"); return; }
     if (token == "GEOMETRY_PROJECT_FRONT") { addToolbarCommand(toolbar, "geometry.project-3d-front"); return; }
