@@ -49,6 +49,19 @@ auto makeStatusChip(QWidget* parent, const QString& text) -> QLabel* {
     return label;
 }
 
+auto makeModelSpinBox(QWidget* parent, const QString& objectName, const QString& prefix) -> QDoubleSpinBox* {
+    auto* spinBox = new QDoubleSpinBox(parent);
+    spinBox->setObjectName(objectName);
+    spinBox->setRange(-10000.0, 10000.0);
+    spinBox->setDecimals(1);
+    spinBox->setSingleStep(1.0);
+    spinBox->setPrefix(prefix);
+    spinBox->setEnabled(false);
+    spinBox->setMinimumWidth(48);
+    spinBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    return spinBox;
+}
+
 }  // namespace
 
 QtGeometryPanel::QtGeometryPanel(QWidget* parent): QDockWidget(QStringLiteral("Write Workspace"), parent) {
@@ -83,26 +96,30 @@ QtGeometryPanel::QtGeometryPanel(QWidget* parent): QDockWidget(QStringLiteral("W
     this->viewStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("View -"));
     this->projectionStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("3D view Iso"));
     this->depthStatusLabel = makeStatusChip(summaryFrame, QStringLiteral("Depth -"));
-    this->depthSpinBox = new QDoubleSpinBox(summaryFrame);
-    this->depthSpinBox->setObjectName(QStringLiteral("vertexNoteQtGeometryPanelDepthSpin"));
-    this->depthSpinBox->setRange(-10000.0, 10000.0);
-    this->depthSpinBox->setDecimals(1);
-    this->depthSpinBox->setSingleStep(1.0);
-    this->depthSpinBox->setPrefix(QStringLiteral("Z "));
-    this->depthSpinBox->setEnabled(false);
-    this->depthSpinBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    summaryLayout->addWidget(this->modeStatusLabel, 0, 0);
-    summaryLayout->addWidget(this->selectionStatusLabel, 1, 0);
-    summaryLayout->addWidget(this->snapStatusLabel, 2, 0);
-    summaryLayout->addWidget(this->topologyStatusLabel, 3, 0);
-    summaryLayout->addWidget(this->viewStatusLabel, 4, 0);
-    summaryLayout->addWidget(this->projectionStatusLabel, 5, 0);
-    summaryLayout->addWidget(this->depthStatusLabel, 6, 0);
-    summaryLayout->addWidget(this->depthSpinBox, 7, 0);
-    QObject::connect(this->depthSpinBox, &QDoubleSpinBox::valueChanged, this, [this](double value) {
-        if (!this->loadingDepthEditor) {
-            Q_EMIT depthEdited(value);
-        }
+    this->modelXSpinBox = makeModelSpinBox(summaryFrame, QStringLiteral("vertexNoteQtGeometryPanelModelXSpin"),
+                                           QStringLiteral("X "));
+    this->modelYSpinBox = makeModelSpinBox(summaryFrame, QStringLiteral("vertexNoteQtGeometryPanelModelYSpin"),
+                                           QStringLiteral("Y "));
+    this->modelZSpinBox = makeModelSpinBox(summaryFrame, QStringLiteral("vertexNoteQtGeometryPanelModelZSpin"),
+                                           QStringLiteral("Z "));
+    summaryLayout->addWidget(this->modeStatusLabel, 0, 0, 1, 3);
+    summaryLayout->addWidget(this->selectionStatusLabel, 1, 0, 1, 3);
+    summaryLayout->addWidget(this->snapStatusLabel, 2, 0, 1, 3);
+    summaryLayout->addWidget(this->topologyStatusLabel, 3, 0, 1, 3);
+    summaryLayout->addWidget(this->viewStatusLabel, 4, 0, 1, 3);
+    summaryLayout->addWidget(this->projectionStatusLabel, 5, 0, 1, 3);
+    summaryLayout->addWidget(this->depthStatusLabel, 6, 0, 1, 3);
+    summaryLayout->addWidget(this->modelXSpinBox, 7, 0);
+    summaryLayout->addWidget(this->modelYSpinBox, 7, 1);
+    summaryLayout->addWidget(this->modelZSpinBox, 7, 2);
+    QObject::connect(this->modelXSpinBox, &QDoubleSpinBox::valueChanged, this, [this](double) {
+        emitModelPositionEdited();
+    });
+    QObject::connect(this->modelYSpinBox, &QDoubleSpinBox::valueChanged, this, [this](double) {
+        emitModelPositionEdited();
+    });
+    QObject::connect(this->modelZSpinBox, &QDoubleSpinBox::valueChanged, this, [this](double) {
+        emitModelPositionEdited();
     });
     this->contentLayout->addWidget(summaryFrame);
 
@@ -315,16 +332,22 @@ void QtGeometryPanel::setTopologySummary(const QString& topology) {
     updateSummaryVisibility();
 }
 
-void QtGeometryPanel::setDepthEditor(double z, bool enabled) {
-    if (!this->depthSpinBox) {
+void QtGeometryPanel::setModelInspector(double x, double y, double z, bool enabled) {
+    if (!this->modelXSpinBox || !this->modelYSpinBox || !this->modelZSpinBox) {
         return;
     }
 
-    this->loadingDepthEditor = true;
-    const QSignalBlocker blocker(this->depthSpinBox);
-    this->depthSpinBox->setEnabled(enabled);
-    this->depthSpinBox->setValue(z);
-    this->loadingDepthEditor = false;
+    this->loadingModelInspector = true;
+    const QSignalBlocker blockX(this->modelXSpinBox);
+    const QSignalBlocker blockY(this->modelYSpinBox);
+    const QSignalBlocker blockZ(this->modelZSpinBox);
+    this->modelXSpinBox->setEnabled(enabled);
+    this->modelYSpinBox->setEnabled(enabled);
+    this->modelZSpinBox->setEnabled(enabled);
+    this->modelXSpinBox->setValue(x);
+    this->modelYSpinBox->setValue(y);
+    this->modelZSpinBox->setValue(z);
+    this->loadingModelInspector = false;
 }
 
 void QtGeometryPanel::updateSummaryVisibility() {
@@ -346,9 +369,23 @@ void QtGeometryPanel::updateSummaryVisibility() {
     if (this->depthStatusLabel) {
         this->depthStatusLabel->setVisible(threeD);
     }
-    if (this->depthSpinBox) {
-        this->depthSpinBox->setVisible(threeD);
+    if (this->modelXSpinBox) {
+        this->modelXSpinBox->setVisible(threeD);
     }
+    if (this->modelYSpinBox) {
+        this->modelYSpinBox->setVisible(threeD);
+    }
+    if (this->modelZSpinBox) {
+        this->modelZSpinBox->setVisible(threeD);
+    }
+}
+
+void QtGeometryPanel::emitModelPositionEdited() {
+    if (this->loadingModelInspector || !this->modelXSpinBox || !this->modelYSpinBox || !this->modelZSpinBox) {
+        return;
+    }
+    Q_EMIT modelPositionEdited(this->modelXSpinBox->value(), this->modelYSpinBox->value(),
+                               this->modelZSpinBox->value());
 }
 
 void QtGeometryPanel::addSection(const QString& title, std::initializer_list<PanelCommand> commands, int columns,

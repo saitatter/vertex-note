@@ -220,6 +220,40 @@ TEST(VertexNoteQtDocumentControllerShapeTools, setsSelected3DDepthRange) {
     EXPECT_NEAR(depth->maxZ, 12.0, 1e-6);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, setsSelected3DModelCenter) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createWireframeBox3D(0U, 100.0, 120.0, 80.0, 60.0, Colors::black, 1.5, 72));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_FALSE(geometry.vertices.empty());
+    const auto hit = controller.hitTestGeometry(0U, geometry.vertices.front().position.x, geometry.vertices.front().position.y,
+                                                1.0, 8.0, true, true, true);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometryObject(*hit);
+
+    const auto initialRange = controller.selectedGeometryModelRange();
+    ASSERT_TRUE(initialRange.has_value());
+    EXPECT_NEAR((initialRange->minX + initialRange->maxX) * 0.5, 0.0, 1e-6);
+    EXPECT_NEAR((initialRange->minY + initialRange->maxY) * 0.5, 0.0, 1e-6);
+    EXPECT_NEAR((initialRange->minZ + initialRange->maxZ) * 0.5, 0.0, 1e-6);
+
+    const vn::geom::ProjectionCamera camera{.yaw = 0.7853981633974483,
+                                            .pitch = -0.5235987755982988,
+                                            .offset = vn::geom::Vec2{100.0, 120.0}};
+    ASSERT_TRUE(controller.setSelectedGeometryModelCenter(vn::geom::Vec3{20.0, -10.0, 12.0}, camera));
+
+    const auto movedRange = controller.selectedGeometryModelRange();
+    ASSERT_TRUE(movedRange.has_value());
+    EXPECT_EQ(movedRange->vertexCount, 8U);
+    EXPECT_NEAR((movedRange->minX + movedRange->maxX) * 0.5, 20.0, 1e-6);
+    EXPECT_NEAR((movedRange->minY + movedRange->maxY) * 0.5, -10.0, 1e-6);
+    EXPECT_NEAR((movedRange->minZ + movedRange->maxZ) * 0.5, 12.0, 1e-6);
+    EXPECT_NEAR(movedRange->maxX - movedRange->minX, 80.0, 1e-6);
+    EXPECT_NEAR(movedRange->maxY - movedRange->minY, 80.0, 1e-6);
+    EXPECT_NEAR(movedRange->maxZ - movedRange->minZ, 60.0, 1e-6);
+    EXPECT_FALSE(controller.setSelectedGeometryModelCenter(vn::geom::Vec3{20.0, -10.0, 12.0}, camera));
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, reportsFillLoopStatus) {
     QtDocumentController controller;
     ASSERT_NE(nullptr,

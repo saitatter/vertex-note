@@ -36,10 +36,10 @@ public:
     void setStatusSummary(const QString& mode, const QString& snap, const QString& selection, const QString& view,
                           const QString& projection, const QString& depth);
     void setTopologySummary(const QString& topology);
-    void setDepthEditor(double z, bool enabled);
+    void setModelInspector(double x, double y, double z, bool enabled);
 
 Q_SIGNALS:
-    void depthEdited(double z);
+    void modelPositionEdited(double x, double y, double z);
 
 private:
     struct PanelCommand {
@@ -50,6 +50,7 @@ private:
     void clearContent();
     void rebuildContent();
     void updateSummaryVisibility();
+    void emitModelPositionEdited();
     void addSection(const QString& title, std::initializer_list<PanelCommand> commands, int columns = 2,
                     bool expanded = true);
 
@@ -66,6 +67,8 @@ private:
     QLabel* viewStatusLabel = nullptr;
     QLabel* projectionStatusLabel = nullptr;
     QLabel* depthStatusLabel = nullptr;
-    QDoubleSpinBox* depthSpinBox = nullptr;
-    bool loadingDepthEditor = false;
+    QDoubleSpinBox* modelXSpinBox = nullptr;
+    QDoubleSpinBox* modelYSpinBox = nullptr;
+    QDoubleSpinBox* modelZSpinBox = nullptr;
+    bool loadingModelInspector = false;
 };

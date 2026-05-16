@@ -63,9 +63,9 @@ void QtAppShell::wireWindowState() {
                          syncToolbarWidgets();
                          updateStatusBarLabels();
                      });
-    QObject::connect(this->window.geometryPanel(), &QtGeometryPanel::depthEdited, &this->window,
-                     [this](double z) {
-                         if (this->window.canvas()->setSelectedGeometryZ(z)) {
+    QObject::connect(this->window.geometryPanel(), &QtGeometryPanel::modelPositionEdited, &this->window,
+                     [this](double x, double y, double z) {
+                         if (this->window.canvas()->setSelectedGeometryModelCenter(x, y, z)) {
                              updateEditCommandStates();
                              updateStatusBarLabels();
                          }

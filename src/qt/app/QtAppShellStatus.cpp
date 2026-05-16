@@ -232,14 +232,18 @@ void QtAppShell::updateStatusBarLabels() {
     const QString topologyText =
             topologyStatusText(loopStatus.kind, faceCount, this->documentController.selectedGeometryFaceSplitDiagonals().size());
     QString depthText = QStringLiteral("-");
-    double depthEditorValue = 0.0;
-    bool depthEditorEnabled = false;
-    if (const auto depth = this->documentController.selectedGeometryDepthRange()) {
-        depthText = std::abs(depth->minZ - depth->maxZ) <= 1e-6
-                            ? QStringLiteral("Z %1").arg(depth->minZ, 0, 'f', 1)
-                            : QStringLiteral("Z %1..%2").arg(depth->minZ, 0, 'f', 1).arg(depth->maxZ, 0, 'f', 1);
-        depthEditorValue = (depth->minZ + depth->maxZ) * 0.5;
-        depthEditorEnabled = true;
+    double modelX = 0.0;
+    double modelY = 0.0;
+    double modelZ = 0.0;
+    bool modelEditorEnabled = false;
+    if (const auto range = this->documentController.selectedGeometryModelRange()) {
+        depthText = std::abs(range->minZ - range->maxZ) <= 1e-6
+                            ? QStringLiteral("Z %1").arg(range->minZ, 0, 'f', 1)
+                            : QStringLiteral("Z %1..%2").arg(range->minZ, 0, 'f', 1).arg(range->maxZ, 0, 'f', 1);
+        modelX = (range->minX + range->maxX) * 0.5;
+        modelY = (range->minY + range->maxY) * 0.5;
+        modelZ = (range->minZ + range->maxZ) * 0.5;
+        modelEditorEnabled = true;
     }
 
     QString text = QStringLiteral("Geometry: %1 | Snap: %2 | Sel: %3").arg(modeText, snapText, selectionText);
@@ -250,5 +254,5 @@ void QtAppShell::updateStatusBarLabels() {
     this->window.geometryPanel()->setStatusSummary(modeText, snapText, selectionText, panelViewText,
                                                    canvas->geometryProjectionViewName(), depthText);
     this->window.geometryPanel()->setTopologySummary(topologyText);
-    this->window.geometryPanel()->setDepthEditor(depthEditorValue, depthEditorEnabled);
+    this->window.geometryPanel()->setModelInspector(modelX, modelY, modelZ, modelEditorEnabled);
 }

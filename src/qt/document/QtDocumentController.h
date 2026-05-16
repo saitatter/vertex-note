@@ -118,6 +118,16 @@ struct QtGeometryDepthRange {
     std::size_t vertexCount = 0U;
 };
 
+struct QtGeometryModelRange {
+    double minX = 0.0;
+    double maxX = 0.0;
+    double minY = 0.0;
+    double maxY = 0.0;
+    double minZ = 0.0;
+    double maxZ = 0.0;
+    std::size_t vertexCount = 0U;
+};
+
 enum class QtGeometryFaceLoopStatusKind {
     NoSelection,
     NoEdges,
@@ -375,6 +385,7 @@ public:
     [[nodiscard]] auto selectedVertexIds() const -> const std::vector<vn::geom::VertexId>&;
     [[nodiscard]] auto selectedEdgeIds() const -> const std::vector<vn::geom::EdgeId>&;
     [[nodiscard]] auto selectedFaceIds() const -> const std::vector<vn::geom::FaceId>&;
+    [[nodiscard]] auto selectedGeometryModelRange() const -> std::optional<QtGeometryModelRange>;
     [[nodiscard]] auto selectedGeometryDepthRange() const -> std::optional<QtGeometryDepthRange>;
     [[nodiscard]] auto selectedGeometryFaceLoopStatus() const -> QtGeometryFaceLoopStatus;
     [[nodiscard]] auto selectedGeometryFaceSplitDiagonals() const -> std::vector<QtGeometryFaceDiagonal>;
@@ -402,6 +413,8 @@ public:
     [[nodiscard]] auto projectSelectedGeometry3D(const vn::geom::ProjectionCamera& camera) -> bool;
     [[nodiscard]] auto nudgeSelectedGeometryZ(double delta, const vn::geom::ProjectionCamera& camera) -> bool;
     [[nodiscard]] auto setSelectedGeometryZ(double z, const vn::geom::ProjectionCamera& camera) -> bool;
+    [[nodiscard]] auto setSelectedGeometryModelCenter(vn::geom::Vec3 center,
+                                                      const vn::geom::ProjectionCamera& camera) -> bool;
     [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
     [[nodiscard]] auto rotateSelectedGeometry(double degrees) -> bool;
     [[nodiscard]] auto scaleSelectedGeometry(double scaleX, double scaleY) -> bool;

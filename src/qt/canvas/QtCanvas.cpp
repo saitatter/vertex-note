@@ -1049,6 +1049,26 @@ auto QtCanvas::setSelectedGeometryZ(double z) -> bool {
     return changed;
 }
 
+auto QtCanvas::setSelectedGeometryModelCenter(double x, double y, double z) -> bool {
+    if (!this->documentController) {
+        return false;
+    }
+
+    const auto camera = geometryProjectionCameraForActiveView();
+    const bool changed = camera && this->documentController->setSelectedGeometryModelCenter(
+                                           vn::geom::Vec3{x, y, z}, *camera);
+    if (changed) {
+        updateDebugOverlay(QStringLiteral("set geometry 3d position"));
+        Q_EMIT statusHintChanged(QStringLiteral("3D center set to X %1, Y %2, Z %3; projection refreshed")
+                                         .arg(x, 0, 'f', 1)
+                                         .arg(y, 0, 'f', 1)
+                                         .arg(z, 0, 'f', 1));
+        update();
+        Q_EMIT documentEdited();
+    }
+    return changed;
+}
+
 auto QtCanvas::insertVertexOnSelectedEdge() -> bool {
     if (!this->documentController) {
         return false;

@@ -127,6 +127,7 @@ public:
     [[nodiscard]] auto projectSelectedGeometry3DTop() -> bool;
     [[nodiscard]] auto nudgeSelectedGeometryZ(double delta) -> bool;
     [[nodiscard]] auto setSelectedGeometryZ(double z) -> bool;
+    [[nodiscard]] auto setSelectedGeometryModelCenter(double x, double y, double z) -> bool;
     [[nodiscard]] auto geometryProjectionViewName() const -> QString;
     [[nodiscard]] auto isGeometryProjectionIsometric() const -> bool;
     [[nodiscard]] auto isGeometryProjectionFront() const -> bool;

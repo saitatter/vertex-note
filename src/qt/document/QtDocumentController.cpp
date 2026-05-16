@@ -1006,7 +1006,7 @@ auto QtDocumentController::selectedFaceIds() const -> const std::vector<vn::geom
     return this->selectedGeometryFaceIds;
 }
 
-auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<QtGeometryDepthRange> {
+auto QtDocumentController::selectedGeometryModelRange() const -> std::optional<QtGeometryModelRange> {
     if (!this->document || !this->selectedGeometryHit ||
         this->selectedGeometryHit->pageIndex >= this->document->getPageCount()) {
         return std::nullopt;
@@ -1043,7 +1043,11 @@ auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<Q
         return std::nullopt;
     }
 
-    QtGeometryDepthRange range{.minZ = std::numeric_limits<double>::max(),
+    QtGeometryModelRange range{.minX = std::numeric_limits<double>::max(),
+                               .maxX = std::numeric_limits<double>::lowest(),
+                               .minY = std::numeric_limits<double>::max(),
+                               .maxY = std::numeric_limits<double>::lowest(),
+                               .minZ = std::numeric_limits<double>::max(),
                                .maxZ = std::numeric_limits<double>::lowest(),
                                .vertexCount = 0U};
     for (auto vertexId: vertexIds) {
@@ -1051,6 +1055,10 @@ auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<Q
         if (!vertex) {
             continue;
         }
+        range.minX = std::min(range.minX, vertex->modelPosition.x);
+        range.maxX = std::max(range.maxX, vertex->modelPosition.x);
+        range.minY = std::min(range.minY, vertex->modelPosition.y);
+        range.maxY = std::max(range.maxY, vertex->modelPosition.y);
         range.minZ = std::min(range.minZ, vertex->modelPosition.z);
         range.maxZ = std::max(range.maxZ, vertex->modelPosition.z);
         ++range.vertexCount;
@@ -1060,6 +1068,14 @@ auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<Q
         return std::nullopt;
     }
     return range;
+}
+
+auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<QtGeometryDepthRange> {
+    const auto range = selectedGeometryModelRange();
+    if (!range) {
+        return std::nullopt;
+    }
+    return QtGeometryDepthRange{.minZ = range->minZ, .maxZ = range->maxZ, .vertexCount = range->vertexCount};
 }
 
 auto QtDocumentController::selectedGeometryFaceLoopStatus() const -> QtGeometryFaceLoopStatus {
@@ -1979,6 +1995,98 @@ auto QtDocumentController::setSelectedGeometryZ(double z, const vn::geom::Projec
                          .before = std::move(*beforeGeometry),
                          .after = std::move(*afterGeometry),
                          .text = "Set geometry Z depth"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::setSelectedGeometryModelCenter(vn::geom::Vec3 center,
+                                                          const vn::geom::ProjectionCamera& camera) -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    auto vertexIds = selectedGeometryTransformVertexIds(after);
+    if (vertexIds.empty()) {
+        this->document->unlock();
+        return false;
+    }
+
+    normalizePageSpaceModelForProjection(after, allGeometryVertexIds(after), camera);
+
+    vn::geom::Vec3 min{std::numeric_limits<double>::max(),
+                       std::numeric_limits<double>::max(),
+                       std::numeric_limits<double>::max()};
+    vn::geom::Vec3 max{std::numeric_limits<double>::lowest(),
+                       std::numeric_limits<double>::lowest(),
+                       std::numeric_limits<double>::lowest()};
+    std::size_t count = 0U;
+    for (auto vertexId: vertexIds) {
+        const auto* vertex = after.vertex(vertexId);
+        if (!vertex) {
+            continue;
+        }
+        min.x = std::min(min.x, vertex->modelPosition.x);
+        max.x = std::max(max.x, vertex->modelPosition.x);
+        min.y = std::min(min.y, vertex->modelPosition.y);
+        max.y = std::max(max.y, vertex->modelPosition.y);
+        min.z = std::min(min.z, vertex->modelPosition.z);
+        max.z = std::max(max.z, vertex->modelPosition.z);
+        ++count;
+    }
+    if (count == 0U) {
+        this->document->unlock();
+        return false;
+    }
+
+    const vn::geom::Vec3 currentCenter{(min.x + max.x) * 0.5, (min.y + max.y) * 0.5, (min.z + max.z) * 0.5};
+    const vn::geom::Vec3 delta{center.x - currentCenter.x, center.y - currentCenter.y, center.z - currentCenter.z};
+    if (std::abs(delta.x) <= 1e-9 && std::abs(delta.y) <= 1e-9 && std::abs(delta.z) <= 1e-9) {
+        this->document->unlock();
+        return false;
+    }
+
+    for (auto vertexId: vertexIds) {
+        const auto* vertex = after.vertex(vertexId);
+        if (!vertex) {
+            continue;
+        }
+        changed = after.setVertexModelPosition(vertexId,
+                                               vn::geom::Vec3{vertex->modelPosition.x + delta.x,
+                                                              vertex->modelPosition.y + delta.y,
+                                                              vertex->modelPosition.z + delta.z}) ||
+                  changed;
+    }
+    changed = after.applyProjection(camera) || changed;
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Set geometry 3D position"});
     rebuildPageSnapshots();
     return true;
 }
