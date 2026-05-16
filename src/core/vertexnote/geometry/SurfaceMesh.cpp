@@ -18,7 +18,7 @@ auto SurfaceMesh::fromGeometryObject(const GeometryObject& object) -> SurfaceMes
     for (const auto& vertex: object.vertices()) {
         mesh.vertices.push_back(SurfaceMeshVertex{
                 .id = vertex.id,
-                .position = Vec3{.x = vertex.position.x, .y = vertex.position.y, .z = 0.0},
+                .position = vertex.modelPosition,
         });
     }
 
@@ -30,6 +30,15 @@ auto SurfaceMesh::fromGeometryObject(const GeometryObject& object) -> SurfaceMes
                 .start = edge.start,
                 .end = edge.end,
                 .controls = edge.controls,
+        });
+    }
+
+    mesh.faces.reserve(object.faces().size());
+    for (const auto& face: object.faces()) {
+        mesh.faces.push_back(SurfaceMeshFace{
+                .id = face.id,
+                .vertices = face.vertices,
+                .fill = face.fill,
         });
     }
     return mesh;
@@ -77,7 +86,20 @@ auto SurfaceMesh::validate() const -> SurfaceMeshValidationResult {
         }
     }
 
+    std::unordered_set<FaceId> faceIds;
+    faceIds.reserve(this->faces.size());
     for (const auto& face: this->faces) {
+        if (face.id == InvalidFaceId) {
+            result.valid = false;
+            result.errors.emplace_back("surface mesh contains an invalid face id");
+        } else if (!faceIds.insert(face.id).second) {
+            result.valid = false;
+            result.errors.emplace_back("surface mesh contains duplicate face ids");
+        }
+        if (face.vertices.size() < 3U) {
+            result.valid = false;
+            result.errors.emplace_back("surface mesh face has fewer than three vertices");
+        }
         for (auto vertexId: face.vertices) {
             if (!vertexIds.contains(vertexId)) {
                 result.valid = false;

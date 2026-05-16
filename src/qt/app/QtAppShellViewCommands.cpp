@@ -48,6 +48,65 @@ void QtAppShell::registerViewCommands() {
             {.id = "view.show-sidebar", .text = "Show Sidebar", .tooltip = "Toggle sidebar visibility",
              .shortcut = "F12", .menu = "View", .checkable = true, .checked = true},
             [this]() { toggleSidebarVisibility(); });
+    ch->registerCommand(
+            {.id = "view.show-geometry-panel", .text = "Workspace Panel", .tooltip = "Toggle the active workspace panel",
+             .menu = "View", .checkable = true, .checked = true},
+            [this]() {
+                applyGeometryPanelVisibility(!this->window.geometryPanel()->isVisible());
+                savePersistentUiState();
+            });
+    ch->addMenuSeparator("View");
+
+    ch->registerCommand(
+            {.id = "view.workspace-notes", .text = "Write Workspace",
+             .tooltip = "Use the writing and note-taking workspace",
+             .menu = "View>Workspace", .checkable = true,
+             .checked = activeWorkspaceId() == "notes"},
+            [this]() { applyWorkspace("notes"); });
+    ch->registerCommand(
+            {.id = "view.workspace-geometry", .text = "Geometry Workspace",
+             .tooltip = "Use a focused geometry editing layout",
+             .menu = "View>Workspace", .checkable = true,
+             .checked = activeWorkspaceId() == "geometry"},
+            [this]() { applyWorkspace("geometry"); });
+    ch->registerCommand(
+            {.id = "view.workspace-3d", .text = "3D Workspace",
+             .tooltip = "Use a focused 3D geometry layout",
+             .menu = "View>Workspace", .checkable = true,
+             .checked = activeWorkspaceId() == "3d"},
+            [this]() { applyWorkspace("3d"); });
+    ch->addMenuSeparator("View");
+
+    ch->registerCommand(
+            {.id = "view.geometry-wireframe", .text = "Wireframe",
+             .tooltip = "Show geometry faces as wireframe outlines",
+             .menu = "View>Geometry View", .checkable = true,
+             .checked = this->window.canvas()->isGeometryWireframeViewEnabled()},
+            [this]() {
+                setGeometryWireframeViewEnabled(!this->window.canvas()->isGeometryWireframeViewEnabled());
+            });
+    ch->registerCommand(
+            {.id = "view.geometry-highlight-vertices", .text = "Vertex Handles",
+             .tooltip = "Show geometry vertex handles without needing hover",
+             .menu = "View>Geometry View", .checkable = true,
+             .checked = this->window.canvas()->isGeometryVertexOverlayEnabled()},
+            [this]() {
+                setGeometryVertexOverlayEnabled(!this->window.canvas()->isGeometryVertexOverlayEnabled());
+            });
+    ch->registerCommand(
+            {.id = "view.geometry-linked-markers", .text = "Linked Markers",
+             .tooltip = "Show markers for welded or shared geometry vertices",
+             .menu = "View>Geometry View", .checkable = true,
+             .checked = this->window.canvas()->isGeometryLinkedVertexOverlayEnabled()},
+            [this]() {
+                setGeometryLinkedVertexOverlayEnabled(!this->window.canvas()->isGeometryLinkedVertexOverlayEnabled());
+            });
+    ch->registerCommand(
+            {.id = "view.geometry-face-fills", .text = "Face Fills",
+             .tooltip = "Show filled geometry mesh and surface faces",
+             .menu = "View>Geometry View", .checkable = true,
+             .checked = this->window.canvas()->isGeometryFaceFillVisible()},
+            [this]() { setGeometryFaceFillVisible(!this->window.canvas()->isGeometryFaceFillVisible()); });
     ch->addMenuSeparator("View");
 
     // Layout submenu

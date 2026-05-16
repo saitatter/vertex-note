@@ -49,6 +49,25 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
         addStretchToolbarSpacer(toolbar);
         return;
     }
+    if (token == "GROUP_FILE") { addToolbarGroupLabel(toolbar, "File"); return; }
+    if (token == "GROUP_EDIT") { addToolbarGroupLabel(toolbar, "Edit"); return; }
+    if (token == "GROUP_NAV") { addToolbarGroupLabel(toolbar, "Nav"); return; }
+    if (token == "GROUP_PAGE") { addToolbarGroupLabel(toolbar, "Page"); return; }
+    if (token == "GROUP_TOOLS") { addToolbarGroupLabel(toolbar, "Tools"); return; }
+    if (token == "GROUP_INSERT") { addToolbarGroupLabel(toolbar, "Insert"); return; }
+    if (token == "GROUP_DRAW") { addToolbarGroupLabel(toolbar, "Draw"); return; }
+    if (token == "GROUP_GEOMETRY") { addToolbarGroupLabel(toolbar, "Geometry"); return; }
+    if (token == "GROUP_TOPOLOGY") { addToolbarGroupLabel(toolbar, "Topology"); return; }
+    if (token == "GROUP_FACES") { addToolbarGroupLabel(toolbar, "Faces"); return; }
+    if (token == "GROUP_3D") { addToolbarGroupLabel(toolbar, "3D"); return; }
+    if (token == "GROUP_VIEW") { addToolbarGroupLabel(toolbar, "View"); return; }
+    if (token == "GROUP_SNAP") { addToolbarGroupLabel(toolbar, "Snap"); return; }
+    if (token == "GROUP_STYLE") { addToolbarGroupLabel(toolbar, "Style"); return; }
+    if (token == "GROUP_COLOR") { addToolbarGroupLabel(toolbar, "Color"); return; }
+    if (token == "WORKSPACE") {
+        toolbar->addWidget(ensureWorkspaceCombo());
+        return;
+    }
     if (token == "SAVE") { addToolbarCommand(toolbar, "file.save"); return; }
     if (token == "NEW") { addToolbarCommand(toolbar, "app.new"); return; }
     if (token == "OPEN") { addToolbarCommand(toolbar, "app.open"); return; }
@@ -202,10 +221,28 @@ void QtAppShell::addToolbarToken(QToolBar* toolbar, std::string_view rawToken) {
     if (token == "CONSTRAINT_DELETE") { addToolbarCommand(toolbar, "constraint.delete"); return; }
     if (token == "GEOMETRY_SELECT_VERTEX") { addToolbarCommand(toolbar, "geometry.selection-mode-vertex"); return; }
     if (token == "GEOMETRY_SELECT_EDGE") { addToolbarCommand(toolbar, "geometry.selection-mode-edge"); return; }
+    if (token == "GEOMETRY_SELECT_FACE") { addToolbarCommand(toolbar, "geometry.selection-mode-face"); return; }
     if (token == "GEOMETRY_SELECT_OBJECT") { addToolbarCommand(toolbar, "geometry.selection-mode-object"); return; }
     if (token == "GEOMETRY_TRANSLATE") { addToolbarCommand(toolbar, "geometry.translate-vertices"); return; }
     if (token == "GEOMETRY_ROTATE") { addToolbarCommand(toolbar, "geometry.rotate-selection"); return; }
     if (token == "GEOMETRY_SCALE") { addToolbarCommand(toolbar, "geometry.scale-selection"); return; }
+    if (token == "GEOMETRY_WELD") { addToolbarCommand(toolbar, "geometry.weld-selection"); return; }
+    if (token == "GEOMETRY_DETACH") { addToolbarCommand(toolbar, "geometry.detach-selection"); return; }
+    if (token == "GEOMETRY_FILL_FACE") { addToolbarCommand(toolbar, "geometry.fill-face"); return; }
+    if (token == "GEOMETRY_DELETE_FACE") { addToolbarCommand(toolbar, "geometry.delete-face"); return; }
+    if (token == "GEOMETRY_SPLIT_FACE") { addToolbarCommand(toolbar, "geometry.split-face"); return; }
+    if (token == "GEOMETRY_TRIANGULATE_FACE") { addToolbarCommand(toolbar, "geometry.triangulate-face"); return; }
+    if (token == "GEOMETRY_3D_BOX") { addToolbarCommand(toolbar, "geometry.create-3d-box"); return; }
+    if (token == "GEOMETRY_PROJECT_ISO") { addToolbarCommand(toolbar, "geometry.project-3d-isometric"); return; }
+    if (token == "GEOMETRY_PROJECT_FRONT") { addToolbarCommand(toolbar, "geometry.project-3d-front"); return; }
+    if (token == "GEOMETRY_PROJECT_TOP") { addToolbarCommand(toolbar, "geometry.project-3d-top"); return; }
+    if (token == "GEOMETRY_Z_UP") { addToolbarCommand(toolbar, "geometry.nudge-z-up"); return; }
+    if (token == "GEOMETRY_Z_DOWN") { addToolbarCommand(toolbar, "geometry.nudge-z-down"); return; }
+    if (token == "GEOMETRY_PANEL") { addToolbarCommand(toolbar, "view.show-geometry-panel"); return; }
+    if (token == "GEOMETRY_VIEW_WIREFRAME") { addToolbarCommand(toolbar, "view.geometry-wireframe"); return; }
+    if (token == "GEOMETRY_VIEW_VERTICES") { addToolbarCommand(toolbar, "view.geometry-highlight-vertices"); return; }
+    if (token == "GEOMETRY_VIEW_LINKED") { addToolbarCommand(toolbar, "view.geometry-linked-markers"); return; }
+    if (token == "GEOMETRY_VIEW_FACES") { addToolbarCommand(toolbar, "view.geometry-face-fills"); return; }
     if (token == "VERY_FINE") { addGenericSizeToolbarAction(toolbar, "Very Fine", "xopp-thickness-finer.svg", 0); return; }
     if (token == "FINE") { addGenericSizeToolbarAction(toolbar, "Fine", "xopp-thickness-fine.svg", 1); return; }
     if (token == "MEDIUM") { addGenericSizeToolbarAction(toolbar, "Medium", "xopp-thickness-medium.svg", 2); return; }

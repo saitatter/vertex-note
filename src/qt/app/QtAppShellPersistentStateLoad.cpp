@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <QByteArray>
@@ -37,6 +38,23 @@ auto settingsGeometrySelectionMode(QSettings& settings, const QString& key,
         return fallback;
     }
     return static_cast<QtGeometrySelectionMode>(value);
+}
+
+auto workspaceIdForToolbarProfile(std::string_view profileId) -> std::string {
+    if (profileId == QT_GEOMETRY_PROFILE_ID) {
+        return "geometry";
+    }
+    if (profileId == QT_3D_PROFILE_ID) {
+        return "3d";
+    }
+    return "notes";
+}
+
+auto normalizeWorkspaceId(std::string workspaceId, std::string_view toolbarProfileId) -> std::string {
+    if (workspaceId == "notes" || workspaceId == "geometry" || workspaceId == "3d") {
+        return workspaceId;
+    }
+    return workspaceIdForToolbarProfile(toolbarProfileId);
 }
 
 void applyQtPreferredLocale(const std::string& preferredLocale) {
@@ -376,6 +394,22 @@ void QtAppShell::loadPersistentUiState() {
                     .toBool();
     this->currentSettings.showPageShadow =
             settings.value(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow).toBool();
+    this->currentSettings.geometryWireframeView =
+            settings.value(QStringLiteral("appearance/geometryWireframeView"),
+                           this->currentSettings.geometryWireframeView)
+                    .toBool();
+    this->currentSettings.geometryHighlightVertices =
+            settings.value(QStringLiteral("appearance/geometryHighlightVertices"),
+                           this->currentSettings.geometryHighlightVertices)
+                    .toBool();
+    this->currentSettings.geometryHighlightLinkedVertices =
+            settings.value(QStringLiteral("appearance/geometryHighlightLinkedVertices"),
+                           this->currentSettings.geometryHighlightLinkedVertices)
+                    .toBool();
+    this->currentSettings.geometryShowFaceFills =
+            settings.value(QStringLiteral("appearance/geometryShowFaceFills"),
+                           this->currentSettings.geometryShowFaceFills)
+                    .toBool();
     this->currentSettings.sidebarWidth =
             std::clamp(settings.value(QStringLiteral("appearance/sidebarWidth"), this->currentSettings.sidebarWidth)
                                .toInt(),
@@ -581,9 +615,13 @@ void QtAppShell::loadPersistentUiState() {
     if (this->currentSettings.toolbarProfileId.empty()) {
         this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
     }
+    this->currentSettings.workspaceId =
+            normalizeWorkspaceId(settings.value(QStringLiteral("general/workspaceId")).toString().toStdString(),
+                                 this->currentSettings.toolbarProfileId);
     this->persistedShowToolbar = settings.value(QStringLiteral("view/showToolbar"), true).toBool();
     this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
     this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
+    this->persistedShowGeometryPanel = settings.value(QStringLiteral("view/showGeometryPanel"), true).toBool();
     this->persistedPairedPages = settings.value(QStringLiteral("view/pairedPages"), false).toBool();
     this->persistedPairOffset = settings.value(QStringLiteral("view/pairOffset"), 0).toInt();
     if (this->persistedPairOffset < 0 || this->persistedPairOffset > 1) {
@@ -623,12 +661,14 @@ void QtAppShell::loadPersistentUiState() {
         // This clears old left/right/floating toolbar state that made startup diverge
         // from the target shell composition.
         this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+        this->currentSettings.workspaceId = "notes";
         this->persistedWindowState.clear();
         this->persistedFloatingToolBarGeometries.clear();
         this->persistedFloatingToolBarUserHidden.clear();
         this->persistedShowToolbar = true;
         this->persistedShowMenubar = true;
         this->persistedShowSidebar = true;
+        this->persistedShowGeometryPanel = true;
         this->persistedPairedPages = false;
         this->persistedPairOffset = 0;
         this->persistedLayoutColumnsRows = 1;

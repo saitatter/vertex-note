@@ -34,6 +34,7 @@
 
 class QDoubleSpinBox;
 class QFontComboBox;
+class QComboBox;
 class QSpinBox;
 class QAction;
 class QToolBar;
@@ -78,6 +79,7 @@ private:
             -> std::vector<std::string>;
     void addToolbarToken(QToolBar* toolbar, std::string_view rawToken);
     void addToolbarCommand(QToolBar* toolbar, std::string_view commandId);
+    void addToolbarGroupLabel(QToolBar* toolbar, std::string_view text);
     void addGenericSizeToolbarAction(QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex);
     void addFillToolbarAction(QToolBar* toolbar);
     void addStretchToolbarSpacer(QToolBar* toolbar);
@@ -85,6 +87,7 @@ private:
     [[nodiscard]] auto createStrokeDrawingToolButton() -> QWidget*;
     [[nodiscard]] auto createVertexDrawingToolButton() -> QWidget*;
     [[nodiscard]] auto createGeometryTransformToolButton() -> QWidget*;
+    [[nodiscard]] auto ensureWorkspaceCombo() -> QComboBox*;
     [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
     [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
     void ensureFontToolbarWidgets();
@@ -100,6 +103,7 @@ private:
     void syncFloatingToolBarsVisibility(bool showToolbars);
     void applyAuxiliaryToolBarVisibility(bool showToolbars);
     void applySidebarVisibility(bool visible);
+    void applyGeometryPanelVisibility(bool visible);
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();
@@ -120,6 +124,10 @@ private:
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
+    void setGeometryWireframeViewEnabled(bool enabled);
+    void setGeometryVertexOverlayEnabled(bool enabled);
+    void setGeometryLinkedVertexOverlayEnabled(bool enabled);
+    void setGeometryFaceFillVisible(bool visible);
     void setGeometrySelectionMode(QtGeometrySelectionMode mode);
     void selectTool(QtToolType tool);
     void toggleDrawingTool(QtToolType tool);
@@ -222,6 +230,12 @@ private:
     void setLayoutRows(int rows);
     void setPairOffset(int offset);
     void syncLayoutSpanCommandStates();
+    void applyWorkspacePreset(std::string_view profileId, std::string_view displayName, bool showGeometryPanel,
+                              bool wireframeView, bool vertexHandles, bool linkedMarkers, bool faceFills,
+                              QtGeometrySelectionMode selectionMode);
+    void applyWorkspace(std::string_view workspaceId);
+    void syncWorkspaceCommandStates();
+    [[nodiscard]] auto activeWorkspaceId() const -> std::string_view;
 
     // Journal extras
     void addPageAtEnd();
@@ -259,6 +273,7 @@ private:
     std::vector<QToolButton*> vertexDrawingToolButtons;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
+    QComboBox* workspaceCombo = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
     QDoubleSpinBox* fontSizeSpinner = nullptr;
     QSpinBox* fillOpacitySpinner = nullptr;
@@ -267,6 +282,7 @@ private:
     std::vector<QToolButton*> toolbarColorButtons;
     std::optional<QtToolbarProfile> activeToolbarProfile;
     std::vector<QtToolbarProfileOption> availableToolbarProfiles;
+    bool suppressWorkspaceComboSync = false;
 
     // Navigation history
     struct NavPoint {
@@ -284,6 +300,7 @@ private:
     bool persistedShowToolbar = true;
     bool persistedShowMenubar = true;
     bool persistedShowSidebar = true;
+    bool persistedShowGeometryPanel = true;
     bool persistedPairedPages = false;
     int persistedPairOffset = 0;
     int persistedLayoutColumnsRows = 1;

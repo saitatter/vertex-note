@@ -34,6 +34,9 @@ private:
     [[nodiscard]] auto applyParallel(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
     [[nodiscard]] auto applyPerpendicular(geom::GeometryObject& object, const geom::Constraint& constraint) const
             -> bool;
+    [[nodiscard]] auto applyEqualLength(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
+    [[nodiscard]] auto applyFixedAngle(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
+    [[nodiscard]] auto applyOnEdge(geom::GeometryObject& object, const geom::Constraint& constraint) const -> bool;
 
 private:
     std::size_t maxIterations = 8U;

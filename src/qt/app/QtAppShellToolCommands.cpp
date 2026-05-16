@@ -12,6 +12,7 @@
 #include <QInputDialog>
 #include <QStatusBar>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 void QtAppShell::registerToolCommands() {
     auto* ch = this->window.commandHost();
@@ -331,6 +332,12 @@ void QtAppShell::registerToolCommands() {
              .checked = this->window.canvas()->toolState().geometrySelectionMode == QtGeometrySelectionMode::Edge},
             [this]() { setGeometrySelectionMode(QtGeometrySelectionMode::Edge); });
     ch->registerCommand(
+            {.id = "geometry.selection-mode-face", .text = "Face Mode",
+             .tooltip = "Select and edit filled geometry faces",
+             .menu = "Tools>Geometry Selection", .checkable = true,
+             .checked = this->window.canvas()->toolState().geometrySelectionMode == QtGeometrySelectionMode::Face},
+            [this]() { setGeometrySelectionMode(QtGeometrySelectionMode::Face); });
+    ch->registerCommand(
             {.id = "geometry.selection-mode-object", .text = "Object Mode",
              .tooltip = "Select and transform whole geometry objects",
              .menu = "Tools>Geometry Selection", .checkable = true,
@@ -369,6 +376,80 @@ void QtAppShell::registerToolCommands() {
              .tooltip = "Scale selected geometry vertices or the selected geometry object",
              .menu = "Tools>Vertex Transform", .enabled = this->documentController.selectedGeometry().has_value()},
             [this]() { scaleSelectedGeometry(); });
+    ch->registerCommand(
+            {.id = "geometry.create-3d-box", .text = "3D Box",
+             .tooltip = "Create an isometric 3D wireframe box on the current page",
+             .menu = "Tools>3D Geometry"},
+            [this]() {
+                if (this->window.canvas()->createWireframeBox3D()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Created 3D wireframe box"), 3000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.project-3d-isometric", .text = "3D Isometric",
+             .tooltip = "Project selected 3D geometry to an isometric view",
+             .menu = "Tools>3D Geometry", .checkable = true,
+             .enabled = this->documentController.selectedGeometry().has_value(),
+             .checked = this->window.canvas()->isGeometryProjectionIsometric()},
+            [this]() {
+                if (this->window.canvas()->projectSelectedGeometry3DIsometric()) {
+                    this->window.statusBar()->showMessage(
+                            QStringLiteral("3D projection: isometric view of the same geometry"), 4000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.project-3d-front", .text = "3D Front",
+             .tooltip = "Project selected 3D geometry to a front view",
+             .menu = "Tools>3D Geometry", .checkable = true,
+             .enabled = this->documentController.selectedGeometry().has_value(),
+             .checked = this->window.canvas()->isGeometryProjectionFront()},
+            [this]() {
+                if (this->window.canvas()->projectSelectedGeometry3DFront()) {
+                    this->window.statusBar()->showMessage(
+                            QStringLiteral("3D projection: front view of the same geometry"), 4000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.project-3d-top", .text = "3D Top",
+             .tooltip = "Project selected 3D geometry to a top view",
+             .menu = "Tools>3D Geometry", .checkable = true,
+             .enabled = this->documentController.selectedGeometry().has_value(),
+             .checked = this->window.canvas()->isGeometryProjectionTop()},
+            [this]() {
+                if (this->window.canvas()->projectSelectedGeometry3DTop()) {
+                    this->window.statusBar()->showMessage(
+                            QStringLiteral("3D projection: top view of the same geometry"), 4000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.nudge-z-up", .text = "Push Z",
+             .tooltip = "Move selected geometry vertices forward in 3D depth",
+             .shortcut = "Ctrl+Alt+Up", .menu = "Tools>3D Geometry",
+             .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() {
+                if (this->window.canvas()->nudgeSelectedGeometryZ(12.0)) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Depth Z increased; projection refreshed"),
+                                                          3000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.nudge-z-down", .text = "Pull Z",
+             .tooltip = "Move selected geometry vertices backward in 3D depth",
+             .shortcut = "Ctrl+Alt+Down", .menu = "Tools>3D Geometry",
+             .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() {
+                if (this->window.canvas()->nudgeSelectedGeometryZ(-12.0)) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Depth Z decreased; projection refreshed"),
+                                                          3000);
+                    updateEditCommandStates();
+                }
+            });
+    ch->addMenuSeparator("Tools>3D Geometry");
     ch->addMenuSeparator("Tools");
     ch->registerCommand(
             {.id = "constraint.coincident", .text = "Coincident", .tooltip = "Merge vertices", .shortcut = "Ctrl+Alt+C",
@@ -387,13 +468,25 @@ void QtAppShell::registerToolCommands() {
              .menu = "Tools>Geometry Constraints"},
             [this]() { applyConstraint(vn::geom::ConstraintKind::FixedLength); });
     ch->registerCommand(
+            {.id = "constraint.equal-length", .text = "Equal Length", .tooltip = "Match selected edge lengths", .shortcut = "Ctrl+Alt+Shift+L",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::EqualLength); });
+    ch->registerCommand(
             {.id = "constraint.edit-length", .text = "Edit Fixed Length...", .tooltip = "Edit constraint value", .shortcut = "Ctrl+Alt+E",
              .menu = "Tools>Geometry Constraints"},
             [this]() { editFixedLengthConstraint(); });
     ch->registerCommand(
+            {.id = "constraint.fixed-angle", .text = "Fixed Angle", .tooltip = "Lock selected edge angle", .shortcut = "Ctrl+Alt+A",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::FixedAngle); });
+    ch->registerCommand(
             {.id = "constraint.radius", .text = "Radius", .tooltip = "Set fixed radius", .shortcut = "Ctrl+Alt+R",
              .menu = "Tools>Geometry Constraints"},
             [this]() { applyConstraint(vn::geom::ConstraintKind::Radius); });
+    ch->registerCommand(
+            {.id = "constraint.on-edge", .text = "On Edge", .tooltip = "Constrain vertex onto selected edge", .shortcut = "Ctrl+Alt+O",
+             .menu = "Tools>Geometry Constraints"},
+            [this]() { applyConstraint(vn::geom::ConstraintKind::OnEdge); });
     ch->registerCommand(
             {.id = "constraint.parallel", .text = "Parallel", .tooltip = "Force parallel edges", .shortcut = "Ctrl+Alt+P",
              .menu = "Tools>Geometry Constraints"},
@@ -415,6 +508,112 @@ void QtAppShell::registerToolCommands() {
                 if (this->window.canvas()->insertVertexOnSelectedEdge()) {
                     this->window.statusBar()->showMessage(QStringLiteral("Inserted geometry vertex"), 3000);
                     updateEditCommandStates();
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.detach-selection", .text = "Detach Selected Geometry",
+             .tooltip = "Separate selected geometry vertices or edges from connected topology",
+             .shortcut = "Ctrl+Alt+D", .menu = "Tools",
+             .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() {
+                if (this->window.canvas()->detachSelectedGeometry()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Detached selected geometry"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    this->window.statusBar()->showMessage(QStringLiteral("No detachable geometry selected"), 3000);
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.weld-selection", .text = "Weld Selected Vertices",
+             .tooltip = "Merge selected geometry vertices into shared topology",
+             .shortcut = "Ctrl+Alt+W", .menu = "Tools",
+             .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() {
+                if (this->window.canvas()->weldSelectedGeometry()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Welded selected vertices"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    this->window.statusBar()->showMessage(QStringLiteral("No weldable vertices selected"), 3000);
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.fill-face", .text = "Fill Closed Geometry Face",
+             .tooltip = "Create a filled surface from the selected closed geometry loop",
+             .shortcut = "Ctrl+Alt+F", .menu = "Tools",
+             .enabled = this->documentController.selectedGeometry().has_value()},
+            [this]() {
+                const int fillOpacity = this->window.canvas()->toolState().fillOpacity;
+                if (this->window.canvas()->fillSelectedGeometryFace(fillOpacity)) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Filled geometry face"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    const auto status = this->documentController.selectedGeometryFaceLoopStatus();
+                    this->window.statusBar()->showMessage(QString::fromStdString(status.message), 3000);
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.delete-face", .text = "Delete Face",
+             .tooltip = "Remove the selected filled geometry face without deleting its edges",
+             .shortcut = "Ctrl+Alt+Backspace", .menu = "Tools>Face Editing",
+             .enabled = !this->documentController.selectedFaceIds().empty()},
+            [this]() {
+                if (this->window.canvas()->deleteSelectedGeometryFace()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Deleted geometry face"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    this->window.statusBar()->showMessage(QStringLiteral("Select a filled face before Delete Face"),
+                                                          3000);
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.split-face", .text = "Split Face",
+             .tooltip = "Split the selected face with a diagonal",
+             .menu = "Tools>Face Editing", .enabled = this->documentController.selectedFaceIds().size() == 1U},
+            [this]() {
+                const auto diagonals = this->documentController.selectedGeometryFaceSplitDiagonals();
+                bool changed = false;
+                if (diagonals.size() > 1U) {
+                    QStringList labels;
+                    for (std::size_t index = 0U; index < diagonals.size(); ++index) {
+                        const auto& diagonal = diagonals[index];
+                        labels << QStringLiteral("v%1 - v%2").arg(diagonal.lhsIndex + 1U).arg(diagonal.rhsIndex + 1U);
+                    }
+                    bool ok = false;
+                    const QString chosen =
+                            QInputDialog::getItem(&this->window, QStringLiteral("Split Face"),
+                                                  QStringLiteral("Diagonal:"), labels, 0, false, &ok);
+                    if (!ok) {
+                        return;
+                    }
+                    const auto chosenIndex = labels.indexOf(chosen);
+                    if (chosenIndex >= 0 && static_cast<std::size_t>(chosenIndex) < diagonals.size()) {
+                        const auto& diagonal = diagonals[static_cast<std::size_t>(chosenIndex)];
+                        changed = this->window.canvas()->splitSelectedGeometryFace(diagonal.lhsIndex,
+                                                                                   diagonal.rhsIndex);
+                    }
+                } else {
+                    changed = this->window.canvas()->splitSelectedGeometryFace();
+                }
+
+                if (changed) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Split geometry face"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    this->window.statusBar()->showMessage(
+                            QStringLiteral("Split needs one selected face with four or more vertices"), 3000);
+                }
+            });
+    ch->registerCommand(
+            {.id = "geometry.triangulate-face", .text = "Triangulate Face",
+             .tooltip = "Triangulate the selected face into editable triangle faces",
+             .menu = "Tools>Face Editing", .enabled = this->documentController.selectedFaceIds().size() == 1U},
+            [this]() {
+                if (this->window.canvas()->triangulateSelectedGeometryFace()) {
+                    this->window.statusBar()->showMessage(QStringLiteral("Triangulated geometry face"), 3000);
+                    updateEditCommandStates();
+                } else {
+                    this->window.statusBar()->showMessage(
+                            QStringLiteral("Triangulate needs one selected filled face"), 3000);
                 }
             });
     ch->registerCommand(

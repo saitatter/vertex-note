@@ -24,6 +24,8 @@ void QtAppShell::toggleFullscreen() {
                                   this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
         const bool showSidebars = this->window.commandHost()->actionForCommand("view.show-sidebar") &&
                                   this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked();
+        const bool showGeometryPanel = this->window.commandHost()->actionForCommand("view.show-geometry-panel") &&
+                                       this->window.commandHost()->actionForCommand("view.show-geometry-panel")->isChecked();
         this->presentationMode = false;
         this->window.commandHost()->setCommandChecked("view.presentation", false);
         this->window.mainToolBar()->setVisible(showToolbars);
@@ -31,6 +33,7 @@ void QtAppShell::toggleFullscreen() {
         this->window.footerToolBar()->setVisible(showToolbars);
         applyAuxiliaryToolBarVisibility(showToolbars);
         applySidebarVisibility(showSidebars);
+        applyGeometryPanelVisibility(showGeometryPanel);
     }
 }
 
@@ -52,6 +55,9 @@ void QtAppShell::togglePresentationMode() {
         this->window.rightPrimaryToolBar()->setVisible(false);
         syncFloatingToolBarsVisibility(false);
         applySidebarVisibility(false);
+        this->window.geometryPanel()->setProperty("vertexProgrammaticVisibilityChange", true);
+        this->window.geometryPanel()->setVisible(false);
+        this->window.geometryPanel()->setProperty("vertexProgrammaticVisibilityChange", false);
         this->window.canvas()->fitPage(false);
         this->window.statusBar()->showMessage(QStringLiteral("Presentation mode — press F5 or Escape to exit"), 4000);
     } else {
@@ -60,11 +66,14 @@ void QtAppShell::togglePresentationMode() {
                                   this->window.commandHost()->actionForCommand("view.show-toolbar")->isChecked();
         const bool showSidebars = this->window.commandHost()->actionForCommand("view.show-sidebar") &&
                                   this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked();
+        const bool showGeometryPanel = this->window.commandHost()->actionForCommand("view.show-geometry-panel") &&
+                                       this->window.commandHost()->actionForCommand("view.show-geometry-panel")->isChecked();
         this->window.mainToolBar()->setVisible(showToolbars);
         this->window.toolsToolBar()->setVisible(showToolbars);
         this->window.footerToolBar()->setVisible(showToolbars);
         applyAuxiliaryToolBarVisibility(showToolbars);
         applySidebarVisibility(showSidebars);
+        applyGeometryPanelVisibility(showGeometryPanel);
         if (this->window.isFullScreen()) {
             this->window.showNormal();
             this->window.commandHost()->setCommandChecked("view.fullscreen", false);

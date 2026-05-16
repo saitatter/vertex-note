@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr int QT_SHELL_LAYOUT_VERSION = 5;
+constexpr int QT_SHELL_LAYOUT_VERSION = 6;
 
 }  // namespace
 void QtAppShell::savePersistentUiState() const {
@@ -35,6 +35,10 @@ void QtAppShell::savePersistentUiState() const {
             commandHost->actionForCommand("view.show-sidebar")
                     ? commandHost->actionForCommand("view.show-sidebar")->isChecked()
                     : this->persistedShowSidebar;
+    const bool showGeometryPanel =
+            commandHost->actionForCommand("view.show-geometry-panel")
+                    ? commandHost->actionForCommand("view.show-geometry-panel")->isChecked()
+                    : this->persistedShowGeometryPanel;
 
     settings.setValue(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth);
     settings.setValue(QStringLiteral("tools/defaultHighlighterWidth"), this->currentSettings.defaultHighlighterWidth);
@@ -170,6 +174,14 @@ void QtAppShell::savePersistentUiState() const {
     settings.setValue(QStringLiteral("appearance/showPageNumberInTitlebar"),
                       this->currentSettings.showPageNumberInTitlebar);
     settings.setValue(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow);
+    settings.setValue(QStringLiteral("appearance/geometryWireframeView"),
+                      this->currentSettings.geometryWireframeView);
+    settings.setValue(QStringLiteral("appearance/geometryHighlightVertices"),
+                      this->currentSettings.geometryHighlightVertices);
+    settings.setValue(QStringLiteral("appearance/geometryHighlightLinkedVertices"),
+                      this->currentSettings.geometryHighlightLinkedVertices);
+    settings.setValue(QStringLiteral("appearance/geometryShowFaceFills"),
+                      this->currentSettings.geometryShowFaceFills);
     settings.setValue(QStringLiteral("appearance/sidebarWidth"), this->currentSettings.sidebarWidth);
     settings.setValue(QStringLiteral("appearance/sidebarOnRight"), this->currentSettings.sidebarOnRight);
     settings.setValue(QStringLiteral("appearance/scrollbarOnLeft"), this->currentSettings.scrollbarOnLeft);
@@ -234,9 +246,11 @@ void QtAppShell::savePersistentUiState() const {
                       QString::fromStdString(this->currentSettings.latexTemporaryFileExt));
     settings.setValue(QStringLiteral("general/uiLayoutVersion"), QT_SHELL_LAYOUT_VERSION);
     settings.setValue(QStringLiteral("general/toolbarProfileId"), QString::fromStdString(this->currentSettings.toolbarProfileId));
+    settings.setValue(QStringLiteral("general/workspaceId"), QString::fromStdString(this->currentSettings.workspaceId));
     settings.setValue(QStringLiteral("view/showToolbar"), showToolbar);
     settings.setValue(QStringLiteral("view/showMenubar"), showMenubar);
     settings.setValue(QStringLiteral("view/showSidebar"), showSidebar);
+    settings.setValue(QStringLiteral("view/showGeometryPanel"), showGeometryPanel);
     settings.setValue(QStringLiteral("view/pairedPages"), canvas->isPairedPagesEnabled());
     settings.setValue(QStringLiteral("view/pairOffset"), canvas->pairOffset());
     settings.setValue(QStringLiteral("view/layoutColumnsRows"), canvas->layoutColumnsRows());

@@ -6,6 +6,7 @@
 
 #include "QtAppShell.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -13,11 +14,13 @@
 #include <QAction>
 #include <QColor>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFont>
 #include <QFontComboBox>
 #include <QIcon>
 #include <QHBoxLayout>
+#include <QLabel>
 #include <QMenu>
 #include <QObject>
 #include <QSize>
@@ -85,6 +88,7 @@ void QtAppShell::resetToolbarWidgetState() {
     this->vertexDrawingToolButtons.clear();
     this->laserToolButton = nullptr;
     this->pdfToolButton = nullptr;
+    this->workspaceCombo = nullptr;
     this->fontFamilyCombo = nullptr;
     this->fontSizeSpinner = nullptr;
     this->toolbarFillAction = nullptr;
@@ -137,6 +141,22 @@ void QtAppShell::addToolbarCommand(QToolBar* toolbar, std::string_view commandId
     }
 }
 
+void QtAppShell::addToolbarGroupLabel(QToolBar* toolbar, std::string_view text) {
+    auto* label = new QLabel(QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())), toolbar);
+    label->setObjectName(QStringLiteral("vertexNoteQtToolbarGroupLabel"));
+    label->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    label->setAttribute(Qt::WA_TransparentForMouseEvents);
+    label->setContentsMargins(0, 0, 0, 0);
+    label->setMinimumHeight(toolbar->iconSize().height() + 10);
+    label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    QFont font = label->font();
+    const double pointSize = font.pointSizeF() > 0.0 ? font.pointSizeF() : 9.0;
+    font.setPointSizeF(std::max(8.0, pointSize - 1.5));
+    font.setBold(false);
+    label->setFont(font);
+    toolbar->addWidget(label);
+}
+
 void QtAppShell::addGenericSizeToolbarAction(QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex) {
     auto* action = new QAction(QString::fromUtf8(text), toolbar);
     action->setToolTip(QString::fromUtf8(text));
@@ -181,6 +201,27 @@ void QtAppShell::addStretchToolbarSpacer(QToolBar* toolbar) {
     auto* spacer = new QWidget(toolbar);
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     toolbar->addWidget(spacer);
+}
+
+auto QtAppShell::ensureWorkspaceCombo() -> QComboBox* {
+    if (!this->workspaceCombo) {
+        this->workspaceCombo = new QComboBox(&this->window);
+        this->workspaceCombo->setObjectName(QStringLiteral("vertexNoteQtWorkspaceCombo"));
+        this->workspaceCombo->setToolTip(QStringLiteral("Workspace"));
+        this->workspaceCombo->setMinimumContentsLength(10);
+        this->workspaceCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+        this->workspaceCombo->addItem(QStringLiteral("Write"), QStringLiteral("notes"));
+        this->workspaceCombo->addItem(QStringLiteral("Geometry"), QStringLiteral("geometry"));
+        this->workspaceCombo->addItem(QStringLiteral("3D"), QStringLiteral("3d"));
+        QObject::connect(this->workspaceCombo, &QComboBox::currentIndexChanged, &this->window, [this](int index) {
+            if (this->suppressWorkspaceComboSync || !this->workspaceCombo || index < 0) {
+                return;
+            }
+            applyWorkspace(this->workspaceCombo->itemData(index).toString().toStdString());
+        });
+        syncWorkspaceCommandStates();
+    }
+    return this->workspaceCombo;
 }
 
 auto QtAppShell::ensureSelectionToolButton() -> QToolButton* {
@@ -257,13 +298,30 @@ auto QtAppShell::createGeometryTransformToolButton() -> QWidget* {
         button->setDefaultAction(action);
         transformMenu->addAction(action);
     } else {
-        button->setIcon(bundledQtIcon("xopp-geometry-tools.svg"));
+        button->setIcon(bundledQtIcon("xopp-geometry-translate.svg"));
     }
     if (auto* action = this->window.commandHost()->actionForCommand("geometry.rotate-selection")) {
         transformMenu->addAction(action);
     }
     if (auto* action = this->window.commandHost()->actionForCommand("geometry.scale-selection")) {
         transformMenu->addAction(action);
+    }
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.fill-face")) {
+        transformMenu->addAction(action);
+    }
+    transformMenu->addSeparator();
+    for (const auto* commandId: {"geometry.create-3d-box", "geometry.project-3d-isometric",
+                                "geometry.project-3d-front", "geometry.project-3d-top",
+                                "geometry.nudge-z-up", "geometry.nudge-z-down"}) {
+        if (auto* action = this->window.commandHost()->actionForCommand(commandId)) {
+            transformMenu->addAction(action);
+        }
+    }
+    transformMenu->addSeparator();
+    for (const auto* commandId: {"geometry.delete-face", "geometry.split-face", "geometry.triangulate-face"}) {
+        if (auto* action = this->window.commandHost()->actionForCommand(commandId)) {
+            transformMenu->addAction(action);
+        }
     }
     menuButton->setMenu(transformMenu);
     return createFamilySplitWidget(&this->window, button, menuButton);

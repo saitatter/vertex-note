@@ -1,5 +1,7 @@
 #include <array>
+#include <cmath>
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -9,6 +11,9 @@
 
 #include "QtDocumentController.h"
 #include "QtToolState.h"
+#include "vertexnote/geometry/GeometryElement.h"
+#include "vertexnote/geometry/GeometryIdGenerator.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 #include "vertexnote/geometry/SurfaceMesh.h"
 #include "view/render/Renderers.h"
 
@@ -81,6 +86,19 @@ auto strokes(const vn::view::render::PageRenderSnapshot& snapshot) -> std::vecto
     return result;
 }
 
+auto insertRawGeometryEdge(QtDocumentController& controller, double x1, double y1, double x2, double y2)
+        -> const Element* {
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    const auto start = object.addVertex({x1, y1});
+    const auto end = object.addVertex({x2, y2});
+    object.addLine(start, end);
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(Colors::black);
+    geometry->setStrokeWidth(1.0);
+    return controller.insertElement(0U, std::move(geometry), "Insert raw geometry edge");
+}
+
 }  // namespace
 
 TEST(VertexNoteQtDocumentControllerShapeTools, createsLegacyStrokeShapesForQtShell) {
@@ -119,6 +137,170 @@ TEST(VertexNoteQtDocumentControllerShapeTools, separatesStrokeLineFromVertexEdge
     EXPECT_EQ(1U, geometryCount(controller.snapshotPages().front()));
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, filledClosedPolylineCreatesGeometryFace) {
+    QtDocumentController controller;
+
+    ASSERT_NE(nullptr, controller.createPolyline(0U,
+                                                {{10.0, 10.0}, {50.0, 10.0}, {50.0, 40.0}, {10.0, 10.0}},
+                                                Colors::red, 2.0, 104));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_EQ(geometry.faces.size(), 1U);
+    EXPECT_EQ(geometry.faces.front().fill, 104);
+    EXPECT_EQ(geometry.faces.front().vertices.size(), 3U);
+    EXPECT_EQ(geometry.faces.front().triangles.size(), 1U);
+    ASSERT_EQ(geometry.edges.size(), 3U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, fillsSelectedClosedGeometryLoop) {
+    QtDocumentController controller;
+
+    ASSERT_NE(nullptr, controller.createRectangle(0U, 10.0, 10.0, 50.0, 40.0, Colors::black, 1.5));
+    auto hit = controller.hitTestGeometry(0U, 20.0, 10.0, 1.0);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometryObject(*hit);
+
+    ASSERT_TRUE(controller.fillSelectedGeometryFace(120));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_EQ(geometry.faces.size(), 1U);
+    EXPECT_EQ(geometry.faces.front().fill, 120);
+    EXPECT_EQ(geometry.faces.front().triangles.size(), 2U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, creates3DWireframeBoxGeometry) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createWireframeBox3D(0U, 100.0, 120.0, 80.0, 60.0, Colors::black, 1.5, 72));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    EXPECT_EQ(geometry.vertices.size(), 8U);
+    EXPECT_EQ(geometry.edges.size(), 12U);
+    EXPECT_EQ(geometry.faces.size(), 6U);
+    EXPECT_EQ(geometry.faces.front().fill, 72);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, reportsSelected3DDepthRange) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createWireframeBox3D(0U, 100.0, 120.0, 80.0, 60.0, Colors::black, 1.5, 72));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_FALSE(geometry.vertices.empty());
+    const auto hit = controller.hitTestGeometry(0U, geometry.vertices.front().position.x, geometry.vertices.front().position.y,
+                                                1.0, 8.0, true, true, true);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometryObject(*hit);
+
+    const auto depth = controller.selectedGeometryDepthRange();
+    ASSERT_TRUE(depth.has_value());
+    EXPECT_EQ(depth->vertexCount, 8U);
+    EXPECT_NEAR(depth->minZ, -30.0, 1e-6);
+    EXPECT_NEAR(depth->maxZ, 30.0, 1e-6);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, setsSelected3DDepthRange) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createWireframeBox3D(0U, 100.0, 120.0, 80.0, 60.0, Colors::black, 1.5, 72));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    ASSERT_FALSE(geometry.vertices.empty());
+    const auto hit = controller.hitTestGeometry(0U, geometry.vertices.front().position.x, geometry.vertices.front().position.y,
+                                                1.0, 8.0, true, true, true);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometryObject(*hit);
+
+    const vn::geom::ProjectionCamera camera{.yaw = 0.7853981633974483,
+                                            .pitch = -0.5235987755982988,
+                                            .offset = vn::geom::Vec2{100.0, 120.0}};
+    ASSERT_TRUE(controller.setSelectedGeometryZ(12.0, camera));
+
+    const auto depth = controller.selectedGeometryDepthRange();
+    ASSERT_TRUE(depth.has_value());
+    EXPECT_EQ(depth->vertexCount, 8U);
+    EXPECT_NEAR(depth->minZ, 12.0, 1e-6);
+    EXPECT_NEAR(depth->maxZ, 12.0, 1e-6);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, reportsFillLoopStatus) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {90.0, 10.0}, {90.0, 70.0}, {10.0, 70.0}},
+                                        Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 0.0, 0.0, 100.0, 80.0));
+    auto status = controller.selectedGeometryFaceLoopStatus();
+    EXPECT_EQ(status.kind, QtGeometryFaceLoopStatusKind::OpenOrBranching);
+    EXPECT_TRUE(status.loop.empty());
+
+    ASSERT_NE(nullptr, controller.createPolyline(0U, {{10.0, 70.0}, {10.0, 10.0}}, Colors::black, 1.0));
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 0.0, 0.0, 100.0, 80.0));
+    status = controller.selectedGeometryFaceLoopStatus();
+    EXPECT_EQ(status.kind, QtGeometryFaceLoopStatusKind::Ready);
+    EXPECT_EQ(status.loop.size(), 4U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, selectsAndDeletesFilledGeometryFace) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createRectangle(0U, 10.0, 10.0, 90.0, 70.0, Colors::black, 1.0, 96));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 40.0, 1.0, 8.0, false, false, true);
+    ASSERT_TRUE(hit.has_value());
+    EXPECT_EQ(hit->hit.type, vn::view::render::GeometryHitType::Face);
+    controller.setSelectedGeometry(*hit);
+    ASSERT_EQ(controller.selectedFaceIds().size(), 1U);
+
+    EXPECT_TRUE(controller.deleteSelectedGeometryFace());
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    EXPECT_TRUE(geometry.faces.empty());
+    EXPECT_EQ(geometry.edges.size(), 4U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, splitsAndTriangulatesSelectedGeometryFace) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createRectangle(0U, 10.0, 10.0, 90.0, 70.0, Colors::black, 1.0, 96));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 40.0, 1.0, 8.0, false, false, true);
+    ASSERT_TRUE(hit.has_value());
+    controller.setSelectedGeometry(*hit);
+    ASSERT_EQ(controller.selectedFaceIds().size(), 1U);
+
+    EXPECT_TRUE(controller.splitSelectedGeometryFace());
+    auto geometry = lastGeometry(controller.snapshotPages().front());
+    EXPECT_EQ(geometry.faces.size(), 2U);
+    EXPECT_EQ(geometry.edges.size(), 5U);
+
+    QtDocumentController triangulateController;
+    ASSERT_NE(nullptr, triangulateController.createRectangle(0U, 10.0, 10.0, 90.0, 70.0, Colors::black, 1.0, 96));
+    auto faceHit = triangulateController.hitTestGeometry(0U, 50.0, 40.0, 1.0, 8.0, false, false, true);
+    ASSERT_TRUE(faceHit.has_value());
+    triangulateController.setSelectedGeometry(*faceHit);
+    EXPECT_TRUE(triangulateController.triangulateSelectedGeometryFace());
+    geometry = lastGeometry(triangulateController.snapshotPages().front());
+    EXPECT_EQ(geometry.faces.size(), 2U);
+    EXPECT_EQ(geometry.edges.size(), 5U);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, splitsSelectedFaceWithChosenDiagonal) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createRectangle(0U, 10.0, 10.0, 90.0, 70.0, Colors::black, 1.0, 96));
+
+    auto faceHit = controller.hitTestGeometry(0U, 50.0, 40.0, 1.0, 8.0, false, false, true);
+    ASSERT_TRUE(faceHit.has_value());
+    controller.setSelectedGeometry(*faceHit);
+
+    const auto diagonals = controller.selectedGeometryFaceSplitDiagonals();
+    ASSERT_EQ(diagonals.size(), 2U);
+    ASSERT_TRUE(controller.splitSelectedGeometryFace(diagonals[1].lhsIndex, diagonals[1].rhsIndex));
+
+    const auto geometry = lastGeometry(controller.snapshotPages().front());
+    EXPECT_EQ(geometry.faces.size(), 2U);
+    EXPECT_EQ(geometry.edges.size(), 5U);
+    const auto diagonal = std::ranges::find_if(geometry.edges, [](const auto& edge) {
+        return ((edge.start.x == 90.0 && edge.start.y == 10.0 && edge.end.x == 10.0 && edge.end.y == 70.0) ||
+                (edge.start.x == 10.0 && edge.start.y == 70.0 && edge.end.x == 90.0 && edge.end.y == 10.0));
+    });
+    EXPECT_NE(diagonal, geometry.edges.end());
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, snapsPagePointsToGridOnPlainPages) {
     QtDocumentController controller;
 
@@ -148,14 +330,36 @@ TEST(VertexNoteQtDocumentControllerShapeTools, snapsPagePointsToGeometryVertices
     EXPECT_DOUBLE_EQ(50.0, snapped.pagePoint.y);
 }
 
+TEST(VertexNoteQtDocumentControllerShapeTools, geometrySnapCacheInvalidatesAfterGeometryChanges) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 50.0, 120.0, 50.0, Colors::black, 1.0));
+
+    const QtSnapOptions options{.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0};
+    const auto firstSnap = controller.snapPagePoint(0U, 52.0, 49.0, 1.0, options);
+    ASSERT_TRUE(firstSnap.snapped);
+
+    ASSERT_NE(nullptr, controller.createEdge(0U, 200.0, 200.0, 240.0, 200.0, Colors::black, 1.0));
+    const auto secondSnap = controller.snapPagePoint(0U, 202.0, 199.0, 1.0, options);
+
+    ASSERT_TRUE(secondSnap.snapped);
+    EXPECT_DOUBLE_EQ(200.0, secondSnap.pagePoint.x);
+    EXPECT_DOUBLE_EQ(200.0, secondSnap.pagePoint.y);
+}
+
 TEST(VertexNoteQtDocumentControllerShapeTools, surfaceMeshValidatesGeometryTopology) {
     vn::geom::GeometryObject object(42U);
     const auto a = object.addVertex({10.0, 10.0});
     const auto b = object.addVertex({50.0, 10.0});
+    const auto c = object.addVertex({50.0, 40.0});
     ASSERT_NE(vn::geom::InvalidEdgeId, object.addLine(a, b));
+    ASSERT_NE(vn::geom::InvalidEdgeId, object.addLine(b, c));
+    ASSERT_NE(vn::geom::InvalidEdgeId, object.addLine(c, a));
+    ASSERT_NE(vn::geom::InvalidFaceId, object.addFace({a, b, c}, 80));
 
     const auto mesh = vn::geom::SurfaceMesh::fromGeometryObject(object);
     EXPECT_EQ(42U, mesh.objectId);
+    ASSERT_EQ(1U, mesh.faces.size());
+    EXPECT_EQ(80, mesh.faces.front().fill);
     EXPECT_TRUE(mesh.validate().valid);
     EXPECT_TRUE(vn::geom::validateGeometryTopology(object).valid);
 }
@@ -557,6 +761,355 @@ TEST(VertexNoteQtDocumentControllerShapeTools, draggingVertexOntoOtherObjectVert
     ASSERT_EQ(1U, redone.size());
     EXPECT_EQ(3U, redone.front().vertices.size());
     EXPECT_EQ(2U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, draggingCoincidentVerticesKeepsSeparateMeshPiecesConnected) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 110.0, 10.0));
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 10.0, 80.0));
+
+    auto hit = controller.hitTestGeometry(0U, 10.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*hit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            20.0, 10.0, 1.0,
+            {.geometryEnabled = true, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto moved = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, moved.size());
+    const auto movedCoincidentVertices = std::ranges::count_if(moved, [](const auto& geometry) {
+        return std::ranges::any_of(geometry.vertices, [](const auto& vertex) {
+            return vertex.position.x == 20.0 && vertex.position.y == 10.0;
+        });
+    });
+    EXPECT_EQ(2, movedCoincidentVertices);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+    const auto restoredCoincidentVertices = std::ranges::count_if(undone, [](const auto& geometry) {
+        return std::ranges::any_of(geometry.vertices, [](const auto& vertex) {
+            return vertex.position.x == 10.0 && vertex.position.y == 10.0;
+        });
+    });
+    EXPECT_EQ(2, restoredCoincidentVertices);
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, redone.size());
+    const auto redoneCoincidentVertices = std::ranges::count_if(redone, [](const auto& geometry) {
+        return std::ranges::any_of(geometry.vertices, [](const auto& vertex) {
+            return vertex.position.x == 20.0 && vertex.position.y == 10.0;
+        });
+    });
+    EXPECT_EQ(2, redoneCoincidentVertices);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, detachesSelectedCoincidentVertexFromSeparateMeshPiece) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 110.0, 10.0));
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 10.0, 80.0));
+
+    auto hit = controller.hitTestGeometry(0U, 10.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.detachSelectedGeometry());
+    EXPECT_EQ("Detach geometry vertex", controller.undoText());
+
+    auto detached = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, detached.size());
+    const auto countVerticesAt = [](const auto& geometries, double x, double y) {
+        std::size_t count = 0U;
+        for (const auto& geometry: geometries) {
+            count += std::ranges::count_if(geometry.vertices, [x, y](const auto& vertex) {
+                return vertex.position.x == x && vertex.position.y == y;
+            });
+        }
+        return count;
+    };
+    EXPECT_EQ(1U, countVerticesAt(detached, 10.0, 10.0));
+    EXPECT_EQ(1U, countVerticesAt(detached, 18.0, 18.0));
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+    EXPECT_EQ(2U, countVerticesAt(undone, 10.0, 10.0));
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, redone.size());
+    EXPECT_EQ(1U, countVerticesAt(redone, 18.0, 18.0));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, detachesSelectedSharedVertexIntoSeparateBranch) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    auto hit = controller.hitTestGeometry(0U, 50.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.detachSelectedGeometry());
+    EXPECT_EQ("Detach geometry vertex", controller.undoText());
+
+    auto detached = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, detached.size());
+    EXPECT_EQ(4U, detached.front().vertices.size());
+    ASSERT_EQ(2U, detached.front().edges.size());
+    const auto endpointCountAt = [](const auto& geometry, double x, double y) {
+        return std::ranges::count_if(geometry.edges, [x, y](const auto& edge) {
+            return (edge.start.x == x && edge.start.y == y) || (edge.end.x == x && edge.end.y == y);
+        });
+    };
+    EXPECT_EQ(1, endpointCountAt(detached.front(), 50.0, 10.0));
+    EXPECT_EQ(1, endpointCountAt(detached.front(), 58.0, 18.0));
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(3U, undone.front().vertices.size());
+    EXPECT_EQ(2U, undone.front().edges.size());
+    EXPECT_EQ(2, endpointCountAt(undone.front(), 50.0, 10.0));
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(4U, redone.front().vertices.size());
+    EXPECT_EQ(1, endpointCountAt(redone.front(), 58.0, 18.0));
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, detachesSelectedEdgeFromSharedVertex) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryEdgesInRect(0U, 5.0, 5.0, 30.0, 10.0));
+    ASSERT_EQ(1U, controller.selectedEdgeIds().size());
+    const auto selectedEdgeId = controller.selectedEdgeIds().front();
+
+    ASSERT_TRUE(controller.detachSelectedGeometry());
+    EXPECT_EQ("Detach geometry edge", controller.undoText());
+
+    auto detached = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, detached.size());
+    EXPECT_EQ(4U, detached.front().vertices.size());
+    const auto selectedEdge =
+            std::ranges::find(detached.front().edges, selectedEdgeId, &vn::view::render::GeometryEdgeRenderModel::id);
+    ASSERT_NE(detached.front().edges.end(), selectedEdge);
+    EXPECT_DOUBLE_EQ(10.0, selectedEdge->start.x);
+    EXPECT_DOUBLE_EQ(10.0, selectedEdge->start.y);
+    EXPECT_DOUBLE_EQ(58.0, selectedEdge->end.x);
+    EXPECT_DOUBLE_EQ(18.0, selectedEdge->end.y);
+
+    const auto stillAttachedEdge = std::ranges::find_if(detached.front().edges, [selectedEdgeId](const auto& edge) {
+        return edge.id != selectedEdgeId;
+    });
+    ASSERT_NE(detached.front().edges.end(), stillAttachedEdge);
+    EXPECT_DOUBLE_EQ(50.0, stillAttachedEdge->start.x);
+    EXPECT_DOUBLE_EQ(10.0, stillAttachedEdge->start.y);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(3U, undone.front().vertices.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, weldsSelectedVerticesInSameGeometryObject) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{10.0, 10.0}, {50.0, 10.0}, {90.0, 10.0}}, Colors::black, 1.0));
+
+    ASSERT_TRUE(controller.selectGeometryVerticesInRect(0U, 5.0, 5.0, 50.0, 10.0));
+    ASSERT_EQ(2U, controller.selectedVertexIds().size());
+
+    ASSERT_TRUE(controller.weldSelectedGeometry());
+    EXPECT_EQ("Weld geometry vertices", controller.undoText());
+
+    auto welded = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, welded.size());
+    EXPECT_EQ(2U, welded.front().vertices.size());
+    ASSERT_EQ(1U, welded.front().edges.size());
+    EXPECT_DOUBLE_EQ(10.0, welded.front().edges.front().start.x);
+    EXPECT_DOUBLE_EQ(10.0, welded.front().edges.front().start.y);
+    EXPECT_DOUBLE_EQ(90.0, welded.front().edges.front().end.x);
+    EXPECT_DOUBLE_EQ(10.0, welded.front().edges.front().end.y);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(3U, undone.front().vertices.size());
+    EXPECT_EQ(2U, undone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, weldsCoincidentVertexAcrossGeometryObjects) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 110.0, 10.0));
+    ASSERT_NE(nullptr, insertRawGeometryEdge(controller, 10.0, 10.0, 10.0, 80.0));
+
+    auto hit = controller.hitTestGeometry(0U, 10.0, 10.0, 1.0, 8.0);
+    ASSERT_TRUE(hit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, hit->hit.type);
+    controller.setSelectedGeometry(*hit);
+
+    ASSERT_TRUE(controller.weldSelectedGeometry());
+    EXPECT_EQ("Weld geometry vertex", controller.undoText());
+
+    auto welded = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, welded.size());
+    EXPECT_EQ(3U, welded.front().vertices.size());
+    EXPECT_EQ(2U, welded.front().edges.size());
+    const auto incidentEdges = std::ranges::count_if(welded.front().edges, [](const auto& edge) {
+        return (edge.start.x == 10.0 && edge.start.y == 10.0) || (edge.end.x == 10.0 && edge.end.y == 10.0);
+    });
+    EXPECT_EQ(2, incidentEdges);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(2U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, drawingEdgeOntoExistingEndpointAutoMergesGeometry) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 10.0, 50.0, 10.0, Colors::black, 1.0));
+    ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 10.0, 90.0, 10.0, Colors::black, 1.0));
+    EXPECT_EQ("Draw edge", controller.undoText());
+
+    auto merged = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, merged.size());
+    EXPECT_EQ(3U, merged.front().vertices.size());
+    ASSERT_EQ(2U, merged.front().edges.size());
+    const auto incidentEdges = std::ranges::count_if(merged.front().edges, [](const auto& edge) {
+        return (edge.start.x == 50.0 && edge.start.y == 10.0) || (edge.end.x == 50.0 && edge.end.y == 10.0);
+    });
+    EXPECT_EQ(2, incidentEdges);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_EQ(2U, undone.front().vertices.size());
+    EXPECT_EQ(1U, undone.front().edges.size());
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(3U, redone.front().vertices.size());
+    EXPECT_EQ(2U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, drawingEdgeBetweenExistingEndpointsAutoMergesBothObjects) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 10.0, 10.0, 50.0, 10.0, Colors::black, 1.0));
+    ASSERT_NE(nullptr, controller.createEdge(0U, 90.0, 10.0, 130.0, 10.0, Colors::black, 1.0));
+    ASSERT_NE(nullptr, controller.createEdge(0U, 50.0, 10.0, 90.0, 10.0, Colors::black, 1.0));
+
+    auto merged = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, merged.size());
+    EXPECT_EQ(4U, merged.front().vertices.size());
+    EXPECT_EQ(3U, merged.front().edges.size());
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(2U, undone.size());
+    EXPECT_EQ(1U, undone[0].edges.size());
+    EXPECT_EQ(1U, undone[1].edges.size());
+
+    ASSERT_TRUE(controller.redo());
+    auto redone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, redone.size());
+    EXPECT_EQ(3U, redone.front().edges.size());
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, appliesEqualLengthConstraintToSelectedEdges) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createPolyline(0U, {{0.0, 0.0}, {4.0, 0.0}, {4.0, 9.0}}, Colors::black, 1.0));
+
+    auto firstEdge = controller.hitTestGeometry(0U, 2.0, 0.0, 1.0, 8.0, false, true);
+    ASSERT_TRUE(firstEdge.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, firstEdge->hit.type);
+    controller.setSelectedGeometry(*firstEdge);
+
+    auto secondEdge = controller.hitTestGeometry(0U, 4.0, 5.0, 1.0, 8.0, false, true);
+    ASSERT_TRUE(secondEdge.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, secondEdge->hit.type);
+    controller.setSelectedGeometry(*secondEdge, true);
+
+    ASSERT_TRUE(controller.applyConstraint(vn::geom::ConstraintKind::EqualLength));
+    EXPECT_EQ("Apply constraint", controller.undoText());
+
+    auto constrained = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, constrained.size());
+    const auto& edge = constrained.front().edges.back();
+    EXPECT_DOUBLE_EQ(4.0, edge.end.x);
+    EXPECT_DOUBLE_EQ(4.0, edge.end.y);
+
+    ASSERT_TRUE(controller.undo());
+    auto undone = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, undone.size());
+    EXPECT_DOUBLE_EQ(9.0, undone.front().edges.back().end.y);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, fixedAngleConstraintGuidesVertexDrag) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr, controller.createEdge(0U, 0.0, 0.0, 0.0, 5.0, Colors::black, 1.0));
+
+    auto edgeHit = controller.hitTestGeometry(0U, 0.0, 2.5, 1.0, 8.0, false, true);
+    ASSERT_TRUE(edgeHit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, edgeHit->hit.type);
+    controller.setSelectedGeometry(*edgeHit);
+    ASSERT_TRUE(controller.applyConstraint(vn::geom::ConstraintKind::FixedAngle));
+
+    auto vertexHit = controller.hitTestGeometry(0U, 0.0, 5.0, 1.0, 8.0, true, false);
+    ASSERT_TRUE(vertexHit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, vertexHit->hit.type);
+    ASSERT_TRUE(controller.beginGeometryVertexDrag(*vertexHit));
+    ASSERT_TRUE(controller.updateGeometryVertexDrag(
+            4.0, 4.0, 1.0,
+            {.geometryEnabled = false, .gridEnabled = false, .gridSize = 10.0, .gridTolerance = 1.0,
+             .screenTolerance = 18.0}));
+    ASSERT_TRUE(controller.endGeometryVertexDrag());
+
+    auto constrained = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, constrained.size());
+    ASSERT_EQ(1U, constrained.front().edges.size());
+    EXPECT_NEAR(0.0, constrained.front().edges.front().end.x, 1e-6);
+    EXPECT_NEAR(std::sqrt(32.0), constrained.front().edges.front().end.y, 1e-6);
+}
+
+TEST(VertexNoteQtDocumentControllerShapeTools, appliesOnEdgeConstraintToSelectedVertexAndEdge) {
+    QtDocumentController controller;
+    ASSERT_NE(nullptr,
+              controller.createPolyline(0U, {{0.0, 0.0}, {10.0, 0.0}, {10.0, 5.0}}, Colors::black, 1.0));
+
+    auto edgeHit = controller.hitTestGeometry(0U, 5.0, 0.0, 1.0, 8.0, false, true);
+    ASSERT_TRUE(edgeHit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Edge, edgeHit->hit.type);
+    controller.setSelectedGeometry(*edgeHit);
+
+    auto vertexHit = controller.hitTestGeometry(0U, 10.0, 5.0, 1.0, 8.0, true, false);
+    ASSERT_TRUE(vertexHit.has_value());
+    ASSERT_EQ(vn::view::render::GeometryHitType::Vertex, vertexHit->hit.type);
+    controller.setSelectedGeometry(*vertexHit, true);
+
+    ASSERT_TRUE(controller.applyConstraint(vn::geom::ConstraintKind::OnEdge));
+
+    auto constrained = geometries(controller.snapshotPages().front());
+    ASSERT_EQ(1U, constrained.size());
+    const auto verticesAtProjection = std::ranges::count_if(constrained.front().vertices, [](const auto& vertex) {
+        return vertex.position.x == 10.0 && vertex.position.y == 0.0;
+    });
+    EXPECT_EQ(2, verticesAtProjection);
 }
 
 TEST(VertexNoteQtDocumentControllerShapeTools, rectangleSelectionTargetsGeometryVerticesInsteadOfWholeShape) {

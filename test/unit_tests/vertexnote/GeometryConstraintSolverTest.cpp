@@ -98,3 +98,52 @@ TEST(VertexNoteGeometryConstraintSolver, appliesRadiusConstraintToCircleEdges) {
     EXPECT_DOUBLE_EQ(object.vertex(radiusPoint)->position.x, 3.0);
     EXPECT_DOUBLE_EQ(object.vertex(radiusPoint)->position.y, 0.0);
 }
+
+TEST(VertexNoteGeometryConstraintSolver, appliesEqualLengthConstraint) {
+    GeometryObject object(42);
+    const auto a = object.addVertex(Vec2{0.0, 0.0});
+    const auto b = object.addVertex(Vec2{4.0, 0.0});
+    const auto c = object.addVertex(Vec2{10.0, 0.0});
+    const auto d = object.addVertex(Vec2{10.0, 8.0});
+    const auto reference = object.addLine(a, b);
+    const auto target = object.addLine(c, d);
+    object.addConstraint(ConstraintKind::EqualLength, {}, {reference, target});
+
+    GeometryConstraintSolver solver;
+    const auto result = solver.apply(object);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_DOUBLE_EQ(object.vertex(d)->position.x, 10.0);
+    EXPECT_DOUBLE_EQ(object.vertex(d)->position.y, 4.0);
+}
+
+TEST(VertexNoteGeometryConstraintSolver, appliesFixedAngleConstraint) {
+    GeometryObject object(42);
+    const auto a = object.addVertex(Vec2{0.0, 0.0});
+    const auto b = object.addVertex(Vec2{0.0, 5.0});
+    const auto edge = object.addLine(a, b);
+    object.addConstraint(ConstraintKind::FixedAngle, {}, {edge}, 0.0);
+
+    GeometryConstraintSolver solver;
+    const auto result = solver.apply(object);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_DOUBLE_EQ(object.vertex(b)->position.x, 5.0);
+    EXPECT_DOUBLE_EQ(object.vertex(b)->position.y, 0.0);
+}
+
+TEST(VertexNoteGeometryConstraintSolver, appliesOnEdgeConstraint) {
+    GeometryObject object(42);
+    const auto a = object.addVertex(Vec2{0.0, 0.0});
+    const auto b = object.addVertex(Vec2{10.0, 0.0});
+    const auto point = object.addVertex(Vec2{6.0, 4.0});
+    const auto edge = object.addLine(a, b);
+    object.addConstraint(ConstraintKind::OnEdge, {point}, {edge});
+
+    GeometryConstraintSolver solver;
+    const auto result = solver.apply(object);
+
+    EXPECT_TRUE(result.changed);
+    EXPECT_DOUBLE_EQ(object.vertex(point)->position.x, 6.0);
+    EXPECT_DOUBLE_EQ(object.vertex(point)->position.y, 0.0);
+}

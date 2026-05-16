@@ -19,7 +19,9 @@ constexpr auto GeometryFormatAttr = u8"vertexnote:format";
 constexpr auto GeometryObjectIdAttr = u8"vertexnote:object-id";
 constexpr auto GeometryVerticesAttr = u8"vertexnote:vertices";
 constexpr auto GeometryEdgesAttr = u8"vertexnote:edges";
+constexpr auto GeometryFacesAttr = u8"vertexnote:faces";
 constexpr auto GeometryConstraintsAttr = u8"vertexnote:constraints";
+constexpr auto GeometryFallbackPartAttr = u8"vertexnote:fallback-part";
 constexpr auto GeometryFormatV1 = "geometry-v1";
 
 struct GeometryStrokeMetadata {
@@ -27,6 +29,7 @@ struct GeometryStrokeMetadata {
     std::string objectId;
     std::string vertices;
     std::string edges;
+    std::string faces;
     std::string constraints;
 };
 

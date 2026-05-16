@@ -21,6 +21,7 @@
 #include "QtToolState.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 #include "view/render/Renderers.h"
 
 class QTimer;
@@ -89,6 +90,10 @@ public:
     void setCursorHighlightOptions(bool enabled, Color fillColor, Color borderColor, int radiusPixels,
                                    int borderWidthPixels);
     void setRecolorOptions(bool recolorMainView, Color light, Color dark);
+    void setGeometryWireframeViewEnabled(bool enabled);
+    void setGeometryVertexOverlayEnabled(bool enabled);
+    void setGeometryLinkedVertexOverlayEnabled(bool enabled);
+    void setGeometryFaceFillVisible(bool visible);
     void setShapeRecognizerMinSize(double value);
     void setSnapRecognizedShapesEnabled(bool enabled);
     void setLaserPointerFadeOutMs(int value);
@@ -102,7 +107,28 @@ public:
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
     [[nodiscard]] auto isTouchDrawingEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryWireframeViewEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryVertexOverlayEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryLinkedVertexOverlayEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryFaceFillVisible() const -> bool;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto detachSelectedGeometry() -> bool;
+    [[nodiscard]] auto weldSelectedGeometry() -> bool;
+    [[nodiscard]] auto fillSelectedGeometryFace(int fillOpacity) -> bool;
+    [[nodiscard]] auto deleteSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool;
+    [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto createWireframeBox3D() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DIsometric() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DFront() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DTop() -> bool;
+    [[nodiscard]] auto nudgeSelectedGeometryZ(double delta) -> bool;
+    [[nodiscard]] auto setSelectedGeometryZ(double z) -> bool;
+    [[nodiscard]] auto geometryProjectionViewName() const -> QString;
+    [[nodiscard]] auto isGeometryProjectionIsometric() const -> bool;
+    [[nodiscard]] auto isGeometryProjectionFront() const -> bool;
+    [[nodiscard]] auto isGeometryProjectionTop() const -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
     [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
@@ -157,6 +183,7 @@ private:
     enum class InstrumentToolKind { None, Setsquare, Compass };
     enum class InstrumentStrokeKind { None, SetsquareEdge, SetsquareRadial, CompassOutline, CompassRadius };
     enum class GeometryTransformHandle { None, TranslateXY, TranslateX, TranslateY, RotateZ, ScaleUniform };
+    enum class GeometryProjectionView { Isometric, Front, Top };
 
     struct InstrumentOverlayState {
         bool visible = false;
@@ -215,9 +242,15 @@ private:
     void selectHoveredGeometry(bool additive = false);
     [[nodiscard]] auto beginSelectedGeometryMoveAtScreen(const QPointF& screenPoint) -> bool;
     [[nodiscard]] auto selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds>;
+    [[nodiscard]] auto geometryProjectionCameraForSelection(double yaw, double pitch, double roll = 0.0) const
+            -> std::optional<vn::geom::ProjectionCamera>;
+    [[nodiscard]] auto geometryProjectionCameraForActiveView() const
+            -> std::optional<vn::geom::ProjectionCamera>;
+    [[nodiscard]] auto geometryTransformSupportsAdvancedHandles() const -> bool;
     [[nodiscard]] auto geometryTransformHandleAtScreen(const QPointF& screenPoint) const -> GeometryTransformHandle;
     [[nodiscard]] auto beginGeometryTransformAtScreen(GeometryTransformHandle handle, const QPointF& screenPoint)
             -> bool;
+    void setGeometryTransformCursor(GeometryTransformHandle handle);
     void updateGeometryTransformAtScreen(const QPointF& screenPoint);
     void finalizeGeometryTransform();
     void cancelGeometryTransform();
@@ -335,6 +368,10 @@ private:
     bool geometrySnapEnabled = true;
     bool gridSnapEnabled = false;
     bool rotationSnapEnabled = false;
+    bool geometryWireframeViewEnabled = false;
+    bool geometryVertexOverlayEnabled = false;
+    bool geometryLinkedVertexOverlayEnabled = true;
+    bool geometryFaceFillVisible = true;
     bool touchDrawingEnabled = false;
     double minimumPressure = 0.05;
     double pressureMultiplier = 1.0;
@@ -402,6 +439,8 @@ private:
     bool movingSelection = false;
     bool scalingSelection = false;
     std::optional<GeometryTransformInteraction> geometryTransformInteraction;
+    GeometryTransformHandle hoveredGeometryTransformHandle = GeometryTransformHandle::None;
+    GeometryProjectionView geometryProjectionView = GeometryProjectionView::Isometric;
     bool shapeDrawing = false;
     bool pdfTextSelecting = false;
     bool movingInstrumentOverlay = false;

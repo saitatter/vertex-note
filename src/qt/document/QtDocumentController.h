@@ -39,6 +39,11 @@
 
 namespace vn::geom {
 class GeometryElement;
+struct ProjectionCamera;
+}
+
+namespace vn::snap {
+class GeometrySnapProvider;
 }
 
 struct QtGeometryHit {
@@ -60,6 +65,13 @@ struct QtGeometryDragState {
     std::optional<vn::snap::SnapCandidate> snapCandidate;
     vn::geom::Vec2 snapPoint;
     bool changed = false;
+};
+
+struct QtGeometryDragLinkedObjectState {
+    std::size_t pageIndex = 0U;
+    vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+    std::vector<vn::geom::VertexId> vertexIds;
+    vn::geom::GeometryObject beforeGeometry;
 };
 
 enum class QtGeometryTransformSelectionKind {
@@ -98,6 +110,35 @@ struct QtSnapPointResult {
     std::optional<vn::snap::SnapKind> snapKind;
     std::optional<vn::snap::SnapCandidate> snapCandidate;
     bool snapped = false;
+};
+
+struct QtGeometryDepthRange {
+    double minZ = 0.0;
+    double maxZ = 0.0;
+    std::size_t vertexCount = 0U;
+};
+
+enum class QtGeometryFaceLoopStatusKind {
+    NoSelection,
+    NoEdges,
+    NeedMoreEdges,
+    UnsupportedEdge,
+    OpenOrBranching,
+    AlreadyFilled,
+    Ready,
+};
+
+struct QtGeometryFaceLoopStatus {
+    QtGeometryFaceLoopStatusKind kind = QtGeometryFaceLoopStatusKind::NoSelection;
+    std::vector<vn::geom::VertexId> loop;
+    std::string message;
+};
+
+struct QtGeometryFaceDiagonal {
+    std::size_t lhsIndex = 0U;
+    std::size_t rhsIndex = 0U;
+    vn::geom::VertexId lhs = vn::geom::InvalidVertexId;
+    vn::geom::VertexId rhs = vn::geom::InvalidVertexId;
 };
 
 struct QtGeometryHistoryObjectState {
@@ -322,6 +363,9 @@ public:
     [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                        double maxScreenDistance, bool includeVertices, bool includeEdges) const
             -> std::optional<QtGeometryHit>;
+    [[nodiscard]] auto hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                       double maxScreenDistance, bool includeVertices, bool includeEdges,
+                                       bool includeFaces) const -> std::optional<QtGeometryHit>;
     void setHoveredGeometry(std::optional<QtGeometryHit> hit);
     void setSelectedGeometry(std::optional<QtGeometryHit> hit, bool additive = false);
     void setSelectedGeometryObject(std::optional<QtGeometryHit> hit);
@@ -330,6 +374,10 @@ public:
     [[nodiscard]] auto selectedGeometry() const -> const std::optional<QtGeometryHit>&;
     [[nodiscard]] auto selectedVertexIds() const -> const std::vector<vn::geom::VertexId>&;
     [[nodiscard]] auto selectedEdgeIds() const -> const std::vector<vn::geom::EdgeId>&;
+    [[nodiscard]] auto selectedFaceIds() const -> const std::vector<vn::geom::FaceId>&;
+    [[nodiscard]] auto selectedGeometryDepthRange() const -> std::optional<QtGeometryDepthRange>;
+    [[nodiscard]] auto selectedGeometryFaceLoopStatus() const -> QtGeometryFaceLoopStatus;
+    [[nodiscard]] auto selectedGeometryFaceSplitDiagonals() const -> std::vector<QtGeometryFaceDiagonal>;
     [[nodiscard]] auto snapPagePoint(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                      const QtSnapOptions& options,
                                      std::optional<vn::geom::ObjectId> ignoredObjectId = std::nullopt) const
@@ -341,7 +389,19 @@ public:
     [[nodiscard]] auto activeGeometryDrag() const -> const std::optional<QtGeometryDragState>&;
     [[nodiscard]] auto lastGeometryDragMessage() const -> const std::string&;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto detachSelectedGeometry() -> bool;
+    [[nodiscard]] auto weldSelectedGeometry() -> bool;
+    [[nodiscard]] auto fillSelectedGeometryFace(int fillOpacity) -> bool;
+    [[nodiscard]] auto deleteSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool;
+    [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
+    [[nodiscard]] auto createWireframeBox3D(std::size_t pageIndex, double centerX, double centerY, double size,
+                                            double depth, Color color, double width, int fill = -1) -> const Element*;
+    [[nodiscard]] auto projectSelectedGeometry3D(const vn::geom::ProjectionCamera& camera) -> bool;
+    [[nodiscard]] auto nudgeSelectedGeometryZ(double delta, const vn::geom::ProjectionCamera& camera) -> bool;
+    [[nodiscard]] auto setSelectedGeometryZ(double z, const vn::geom::ProjectionCamera& camera) -> bool;
     [[nodiscard]] auto translateSelectedVertices(double dx, double dy) -> bool;
     [[nodiscard]] auto rotateSelectedGeometry(double degrees) -> bool;
     [[nodiscard]] auto scaleSelectedGeometry(double scaleX, double scaleY) -> bool;
@@ -363,8 +423,8 @@ public:
                     const std::string& lineStyle = "plain") -> const Element*;
     auto createEdge(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
             -> const Element*;
-    auto createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width)
-            -> const Element*;
+    auto createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width,
+                         int fill = -1) -> const Element*;
     auto createCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color, double width)
             -> const Element*;
     auto createEllipse(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color, double width,
@@ -382,7 +442,7 @@ public:
     auto createCompassStroke(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
                              double width, const std::string& lineStyle) -> const Element*;
     auto createPolyline(std::size_t pageIndex, const std::vector<std::pair<double, double>>& points, Color color,
-                        double width) -> const Element*;
+                        double width, int fill = -1) -> const Element*;
     auto createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
                                 double width) -> const Element*;
     auto createConstructionCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry, Color color,
@@ -431,6 +491,8 @@ public:
     [[nodiscard]] auto selectGeometryVerticesInRect(std::size_t pageIndex, double x, double y, double w, double h,
                                                     bool additive = false) -> bool;
     [[nodiscard]] auto selectGeometryEdgesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                 bool additive = false) -> bool;
+    [[nodiscard]] auto selectGeometryFacesInRect(std::size_t pageIndex, double x, double y, double w, double h,
                                                  bool additive = false) -> bool;
     [[nodiscard]] auto selectGeometryObjectInRect(std::size_t pageIndex, double x, double y, double w, double h)
             -> bool;
@@ -550,6 +612,9 @@ private:
     static auto isPdfPath(const std::filesystem::path& path) -> bool;
     static auto normalizeExtension(const std::filesystem::path& path) -> std::string;
     void rebuildPageSnapshots();
+    void invalidateGeometrySnapCache();
+    [[nodiscard]] auto geometrySnapProviderForPage(std::size_t pageIndex, const PageRef& page) const
+            -> std::shared_ptr<vn::snap::GeometrySnapProvider>;
     [[nodiscard]] auto cachedPdfRaster(std::size_t pdfPageNumber, double pageWidth, double pageHeight)
             -> vn::util::RasterImageData;
     void prunePdfRasterCache();
@@ -563,6 +628,9 @@ private:
             -> vn::geom::GeometryElement*;
     [[nodiscard]] auto removeGeometryElement(std::size_t pageIndex, vn::geom::ObjectId objectId)
             -> std::optional<QtGeometryHistoryRemovedElement>;
+    [[nodiscard]] auto insertOrAutoMergeGeometry(std::size_t pageIndex,
+                                                 std::unique_ptr<vn::geom::GeometryElement> geometry,
+                                                 std::string historyText) -> const Element*;
     [[nodiscard]] static auto gridSnapProviderFor(PageTypeFormat format, double gridSize, double gridTolerance)
             -> std::shared_ptr<const vn::snap::ISnapProvider>;
     void clearHistory();
@@ -575,6 +643,7 @@ private:
     std::unique_ptr<Document> document;
     std::optional<std::filesystem::path> loadedPath;
     std::vector<vn::view::render::PageRenderSnapshot> pageSnapshots;
+    mutable std::vector<std::shared_ptr<vn::snap::GeometrySnapProvider>> geometrySnapProviderCache;
     struct QtPdfRasterCacheEntry {
         std::size_t pdfPageNumber = 0U;
         double pageWidth = 0.0;
@@ -593,7 +662,9 @@ private:
     std::optional<QtGeometryHit> selectedGeometryHit;
     std::vector<vn::geom::VertexId> selectedGeometryVertexIds;
     std::vector<vn::geom::EdgeId> selectedGeometryEdgeIds;
+    std::vector<vn::geom::FaceId> selectedGeometryFaceIds;
     std::optional<QtGeometryDragState> geometryDragState;
+    std::vector<QtGeometryDragLinkedObjectState> geometryDragLinkedObjects;
     std::string lastGeometryDragStatus;
     std::optional<QtGeometryTransformState> geometryTransformState;
     std::deque<QtGeometryHistoryEntry> geometryUndoHistory;

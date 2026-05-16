@@ -10,8 +10,11 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -25,11 +28,16 @@
 #include "model/SplineSegment.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 // ---------------------------------------------------------------------------
 // Shape creation
 // ---------------------------------------------------------------------------
 
 namespace {
+
+constexpr double AutoMergeVertexEpsilon = 1e-6;
+constexpr double BoxIsoYaw = 0.7853981633974483;
+constexpr double BoxIsoPitch = -0.5235987755982988;
 
 auto insertGeometryOnPage(Document* doc, std::size_t pageIndex,
                           std::unique_ptr<vn::geom::GeometryElement> geometry) -> const Element* {
@@ -76,6 +84,138 @@ void configureStrokeStyle(Stroke& stroke, Color color, double width, const std::
     if (fill >= 0) {
         stroke.setFill(fill);
     }
+}
+
+auto distance(vn::geom::Vec2 lhs, vn::geom::Vec2 rhs) -> double {
+    return std::hypot(rhs.x - lhs.x, rhs.y - lhs.y);
+}
+
+auto coincidentPoint(vn::geom::Vec2 lhs, vn::geom::Vec2 rhs) -> bool {
+    return distance(lhs, rhs) <= AutoMergeVertexEpsilon;
+}
+
+auto containsCoincidentPoint(const std::vector<vn::geom::Vec2>& points, vn::geom::Vec2 point) -> bool {
+    return std::ranges::any_of(points, [point](vn::geom::Vec2 candidate) {
+        return coincidentPoint(candidate, point);
+    });
+}
+
+auto findCoincidentVertex(const vn::geom::GeometryObject& object, vn::geom::Vec2 point)
+        -> std::optional<vn::geom::VertexId> {
+    for (const auto& vertex: object.vertices()) {
+        if (coincidentPoint(vertex.position, point)) {
+            return vertex.id;
+        }
+    }
+    return std::nullopt;
+}
+
+auto edgeCanCollapse(vn::geom::EdgeKind kind) -> bool {
+    return kind == vn::geom::EdgeKind::Line || kind == vn::geom::EdgeKind::ConstructionLine ||
+           kind == vn::geom::EdgeKind::CubicBezier;
+}
+
+auto mergeGeometryInto(vn::geom::GeometryObject& base, const vn::geom::GeometryObject& incoming) -> bool {
+    std::unordered_map<vn::geom::VertexId, vn::geom::VertexId> vertexMap;
+    std::unordered_map<vn::geom::EdgeId, vn::geom::EdgeId> edgeMap;
+    bool changed = false;
+
+    try {
+        for (const auto& vertex: incoming.vertices()) {
+            if (auto existingVertex = findCoincidentVertex(base, vertex.position)) {
+                vertexMap[vertex.id] = *existingVertex;
+                continue;
+            }
+            vertexMap[vertex.id] = base.addVertex(vertex.position, vertex.flags);
+            changed = true;
+        }
+
+        for (const auto& edge: incoming.edges()) {
+            const auto startIt = vertexMap.find(edge.start);
+            const auto endIt = vertexMap.find(edge.end);
+            if (startIt == vertexMap.end() || endIt == vertexMap.end()) {
+                continue;
+            }
+            if (startIt->second == endIt->second && edgeCanCollapse(edge.kind)) {
+                changed = true;
+                continue;
+            }
+
+            std::vector<vn::geom::VertexId> controls;
+            controls.reserve(edge.controls.size());
+            bool validControls = true;
+            for (auto control: edge.controls) {
+                const auto controlIt = vertexMap.find(control);
+                if (controlIt == vertexMap.end()) {
+                    validControls = false;
+                    break;
+                }
+                controls.push_back(controlIt->second);
+            }
+            if (!validControls) {
+                continue;
+            }
+
+            edgeMap[edge.id] = base.addEdge(edge.kind, startIt->second, endIt->second, std::move(controls));
+            changed = true;
+        }
+
+        for (const auto& face: incoming.faces()) {
+            std::vector<vn::geom::VertexId> vertices;
+            vertices.reserve(face.vertices.size());
+            bool valid = true;
+            for (auto vertexId: face.vertices) {
+                const auto vertexIt = vertexMap.find(vertexId);
+                if (vertexIt == vertexMap.end()) {
+                    valid = false;
+                    break;
+                }
+                vertices.push_back(vertexIt->second);
+            }
+            if (!valid) {
+                continue;
+            }
+            base.addFace(std::move(vertices), face.fill);
+            changed = true;
+        }
+
+        for (const auto& constraint: incoming.constraints()) {
+            std::vector<vn::geom::VertexId> vertices;
+            vertices.reserve(constraint.vertices.size());
+            bool valid = true;
+            for (auto vertexId: constraint.vertices) {
+                const auto vertexIt = vertexMap.find(vertexId);
+                if (vertexIt == vertexMap.end()) {
+                    valid = false;
+                    break;
+                }
+                vertices.push_back(vertexIt->second);
+            }
+            if (!valid) {
+                continue;
+            }
+
+            std::vector<vn::geom::EdgeId> edges;
+            edges.reserve(constraint.edges.size());
+            for (auto edgeId: constraint.edges) {
+                const auto edgeIt = edgeMap.find(edgeId);
+                if (edgeIt == edgeMap.end()) {
+                    valid = false;
+                    break;
+                }
+                edges.push_back(edgeIt->second);
+            }
+            if (!valid) {
+                continue;
+            }
+            base.addConstraint(constraint.kind, std::move(vertices), std::move(edges), constraint.value);
+            changed = true;
+        }
+    } catch (const std::invalid_argument&) {
+        return false;
+    }
+
+    return changed;
 }
 
 auto buildEllipsePoints(double x1, double y1, double x2, double y2) -> std::vector<Point> {
@@ -230,6 +370,110 @@ auto insertLegacyStroke(Document* doc, std::size_t pageIndex, const std::vector<
 
 }  // namespace
 
+auto QtDocumentController::insertOrAutoMergeGeometry(std::size_t pageIndex,
+                                                     std::unique_ptr<vn::geom::GeometryElement> geometry,
+                                                     std::string historyText) -> const Element* {
+    if (!this->document || !geometry || pageIndex >= this->document->getPageCount()) {
+        return nullptr;
+    }
+
+    std::vector<vn::geom::Vec2> mergePoints;
+    mergePoints.reserve(geometry->geometry().vertices().size());
+    for (const auto& vertex: geometry->geometry().vertices()) {
+        if (!containsCoincidentPoint(mergePoints, vertex.position)) {
+            mergePoints.push_back(vertex.position);
+        }
+    }
+
+    this->document->lock();
+    auto page = this->document->getPage(pageIndex);
+    auto* selectedLayer = page ? page->getSelectedLayer() : nullptr;
+    if (!page || !selectedLayer) {
+        this->document->unlock();
+        return nullptr;
+    }
+
+    std::vector<vn::geom::GeometryElement*> mergeTargets;
+    for (Layer* layer: page->getLayers()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const auto& element: layer->getElements()) {
+            auto* existingGeometry = dynamic_cast<vn::geom::GeometryElement*>(element.get());
+            if (!existingGeometry) {
+                continue;
+            }
+
+            const bool touchesNewGeometry = std::ranges::any_of(existingGeometry->geometry().vertices(),
+                                                                [&mergePoints](const auto& vertex) {
+                                                                    return containsCoincidentPoint(mergePoints,
+                                                                                                   vertex.position);
+                                                                });
+            if (touchesNewGeometry) {
+                mergeTargets.push_back(existingGeometry);
+            }
+        }
+    }
+
+    if (mergeTargets.empty()) {
+        const auto* ptr = geometry.get();
+        selectedLayer->addElement(std::move(geometry));
+        this->document->unlock();
+
+        QtStrokeHistoryEntry entry;
+        entry.pageIndex = pageIndex;
+        entry.element = ptr;
+        entry.text = std::move(historyText);
+        pushHistory(QtHistoryEntry{std::move(entry)});
+        rebuildPageSnapshots();
+        return ptr;
+    }
+
+    auto* baseGeometry = mergeTargets.front();
+    const auto before = baseGeometry->geometry();
+    auto merged = before;
+    bool changed = mergeGeometryInto(merged, geometry->geometry());
+    std::vector<QtGeometryHistoryRemovedElement> removedElements;
+
+    std::unordered_set<vn::geom::ObjectId> removedObjectIds;
+    for (std::size_t index = 1U; index < mergeTargets.size(); ++index) {
+        auto* targetGeometry = mergeTargets[index];
+        if (!targetGeometry || targetGeometry == baseGeometry ||
+            removedObjectIds.contains(targetGeometry->geometry().objectId())) {
+            continue;
+        }
+
+        const auto targetObjectId = targetGeometry->geometry().objectId();
+        const auto targetObject = targetGeometry->geometry();
+        changed = mergeGeometryInto(merged, targetObject) || changed;
+        if (auto removed = removeGeometryElement(pageIndex, targetObjectId)) {
+            removedElements.push_back(std::move(*removed));
+            removedObjectIds.insert(targetObjectId);
+            changed = true;
+        }
+    }
+
+    if (!changed) {
+        this->document->unlock();
+        return nullptr;
+    }
+
+    baseGeometry->replaceGeometry(std::move(merged));
+    const auto after = baseGeometry->geometry();
+    const auto* ptr = baseGeometry;
+    const auto objectId = baseGeometry->geometry().objectId();
+    this->document->unlock();
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(before),
+                         .after = std::move(after),
+                         .removedElements = std::move(removedElements),
+                         .text = std::move(historyText)});
+    rebuildPageSnapshots();
+    return ptr;
+}
+
 auto QtDocumentController::createLine(std::size_t pageIndex, double x1, double y1, double x2, double y2, Color color,
                                       double width, const std::string& lineStyle) -> const Element* {
     auto [ptr, entry] =
@@ -252,20 +496,78 @@ auto QtDocumentController::createEdge(std::size_t pageIndex, double x1, double y
     geometry->setColor(color);
     geometry->setStrokeWidth(width);
 
+    return insertOrAutoMergeGeometry(pageIndex, std::move(geometry), "Draw edge");
+}
+
+auto QtDocumentController::createWireframeBox3D(std::size_t pageIndex, double centerX, double centerY, double size,
+                                                double depth, Color color, double width, int fill) -> const Element* {
+    if (size <= 0.0 || depth <= 0.0) {
+        return nullptr;
+    }
+
+    vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
+    const vn::geom::ProjectionCamera camera{
+            .yaw = BoxIsoYaw,
+            .pitch = BoxIsoPitch,
+            .roll = 0.0,
+            .zoom = 1.0,
+            .offset = vn::geom::Vec2{centerX, centerY},
+    };
+    const double half = size * 0.5;
+    const double zHalf = depth * 0.5;
+    const auto addVertex = [&](vn::geom::Vec3 model) {
+        const auto projected = vn::geom::projectPoint(model, camera).pagePosition;
+        return object.addVertex3D(model, projected);
+    };
+
+    const auto backTopLeft = addVertex({-half, -half, -zHalf});
+    const auto backTopRight = addVertex({half, -half, -zHalf});
+    const auto backBottomRight = addVertex({half, half, -zHalf});
+    const auto backBottomLeft = addVertex({-half, half, -zHalf});
+    const auto frontTopLeft = addVertex({-half, -half, zHalf});
+    const auto frontTopRight = addVertex({half, -half, zHalf});
+    const auto frontBottomRight = addVertex({half, half, zHalf});
+    const auto frontBottomLeft = addVertex({-half, half, zHalf});
+
+    object.addLine(backTopLeft, backTopRight);
+    object.addLine(backTopRight, backBottomRight);
+    object.addLine(backBottomRight, backBottomLeft);
+    object.addLine(backBottomLeft, backTopLeft);
+    object.addLine(frontTopLeft, frontTopRight);
+    object.addLine(frontTopRight, frontBottomRight);
+    object.addLine(frontBottomRight, frontBottomLeft);
+    object.addLine(frontBottomLeft, frontTopLeft);
+    object.addLine(backTopLeft, frontTopLeft);
+    object.addLine(backTopRight, frontTopRight);
+    object.addLine(backBottomRight, frontBottomRight);
+    object.addLine(backBottomLeft, frontBottomLeft);
+
+    if (fill >= 0) {
+        const int opacity = std::clamp(fill, 0, 255);
+        object.addFace({backTopLeft, backTopRight, backBottomRight, backBottomLeft}, opacity);
+        object.addFace({frontTopLeft, frontTopRight, frontBottomRight, frontBottomLeft}, opacity);
+        object.addFace({backTopLeft, backTopRight, frontTopRight, frontTopLeft}, opacity);
+        object.addFace({backBottomLeft, backBottomRight, frontBottomRight, frontBottomLeft}, opacity);
+        object.addFace({backTopRight, backBottomRight, frontBottomRight, frontTopRight}, opacity);
+        object.addFace({backTopLeft, backBottomLeft, frontBottomLeft, frontTopLeft}, opacity);
+    }
+
+    auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
+    geometry->setColor(color);
+    geometry->setStrokeWidth(width);
+
     const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
     if (ptr) {
-        QtStrokeHistoryEntry entry;
-        entry.pageIndex = pageIndex;
-        entry.element = ptr;
-        entry.text = "Draw edge";
-        pushHistory(QtHistoryEntry{std::move(entry)});
+        pushHistory(QtHistoryEntry{QtStrokeHistoryEntry{.pageIndex = pageIndex,
+                                                        .element = ptr,
+                                                        .text = "Draw 3D wireframe box"}});
         rebuildPageSnapshots();
     }
     return ptr;
 }
 
 auto QtDocumentController::createRectangle(std::size_t pageIndex, double x1, double y1, double x2, double y2,
-                                           Color color, double width) -> const Element* {
+                                           Color color, double width, int fill) -> const Element* {
     vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
     auto topLeft = object.addVertex({x1, y1});
     auto topRight = object.addVertex({x2, y1});
@@ -275,6 +577,9 @@ auto QtDocumentController::createRectangle(std::size_t pageIndex, double x1, dou
     object.addLine(topRight, bottomRight);
     object.addLine(bottomRight, bottomLeft);
     object.addLine(bottomLeft, topLeft);
+    if (fill >= 0) {
+        object.addFace({topLeft, topRight, bottomRight, bottomLeft}, fill);
+    }
 
     auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
     geometry->setColor(color);
@@ -449,35 +754,41 @@ auto QtDocumentController::createCompassStroke(std::size_t pageIndex,
 
 auto QtDocumentController::createPolyline(std::size_t pageIndex,
                                           const std::vector<std::pair<double, double>>& points, Color color,
-                                          double width) -> const Element* {
+                                          double width, int fill) -> const Element* {
     if (points.size() < 2U) {
+        return nullptr;
+    }
+
+    const auto closed = points.size() > 2U &&
+                        coincidentPoint(vn::geom::Vec2{points.front().first, points.front().second},
+                                        vn::geom::Vec2{points.back().first, points.back().second});
+    const std::size_t vertexPointCount = closed ? points.size() - 1U : points.size();
+    if (vertexPointCount < 2U) {
         return nullptr;
     }
 
     vn::geom::GeometryObject object(vn::geom::GeometryIdGenerator::nextObjectId());
     std::vector<vn::geom::VertexId> vertices;
-    vertices.reserve(points.size());
-    for (const auto& [x, y]: points) {
+    vertices.reserve(vertexPointCount);
+    for (std::size_t index = 0; index < vertexPointCount; ++index) {
+        const auto& [x, y] = points[index];
         vertices.push_back(object.addVertex({x, y}));
     }
     for (auto it = std::next(vertices.begin()); it != vertices.end(); ++it) {
         object.addLine(*std::prev(it), *it);
+    }
+    if (closed) {
+        object.addLine(vertices.back(), vertices.front());
+        if (fill >= 0 && vertices.size() >= 3U) {
+            object.addFace(vertices, fill);
+        }
     }
 
     auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
     geometry->setColor(color);
     geometry->setStrokeWidth(width);
 
-    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
-    if (ptr) {
-        QtStrokeHistoryEntry entry;
-        entry.pageIndex = pageIndex;
-        entry.element = ptr;
-        entry.text = "Draw polyline";
-        pushHistory(QtHistoryEntry{std::move(entry)});
-        rebuildPageSnapshots();
-    }
-    return ptr;
+    return insertOrAutoMergeGeometry(pageIndex, std::move(geometry), "Draw polyline");
 }
 
 auto QtDocumentController::createConstructionLine(std::size_t pageIndex, double x1, double y1, double x2, double y2,
@@ -491,16 +802,7 @@ auto QtDocumentController::createConstructionLine(std::size_t pageIndex, double 
     geometry->setColor(color);
     geometry->setStrokeWidth(width);
 
-    const auto* ptr = insertGeometryOnPage(this->document.get(), pageIndex, std::move(geometry));
-    if (ptr) {
-        QtStrokeHistoryEntry entry;
-        entry.pageIndex = pageIndex;
-        entry.element = ptr;
-        entry.text = "Draw construction line";
-        pushHistory(QtHistoryEntry{std::move(entry)});
-        rebuildPageSnapshots();
-    }
-    return ptr;
+    return insertOrAutoMergeGeometry(pageIndex, std::move(geometry), "Draw construction line");
 }
 
 auto QtDocumentController::createConstructionCircle(std::size_t pageIndex, double cx, double cy, double rx, double ry,

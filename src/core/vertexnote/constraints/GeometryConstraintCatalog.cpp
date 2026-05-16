@@ -21,11 +21,11 @@ constexpr std::array<ConstraintDescriptor, 10> Descriptors{{
         {ConstraintKind::Vertical, "vertical", "Vertical", 2, 0, false, true},
         {ConstraintKind::Parallel, "parallel", "Parallel", 0, 2, false, true},
         {ConstraintKind::Perpendicular, "perpendicular", "Perpendicular", 0, 2, false, true},
-        {ConstraintKind::EqualLength, "equal-length", "Equal length", 0, 2, false, false},
+        {ConstraintKind::EqualLength, "equal-length", "Equal length", 0, 2, false, true},
         {ConstraintKind::FixedLength, "fixed-length", "Fixed length", 2, 0, true, true},
-        {ConstraintKind::FixedAngle, "fixed-angle", "Fixed angle", 0, 1, true, false},
+        {ConstraintKind::FixedAngle, "fixed-angle", "Fixed angle", 0, 1, true, true},
         {ConstraintKind::Radius, "radius", "Radius", 0, 1, true, true},
-        {ConstraintKind::OnEdge, "on-edge", "On edge", 1, 1, false, false},
+        {ConstraintKind::OnEdge, "on-edge", "On edge", 1, 1, false, true},
 }};
 
 }  // namespace

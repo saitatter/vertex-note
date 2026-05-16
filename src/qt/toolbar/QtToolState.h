@@ -46,7 +46,7 @@ enum class QtToolType {
 };
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 enum class QtPointerButtonAction { None = 0, Pan = 1, Eraser = 2 };
-enum class QtGeometrySelectionMode { Vertex, Edge, Object };
+enum class QtGeometrySelectionMode { Vertex, Edge, Face, Object };
 
 struct QtPointerButtonMatrix {
     QtPointerButtonAction eraserTipAction = QtPointerButtonAction::Eraser;

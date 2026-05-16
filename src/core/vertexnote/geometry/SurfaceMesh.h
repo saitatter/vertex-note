@@ -30,7 +30,9 @@ struct SurfaceMeshEdge {
 };
 
 struct SurfaceMeshFace {
+    FaceId id = InvalidFaceId;
     std::vector<VertexId> vertices;
+    int fill = 64;
 };
 
 struct SurfaceMeshValidationResult {

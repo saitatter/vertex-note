@@ -130,6 +130,7 @@ private:
 
     size_t tempTimestamp = 0;
     fs::path tempFilename;
+    bool tempIgnoreStroke = false;
 
     std::vector<double> pressureBuffer;
 };

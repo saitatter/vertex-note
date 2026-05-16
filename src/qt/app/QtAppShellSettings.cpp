@@ -10,9 +10,11 @@
 #include <cctype>
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include <QApplication>
 #include <QColor>
+#include <QComboBox>
 #include <QPalette>
 #include <QStatusBar>
 #include <QStyle>
@@ -35,6 +37,30 @@ auto lowerExtension(const std::filesystem::path& path) -> std::string {
 auto isAutosavableDocumentPath(const std::filesystem::path& path) -> bool {
     const auto ext = lowerExtension(path);
     return ext == ".xopp" || ext == ".xoj" || ext == ".xopt";
+}
+
+auto isKnownWorkspaceId(std::string_view workspaceId) -> bool {
+    return workspaceId == "notes" || workspaceId == "geometry" || workspaceId == "3d";
+}
+
+auto workspaceIdForProfile(std::string_view profileId) -> std::string_view {
+    if (profileId == QT_GEOMETRY_PROFILE_ID) {
+        return "geometry";
+    }
+    if (profileId == QT_3D_PROFILE_ID) {
+        return "3d";
+    }
+    return "notes";
+}
+
+auto panelModeForWorkspace(std::string_view workspaceId) -> QtWorkspacePanelMode {
+    if (workspaceId == "geometry") {
+        return QtWorkspacePanelMode::Geometry;
+    }
+    if (workspaceId == "3d") {
+        return QtWorkspacePanelMode::ThreeD;
+    }
+    return QtWorkspacePanelMode::Notes;
 }
 
 auto lightPalette() -> QPalette {
@@ -95,6 +121,106 @@ void QtAppShell::applySidebarVisibility(bool visible) {
     this->window.setGtkParitySidebarMode(gtkParity);
     this->window.pageSidebar()->setVisible(visible);
     this->window.layerPanel()->setVisible(!gtkParity && visible);
+}
+
+void QtAppShell::applyGeometryPanelVisibility(bool visible) {
+    this->window.geometryPanel()->setVisible(visible);
+    this->window.commandHost()->setCommandChecked("view.show-geometry-panel", visible);
+}
+
+void QtAppShell::applyWorkspacePreset(std::string_view profileId, std::string_view displayName, bool showGeometryPanel,
+                                      bool wireframeView, bool vertexHandles, bool linkedMarkers, bool faceFills,
+                                      QtGeometrySelectionMode selectionMode) {
+    this->currentSettings.workspaceId = std::string(workspaceIdForProfile(profileId));
+    this->currentSettings.toolbarProfileId = std::string(profileId);
+    this->currentSettings.geometryWireframeView = wireframeView;
+    this->currentSettings.geometryHighlightVertices = vertexHandles;
+    this->currentSettings.geometryHighlightLinkedVertices = linkedMarkers;
+    this->currentSettings.geometryShowFaceFills = faceFills;
+    this->currentSettings.geometrySelectionModeDefault = selectionMode;
+
+    auto* canvas = this->window.canvas();
+    auto& toolState = canvas->toolState();
+    toolState.geometrySelectionMode = selectionMode;
+    canvas->setGeometryWireframeViewEnabled(wireframeView);
+    canvas->setGeometryVertexOverlayEnabled(vertexHandles);
+    canvas->setGeometryLinkedVertexOverlayEnabled(linkedMarkers);
+    canvas->setGeometryFaceFillVisible(faceFills);
+
+    rebuildToolbar();
+    this->window.mainToolBar()->setVisible(true);
+    this->window.toolsToolBar()->setVisible(true);
+    this->window.footerToolBar()->setVisible(true);
+    applyAuxiliaryToolBarVisibility(true);
+    this->window.commandHost()->setCommandChecked("view.show-toolbar", true);
+    applySidebarVisibility(this->window.commandHost()->actionForCommand("view.show-sidebar")
+                                   ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()
+                                   : this->persistedShowSidebar);
+    this->window.geometryPanel()->setWorkspaceMode(panelModeForWorkspace(activeWorkspaceId()));
+    applyGeometryPanelVisibility(showGeometryPanel);
+
+    updateToolCommandStates();
+    syncWorkspaceCommandStates();
+    updateStatusBarLabels();
+    savePersistentUiState();
+    this->window.canvas()->update();
+    this->window.statusBar()->showMessage(
+            QStringLiteral("%1 workspace").arg(QString::fromUtf8(displayName.data(),
+                                                                 static_cast<qsizetype>(displayName.size()))),
+            3000);
+}
+
+void QtAppShell::applyWorkspace(std::string_view workspaceId) {
+    if (!isKnownWorkspaceId(workspaceId)) {
+        workspaceId = "notes";
+    }
+
+    if (workspaceId == "geometry") {
+        applyWorkspacePreset(QT_GEOMETRY_PROFILE_ID, "Geometry", true, false, true, true, true,
+                             QtGeometrySelectionMode::Vertex);
+        this->currentSettings.workspaceId = "geometry";
+        syncWorkspaceCommandStates();
+        return;
+    }
+    if (workspaceId == "3d") {
+        applyWorkspacePreset(QT_3D_PROFILE_ID, "3D", true, true, true, true, true,
+                             QtGeometrySelectionMode::Object);
+        this->currentSettings.workspaceId = "3d";
+        syncWorkspaceCommandStates();
+        return;
+    }
+
+    applyWorkspacePreset(QT_GTK_PARITY_PROFILE_ID, "Write", true, false, false, true, true,
+                         QtGeometrySelectionMode::Vertex);
+    this->currentSettings.workspaceId = "notes";
+    syncWorkspaceCommandStates();
+}
+
+void QtAppShell::syncWorkspaceCommandStates() {
+    if (!isKnownWorkspaceId(this->currentSettings.workspaceId)) {
+        this->currentSettings.workspaceId = std::string(workspaceIdForProfile(this->currentSettings.toolbarProfileId));
+    }
+
+    const auto workspaceId = activeWorkspaceId();
+    this->window.commandHost()->setCommandChecked("view.workspace-notes", workspaceId == "notes");
+    this->window.commandHost()->setCommandChecked("view.workspace-geometry", workspaceId == "geometry");
+    this->window.commandHost()->setCommandChecked("view.workspace-3d", workspaceId == "3d");
+    this->window.geometryPanel()->setWorkspaceMode(panelModeForWorkspace(workspaceId));
+
+    if (this->workspaceCombo) {
+        this->suppressWorkspaceComboSync = true;
+        const QString wanted = QString::fromUtf8(workspaceId.data(), static_cast<qsizetype>(workspaceId.size()));
+        const int index = this->workspaceCombo->findData(wanted);
+        if (index >= 0) {
+            this->workspaceCombo->setCurrentIndex(index);
+        }
+        this->suppressWorkspaceComboSync = false;
+    }
+}
+
+auto QtAppShell::activeWorkspaceId() const -> std::string_view {
+    return isKnownWorkspaceId(this->currentSettings.workspaceId) ? std::string_view(this->currentSettings.workspaceId)
+                                                                 : std::string_view("notes");
 }
 
 void QtAppShell::configureAutosave() {
@@ -182,6 +308,10 @@ void QtAppShell::applyRuntimeSettings() {
     canvas->setPageShadowEnabled(this->currentSettings.showPageShadow);
     canvas->setSelectionColor(this->currentSettings.selectionColor);
     canvas->setCanvasBackgroundColor(this->currentSettings.backgroundColor);
+    canvas->setGeometryWireframeViewEnabled(this->currentSettings.geometryWireframeView);
+    canvas->setGeometryVertexOverlayEnabled(this->currentSettings.geometryHighlightVertices);
+    canvas->setGeometryLinkedVertexOverlayEnabled(this->currentSettings.geometryHighlightLinkedVertices);
+    canvas->setGeometryFaceFillVisible(this->currentSettings.geometryShowFaceFills);
     canvas->setCursorHighlightOptions(this->currentSettings.highlightPosition,
                                       this->currentSettings.cursorHighlightColor,
                                       this->currentSettings.cursorHighlightBorderColor,

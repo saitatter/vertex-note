@@ -14,11 +14,13 @@ namespace vn::geom {
 using ObjectId = std::uint64_t;
 using VertexId = std::uint64_t;
 using EdgeId = std::uint64_t;
+using FaceId = std::uint64_t;
 using ConstraintId = std::uint64_t;
 
 constexpr ObjectId InvalidObjectId = 0;
 constexpr VertexId InvalidVertexId = 0;
 constexpr EdgeId InvalidEdgeId = 0;
+constexpr FaceId InvalidFaceId = 0;
 constexpr ConstraintId InvalidConstraintId = 0;
 
 struct Vec2 {
@@ -55,6 +57,7 @@ enum class VertexFlags : std::uint32_t {
 struct Vertex {
     VertexId id = InvalidVertexId;
     Vec2 position;
+    Vec3 modelPosition;
     ObjectId owner = InvalidObjectId;
     VertexFlags flags = VertexFlags::Explicit;
 };
@@ -73,6 +76,12 @@ struct Edge {
     VertexId start = InvalidVertexId;
     VertexId end = InvalidVertexId;
     std::vector<VertexId> controls;
+};
+
+struct Face {
+    FaceId id = InvalidFaceId;
+    std::vector<VertexId> vertices;
+    int fill = 64;
 };
 
 enum class ConstraintKind {

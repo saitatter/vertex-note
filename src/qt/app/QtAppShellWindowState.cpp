@@ -52,12 +52,23 @@ void QtAppShell::wireWindowState() {
                      });
 
     QObject::connect(this->window.canvas(), &QtCanvas::selectionStateChanged, &this->window,
-                     [this]() { updateEditCommandStates(); });
+                     [this]() {
+                         updateEditCommandStates();
+                         updateStatusBarLabels();
+                     });
     QObject::connect(this->window.canvas(), &QtCanvas::toolStateChanged, &this->window,
                      [this]() {
                          updateToolCommandStates();
                          this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
                          syncToolbarWidgets();
+                         updateStatusBarLabels();
+                     });
+    QObject::connect(this->window.geometryPanel(), &QtGeometryPanel::depthEdited, &this->window,
+                     [this](double z) {
+                         if (this->window.canvas()->setSelectedGeometryZ(z)) {
+                             updateEditCommandStates();
+                             updateStatusBarLabels();
+                         }
                      });
 
     QObject::connect(this->window.layerPanel(), &QtLayerPanel::layerChanged, &this->window,
@@ -80,6 +91,14 @@ void QtAppShell::wireWindowState() {
                      [syncSidebarVisibility](bool) { syncSidebarVisibility(); });
     QObject::connect(this->window.layerPanel(), &QDockWidget::visibilityChanged, &this->window,
                      [syncSidebarVisibility](bool) { syncSidebarVisibility(); });
+    QObject::connect(this->window.geometryPanel(), &QDockWidget::visibilityChanged, &this->window,
+                     [this](bool visible) {
+                         if (this->window.geometryPanel()->property("vertexProgrammaticVisibilityChange").toBool()) {
+                             return;
+                         }
+                         this->window.commandHost()->setCommandChecked("view.show-geometry-panel", visible);
+                         savePersistentUiState();
+                     });
 
     for (auto* floatingToolBar: this->window.floatingToolBars()) {
         QObject::connect(floatingToolBar, &QToolBar::visibilityChanged, &this->window, [this, floatingToolBar](bool visible) {

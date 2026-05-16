@@ -42,6 +42,7 @@ void QtAppShell::updateEditCommandStates() {
 void QtAppShell::setGeometrySnapEnabled(bool enabled) {
     this->window.canvas()->setGeometrySnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-geometry-snap", enabled);
+    updateStatusBarLabels();
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Snap to vertex enabled") : QStringLiteral("Snap to vertex disabled"), 2500);
 }
@@ -49,8 +50,53 @@ void QtAppShell::setGeometrySnapEnabled(bool enabled) {
 void QtAppShell::setGridSnapEnabled(bool enabled) {
     this->window.canvas()->setGridSnapEnabled(enabled);
     this->window.commandHost()->setCommandChecked("view.toggle-grid-snap", enabled);
+    updateStatusBarLabels();
     this->window.statusBar()->showMessage(
             enabled ? QStringLiteral("Snap to grid enabled") : QStringLiteral("Snap to grid disabled"), 2500);
+}
+
+void QtAppShell::setGeometryWireframeViewEnabled(bool enabled) {
+    this->currentSettings.geometryWireframeView = enabled;
+    this->window.canvas()->setGeometryWireframeViewEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.geometry-wireframe", enabled);
+    updateStatusBarLabels();
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Geometry wireframe view enabled")
+                    : QStringLiteral("Geometry wireframe view disabled"),
+            2500);
+}
+
+void QtAppShell::setGeometryVertexOverlayEnabled(bool enabled) {
+    this->currentSettings.geometryHighlightVertices = enabled;
+    this->window.canvas()->setGeometryVertexOverlayEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.geometry-highlight-vertices", enabled);
+    updateStatusBarLabels();
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Geometry vertex handles enabled")
+                    : QStringLiteral("Geometry vertex handles disabled"),
+            2500);
+}
+
+void QtAppShell::setGeometryLinkedVertexOverlayEnabled(bool enabled) {
+    this->currentSettings.geometryHighlightLinkedVertices = enabled;
+    this->window.canvas()->setGeometryLinkedVertexOverlayEnabled(enabled);
+    this->window.commandHost()->setCommandChecked("view.geometry-linked-markers", enabled);
+    updateStatusBarLabels();
+    this->window.statusBar()->showMessage(
+            enabled ? QStringLiteral("Geometry linked markers enabled")
+                    : QStringLiteral("Geometry linked markers disabled"),
+            2500);
+}
+
+void QtAppShell::setGeometryFaceFillVisible(bool visible) {
+    this->currentSettings.geometryShowFaceFills = visible;
+    this->window.canvas()->setGeometryFaceFillVisible(visible);
+    this->window.commandHost()->setCommandChecked("view.geometry-face-fills", visible);
+    updateStatusBarLabels();
+    this->window.statusBar()->showMessage(
+            visible ? QStringLiteral("Geometry face fills visible")
+                    : QStringLiteral("Geometry face fills hidden"),
+            2500);
 }
 
 void QtAppShell::setGeometrySelectionMode(QtGeometrySelectionMode mode) {
@@ -62,9 +108,12 @@ void QtAppShell::setGeometrySelectionMode(QtGeometrySelectionMode mode) {
         this->window.toolPalette()->syncFromToolState(this->window.canvas()->toolState());
     }
     updateToolCommandStates();
+    updateStatusBarLabels();
     QString label = QStringLiteral("Vertex");
     if (mode == QtGeometrySelectionMode::Edge) {
         label = QStringLiteral("Edge");
+    } else if (mode == QtGeometrySelectionMode::Face) {
+        label = QStringLiteral("Face");
     } else if (mode == QtGeometrySelectionMode::Object) {
         label = QStringLiteral("Object");
     }
@@ -123,12 +172,54 @@ void QtAppShell::updateToolCommandStates() {
                                                   geometrySelectionMode == QtGeometrySelectionMode::Vertex);
     this->window.commandHost()->setCommandChecked("geometry.selection-mode-edge",
                                                   geometrySelectionMode == QtGeometrySelectionMode::Edge);
+    this->window.commandHost()->setCommandChecked("geometry.selection-mode-face",
+                                                  geometrySelectionMode == QtGeometrySelectionMode::Face);
     this->window.commandHost()->setCommandChecked("geometry.selection-mode-object",
                                                   geometrySelectionMode == QtGeometrySelectionMode::Object);
+    this->window.commandHost()->setCommandChecked("view.geometry-wireframe",
+                                                  this->window.canvas()->isGeometryWireframeViewEnabled());
+    this->window.commandHost()->setCommandChecked("view.geometry-highlight-vertices",
+                                                  this->window.canvas()->isGeometryVertexOverlayEnabled());
+    this->window.commandHost()->setCommandChecked("view.geometry-linked-markers",
+                                                  this->window.canvas()->isGeometryLinkedVertexOverlayEnabled());
+    this->window.commandHost()->setCommandChecked("view.geometry-face-fills",
+                                                  this->window.canvas()->isGeometryFaceFillVisible());
     const bool hasGeometrySelection = this->documentController.selectedGeometry().has_value();
+    const auto selectedVertexCount = this->documentController.selectedVertexIds().size();
+    const auto selectedEdgeCount = this->documentController.selectedEdgeIds().size();
+    const auto selectedFaceCount = this->documentController.selectedFaceIds().size();
     this->window.commandHost()->setCommandEnabled("geometry.translate-vertices", hasGeometrySelection);
     this->window.commandHost()->setCommandEnabled("geometry.rotate-selection", hasGeometrySelection);
     this->window.commandHost()->setCommandEnabled("geometry.scale-selection", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.detach-selection", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.weld-selection", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.fill-face", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.delete-face", selectedFaceCount > 0U);
+    this->window.commandHost()->setCommandEnabled("geometry.split-face", selectedFaceCount == 1U);
+    this->window.commandHost()->setCommandEnabled("geometry.triangulate-face", selectedFaceCount == 1U);
+    this->window.commandHost()->setCommandEnabled("geometry.project-3d-isometric", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.project-3d-front", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.project-3d-top", hasGeometrySelection);
+    this->window.commandHost()->setCommandChecked("geometry.project-3d-isometric",
+                                                  this->window.canvas()->isGeometryProjectionIsometric());
+    this->window.commandHost()->setCommandChecked("geometry.project-3d-front",
+                                                  this->window.canvas()->isGeometryProjectionFront());
+    this->window.commandHost()->setCommandChecked("geometry.project-3d-top",
+                                                  this->window.canvas()->isGeometryProjectionTop());
+    this->window.commandHost()->setCommandEnabled("geometry.nudge-z-up", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("geometry.nudge-z-down", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("constraint.coincident", selectedVertexCount >= 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.horizontal", selectedVertexCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.vertical", selectedVertexCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.fixed-length", selectedVertexCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.equal-length", selectedEdgeCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.fixed-angle", selectedEdgeCount == 1U);
+    this->window.commandHost()->setCommandEnabled("constraint.radius", selectedEdgeCount == 1U);
+    this->window.commandHost()->setCommandEnabled("constraint.on-edge", selectedVertexCount == 1U && selectedEdgeCount == 1U);
+    this->window.commandHost()->setCommandEnabled("constraint.parallel", selectedEdgeCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.perpendicular", selectedEdgeCount == 2U);
+    this->window.commandHost()->setCommandEnabled("constraint.edit-length", hasGeometrySelection);
+    this->window.commandHost()->setCommandEnabled("constraint.delete", hasGeometrySelection);
     syncToolbarWidgets();
 }
 

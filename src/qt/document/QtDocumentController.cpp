@@ -12,6 +12,8 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <span>
+#include <stdexcept>
 #include <string_view>
 #include <unordered_map>
 #include <variant>
@@ -33,6 +35,7 @@
 #include "vertexnote/constraints/GeometryConstraintSolver.h"
 #include "vertexnote/geometry/GeometryElement.h"
 #include "vertexnote/geometry/GeometryIdGenerator.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 #include "vertexnote/geometry/GeometryTransform.h"
 #include "vertexnote/geometry/SurfaceMesh.h"
 #include "vertexnote/snapping/GeometrySnapProvider.h"
@@ -45,9 +48,21 @@
 namespace {
 
 constexpr double PI = 3.14159265358979323846;
+constexpr double CoincidentVertexEpsilon = 1e-6;
+constexpr vn::geom::Vec2 TopologyDetachOffset{8.0, 8.0};
 
 [[nodiscard]] auto distance(vn::geom::Vec2 lhs, vn::geom::Vec2 rhs) -> double {
     return std::hypot(rhs.x - lhs.x, rhs.y - lhs.y);
+}
+
+[[nodiscard]] auto coincidentPoint(vn::geom::Vec2 lhs, vn::geom::Vec2 rhs) -> bool {
+    return distance(lhs, rhs) <= CoincidentVertexEpsilon;
+}
+
+[[nodiscard]] auto containsCoincidentPoint(const std::vector<vn::geom::Vec2>& points, vn::geom::Vec2 point) -> bool {
+    return std::ranges::any_of(points, [point](vn::geom::Vec2 candidate) {
+        return coincidentPoint(candidate, point);
+    });
 }
 
 [[nodiscard]] auto projectionOnSegment(vn::geom::Vec2 point, vn::geom::Vec2 start, vn::geom::Vec2 end)
@@ -68,6 +83,362 @@ constexpr double PI = 3.14159265358979323846;
 
 [[nodiscard]] auto containsVertexId(const std::vector<vn::geom::VertexId>& vertices, vn::geom::VertexId vertex) -> bool {
     return std::find(vertices.begin(), vertices.end(), vertex) != vertices.end();
+}
+
+template <typename Id>
+void appendUnique(std::vector<Id>& ids, Id id) {
+    if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+        ids.push_back(id);
+    }
+}
+
+[[nodiscard]] auto edgeReferencesVertex(const vn::geom::Edge& edge, vn::geom::VertexId vertexId) -> bool {
+    return edge.start == vertexId || edge.end == vertexId ||
+           std::find(edge.controls.begin(), edge.controls.end(), vertexId) != edge.controls.end();
+}
+
+[[nodiscard]] auto isLineLikeEdge(const vn::geom::Edge& edge) -> bool {
+    return edge.kind == vn::geom::EdgeKind::Line || edge.kind == vn::geom::EdgeKind::ConstructionLine;
+}
+
+[[nodiscard]] auto isOnEdgeSupportedEdge(const vn::geom::Edge& edge) -> bool {
+    return isLineLikeEdge(edge) || edge.kind == vn::geom::EdgeKind::Arc ||
+           edge.kind == vn::geom::EdgeKind::ConstructionCircle;
+}
+
+[[nodiscard]] auto edgeAngle(const vn::geom::GeometryObject& object, const vn::geom::Edge& edge)
+        -> std::optional<double> {
+    const auto* start = object.vertex(edge.start);
+    const auto* end = object.vertex(edge.end);
+    if (!start || !end) {
+        return std::nullopt;
+    }
+    const double dx = end->position.x - start->position.x;
+    const double dy = end->position.y - start->position.y;
+    if (std::hypot(dx, dy) <= 1e-9) {
+        return std::nullopt;
+    }
+    return std::atan2(dy, dx);
+}
+
+void replaceEdgeVertexReference(vn::geom::Edge& edge, vn::geom::VertexId oldVertexId,
+                                vn::geom::VertexId newVertexId) {
+    if (edge.start == oldVertexId) {
+        edge.start = newVertexId;
+    }
+    if (edge.end == oldVertexId) {
+        edge.end = newVertexId;
+    }
+    for (auto& control: edge.controls) {
+        if (control == oldVertexId) {
+            control = newVertexId;
+        }
+    }
+}
+
+[[nodiscard]] auto edgeVertexReferences(const vn::geom::Edge& edge) -> std::vector<vn::geom::VertexId> {
+    std::vector<vn::geom::VertexId> result;
+    appendUnique(result, edge.start);
+    appendUnique(result, edge.end);
+    for (auto control: edge.controls) {
+        appendUnique(result, control);
+    }
+    result.erase(std::remove(result.begin(), result.end(), vn::geom::InvalidVertexId), result.end());
+    return result;
+}
+
+[[nodiscard]] auto incidentEdgeIds(const vn::geom::GeometryObject& object, vn::geom::VertexId vertexId)
+        -> std::vector<vn::geom::EdgeId> {
+    std::vector<vn::geom::EdgeId> result;
+    for (const auto& edge: object.edges()) {
+        if (edgeReferencesVertex(edge, vertexId)) {
+            result.push_back(edge.id);
+        }
+    }
+    return result;
+}
+
+[[nodiscard]] auto sameVertexSet(const std::vector<vn::geom::VertexId>& lhs,
+                                 const std::vector<vn::geom::VertexId>& rhs) -> bool {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+    std::unordered_set<vn::geom::VertexId> values(lhs.begin(), lhs.end());
+    return std::ranges::all_of(rhs, [&values](auto vertexId) { return values.contains(vertexId); });
+}
+
+[[nodiscard]] auto orderedClosedLineLoop(const vn::geom::GeometryObject& object,
+                                         const std::vector<vn::geom::EdgeId>& edgeIds)
+        -> std::optional<std::vector<vn::geom::VertexId>> {
+    std::vector<const vn::geom::Edge*> edges;
+    if (edgeIds.empty()) {
+        edges.reserve(object.edges().size());
+        for (const auto& edge: object.edges()) {
+            if (edge.kind == vn::geom::EdgeKind::Line) {
+                edges.push_back(&edge);
+            } else if (edge.kind != vn::geom::EdgeKind::ConstructionLine) {
+                return std::nullopt;
+            }
+        }
+    } else {
+        edges.reserve(edgeIds.size());
+        for (auto edgeId: edgeIds) {
+            const auto* edge = object.edge(edgeId);
+            if (!edge || edge->kind != vn::geom::EdgeKind::Line) {
+                return std::nullopt;
+            }
+            edges.push_back(edge);
+        }
+    }
+    if (edges.size() < 3U) {
+        return std::nullopt;
+    }
+
+    std::unordered_map<vn::geom::VertexId, std::vector<vn::geom::VertexId>> adjacency;
+    for (const auto* edge: edges) {
+        adjacency[edge->start].push_back(edge->end);
+        adjacency[edge->end].push_back(edge->start);
+    }
+    for (const auto& [_, neighbors]: adjacency) {
+        if (neighbors.size() != 2U) {
+            return std::nullopt;
+        }
+    }
+
+    const auto start = edges.front()->start;
+    std::vector<vn::geom::VertexId> loop{start};
+    std::unordered_set<vn::geom::VertexId> visited{start};
+    auto previous = vn::geom::InvalidVertexId;
+    auto current = start;
+    for (std::size_t step = 0; step < edges.size(); ++step) {
+        const auto& neighbors = adjacency[current];
+        const auto next = neighbors[0] == previous ? neighbors[1] : neighbors[0];
+        if (next == start) {
+            return loop.size() == edges.size() ? std::optional<std::vector<vn::geom::VertexId>>{loop} : std::nullopt;
+        }
+        if (!visited.insert(next).second) {
+            return std::nullopt;
+        }
+        loop.push_back(next);
+        previous = current;
+        current = next;
+    }
+    return std::nullopt;
+}
+
+[[nodiscard]] auto evaluateClosedLineLoop(const vn::geom::GeometryObject& object,
+                                          const std::vector<vn::geom::EdgeId>& edgeIds)
+        -> QtGeometryFaceLoopStatus {
+    if (edgeIds.empty()) {
+        return {.kind = QtGeometryFaceLoopStatusKind::NoEdges,
+                .message = "Select the edges that form one closed loop"};
+    }
+    if (edgeIds.size() < 3U) {
+        return {.kind = QtGeometryFaceLoopStatusKind::NeedMoreEdges,
+                .message = "Fill needs at least three selected line edges"};
+    }
+
+    std::unordered_map<vn::geom::VertexId, std::size_t> degree;
+    for (auto edgeId: edgeIds) {
+        const auto* edge = object.edge(edgeId);
+        if (!edge) {
+            return {.kind = QtGeometryFaceLoopStatusKind::OpenOrBranching,
+                    .message = "Selected loop contains a missing edge"};
+        }
+        if (edge->kind != vn::geom::EdgeKind::Line) {
+            return {.kind = QtGeometryFaceLoopStatusKind::UnsupportedEdge,
+                    .message = "Fill currently supports straight line loops only"};
+        }
+        ++degree[edge->start];
+        ++degree[edge->end];
+    }
+
+    if (degree.size() != edgeIds.size()) {
+        return {.kind = QtGeometryFaceLoopStatusKind::OpenOrBranching,
+                .message = "Loop is open or branching; select one closed chain"};
+    }
+    for (const auto& [_, count]: degree) {
+        if (count != 2U) {
+            return {.kind = QtGeometryFaceLoopStatusKind::OpenOrBranching,
+                    .message = "Loop is open or branching; every vertex must connect to two selected edges"};
+        }
+    }
+
+    auto loop = orderedClosedLineLoop(object, edgeIds);
+    if (!loop) {
+        return {.kind = QtGeometryFaceLoopStatusKind::OpenOrBranching,
+                .message = "Loop is not closed; select one continuous boundary"};
+    }
+    if (std::ranges::any_of(object.faces(), [&loop](const auto& face) {
+            return sameVertexSet(face.vertices, *loop);
+        })) {
+        return {.kind = QtGeometryFaceLoopStatusKind::AlreadyFilled,
+                .loop = *loop,
+                .message = "This loop already has a face"};
+    }
+
+    return {.kind = QtGeometryFaceLoopStatusKind::Ready,
+            .loop = *loop,
+            .message = "Closed loop ready for Fill"};
+}
+
+[[nodiscard]] auto fillCandidateEdgeIds(const vn::geom::GeometryObject& object,
+                                        const std::vector<vn::geom::EdgeId>& selectedEdgeIds)
+        -> std::vector<vn::geom::EdgeId> {
+    if (!selectedEdgeIds.empty()) {
+        return selectedEdgeIds;
+    }
+
+    std::vector<vn::geom::EdgeId> edgeIds;
+    edgeIds.reserve(object.edges().size());
+    for (const auto& edge: object.edges()) {
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            continue;
+        }
+        edgeIds.push_back(edge.id);
+    }
+    return edgeIds;
+}
+
+[[nodiscard]] auto hasLineBetween(const vn::geom::GeometryObject& object, vn::geom::VertexId lhs,
+                                  vn::geom::VertexId rhs) -> bool {
+    return std::ranges::any_of(object.edges(), [lhs, rhs](const auto& edge) {
+        return edge.kind == vn::geom::EdgeKind::Line &&
+               ((edge.start == lhs && edge.end == rhs) || (edge.start == rhs && edge.end == lhs));
+    });
+}
+
+void ensureLineBetween(vn::geom::GeometryObject& object, vn::geom::VertexId lhs, vn::geom::VertexId rhs) {
+    if (lhs == rhs || hasLineBetween(object, lhs, rhs)) {
+        return;
+    }
+    object.addLine(lhs, rhs);
+}
+
+[[nodiscard]] auto allGeometryVertexIds(const vn::geom::GeometryObject& object) -> std::vector<vn::geom::VertexId> {
+    std::vector<vn::geom::VertexId> result;
+    result.reserve(object.vertices().size());
+    for (const auto& vertex: object.vertices()) {
+        result.push_back(vertex.id);
+    }
+    return result;
+}
+
+void normalizePageSpaceModelForProjection(vn::geom::GeometryObject& object,
+                                          std::span<const vn::geom::VertexId> vertexIds,
+                                          const vn::geom::ProjectionCamera& camera) {
+    const bool pageSpaceModel = std::ranges::all_of(vertexIds, [&](auto vertexId) {
+        const auto* vertex = object.vertex(vertexId);
+        return vertex && std::abs(vertex->modelPosition.x - vertex->position.x) <= 1e-6 &&
+               std::abs(vertex->modelPosition.y - vertex->position.y) <= 1e-6 &&
+               std::abs(vertex->modelPosition.z) <= 1e-6;
+    });
+    if (!pageSpaceModel) {
+        return;
+    }
+
+    for (auto vertexId: vertexIds) {
+        if (auto* vertex = object.vertex(vertexId)) {
+            static_cast<void>(object.setVertexModelPosition(
+                    vertexId, vn::geom::Vec3{vertex->position.x - camera.offset.x,
+                                             vertex->position.y - camera.offset.y,
+                                             vertex->modelPosition.z}));
+        }
+    }
+}
+
+[[nodiscard]] auto facePathBetween(const std::vector<vn::geom::VertexId>& vertices, std::size_t start,
+                                   std::size_t end) -> std::vector<vn::geom::VertexId> {
+    std::vector<vn::geom::VertexId> result;
+    if (vertices.empty()) {
+        return result;
+    }
+    for (std::size_t index = start;; index = (index + 1U) % vertices.size()) {
+        result.push_back(vertices[index]);
+        if (index == end) {
+            break;
+        }
+    }
+    return result;
+}
+
+[[nodiscard]] auto splitFaceByIndices(vn::geom::GeometryObject& object, vn::geom::FaceId faceId,
+                                      std::size_t lhsIndex, std::size_t rhsIndex) -> bool {
+    const auto* face = object.face(faceId);
+    if (!face || face->vertices.size() < 4U || lhsIndex >= face->vertices.size() || rhsIndex >= face->vertices.size()) {
+        return false;
+    }
+
+    if (lhsIndex == rhsIndex) {
+        return false;
+    }
+    if (lhsIndex > rhsIndex) {
+        std::swap(lhsIndex, rhsIndex);
+    }
+    if (rhsIndex == lhsIndex + 1U || (lhsIndex == 0U && rhsIndex + 1U == face->vertices.size())) {
+        return false;
+    }
+
+    const auto vertices = face->vertices;
+    const int fill = face->fill;
+    const auto lhs = vertices[lhsIndex];
+    const auto rhs = vertices[rhsIndex];
+
+    ensureLineBetween(object, lhs, rhs);
+    if (!object.removeFace(faceId)) {
+        return false;
+    }
+
+    object.addFace(facePathBetween(vertices, lhsIndex, rhsIndex), fill);
+    object.addFace(facePathBetween(vertices, rhsIndex, lhsIndex), fill);
+    return true;
+}
+
+[[nodiscard]] auto triangulateFace(vn::geom::GeometryObject& object, vn::geom::FaceId faceId) -> bool {
+    const auto* face = object.face(faceId);
+    if (!face || face->vertices.size() < 4U) {
+        return false;
+    }
+
+    const auto vertices = face->vertices;
+    const int fill = face->fill;
+    const auto anchor = vertices.front();
+    for (std::size_t index = 2U; index + 1U < vertices.size(); ++index) {
+        ensureLineBetween(object, anchor, vertices[index]);
+    }
+    if (!object.removeFace(faceId)) {
+        return false;
+    }
+    for (std::size_t index = 1U; index + 1U < vertices.size(); ++index) {
+        object.addFace({anchor, vertices[index], vertices[index + 1U]}, fill);
+    }
+    return true;
+}
+
+void removeConstraintsReferencing(vn::geom::GeometryObject& object,
+                                  const std::vector<vn::geom::VertexId>& vertexIds,
+                                  const std::vector<vn::geom::EdgeId>& edgeIds) {
+    if (vertexIds.empty() && edgeIds.empty()) {
+        return;
+    }
+
+    const std::unordered_set<vn::geom::VertexId> vertexSet(vertexIds.begin(), vertexIds.end());
+    const std::unordered_set<vn::geom::EdgeId> edgeSet(edgeIds.begin(), edgeIds.end());
+    std::vector<vn::geom::ConstraintId> removedConstraints;
+    for (const auto& constraint: object.constraints()) {
+        const bool referencesVertex = std::ranges::any_of(constraint.vertices, [&vertexSet](auto vertexId) {
+            return vertexSet.contains(vertexId);
+        });
+        const bool referencesEdge = std::ranges::any_of(constraint.edges, [&edgeSet](auto edgeId) {
+            return edgeSet.contains(edgeId);
+        });
+        if (referencesVertex || referencesEdge) {
+            removedConstraints.push_back(constraint.id);
+        }
+    }
+    for (auto constraintId: removedConstraints) {
+        (void)object.removeConstraint(constraintId);
+    }
 }
 
 [[nodiscard]] auto snapToEditableSelfEdge(const vn::geom::GeometryObject& object,
@@ -498,11 +869,18 @@ auto QtDocumentController::titleText() const -> std::string {
 auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                                        double maxScreenDistance) const
         -> std::optional<QtGeometryHit> {
-    return hitTestGeometry(pageIndex, pageX, pageY, zoom, maxScreenDistance, true, true);
+    return hitTestGeometry(pageIndex, pageX, pageY, zoom, maxScreenDistance, true, true, true);
 }
 
 auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
                                            double maxScreenDistance, bool includeVertices, bool includeEdges) const
+        -> std::optional<QtGeometryHit> {
+    return hitTestGeometry(pageIndex, pageX, pageY, zoom, maxScreenDistance, includeVertices, includeEdges, false);
+}
+
+auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, double pageY, double zoom,
+                                           double maxScreenDistance, bool includeVertices, bool includeEdges,
+                                           bool includeFaces) const
         -> std::optional<QtGeometryHit> {
     if (pageIndex >= this->pageSnapshots.size()) {
         return std::nullopt;
@@ -521,6 +899,9 @@ auto QtDocumentController::hitTestGeometry(std::size_t pageIndex, double pageX, 
         }
         if (!includeEdges) {
             filteredGeometry.edges.clear();
+        }
+        if (!includeFaces) {
+            filteredGeometry.faces.clear();
         }
         auto hit = vn::view::render::hitTestGeometry(filteredGeometry, pageX, pageY, zoom, maxScreenDistance);
         if (!hit) {
@@ -546,6 +927,7 @@ void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit,
         this->selectedGeometryHit = std::move(hit);
         this->selectedGeometryVertexIds.clear();
         this->selectedGeometryEdgeIds.clear();
+        this->selectedGeometryFaceIds.clear();
         if (this->selectedGeometryHit) {
             if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
                 this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
@@ -554,6 +936,10 @@ void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit,
             if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
                 this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
                 this->selectedGeometryEdgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
+            }
+            if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Face &&
+                this->selectedGeometryHit->hit.faceId != vn::geom::InvalidFaceId) {
+                this->selectedGeometryFaceIds.push_back(this->selectedGeometryHit->hit.faceId);
             }
         }
         return;
@@ -573,6 +959,12 @@ void QtDocumentController::setSelectedGeometry(std::optional<QtGeometryHit> hit,
                       this->selectedGeometryHit->hit.edgeId) == this->selectedGeometryEdgeIds.end()) {
             this->selectedGeometryEdgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
         }
+        if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Face &&
+            this->selectedGeometryHit->hit.faceId != vn::geom::InvalidFaceId &&
+            std::find(this->selectedGeometryFaceIds.begin(), this->selectedGeometryFaceIds.end(),
+                      this->selectedGeometryHit->hit.faceId) == this->selectedGeometryFaceIds.end()) {
+            this->selectedGeometryFaceIds.push_back(this->selectedGeometryHit->hit.faceId);
+        }
     }
 }
 
@@ -580,6 +972,7 @@ void QtDocumentController::setSelectedGeometryObject(std::optional<QtGeometryHit
     this->selectedGeometryHit = std::move(hit);
     this->selectedGeometryVertexIds.clear();
     this->selectedGeometryEdgeIds.clear();
+    this->selectedGeometryFaceIds.clear();
 }
 
 void QtDocumentController::clearInteractiveGeometryState() {
@@ -587,7 +980,9 @@ void QtDocumentController::clearInteractiveGeometryState() {
     this->selectedGeometryHit.reset();
     this->selectedGeometryVertexIds.clear();
     this->selectedGeometryEdgeIds.clear();
+    this->selectedGeometryFaceIds.clear();
     this->geometryDragState.reset();
+    this->geometryDragLinkedObjects.clear();
     this->geometryTransformState.reset();
 }
 
@@ -607,12 +1002,167 @@ auto QtDocumentController::selectedEdgeIds() const -> const std::vector<vn::geom
     return this->selectedGeometryEdgeIds;
 }
 
+auto QtDocumentController::selectedFaceIds() const -> const std::vector<vn::geom::FaceId>& {
+    return this->selectedGeometryFaceIds;
+}
+
+auto QtDocumentController::selectedGeometryDepthRange() const -> std::optional<QtGeometryDepthRange> {
+    if (!this->document || !this->selectedGeometryHit ||
+        this->selectedGeometryHit->pageIndex >= this->document->getPageCount()) {
+        return std::nullopt;
+    }
+
+    const auto page = this->document->getPage(this->selectedGeometryHit->pageIndex);
+    if (!page) {
+        return std::nullopt;
+    }
+
+    const vn::geom::GeometryObject* selectedObject = nullptr;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
+            if (geometry && geometry->geometry().objectId() == this->selectedGeometryHit->hit.objectId) {
+                selectedObject = &geometry->geometry();
+                break;
+            }
+        }
+        if (selectedObject) {
+            break;
+        }
+    }
+
+    if (!selectedObject) {
+        return std::nullopt;
+    }
+
+    const auto vertexIds = selectedGeometryTransformVertexIds(*selectedObject);
+    if (vertexIds.empty()) {
+        return std::nullopt;
+    }
+
+    QtGeometryDepthRange range{.minZ = std::numeric_limits<double>::max(),
+                               .maxZ = std::numeric_limits<double>::lowest(),
+                               .vertexCount = 0U};
+    for (auto vertexId: vertexIds) {
+        const auto* vertex = selectedObject->vertex(vertexId);
+        if (!vertex) {
+            continue;
+        }
+        range.minZ = std::min(range.minZ, vertex->modelPosition.z);
+        range.maxZ = std::max(range.maxZ, vertex->modelPosition.z);
+        ++range.vertexCount;
+    }
+
+    if (range.vertexCount == 0U) {
+        return std::nullopt;
+    }
+    return range;
+}
+
+auto QtDocumentController::selectedGeometryFaceLoopStatus() const -> QtGeometryFaceLoopStatus {
+    if (!this->document || !this->selectedGeometryHit ||
+        this->selectedGeometryHit->pageIndex >= this->document->getPageCount()) {
+        return {.kind = QtGeometryFaceLoopStatusKind::NoSelection,
+                .message = "Select geometry edges before Fill"};
+    }
+
+    const auto page = this->document->getPage(this->selectedGeometryHit->pageIndex);
+    if (!page) {
+        return {.kind = QtGeometryFaceLoopStatusKind::NoSelection,
+                .message = "Select geometry edges before Fill"};
+    }
+
+    const vn::geom::GeometryObject* selectedObject = nullptr;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
+            if (geometry && geometry->geometry().objectId() == this->selectedGeometryHit->hit.objectId) {
+                selectedObject = &geometry->geometry();
+                break;
+            }
+        }
+        if (selectedObject) {
+            break;
+        }
+    }
+    if (!selectedObject) {
+        return {.kind = QtGeometryFaceLoopStatusKind::NoSelection,
+                .message = "Selected geometry no longer exists"};
+    }
+
+    const auto edgeIds = fillCandidateEdgeIds(*selectedObject, this->selectedGeometryEdgeIds);
+    return evaluateClosedLineLoop(*selectedObject, edgeIds);
+}
+
+auto QtDocumentController::selectedGeometryFaceSplitDiagonals() const -> std::vector<QtGeometryFaceDiagonal> {
+    std::vector<QtGeometryFaceDiagonal> diagonals;
+    if (!this->document || !this->selectedGeometryHit ||
+        this->selectedGeometryHit->pageIndex >= this->document->getPageCount()) {
+        return diagonals;
+    }
+
+    const auto faceId = !this->selectedGeometryFaceIds.empty() ? this->selectedGeometryFaceIds.front()
+                                                               : this->selectedGeometryHit->hit.faceId;
+    if (faceId == vn::geom::InvalidFaceId) {
+        return diagonals;
+    }
+
+    const auto page = this->document->getPage(this->selectedGeometryHit->pageIndex);
+    if (!page) {
+        return diagonals;
+    }
+
+    const vn::geom::Face* face = nullptr;
+    for (const Layer* layer: page->getLayersView()) {
+        if (!layer || !layer->isVisible()) {
+            continue;
+        }
+        for (const Element* element: layer->getElementsView()) {
+            const auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(element);
+            if (!geometry || geometry->geometry().objectId() != this->selectedGeometryHit->hit.objectId) {
+                continue;
+            }
+            face = geometry->geometry().face(faceId);
+            break;
+        }
+        if (face) {
+            break;
+        }
+    }
+    if (!face || face->vertices.size() < 4U) {
+        return diagonals;
+    }
+
+    const auto count = face->vertices.size();
+    for (std::size_t lhs = 0U; lhs < count; ++lhs) {
+        for (std::size_t rhs = lhs + 1U; rhs < count; ++rhs) {
+            if (rhs == lhs + 1U || (lhs == 0U && rhs + 1U == count)) {
+                continue;
+            }
+            diagonals.push_back(QtGeometryFaceDiagonal{
+                    .lhsIndex = lhs,
+                    .rhsIndex = rhs,
+                    .lhs = face->vertices[lhs],
+                    .rhs = face->vertices[rhs],
+            });
+        }
+    }
+    return diagonals;
+}
+
 auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> bool {
     if (hit.hit.type != vn::view::render::GeometryHitType::Vertex) {
         return false;
     }
 
     this->lastGeometryDragStatus.clear();
+    this->geometryDragLinkedObjects.clear();
     const bool preserveSelection = this->selectedGeometryHit && this->selectedGeometryHit->pageIndex == hit.pageIndex &&
                                    this->selectedGeometryHit->hit.objectId == hit.hit.objectId &&
                                    std::find(this->selectedGeometryVertexIds.begin(), this->selectedGeometryVertexIds.end(),
@@ -632,20 +1182,82 @@ auto QtDocumentController::beginGeometryVertexDrag(const QtGeometryHit& hit) -> 
             .snapPoint = {hit.hit.point.x, hit.hit.point.y},
     };
 
+    bool initialized = false;
     this->document->lock();
     if (auto* geometry = findMutableGeometryElement(hit.pageIndex, hit.hit.objectId)) {
         this->geometryDragState->beforeGeometry = geometry->geometry();
+        auto& beforeGeometry = this->geometryDragState->beforeGeometry;
+
+        std::vector<vn::geom::Vec2> draggedPositions;
+        draggedPositions.reserve(this->geometryDragState->vertexIds.size());
+        for (auto vertexId: this->geometryDragState->vertexIds) {
+            if (const auto* vertex = beforeGeometry.vertex(vertexId)) {
+                if (!containsCoincidentPoint(draggedPositions, vertex->position)) {
+                    draggedPositions.push_back(vertex->position);
+                }
+            }
+        }
+        if (draggedPositions.empty()) {
+            draggedPositions.push_back({hit.hit.point.x, hit.hit.point.y});
+        }
+
+        for (const auto& vertex: beforeGeometry.vertices()) {
+            if (!containsVertexId(this->geometryDragState->vertexIds, vertex.id) &&
+                containsCoincidentPoint(draggedPositions, vertex.position)) {
+                this->geometryDragState->vertexIds.push_back(vertex.id);
+            }
+        }
+
         this->geometryDragState->originalPositions.reserve(this->geometryDragState->vertexIds.size());
         this->geometryDragState->currentPositions.reserve(this->geometryDragState->vertexIds.size());
         for (auto vertexId: this->geometryDragState->vertexIds) {
-            if (const auto* vertex = geometry->geometry().vertex(vertexId)) {
+            if (const auto* vertex = beforeGeometry.vertex(vertexId)) {
                 this->geometryDragState->originalPositions.push_back(vertex->position);
                 this->geometryDragState->currentPositions.push_back(vertex->position);
             }
         }
+        initialized = !this->geometryDragState->originalPositions.empty();
+
+        auto page = this->document->getPage(hit.pageIndex);
+        if (page) {
+            for (Layer* layer: page->getLayers()) {
+                if (!layer || !layer->isVisible()) {
+                    continue;
+                }
+                for (auto& element: layer->getElements()) {
+                    auto* linkedGeometry = dynamic_cast<vn::geom::GeometryElement*>(element.get());
+                    if (!linkedGeometry || linkedGeometry == geometry ||
+                        linkedGeometry->geometry().objectId() == hit.hit.objectId) {
+                        continue;
+                    }
+
+                    std::vector<vn::geom::VertexId> linkedVertexIds;
+                    const auto& linkedObject = linkedGeometry->geometry();
+                    for (const auto& vertex: linkedObject.vertices()) {
+                        if (containsCoincidentPoint(draggedPositions, vertex.position)) {
+                            linkedVertexIds.push_back(vertex.id);
+                        }
+                    }
+                    if (linkedVertexIds.empty()) {
+                        continue;
+                    }
+
+                    this->geometryDragLinkedObjects.push_back(QtGeometryDragLinkedObjectState{
+                            .pageIndex = hit.pageIndex,
+                            .objectId = linkedObject.objectId(),
+                            .vertexIds = std::move(linkedVertexIds),
+                            .beforeGeometry = linkedObject,
+                    });
+                }
+            }
+        }
     }
     this->document->unlock();
-    return true;
+    if (!initialized) {
+        this->geometryDragState.reset();
+        this->geometryDragLinkedObjects.clear();
+    }
+    return initialized;
 }
 
 auto QtDocumentController::snapPagePoint(std::size_t pageIndex, double pageX, double pageY, double zoom,
@@ -668,16 +1280,19 @@ auto QtDocumentController::snapPagePoint(std::size_t pageIndex, double pageX, do
     vn::snap::SnapEngine engine;
     bool hasSnapProviders = false;
     if (options.geometryEnabled) {
-        auto objects = vn::snap::collectGeometryObjects(page);
         if (ignoredObjectId) {
+            auto objects = vn::snap::collectGeometryObjects(page);
             objects.erase(std::remove_if(objects.begin(), objects.end(),
                                          [&](const vn::geom::GeometryObject* object) {
                                              return !object || object->objectId() == *ignoredObjectId;
                                          }),
                           objects.end());
-        }
-        if (!objects.empty()) {
-            engine.addProvider(std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects)));
+            if (!objects.empty()) {
+                engine.addProvider(std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects)));
+                hasSnapProviders = true;
+            }
+        } else if (auto provider = geometrySnapProviderForPage(pageIndex, page)) {
+            engine.addProvider(std::move(provider));
             hasSnapProviders = true;
         }
     }
@@ -712,8 +1327,32 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
         return false;
     }
 
-    const auto snapped = snapPagePoint(this->geometryDragState->pageIndex, pageX, pageY, zoom, options,
-                                      this->geometryDragState->objectId);
+    auto snapped = snapPagePoint(this->geometryDragState->pageIndex, pageX, pageY, zoom, options,
+                                 this->geometryDragState->objectId);
+    const auto snappedToLinkedDragObject = [this, &snapped]() {
+        if (!snapped.snapCandidate || snapped.snapCandidate->object == vn::geom::InvalidObjectId) {
+            return false;
+        }
+        return std::ranges::any_of(this->geometryDragLinkedObjects, [&snapped](const auto& linked) {
+            return linked.objectId == snapped.snapCandidate->object;
+        });
+    };
+    if (snappedToLinkedDragObject()) {
+        if (options.gridEnabled) {
+            snapped = snapPagePoint(this->geometryDragState->pageIndex, pageX, pageY, zoom,
+                                    {.geometryEnabled = false,
+                                     .gridEnabled = true,
+                                     .gridSize = options.gridSize,
+                                     .gridTolerance = options.gridTolerance,
+                                     .screenTolerance = options.screenTolerance},
+                                    this->geometryDragState->objectId);
+        } else {
+            snapped = QtSnapPointResult{.pagePoint = vn::geom::Vec2{pageX, pageY},
+                                        .snapKind = std::nullopt,
+                                        .snapCandidate = std::nullopt,
+                                        .snapped = false};
+        }
+    }
     vn::geom::Vec2 target = snapped.pagePoint;
     this->geometryDragState->snapKind = snapped.snapKind;
     this->geometryDragState->snapCandidate = snapped.snapCandidate;
@@ -749,12 +1388,12 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
     const vn::geom::Vec2 delta{target.x - this->geometryDragState->originalPosition.x,
                                target.y - this->geometryDragState->originalPosition.y};
     bool changed = std::abs(delta.x) > 1e-6 || std::abs(delta.y) > 1e-6;
+    const vn::geom::GeometryTransform2D transform{
+            .pivot = this->geometryDragState->originalPosition,
+            .translation = delta,
+    };
     auto transformed = vn::geom::transformedGeometry(
-            this->geometryDragState->beforeGeometry, this->geometryDragState->vertexIds,
-            vn::geom::GeometryTransform2D{
-                    .pivot = this->geometryDragState->originalPosition,
-                    .translation = delta,
-            });
+            this->geometryDragState->beforeGeometry, this->geometryDragState->vertexIds, transform);
     if (this->geometryDragState->vertexIds.size() <= 1U) {
         changed = transformed.setVertexPosition(this->geometryDragState->vertexId, target) || changed;
     }
@@ -762,6 +1401,19 @@ auto QtDocumentController::updateGeometryVertexDrag(double pageX, double pageY, 
     if (!geometry->geometry().constraints().empty()) {
         const vn::constraints::GeometryConstraintSolver solver;
         changed = solver.apply(geometry->geometry()).changed || changed;
+    }
+
+    for (auto& linked: this->geometryDragLinkedObjects) {
+        auto* linkedGeometry = findMutableGeometryElement(linked.pageIndex, linked.objectId);
+        if (!linkedGeometry) {
+            continue;
+        }
+        auto linkedTransformed = vn::geom::transformedGeometry(linked.beforeGeometry, linked.vertexIds, transform);
+        linkedGeometry->replaceGeometry(std::move(linkedTransformed));
+        if (!linkedGeometry->geometry().constraints().empty()) {
+            const vn::constraints::GeometryConstraintSolver solver;
+            changed = solver.apply(linkedGeometry->geometry()).changed || changed;
+        }
     }
 
     if (const auto* vertex = geometry->geometry().vertex(this->geometryDragState->vertexId)) {
@@ -866,7 +1518,19 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
             if (!changed) {
                 this->document->unlock();
                 this->geometryDragState.reset();
+                this->geometryDragLinkedObjects.clear();
                 return false;
+            }
+
+            for (const auto& linked: this->geometryDragLinkedObjects) {
+                if (auto* linkedGeometry = findMutableGeometryElement(linked.pageIndex, linked.objectId)) {
+                    linkedObjects.push_back(QtGeometryHistoryObjectState{
+                            .pageIndex = linked.pageIndex,
+                            .objectId = linked.objectId,
+                            .before = linked.beforeGeometry,
+                            .after = linkedGeometry->geometry(),
+                    });
+                }
             }
 
             pushGeometryHistory({.pageIndex = this->geometryDragState->pageIndex,
@@ -892,6 +1556,7 @@ auto QtDocumentController::endGeometryVertexDrag() -> bool {
         this->document->unlock();
     }
     this->geometryDragState.reset();
+    this->geometryDragLinkedObjects.clear();
     if (changed) {
         rebuildPageSnapshots();
     }
@@ -936,6 +1601,24 @@ auto QtDocumentController::selectedGeometryTransformVertexIds(const vn::geom::Ge
             appendVertex(edge->end);
             for (auto controlId: edge->controls) {
                 appendVertex(controlId);
+            }
+        }
+        return vertexIds;
+    }
+
+    if (!this->selectedGeometryFaceIds.empty()) {
+        const auto appendVertex = [&](vn::geom::VertexId vertexId) {
+            if (object.vertex(vertexId) && std::find(vertexIds.begin(), vertexIds.end(), vertexId) == vertexIds.end()) {
+                vertexIds.push_back(vertexId);
+            }
+        };
+        for (auto faceId: this->selectedGeometryFaceIds) {
+            const auto* face = object.face(faceId);
+            if (!face) {
+                continue;
+            }
+            for (auto vertexId: face->vertices) {
+                appendVertex(vertexId);
             }
         }
         return vertexIds;
@@ -1166,6 +1849,140 @@ auto QtDocumentController::scaleSelectedGeometry(double scaleX, double scaleY) -
     return endSelectedGeometryTransform();
 }
 
+auto QtDocumentController::projectSelectedGeometry3D(const vn::geom::ProjectionCamera& camera) -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    const auto vertexIds = allGeometryVertexIds(after);
+    normalizePageSpaceModelForProjection(after, vertexIds, camera);
+    changed = after.applyProjection(camera);
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Project geometry 3D view"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::nudgeSelectedGeometryZ(double delta, const vn::geom::ProjectionCamera& camera) -> bool {
+    if (!this->selectedGeometryHit || !this->document || delta == 0.0) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    auto vertexIds = selectedGeometryTransformVertexIds(after);
+    normalizePageSpaceModelForProjection(after, allGeometryVertexIds(after), camera);
+    for (auto vertexId: vertexIds) {
+        if (auto* vertex = after.vertex(vertexId)) {
+            changed = after.setVertexZ(vertexId, vertex->modelPosition.z + delta) || changed;
+        }
+    }
+    changed = after.applyProjection(camera) || changed;
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = delta > 0.0 ? "Push geometry vertices in Z" : "Pull geometry vertices in Z"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::setSelectedGeometryZ(double z, const vn::geom::ProjectionCamera& camera) -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    auto vertexIds = selectedGeometryTransformVertexIds(after);
+    normalizePageSpaceModelForProjection(after, allGeometryVertexIds(after), camera);
+    for (auto vertexId: vertexIds) {
+        changed = after.setVertexZ(vertexId, z) || changed;
+    }
+    changed = after.applyProjection(camera) || changed;
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Set geometry Z depth"});
+    rebuildPageSnapshots();
+    return true;
+}
+
 auto QtDocumentController::deleteSelectedGeometry() -> bool {
     if (!this->selectedGeometryHit || !this->document) {
         return false;
@@ -1205,7 +2022,18 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
             changed = geometry->removeEdge(edgeId) || changed;
         }
         actionText = edgeIds.size() > 1U ? "Delete geometry edges" : "Delete geometry edge";
-    } else if (this->selectedGeometryVertexIds.empty() && this->selectedGeometryEdgeIds.empty()) {
+    } else if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Face &&
+               this->selectedGeometryHit->hit.faceId != vn::geom::InvalidFaceId) {
+        std::vector<vn::geom::FaceId> faceIds = this->selectedGeometryFaceIds;
+        if (faceIds.empty()) {
+            faceIds.push_back(this->selectedGeometryHit->hit.faceId);
+        }
+        for (auto faceId: faceIds) {
+            changed = geometry->geometry().removeFace(faceId) || changed;
+        }
+        actionText = faceIds.size() > 1U ? "Delete geometry faces" : "Delete geometry face";
+    } else if (this->selectedGeometryVertexIds.empty() && this->selectedGeometryEdgeIds.empty() &&
+               this->selectedGeometryFaceIds.empty()) {
         if (auto removed = removeGeometryElement(this->selectedGeometryHit->pageIndex, this->selectedGeometryHit->hit.objectId)) {
             removedElements.push_back(std::move(*removed));
             changed = true;
@@ -1231,6 +2059,540 @@ auto QtDocumentController::deleteSelectedGeometry() -> bool {
     }
 
     return changed;
+}
+
+auto QtDocumentController::fillSelectedGeometryFace(int fillOpacity) -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    const auto edgeIds = fillCandidateEdgeIds(after, this->selectedGeometryEdgeIds);
+
+    auto loopStatus = evaluateClosedLineLoop(after, edgeIds);
+    if (loopStatus.kind == QtGeometryFaceLoopStatusKind::Ready) {
+        try {
+            after.addFace(loopStatus.loop, std::clamp(fillOpacity, 0, 255));
+            changed = true;
+        } catch (const std::invalid_argument&) {
+            changed = false;
+        }
+    }
+
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Fill geometry face"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::deleteSelectedGeometryFace() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::vector<vn::geom::FaceId> faceIds = this->selectedGeometryFaceIds;
+    if (faceIds.empty() && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Face &&
+        this->selectedGeometryHit->hit.faceId != vn::geom::InvalidFaceId) {
+        faceIds.push_back(this->selectedGeometryHit->hit.faceId);
+    }
+    if (faceIds.empty()) {
+        return false;
+    }
+
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    for (auto faceId: faceIds) {
+        changed = after.removeFace(faceId) || changed;
+    }
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = faceIds.size() > 1U ? "Delete geometry faces" : "Delete geometry face"});
+    this->selectedGeometryFaceIds.clear();
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::splitSelectedGeometryFace() -> bool {
+    const auto diagonals = selectedGeometryFaceSplitDiagonals();
+    if (diagonals.empty()) {
+        return false;
+    }
+    return splitSelectedGeometryFace(diagonals.front().lhsIndex, diagonals.front().rhsIndex);
+}
+
+auto QtDocumentController::splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto faceId = !this->selectedGeometryFaceIds.empty() ? this->selectedGeometryFaceIds.front()
+                                                               : this->selectedGeometryHit->hit.faceId;
+    if (faceId == vn::geom::InvalidFaceId) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    changed = splitFaceByIndices(after, faceId, lhsIndex, rhsIndex);
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Split geometry face"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::triangulateSelectedGeometryFace() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto faceId = !this->selectedGeometryFaceIds.empty() ? this->selectedGeometryFaceIds.front()
+                                                               : this->selectedGeometryHit->hit.faceId;
+    if (faceId == vn::geom::InvalidFaceId) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    if (!geometry) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    changed = triangulateFace(after, faceId);
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+    }
+    this->document->unlock();
+
+    if (!changed || !afterGeometry) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = "Triangulate geometry face"});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::detachSelectedGeometry() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    std::vector<vn::geom::VertexId> affectedVertexIds;
+    std::vector<vn::geom::EdgeId> affectedEdgeIds;
+    std::string actionText = "Detach geometry";
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    auto page = pageIndex < this->document->getPageCount() ? this->document->getPage(pageIndex) : nullptr;
+    if (!geometry || !page) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    const auto before = *beforeGeometry;
+
+    const auto hasCoincidentPeer = [&](vn::geom::VertexId vertexId, vn::geom::Vec2 position) {
+        for (const auto& vertex: before.vertices()) {
+            if (vertex.id != vertexId && coincidentPoint(vertex.position, position)) {
+                return true;
+            }
+        }
+
+        for (Layer* layer: page->getLayers()) {
+            if (!layer || !layer->isVisible()) {
+                continue;
+            }
+            for (const auto& element: layer->getElements()) {
+                const auto* otherGeometry = dynamic_cast<const vn::geom::GeometryElement*>(element.get());
+                if (!otherGeometry || otherGeometry->geometry().objectId() == objectId) {
+                    continue;
+                }
+                for (const auto& vertex: otherGeometry->geometry().vertices()) {
+                    if (coincidentPoint(vertex.position, position)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    };
+
+    std::vector<vn::geom::EdgeId> edgeIds = this->selectedGeometryEdgeIds;
+    if (edgeIds.empty() && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
+        this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
+        edgeIds.push_back(this->selectedGeometryHit->hit.edgeId);
+    }
+
+    std::vector<vn::geom::VertexId> vertexIds = this->selectedGeometryVertexIds;
+    if (vertexIds.empty() && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+        this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+        vertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+    }
+
+    if (!edgeIds.empty()) {
+        std::unordered_set<vn::geom::EdgeId> selectedEdgeSet;
+        for (auto edgeId: edgeIds) {
+            if (after.edge(edgeId)) {
+                selectedEdgeSet.insert(edgeId);
+            }
+        }
+
+        std::unordered_map<vn::geom::VertexId, vn::geom::VertexId> duplicateVertexIds;
+        const auto duplicateSelectedEdgeVertex = [&](vn::geom::VertexId vertexId) -> std::optional<vn::geom::VertexId> {
+            if (const auto existing = duplicateVertexIds.find(vertexId); existing != duplicateVertexIds.end()) {
+                return existing->second;
+            }
+
+            const auto* vertex = after.vertex(vertexId);
+            if (!vertex) {
+                return std::nullopt;
+            }
+            const auto position = vertex->position;
+            const auto flags = vertex->flags;
+            const auto duplicate = after.addVertex({position.x + TopologyDetachOffset.x,
+                                                    position.y + TopologyDetachOffset.y},
+                                                   flags);
+            duplicateVertexIds.emplace(vertexId, duplicate);
+            appendUnique(affectedVertexIds, vertexId);
+            appendUnique(affectedVertexIds, duplicate);
+            return duplicate;
+        };
+
+        for (auto edgeId: edgeIds) {
+            const auto* beforeEdge = before.edge(edgeId);
+            if (!beforeEdge || !selectedEdgeSet.contains(edgeId)) {
+                continue;
+            }
+
+            for (auto vertexId: edgeVertexReferences(*beforeEdge)) {
+                const auto* beforeVertex = before.vertex(vertexId);
+                if (!beforeVertex) {
+                    continue;
+                }
+
+                bool sharedWithUnselectedEdge = false;
+                for (const auto& edge: before.edges()) {
+                    if (!selectedEdgeSet.contains(edge.id) && edgeReferencesVertex(edge, vertexId)) {
+                        sharedWithUnselectedEdge = true;
+                        break;
+                    }
+                }
+
+                if (!sharedWithUnselectedEdge && !hasCoincidentPeer(vertexId, beforeVertex->position)) {
+                    continue;
+                }
+
+                const auto duplicate = duplicateSelectedEdgeVertex(vertexId);
+                auto* edge = after.edge(edgeId);
+                if (!duplicate || !edge) {
+                    continue;
+                }
+
+                replaceEdgeVertexReference(*edge, vertexId, *duplicate);
+                appendUnique(affectedEdgeIds, edgeId);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            actionText = selectedEdgeSet.size() > 1U ? "Detach geometry edges" : "Detach geometry edge";
+        }
+    } else if (!vertexIds.empty()) {
+        for (auto vertexId: vertexIds) {
+            const auto* vertex = after.vertex(vertexId);
+            if (!vertex) {
+                continue;
+            }
+
+            const auto position = vertex->position;
+            const auto flags = vertex->flags;
+            const auto incidentEdges = incidentEdgeIds(after, vertexId);
+            if (incidentEdges.size() > 1U) {
+                const auto duplicate = after.addVertex(position, flags);
+                for (std::size_t index = 1U; index < incidentEdges.size(); ++index) {
+                    if (auto* edge = after.edge(incidentEdges[index])) {
+                        replaceEdgeVertexReference(*edge, vertexId, duplicate);
+                        appendUnique(affectedEdgeIds, incidentEdges[index]);
+                    }
+                }
+                (void)after.setVertexPosition(vertexId, {position.x + TopologyDetachOffset.x,
+                                                         position.y + TopologyDetachOffset.y});
+                appendUnique(affectedVertexIds, vertexId);
+                appendUnique(affectedVertexIds, duplicate);
+                changed = true;
+            } else if (hasCoincidentPeer(vertexId, position)) {
+                (void)after.setVertexPosition(vertexId, {position.x + TopologyDetachOffset.x,
+                                                         position.y + TopologyDetachOffset.y});
+                appendUnique(affectedVertexIds, vertexId);
+                for (auto edgeId: incidentEdges) {
+                    appendUnique(affectedEdgeIds, edgeId);
+                }
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            actionText = vertexIds.size() > 1U ? "Detach geometry vertices" : "Detach geometry vertex";
+        }
+    }
+
+    if (changed) {
+        removeConstraintsReferencing(after, affectedVertexIds, affectedEdgeIds);
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+        if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+            this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+            if (const auto* vertex = afterGeometry->vertex(this->selectedGeometryHit->hit.vertexId)) {
+                this->selectedGeometryHit->hit.point = Point(vertex->position.x, vertex->position.y);
+            }
+        } else if (this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Edge &&
+                   this->selectedGeometryHit->hit.edgeId != vn::geom::InvalidEdgeId) {
+            if (const auto* edge = afterGeometry->edge(this->selectedGeometryHit->hit.edgeId)) {
+                const auto* start = afterGeometry->vertex(edge->start);
+                const auto* end = afterGeometry->vertex(edge->end);
+                if (start && end) {
+                    this->selectedGeometryHit->hit.point =
+                            Point((start->position.x + end->position.x) / 2.0,
+                                  (start->position.y + end->position.y) / 2.0);
+                }
+            }
+        }
+        this->hoveredGeometryHit = this->selectedGeometryHit;
+    }
+    this->document->unlock();
+
+    if (!changed) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .text = std::move(actionText)});
+    rebuildPageSnapshots();
+    return true;
+}
+
+auto QtDocumentController::weldSelectedGeometry() -> bool {
+    if (!this->selectedGeometryHit || !this->document) {
+        return false;
+    }
+
+    std::vector<vn::geom::VertexId> vertexIds = this->selectedGeometryVertexIds;
+    if (vertexIds.empty() && this->selectedGeometryHit->hit.type == vn::view::render::GeometryHitType::Vertex &&
+        this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+        vertexIds.push_back(this->selectedGeometryHit->hit.vertexId);
+    }
+    if (vertexIds.empty()) {
+        return false;
+    }
+
+    struct ExternalWeldTarget {
+        vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
+        vn::geom::VertexId targetVertexId = vn::geom::InvalidVertexId;
+        vn::geom::VertexId weldVertexId = vn::geom::InvalidVertexId;
+        vn::geom::GeometryObject geometry;
+    };
+
+    const auto pageIndex = this->selectedGeometryHit->pageIndex;
+    const auto objectId = this->selectedGeometryHit->hit.objectId;
+    std::optional<vn::geom::GeometryObject> beforeGeometry;
+    std::optional<vn::geom::GeometryObject> afterGeometry;
+    std::vector<QtGeometryHistoryRemovedElement> removedElements;
+    bool changed = false;
+
+    this->document->lock();
+    auto* geometry = findMutableGeometryElement(pageIndex, objectId);
+    auto page = pageIndex < this->document->getPageCount() ? this->document->getPage(pageIndex) : nullptr;
+    if (!geometry || !page) {
+        this->document->unlock();
+        return false;
+    }
+
+    beforeGeometry = geometry->geometry();
+    auto after = *beforeGeometry;
+    const auto targetVertexId = vertexIds.front();
+    if (!after.vertex(targetVertexId)) {
+        this->document->unlock();
+        return false;
+    }
+
+    for (std::size_t index = 1U; index < vertexIds.size(); ++index) {
+        changed = after.mergeVertexInto(vertexIds[index], targetVertexId) || changed;
+    }
+
+    std::vector<ExternalWeldTarget> externalTargets;
+    std::unordered_set<vn::geom::ObjectId> collectedObjects;
+    for (auto weldVertexId: vertexIds) {
+        const auto* weldVertex = after.vertex(weldVertexId);
+        if (!weldVertex) {
+            continue;
+        }
+        for (Layer* layer: page->getLayers()) {
+            if (!layer || !layer->isVisible()) {
+                continue;
+            }
+            for (const auto& element: layer->getElements()) {
+                const auto* otherGeometry = dynamic_cast<const vn::geom::GeometryElement*>(element.get());
+                if (!otherGeometry || otherGeometry->geometry().objectId() == objectId ||
+                    collectedObjects.contains(otherGeometry->geometry().objectId())) {
+                    continue;
+                }
+                for (const auto& vertex: otherGeometry->geometry().vertices()) {
+                    if (!coincidentPoint(vertex.position, weldVertex->position)) {
+                        continue;
+                    }
+                    externalTargets.push_back(ExternalWeldTarget{
+                            .objectId = otherGeometry->geometry().objectId(),
+                            .targetVertexId = vertex.id,
+                            .weldVertexId = weldVertexId,
+                            .geometry = otherGeometry->geometry(),
+                    });
+                    collectedObjects.insert(otherGeometry->geometry().objectId());
+                    break;
+                }
+            }
+        }
+    }
+
+    for (const auto& target: externalTargets) {
+        auto merged = mergedGeometryForVertexWeld(after, target.geometry, target.targetVertexId, target.weldVertexId);
+        if (!merged) {
+            continue;
+        }
+        auto removed = removeGeometryElement(pageIndex, target.objectId);
+        if (!removed) {
+            continue;
+        }
+        after = std::move(*merged);
+        removedElements.push_back(std::move(*removed));
+        changed = true;
+    }
+
+    if (changed) {
+        geometry->replaceGeometry(std::move(after));
+        afterGeometry = geometry->geometry();
+        if (this->selectedGeometryHit->hit.vertexId != vn::geom::InvalidVertexId) {
+            if (const auto* vertex = afterGeometry->vertex(this->selectedGeometryHit->hit.vertexId)) {
+                this->selectedGeometryHit->hit.point = Point(vertex->position.x, vertex->position.y);
+            }
+        }
+        this->hoveredGeometryHit = this->selectedGeometryHit;
+    }
+    this->document->unlock();
+
+    if (!changed) {
+        return false;
+    }
+
+    pushGeometryHistory({.pageIndex = pageIndex,
+                         .objectId = objectId,
+                         .before = std::move(*beforeGeometry),
+                         .after = std::move(*afterGeometry),
+                         .removedElements = std::move(removedElements),
+                         .text = vertexIds.size() > 1U ? "Weld geometry vertices" : "Weld geometry vertex"});
+    rebuildPageSnapshots();
+    return true;
 }
 
 auto QtDocumentController::insertVertexOnSelectedEdge() -> bool {
@@ -1371,11 +2733,39 @@ auto QtDocumentController::normalizeExtension(const std::filesystem::path& path)
 
 void QtDocumentController::rebuildPageSnapshots() {
     this->pageSnapshots.clear();
+    invalidateGeometrySnapCache();
     if (!this->document) {
         return;
     }
     this->pageSnapshots = vn::view::render::buildPageRenderSnapshots(
             *this->document, {.renderPdfBackgrounds = false});
+    this->geometrySnapProviderCache.resize(this->pageSnapshots.size());
+}
+
+void QtDocumentController::invalidateGeometrySnapCache() {
+    this->geometrySnapProviderCache.clear();
+}
+
+auto QtDocumentController::geometrySnapProviderForPage(std::size_t pageIndex, const PageRef& page) const
+        -> std::shared_ptr<vn::snap::GeometrySnapProvider> {
+    if (!page) {
+        return nullptr;
+    }
+    if (this->geometrySnapProviderCache.size() < this->pageSnapshots.size()) {
+        this->geometrySnapProviderCache.resize(this->pageSnapshots.size());
+    }
+    if (pageIndex >= this->geometrySnapProviderCache.size()) {
+        return nullptr;
+    }
+
+    auto& provider = this->geometrySnapProviderCache[pageIndex];
+    if (!provider) {
+        auto objects = vn::snap::collectGeometryObjects(page);
+        if (!objects.empty()) {
+            provider = std::make_shared<vn::snap::GeometrySnapProvider>(std::move(objects));
+        }
+    }
+    return provider;
 }
 
 auto QtDocumentController::cachedPdfRaster(std::size_t pdfPageNumber, double pageWidth, double pageHeight)
@@ -2020,8 +3410,7 @@ auto QtDocumentController::applyConstraint(vn::geom::ConstraintKind kind) -> boo
                 }
                 for (const auto edgeId: this->selectedGeometryEdgeIds) {
                     const auto* edge = before.edge(edgeId);
-                    if (!edge || (edge->kind != vn::geom::EdgeKind::Line &&
-                                  edge->kind != vn::geom::EdgeKind::ConstructionLine)) {
+                    if (!edge || !isLineLikeEdge(*edge)) {
                         return false;
                     }
                 }
@@ -2051,9 +3440,45 @@ auto QtDocumentController::applyConstraint(vn::geom::ConstraintKind kind) -> boo
                 break;
             }
             case vn::geom::ConstraintKind::EqualLength:
-            case vn::geom::ConstraintKind::FixedAngle:
-            case vn::geom::ConstraintKind::OnEdge:
-                return false;
+                if (this->selectedGeometryEdgeIds.size() != 2U) {
+                    return false;
+                }
+                for (const auto edgeId: this->selectedGeometryEdgeIds) {
+                    const auto* edge = before.edge(edgeId);
+                    if (!edge || !isLineLikeEdge(*edge)) {
+                        return false;
+                    }
+                }
+                after.addConstraint(kind, {}, {this->selectedGeometryEdgeIds[0], this->selectedGeometryEdgeIds[1]});
+                break;
+            case vn::geom::ConstraintKind::FixedAngle: {
+                if (this->selectedGeometryEdgeIds.size() != 1U) {
+                    return false;
+                }
+                const auto* edge = before.edge(this->selectedGeometryEdgeIds.front());
+                if (!edge || !isLineLikeEdge(*edge)) {
+                    return false;
+                }
+                const auto angle = edgeAngle(before, *edge);
+                if (!angle) {
+                    return false;
+                }
+                after.addConstraint(kind, {}, {this->selectedGeometryEdgeIds.front()}, *angle);
+                break;
+            }
+            case vn::geom::ConstraintKind::OnEdge: {
+                if (this->selectedGeometryVertexIds.size() != 1U || this->selectedGeometryEdgeIds.size() != 1U) {
+                    return false;
+                }
+                const auto* edge = before.edge(this->selectedGeometryEdgeIds.front());
+                if (!edge || !isOnEdgeSupportedEdge(*edge) ||
+                    edgeReferencesVertex(*edge, this->selectedGeometryVertexIds.front())) {
+                    return false;
+                }
+                after.addConstraint(kind, {this->selectedGeometryVertexIds.front()},
+                                    {this->selectedGeometryEdgeIds.front()});
+                break;
+            }
         }
     } catch (const std::invalid_argument&) {
         return false;

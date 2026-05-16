@@ -1,5 +1,6 @@
 #include "SaveHandler.h"
 
+#include <algorithm>
 #include <cinttypes>   // for PRIx32
 #include <cstdint>     // for uint32_t
 #include <cstdio>      // for sprintf, size_t
@@ -218,20 +219,32 @@ void SaveHandler::visitLayer(XmlNode* page, const Layer* l) {
             image->setAttrib(vn::xml_attrs::BOTTOM_POS_STR, i->getY() + i->getElementHeight());
         } else if (e->getType() == ELEMENT_GEOMETRY) {
             auto* geometry = dynamic_cast<const vn::geom::GeometryElement*>(e);
-            auto fallback = geometry->makeStrokeFallback();
-            if (fallback->getPointCount() < 2) {
+            auto fallbacks = geometry->makeStrokeFallbacks();
+            fallbacks.erase(std::remove_if(fallbacks.begin(), fallbacks.end(),
+                                           [](const auto& fallback) {
+                                               return !fallback || fallback->getPointCount() < 2;
+                                           }),
+                            fallbacks.end());
+            if (fallbacks.empty()) {
                 std::cerr << "Trying to save an empty Geometry element. Discarding it!\n";
                 continue;
             }
-            auto* stroke = new XmlPointNode(TAG_NAMES[TagType::STROKE]);
-            layer->addChild(stroke);
-            visitStroke(stroke, fallback.get());
             const auto metadata = vn::io::serializeGeometryStrokeMetadata(geometry->geometry());
-            stroke->setAttrib(vn::io::GeometryFormatAttr, metadata.format);
-            stroke->setAttrib(vn::io::GeometryObjectIdAttr, metadata.objectId);
-            stroke->setAttrib(vn::io::GeometryVerticesAttr, metadata.vertices);
-            stroke->setAttrib(vn::io::GeometryEdgesAttr, metadata.edges);
-            stroke->setAttrib(vn::io::GeometryConstraintsAttr, metadata.constraints);
+            for (std::size_t index = 0; index < fallbacks.size(); ++index) {
+                auto* stroke = new XmlPointNode(TAG_NAMES[TagType::STROKE]);
+                layer->addChild(stroke);
+                visitStroke(stroke, fallbacks[index].get());
+                if (index == 0U) {
+                    stroke->setAttrib(vn::io::GeometryFormatAttr, metadata.format);
+                    stroke->setAttrib(vn::io::GeometryObjectIdAttr, metadata.objectId);
+                    stroke->setAttrib(vn::io::GeometryVerticesAttr, metadata.vertices);
+                    stroke->setAttrib(vn::io::GeometryEdgesAttr, metadata.edges);
+                    stroke->setAttrib(vn::io::GeometryFacesAttr, metadata.faces);
+                    stroke->setAttrib(vn::io::GeometryConstraintsAttr, metadata.constraints);
+                } else {
+                    stroke->setAttrib(vn::io::GeometryFallbackPartAttr, "true");
+                }
+            }
         }
     }
 }

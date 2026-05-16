@@ -400,6 +400,68 @@ auto QtDocumentController::selectGeometryEdgesInRect(std::size_t pageIndex, doub
     return true;
 }
 
+auto QtDocumentController::selectGeometryFacesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                     bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& face: geometry->faces) {
+            const bool touchesRect = std::ranges::any_of(face.vertices, [&](const Point& point) {
+                return pointInRect(point, left, right, top, bottom);
+            });
+            if (!touchesRect) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Face;
+            hit.objectId = geometry->objectId;
+            hit.faceId = face.id;
+            if (!face.vertices.empty()) {
+                hit.point = face.vertices.front();
+            }
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
 auto QtDocumentController::selectGeometryObjectInRect(std::size_t pageIndex, double x, double y, double w, double h)
         -> bool {
     if (pageIndex >= this->pageSnapshots.size()) {

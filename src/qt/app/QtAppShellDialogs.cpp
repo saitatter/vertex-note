@@ -64,7 +64,18 @@ void QtAppShell::showSettingsDialog() {
     const auto previousIconTheme = this->currentSettings.iconTheme;
     const auto previousThemeVariant = this->currentSettings.themeVariant;
     const auto previousLocale = this->currentSettings.preferredLocale;
+    const auto previousWorkspaceId = this->currentSettings.workspaceId;
     this->currentSettings = dialog.settings();
+    this->currentSettings.workspaceId = previousWorkspaceId;
+    if (this->currentSettings.toolbarProfileId != previousToolbarProfileId) {
+        if (this->currentSettings.toolbarProfileId == QT_GEOMETRY_PROFILE_ID) {
+            this->currentSettings.workspaceId = "geometry";
+        } else if (this->currentSettings.toolbarProfileId == QT_3D_PROFILE_ID) {
+            this->currentSettings.workspaceId = "3d";
+        } else if (this->currentSettings.toolbarProfileId == QT_GTK_PARITY_PROFILE_ID) {
+            this->currentSettings.workspaceId = "notes";
+        }
+    }
     if (this->currentSettings.audioFolder.empty()) {
         this->currentSettings.audioFolder = Util::getDataSubfolder("audio").string();
     }
@@ -89,6 +100,7 @@ void QtAppShell::showSettingsDialog() {
                                        ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()
                                        : this->persistedShowSidebar);
     }
+    syncWorkspaceCommandStates();
     configureAutosave();
     savePersistentUiState();
     updateWindowTitle();

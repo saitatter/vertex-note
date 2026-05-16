@@ -16,6 +16,7 @@ namespace vn::view::render {
 enum class GeometryHitType {
     Vertex,
     Edge,
+    Face,
 };
 
 struct GeometryHitResult {
@@ -23,6 +24,7 @@ struct GeometryHitResult {
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
     vn::geom::VertexId vertexId = vn::geom::InvalidVertexId;
     vn::geom::EdgeId edgeId = vn::geom::InvalidEdgeId;
+    vn::geom::FaceId faceId = vn::geom::InvalidFaceId;
     Point point;
     std::optional<vn::snap::SnapKind> snapKind;
     double screenDistance = 0.0;
