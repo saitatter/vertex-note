@@ -99,7 +99,7 @@ private:
     void applyToolbarColor(Color color);
     void rebuildRecentDocumentsMenu();
     void loadPersistentUiState();
-    void savePersistentUiState() const;
+    void savePersistentUiState();
     void syncFloatingToolBarsVisibility(bool showToolbars);
     void applyAuxiliaryToolBarVisibility(bool showToolbars);
     void applySidebarVisibility(bool visible);
@@ -233,7 +233,22 @@ private:
     void applyWorkspacePreset(std::string_view profileId, std::string_view displayName, bool showGeometryPanel,
                               bool wireframeView, bool vertexHandles, bool linkedMarkers, bool faceFills,
                               QtGeometrySelectionMode selectionMode);
+    struct QtWorkspaceViewState {
+        bool initialized = false;
+        bool showGeometryPanel = true;
+        bool wireframeView = false;
+        bool vertexHandles = false;
+        bool linkedMarkers = true;
+        bool faceFills = true;
+        QtGeometrySelectionMode selectionMode = QtGeometrySelectionMode::Vertex;
+    };
+    void applyWorkspacePreset(std::string_view profileId, std::string_view displayName,
+                              const QtWorkspaceViewState& state);
     void applyWorkspace(std::string_view workspaceId);
+    void rememberCurrentWorkspaceViewState();
+    [[nodiscard]] auto defaultWorkspaceViewState(std::string_view workspaceId) const -> QtWorkspaceViewState;
+    [[nodiscard]] auto workspaceViewState(std::string_view workspaceId) -> QtWorkspaceViewState&;
+    [[nodiscard]] auto workspaceViewState(std::string_view workspaceId) const -> const QtWorkspaceViewState&;
     void syncWorkspaceCommandStates();
     [[nodiscard]] auto activeWorkspaceId() const -> std::string_view;
 
@@ -283,6 +298,9 @@ private:
     std::optional<QtToolbarProfile> activeToolbarProfile;
     std::vector<QtToolbarProfileOption> availableToolbarProfiles;
     bool suppressWorkspaceComboSync = false;
+    QtWorkspaceViewState notesWorkspaceState{};
+    QtWorkspaceViewState geometryWorkspaceState{};
+    QtWorkspaceViewState threeDWorkspaceState{};
 
     // Navigation history
     struct NavPoint {

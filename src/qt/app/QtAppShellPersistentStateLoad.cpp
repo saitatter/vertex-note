@@ -635,6 +635,35 @@ void QtAppShell::loadPersistentUiState() {
     this->persistedVerticalLayout = settings.value(QStringLiteral("view/verticalLayout"), true).toBool();
     this->persistedLayoutRtl = settings.value(QStringLiteral("view/layoutRtl"), false).toBool();
     this->persistedLayoutBtt = settings.value(QStringLiteral("view/layoutBtt"), false).toBool();
+    const auto loadWorkspaceState = [this, &settings](const QString& id,
+                                                       std::string_view workspaceId) -> QtWorkspaceViewState {
+        auto state = defaultWorkspaceViewState(workspaceId);
+        const QString prefix = QStringLiteral("workspace/%1/").arg(id);
+        state.showGeometryPanel =
+                settings.value(prefix + QStringLiteral("showGeometryPanel"), state.showGeometryPanel).toBool();
+        state.wireframeView =
+                settings.value(prefix + QStringLiteral("wireframeView"), state.wireframeView).toBool();
+        state.vertexHandles =
+                settings.value(prefix + QStringLiteral("vertexHandles"), state.vertexHandles).toBool();
+        state.linkedMarkers =
+                settings.value(prefix + QStringLiteral("linkedMarkers"), state.linkedMarkers).toBool();
+        state.faceFills =
+                settings.value(prefix + QStringLiteral("faceFills"), state.faceFills).toBool();
+        state.selectionMode =
+                settingsGeometrySelectionMode(settings, prefix + QStringLiteral("selectionMode"), state.selectionMode);
+        state.initialized = true;
+        return state;
+    };
+    this->notesWorkspaceState = loadWorkspaceState(QStringLiteral("notes"), "notes");
+    this->geometryWorkspaceState = loadWorkspaceState(QStringLiteral("geometry"), "geometry");
+    this->threeDWorkspaceState = loadWorkspaceState(QStringLiteral("3d"), "3d");
+    const auto& activeWorkspaceState = workspaceViewState(this->currentSettings.workspaceId);
+    this->currentSettings.geometryWireframeView = activeWorkspaceState.wireframeView;
+    this->currentSettings.geometryHighlightVertices = activeWorkspaceState.vertexHandles;
+    this->currentSettings.geometryHighlightLinkedVertices = activeWorkspaceState.linkedMarkers;
+    this->currentSettings.geometryShowFaceFills = activeWorkspaceState.faceFills;
+    this->currentSettings.geometrySelectionModeDefault = activeWorkspaceState.selectionMode;
+    this->persistedShowGeometryPanel = activeWorkspaceState.showGeometryPanel;
 
     std::vector<std::filesystem::path> recentPaths;
     const auto recentEntries = settings.value(QStringLiteral("recentDocuments/files")).toStringList();

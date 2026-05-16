@@ -118,6 +118,8 @@ public:
     [[nodiscard]] auto deleteSelectedGeometryFace() -> bool;
     [[nodiscard]] auto splitSelectedGeometryFace() -> bool;
     [[nodiscard]] auto splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool;
+    void setGeometryFaceSplitPreview(std::optional<QtGeometryFaceDiagonal> diagonal);
+    void clearGeometryFaceSplitPreview();
     [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
     [[nodiscard]] auto createWireframeBox3D() -> bool;
     [[nodiscard]] auto projectSelectedGeometry3DIsometric() -> bool;
@@ -439,6 +441,7 @@ private:
     bool movingSelection = false;
     bool scalingSelection = false;
     std::optional<GeometryTransformInteraction> geometryTransformInteraction;
+    std::optional<QtGeometryFaceDiagonal> geometryFaceSplitPreview;
     GeometryTransformHandle hoveredGeometryTransformHandle = GeometryTransformHandle::None;
     GeometryProjectionView geometryProjectionView = GeometryProjectionView::Isometric;
     bool shapeDrawing = false;

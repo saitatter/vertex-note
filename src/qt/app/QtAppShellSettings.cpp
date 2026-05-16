@@ -131,21 +131,34 @@ void QtAppShell::applyGeometryPanelVisibility(bool visible) {
 void QtAppShell::applyWorkspacePreset(std::string_view profileId, std::string_view displayName, bool showGeometryPanel,
                                       bool wireframeView, bool vertexHandles, bool linkedMarkers, bool faceFills,
                                       QtGeometrySelectionMode selectionMode) {
+    QtWorkspaceViewState state;
+    state.initialized = true;
+    state.showGeometryPanel = showGeometryPanel;
+    state.wireframeView = wireframeView;
+    state.vertexHandles = vertexHandles;
+    state.linkedMarkers = linkedMarkers;
+    state.faceFills = faceFills;
+    state.selectionMode = selectionMode;
+    applyWorkspacePreset(profileId, displayName, state);
+}
+
+void QtAppShell::applyWorkspacePreset(std::string_view profileId, std::string_view displayName,
+                                      const QtWorkspaceViewState& state) {
     this->currentSettings.workspaceId = std::string(workspaceIdForProfile(profileId));
     this->currentSettings.toolbarProfileId = std::string(profileId);
-    this->currentSettings.geometryWireframeView = wireframeView;
-    this->currentSettings.geometryHighlightVertices = vertexHandles;
-    this->currentSettings.geometryHighlightLinkedVertices = linkedMarkers;
-    this->currentSettings.geometryShowFaceFills = faceFills;
-    this->currentSettings.geometrySelectionModeDefault = selectionMode;
+    this->currentSettings.geometryWireframeView = state.wireframeView;
+    this->currentSettings.geometryHighlightVertices = state.vertexHandles;
+    this->currentSettings.geometryHighlightLinkedVertices = state.linkedMarkers;
+    this->currentSettings.geometryShowFaceFills = state.faceFills;
+    this->currentSettings.geometrySelectionModeDefault = state.selectionMode;
 
     auto* canvas = this->window.canvas();
     auto& toolState = canvas->toolState();
-    toolState.geometrySelectionMode = selectionMode;
-    canvas->setGeometryWireframeViewEnabled(wireframeView);
-    canvas->setGeometryVertexOverlayEnabled(vertexHandles);
-    canvas->setGeometryLinkedVertexOverlayEnabled(linkedMarkers);
-    canvas->setGeometryFaceFillVisible(faceFills);
+    toolState.geometrySelectionMode = state.selectionMode;
+    canvas->setGeometryWireframeViewEnabled(state.wireframeView);
+    canvas->setGeometryVertexOverlayEnabled(state.vertexHandles);
+    canvas->setGeometryLinkedVertexOverlayEnabled(state.linkedMarkers);
+    canvas->setGeometryFaceFillVisible(state.faceFills);
 
     rebuildToolbar();
     this->window.mainToolBar()->setVisible(true);
@@ -157,7 +170,7 @@ void QtAppShell::applyWorkspacePreset(std::string_view profileId, std::string_vi
                                    ? this->window.commandHost()->actionForCommand("view.show-sidebar")->isChecked()
                                    : this->persistedShowSidebar);
     this->window.geometryPanel()->setWorkspaceMode(panelModeForWorkspace(activeWorkspaceId()));
-    applyGeometryPanelVisibility(showGeometryPanel);
+    applyGeometryPanelVisibility(state.showGeometryPanel);
 
     updateToolCommandStates();
     syncWorkspaceCommandStates();
@@ -170,28 +183,100 @@ void QtAppShell::applyWorkspacePreset(std::string_view profileId, std::string_vi
             3000);
 }
 
+auto QtAppShell::defaultWorkspaceViewState(std::string_view workspaceId) const -> QtWorkspaceViewState {
+    QtWorkspaceViewState state;
+    state.initialized = true;
+    if (workspaceId == "geometry") {
+        state.showGeometryPanel = true;
+        state.wireframeView = false;
+        state.vertexHandles = true;
+        state.linkedMarkers = true;
+        state.faceFills = true;
+        state.selectionMode = QtGeometrySelectionMode::Vertex;
+        return state;
+    }
+    if (workspaceId == "3d") {
+        state.showGeometryPanel = true;
+        state.wireframeView = true;
+        state.vertexHandles = true;
+        state.linkedMarkers = true;
+        state.faceFills = true;
+        state.selectionMode = QtGeometrySelectionMode::Object;
+        return state;
+    }
+    state.showGeometryPanel = true;
+    state.wireframeView = false;
+    state.vertexHandles = false;
+    state.linkedMarkers = true;
+    state.faceFills = true;
+    state.selectionMode = QtGeometrySelectionMode::Vertex;
+    return state;
+}
+
+auto QtAppShell::workspaceViewState(std::string_view workspaceId) -> QtWorkspaceViewState& {
+    if (workspaceId == "geometry") {
+        return this->geometryWorkspaceState;
+    }
+    if (workspaceId == "3d") {
+        return this->threeDWorkspaceState;
+    }
+    return this->notesWorkspaceState;
+}
+
+auto QtAppShell::workspaceViewState(std::string_view workspaceId) const -> const QtWorkspaceViewState& {
+    if (workspaceId == "geometry") {
+        return this->geometryWorkspaceState;
+    }
+    if (workspaceId == "3d") {
+        return this->threeDWorkspaceState;
+    }
+    return this->notesWorkspaceState;
+}
+
+void QtAppShell::rememberCurrentWorkspaceViewState() {
+    auto& state = workspaceViewState(activeWorkspaceId());
+    auto* canvas = this->window.canvas();
+    state.initialized = true;
+    state.showGeometryPanel = this->window.geometryPanel()->isVisible();
+    state.wireframeView = canvas->isGeometryWireframeViewEnabled();
+    state.vertexHandles = canvas->isGeometryVertexOverlayEnabled();
+    state.linkedMarkers = canvas->isGeometryLinkedVertexOverlayEnabled();
+    state.faceFills = canvas->isGeometryFaceFillVisible();
+    state.selectionMode = canvas->toolState().geometrySelectionMode;
+}
+
 void QtAppShell::applyWorkspace(std::string_view workspaceId) {
     if (!isKnownWorkspaceId(workspaceId)) {
         workspaceId = "notes";
     }
+    rememberCurrentWorkspaceViewState();
 
     if (workspaceId == "geometry") {
-        applyWorkspacePreset(QT_GEOMETRY_PROFILE_ID, "Geometry", true, false, true, true, true,
-                             QtGeometrySelectionMode::Vertex);
+        auto& state = workspaceViewState(workspaceId);
+        if (!state.initialized) {
+            state = defaultWorkspaceViewState(workspaceId);
+        }
+        applyWorkspacePreset(QT_GEOMETRY_PROFILE_ID, "Geometry", state);
         this->currentSettings.workspaceId = "geometry";
         syncWorkspaceCommandStates();
         return;
     }
     if (workspaceId == "3d") {
-        applyWorkspacePreset(QT_3D_PROFILE_ID, "3D", true, true, true, true, true,
-                             QtGeometrySelectionMode::Object);
+        auto& state = workspaceViewState(workspaceId);
+        if (!state.initialized) {
+            state = defaultWorkspaceViewState(workspaceId);
+        }
+        applyWorkspacePreset(QT_3D_PROFILE_ID, "3D", state);
         this->currentSettings.workspaceId = "3d";
         syncWorkspaceCommandStates();
         return;
     }
 
-    applyWorkspacePreset(QT_GTK_PARITY_PROFILE_ID, "Write", true, false, false, true, true,
-                         QtGeometrySelectionMode::Vertex);
+    auto& state = workspaceViewState(workspaceId);
+    if (!state.initialized) {
+        state = defaultWorkspaceViewState(workspaceId);
+    }
+    applyWorkspacePreset(QT_GTK_PARITY_PROFILE_ID, "Write", state);
     this->currentSettings.workspaceId = "notes";
     syncWorkspaceCommandStates();
 }

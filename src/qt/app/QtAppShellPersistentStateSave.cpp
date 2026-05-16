@@ -19,7 +19,7 @@ namespace {
 constexpr int QT_SHELL_LAYOUT_VERSION = 6;
 
 }  // namespace
-void QtAppShell::savePersistentUiState() const {
+void QtAppShell::savePersistentUiState() {
     QSettings settings(QStringLiteral("VertexNote"), QStringLiteral("VertexNoteQtShell"));
     const auto* commandHost = this->window.commandHost();
     const auto* canvas = this->window.canvas();
@@ -39,6 +39,20 @@ void QtAppShell::savePersistentUiState() const {
             commandHost->actionForCommand("view.show-geometry-panel")
                     ? commandHost->actionForCommand("view.show-geometry-panel")->isChecked()
                     : this->persistedShowGeometryPanel;
+    rememberCurrentWorkspaceViewState();
+
+    const auto saveWorkspaceState = [&settings](const QString& id, const QtWorkspaceViewState& state) {
+        const QString prefix = QStringLiteral("workspace/%1/").arg(id);
+        settings.setValue(prefix + QStringLiteral("showGeometryPanel"), state.showGeometryPanel);
+        settings.setValue(prefix + QStringLiteral("wireframeView"), state.wireframeView);
+        settings.setValue(prefix + QStringLiteral("vertexHandles"), state.vertexHandles);
+        settings.setValue(prefix + QStringLiteral("linkedMarkers"), state.linkedMarkers);
+        settings.setValue(prefix + QStringLiteral("faceFills"), state.faceFills);
+        settings.setValue(prefix + QStringLiteral("selectionMode"), static_cast<int>(state.selectionMode));
+    };
+    saveWorkspaceState(QStringLiteral("notes"), this->notesWorkspaceState);
+    saveWorkspaceState(QStringLiteral("geometry"), this->geometryWorkspaceState);
+    saveWorkspaceState(QStringLiteral("3d"), this->threeDWorkspaceState);
 
     settings.setValue(QStringLiteral("tools/defaultPenWidth"), this->currentSettings.defaultPenWidth);
     settings.setValue(QStringLiteral("tools/defaultHighlighterWidth"), this->currentSettings.defaultHighlighterWidth);

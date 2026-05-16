@@ -9,11 +9,15 @@
 #include <string>
 
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QInputDialog>
+#include <QLabel>
+#include <QListWidget>
 #include <QStatusBar>
 #include <QString>
-#include <QStringList>
 #include <QUrl>
+#include <QVBoxLayout>
 void QtAppShell::registerToolCommands() {
     auto* ch = this->window.commandHost();
 
@@ -573,19 +577,37 @@ void QtAppShell::registerToolCommands() {
                 const auto diagonals = this->documentController.selectedGeometryFaceSplitDiagonals();
                 bool changed = false;
                 if (diagonals.size() > 1U) {
-                    QStringList labels;
+                    QDialog dialog(&this->window);
+                    dialog.setWindowTitle(QStringLiteral("Split Face"));
+                    dialog.setObjectName(QStringLiteral("vertexNoteQtSplitFaceDialog"));
+                    auto* layout = new QVBoxLayout(&dialog);
+                    layout->setContentsMargins(10, 10, 10, 10);
+                    layout->setSpacing(8);
+                    auto* label = new QLabel(QStringLiteral("Diagonal"), &dialog);
+                    auto* list = new QListWidget(&dialog);
+                    list->setObjectName(QStringLiteral("vertexNoteQtSplitFaceDiagonalList"));
                     for (std::size_t index = 0U; index < diagonals.size(); ++index) {
                         const auto& diagonal = diagonals[index];
-                        labels << QStringLiteral("v%1 - v%2").arg(diagonal.lhsIndex + 1U).arg(diagonal.rhsIndex + 1U);
+                        list->addItem(QStringLiteral("v%1 - v%2").arg(diagonal.lhsIndex + 1U).arg(diagonal.rhsIndex + 1U));
                     }
-                    bool ok = false;
-                    const QString chosen =
-                            QInputDialog::getItem(&this->window, QStringLiteral("Split Face"),
-                                                  QStringLiteral("Diagonal:"), labels, 0, false, &ok);
-                    if (!ok) {
+                    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+                    layout->addWidget(label);
+                    layout->addWidget(list);
+                    layout->addWidget(buttons);
+                    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+                    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+                    QObject::connect(list, &QListWidget::currentRowChanged, &dialog, [this, diagonals](int row) {
+                        if (row >= 0 && static_cast<std::size_t>(row) < diagonals.size()) {
+                            this->window.canvas()->setGeometryFaceSplitPreview(diagonals[static_cast<std::size_t>(row)]);
+                        }
+                    });
+                    list->setCurrentRow(0);
+                    if (dialog.exec() != QDialog::Accepted) {
+                        this->window.canvas()->clearGeometryFaceSplitPreview();
                         return;
                     }
-                    const auto chosenIndex = labels.indexOf(chosen);
+                    const auto chosenIndex = list->currentRow();
+                    this->window.canvas()->clearGeometryFaceSplitPreview();
                     if (chosenIndex >= 0 && static_cast<std::size_t>(chosenIndex) < diagonals.size()) {
                         const auto& diagonal = diagonals[static_cast<std::size_t>(chosenIndex)];
                         changed = this->window.canvas()->splitSelectedGeometryFace(diagonal.lhsIndex,

@@ -841,6 +841,19 @@ auto QtCanvas::splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIn
     return changed;
 }
 
+void QtCanvas::setGeometryFaceSplitPreview(std::optional<QtGeometryFaceDiagonal> diagonal) {
+    this->geometryFaceSplitPreview = diagonal;
+    update();
+}
+
+void QtCanvas::clearGeometryFaceSplitPreview() {
+    if (!this->geometryFaceSplitPreview) {
+        return;
+    }
+    this->geometryFaceSplitPreview.reset();
+    update();
+}
+
 auto QtCanvas::triangulateSelectedGeometryFace() -> bool {
     if (!this->documentController) {
         return false;
@@ -2677,6 +2690,46 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
         }
     };
 
+    const auto drawGeometryDiagonalPreview = [&](vn::geom::ObjectId objectId,
+                                                 const QtGeometryFaceDiagonal& diagonal, const QColor& color) {
+        for (const auto& drawable: pageInfo.drawables) {
+            const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+            if (!geometry || geometry->objectId != objectId) {
+                continue;
+            }
+
+            const auto findVertex = [&](vn::geom::VertexId vertexId) {
+                return std::find_if(geometry->vertices.begin(), geometry->vertices.end(),
+                                    [&](const auto& vertex) { return vertex.id == vertexId; });
+            };
+            const auto lhs = findVertex(diagonal.lhs);
+            const auto rhs = findVertex(diagonal.rhs);
+            if (lhs == geometry->vertices.end() || rhs == geometry->vertices.end()) {
+                break;
+            }
+
+            const double zoomScale = std::max(this->zoomFactor, 0.001);
+            const QPointF lhsPoint(rect.x() + lhs->position.x, rect.y() + lhs->position.y);
+            const QPointF rhsPoint(rect.x() + rhs->position.x, rect.y() + rhs->position.y);
+            QPen previewPen(color, 2.2 / zoomScale);
+            previewPen.setStyle(Qt::DashLine);
+
+            painter.save();
+            painter.setRenderHint(QPainter::Antialiasing, true);
+            painter.setPen(previewPen);
+            painter.drawLine(lhsPoint, rhsPoint);
+            painter.setPen(QPen(color, 1.8 / zoomScale));
+            painter.setBrush(QColor(255, 255, 255, 235));
+            const double handleSize = 8.0 / zoomScale;
+            painter.drawRect(QRectF(lhsPoint.x() - handleSize / 2.0, lhsPoint.y() - handleSize / 2.0,
+                                    handleSize, handleSize));
+            painter.drawRect(QRectF(rhsPoint.x() - handleSize / 2.0, rhsPoint.y() - handleSize / 2.0,
+                                    handleSize, handleSize));
+            painter.restore();
+            break;
+        }
+    };
+
     if (selected && selected->pageIndex == pageIndex) {
         const auto loopStatus = this->documentController->selectedGeometryFaceLoopStatus();
         if (loopStatus.kind == QtGeometryFaceLoopStatusKind::Ready) {
@@ -2691,6 +2744,10 @@ void QtCanvas::drawGeometryInteractionOverlay(QPainter& painter, const QRectF& r
             drawGeometryEdgesOverlay(selected->hit.objectId, &selectedEdgeIds, selectedEdgeColor, 2.4);
         } else {
             drawSingleEdgeOverlay(*selected, selectedEdgeColor, 2.2);
+        }
+        if (this->geometryFaceSplitPreview) {
+            drawGeometryDiagonalPreview(selected->hit.objectId, *this->geometryFaceSplitPreview,
+                                        QColor(255, 140, 20));
         }
     }
     if (hovered) {
