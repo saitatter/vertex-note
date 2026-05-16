@@ -338,7 +338,11 @@ QtAppShell::QtAppShell():
     }
 }
 
-QtAppShell::~QtAppShell() { savePersistentUiState(); }
+QtAppShell::~QtAppShell() {
+    if (this->persistentUiStateSavingEnabled) {
+        savePersistentUiState();
+    }
+}
 
 auto QtAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
 
@@ -358,6 +362,10 @@ auto QtAppShell::pluginUiBridge() -> vn::ui::common::IPluginUiBridge* { return &
 
 auto QtAppShell::nativeMainWindowHandle() const -> void* {
     return reinterpret_cast<void*>(const_cast<QtMainWindow*>(&this->window));
+}
+
+void QtAppShell::setPersistentUiStateSavingEnabled(bool enabled) {
+    this->persistentUiStateSavingEnabled = enabled;
 }
 
 void QtAppShell::showMainWindow() {

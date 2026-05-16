@@ -57,6 +57,7 @@ public:
     [[nodiscard]] auto pluginUiBridge() -> vn::ui::common::IPluginUiBridge* override;
     [[nodiscard]] auto nativeMainWindowHandle() const -> void* override;
 
+    void setPersistentUiStateSavingEnabled(bool enabled);
     void showMainWindow() override;
     void requestQuit() override;
     void setMainWindowTitle(std::string_view title) override;
@@ -315,6 +316,7 @@ private:
     QByteArray persistedWindowState;
     std::vector<QByteArray> persistedFloatingToolBarGeometries;
     std::vector<bool> persistedFloatingToolBarUserHidden;
+    bool persistentUiStateSavingEnabled = true;
     bool persistedShowToolbar = true;
     bool persistedShowMenubar = true;
     bool persistedShowSidebar = true;
