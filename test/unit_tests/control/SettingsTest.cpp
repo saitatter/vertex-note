@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
+#include <limits>
 
 #include "control/settings/Settings.h"
 
@@ -31,6 +32,27 @@ TEST(SettingsTest, loadsCommaDecimalSettings) {
     Settings loaded(outPath);
     EXPECT_TRUE(loaded.load());
     EXPECT_DOUBLE_EQ(1.5, loaded.getPressureMultiplier());
+
+    fs::remove(outPath);
+}
+
+TEST(SettingsTest, clampsUnsignedSettingsWithoutSignedOverflow) {
+    const fs::path outPath = fs::temp_directory_path() / "vertex-note-test-units_Settings_unsignedClamp.xml";
+    {
+        std::ofstream out(outPath);
+        out << R"(<?xml version="1.0" encoding="UTF-8"?>)"
+               R"(<settings>)"
+               R"(<property name="preloadPagesBefore" value="-5"/>)"
+               R"(<property name="preloadPagesAfter" value="18446744073709551615"/>)"
+               R"(<property name="backgroundColor" value="18446744073709551615"/>)"
+               R"(</settings>)";
+    }
+
+    Settings loaded(outPath);
+    EXPECT_TRUE(loaded.load());
+    EXPECT_EQ(0U, loaded.getPreloadPagesBefore());
+    EXPECT_EQ(std::numeric_limits<unsigned int>::max(), loaded.getPreloadPagesAfter());
+    EXPECT_EQ(Color(std::numeric_limits<uint32_t>::max()), loaded.getBackgroundColor());
 
     fs::remove(outPath);
 }

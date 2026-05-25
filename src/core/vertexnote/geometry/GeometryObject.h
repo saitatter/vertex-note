@@ -18,6 +18,8 @@ class Stroke;
 
 namespace vn::geom {
 
+struct ProjectionCamera;
+
 class GeometryObject {
 public:
     explicit GeometryObject(ObjectId id = InvalidObjectId);
@@ -26,14 +28,20 @@ public:
     void setObjectId(ObjectId id);
 
     auto addVertex(Vec2 position, VertexFlags flags = VertexFlags::Explicit) -> VertexId;
+    auto addVertex3D(Vec3 modelPosition, Vec2 projectedPosition, VertexFlags flags = VertexFlags::Explicit)
+            -> VertexId;
     auto addEdge(EdgeKind kind, VertexId start, VertexId end, std::vector<VertexId> controls = {}) -> EdgeId;
+    auto addFace(std::vector<VertexId> vertices, int fill = 64) -> FaceId;
     auto addLine(VertexId start, VertexId end) -> EdgeId;
     auto addConstraint(ConstraintKind kind, std::vector<VertexId> vertices = {}, std::vector<EdgeId> edges = {},
                        double value = 0.0) -> ConstraintId;
 
     auto addVertexWithId(VertexId id, Vec2 position, VertexFlags flags = VertexFlags::Explicit) -> VertexId;
+    auto addVertex3DWithId(VertexId id, Vec3 modelPosition, Vec2 projectedPosition,
+                           VertexFlags flags = VertexFlags::Explicit) -> VertexId;
     auto addEdgeWithId(EdgeId id, EdgeKind kind, VertexId start, VertexId end, std::vector<VertexId> controls = {})
             -> EdgeId;
+    auto addFaceWithId(FaceId id, std::vector<VertexId> vertices, int fill = 64) -> FaceId;
     auto addConstraintWithId(ConstraintId id, ConstraintKind kind, std::vector<VertexId> vertices = {},
                              std::vector<EdgeId> edges = {}, double value = 0.0) -> ConstraintId;
 
@@ -41,21 +49,31 @@ public:
     [[nodiscard]] auto vertex(VertexId id) const -> const Vertex*;
     [[nodiscard]] auto edge(EdgeId id) -> Edge*;
     [[nodiscard]] auto edge(EdgeId id) const -> const Edge*;
+    [[nodiscard]] auto face(FaceId id) -> Face*;
+    [[nodiscard]] auto face(FaceId id) const -> const Face*;
     [[nodiscard]] auto constraint(ConstraintId id) -> Constraint*;
     [[nodiscard]] auto constraint(ConstraintId id) const -> const Constraint*;
 
     [[nodiscard]] auto vertices() const -> std::span<const Vertex>;
     [[nodiscard]] auto edges() const -> std::span<const Edge>;
+    [[nodiscard]] auto faces() const -> std::span<const Face>;
     [[nodiscard]] auto constraints() const -> std::span<const Constraint>;
 
     [[nodiscard]] auto bounds() const -> std::optional<Bounds>;
     [[nodiscard]] auto toPolyline() const -> std::vector<Vec2>;
     [[nodiscard]] auto makeStrokeFallback(double width, Color color) const -> std::unique_ptr<Stroke>;
+    [[nodiscard]] auto makeStrokeFallbacks(double width, Color color) const -> std::vector<std::unique_ptr<Stroke>>;
 
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;
+    [[nodiscard]] auto setVertexModelPosition(VertexId id, Vec3 position) -> bool;
+    [[nodiscard]] auto setVertexZ(VertexId id, double z) -> bool;
+    [[nodiscard]] auto applyProjection(const ProjectionCamera& camera) -> bool;
     [[nodiscard]] auto removeVertex(VertexId id) -> bool;
     [[nodiscard]] auto removeEdge(EdgeId id) -> bool;
+    [[nodiscard]] auto removeFace(FaceId id) -> bool;
     [[nodiscard]] auto insertVertexOnEdge(EdgeId edge, Vec2 position) -> std::optional<VertexId>;
+    [[nodiscard]] auto splitEdgeAtVertex(EdgeId edge, VertexId vertex) -> bool;
+    [[nodiscard]] auto mergeVertexInto(VertexId source, VertexId target) -> bool;
     [[nodiscard]] auto removeConstraint(ConstraintId id) -> bool;
     [[nodiscard]] auto replaceConstraint(Constraint constraint) -> bool;
     void move(double dx, double dy);
@@ -65,18 +83,26 @@ public:
 private:
     [[nodiscard]] auto containsVertex(VertexId id) const -> bool;
     [[nodiscard]] auto containsEdge(EdgeId id) const -> bool;
+    [[nodiscard]] auto containsFace(FaceId id) const -> bool;
     void cleanupDanglingVertices();
+    void cleanupDegenerateFaces();
+    [[nodiscard]] static auto sanitizedFaceVertices(std::vector<VertexId> vertices) -> std::vector<VertexId>;
+    [[nodiscard]] auto validateFaceVertices(const std::vector<VertexId>& vertices) const -> bool;
+    void insertVertexIntoFaces(VertexId start, VertexId end, VertexId inserted);
     [[nodiscard]] auto nextVertexId() -> VertexId;
     [[nodiscard]] auto nextEdgeId() -> EdgeId;
+    [[nodiscard]] auto nextFaceId() -> FaceId;
     [[nodiscard]] auto nextConstraintId() -> ConstraintId;
 
 private:
     ObjectId id = InvalidObjectId;
     VertexId nextLocalVertexId = InvalidVertexId + 1;
     EdgeId nextLocalEdgeId = InvalidEdgeId + 1;
+    FaceId nextLocalFaceId = InvalidFaceId + 1;
     ConstraintId nextLocalConstraintId = InvalidConstraintId + 1;
     std::vector<Vertex> vertexList;
     std::vector<Edge> edgeList;
+    std::vector<Face> faceList;
     std::vector<Constraint> constraintList;
 };
 

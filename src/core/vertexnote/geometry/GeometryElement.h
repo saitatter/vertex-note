@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "model/Element.h"
 #include "vertexnote/geometry/GeometryObject.h"
@@ -28,6 +29,7 @@ public:
     [[nodiscard]] auto getStrokeWidth() const -> double;
 
     [[nodiscard]] auto makeStrokeFallback() const -> std::unique_ptr<Stroke>;
+    [[nodiscard]] auto makeStrokeFallbacks() const -> std::vector<std::unique_ptr<Stroke>>;
     void assignNewObjectId();
     void replaceGeometry(GeometryObject object);
     [[nodiscard]] auto setVertexPosition(VertexId id, Vec2 position) -> bool;

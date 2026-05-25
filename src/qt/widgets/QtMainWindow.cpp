@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include <QComboBox>
+#include <QIcon>
 #include <QMenuBar>
 #include <QPoint>
 #include <QSlider>
@@ -22,6 +23,8 @@
 QtMainWindow::QtMainWindow(): commandRegistry(this) {
     setObjectName("vertexNoteQtMainWindow");
     setWindowTitle("VertexNote");
+    setWindowIcon(QIcon(QString::fromUtf8(PROJECT_SOURCE_DIR) +
+                        QStringLiteral("/ui/pixmaps/app.vertexnote.VertexNote.svg")));
     resize(1440, 900);
     setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks | QMainWindow::GroupedDragging);
     menuBar()->setNativeMenuBar(false);
@@ -35,6 +38,7 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QMenu::item { background: transparent; padding: 4px 26px 4px 26px; min-height: 17px; }"
             "QMenu::item:selected { background: #e7f0ff; color: #111111; }"
             "QMenu::item:checked { background: transparent; }"
+            "QMenu#vertexNoteQtToolFamilyMenu::item:checked { background: #eef5ff; }"
             "QMenu::item:disabled { color: #a9a9a9; }"
             "QMenu::separator { height: 1px; background: #e2e2e2; margin: 4px 0px; }"
             "QMenu::indicator { width: 13px; height: 13px; left: 5px; border: 1px solid #555555; background: #ffffff; }"
@@ -52,6 +56,8 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " border-left: 1px solid #d8d8d8; border-bottom: none; padding: 3px 1px; }"
             "QToolBar[vertexFloatToolbar=\"true\"] { border: 1px solid #d8d8d8; padding: 3px; }"
             "QToolBar::separator { background: #d8d8d8; width: 1px; margin: 2px 4px; }"
+            "QToolBar QLabel#vertexNoteQtToolbarGroupLabel {"
+            " color: #666666; padding: 0px 2px 0px 7px; background: transparent; }"
             "QToolBar QToolButton { margin: 0px; padding: 3px; min-width: 30px; min-height: 30px; border: 1px solid transparent; border-radius: 2px; }"
             "QToolBar QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "QToolBar QToolButton:checked { background: #dce8ff; border-color: #8db0ff; }"
@@ -68,15 +74,31 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             "QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:hover,"
             " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:pressed,"
             " QToolBar QToolButton#vertexNoteQtFamilyToolButton::menu-button:open { background: transparent; }"
+            "QToolBar QWidget#vertexNoteQtFamilySplitWidget { margin: 0px 1px; padding: 0px; background: transparent; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton {"
+            " background: transparent; padding: 3px; min-width: 30px; min-height: 30px;"
+            " border: 1px solid transparent; border-top-left-radius: 2px; border-bottom-left-radius: 2px;"
+            " border-top-right-radius: 0px; border-bottom-right-radius: 0px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyActionButton:checked { background: #dce8ff; border-color: #8db0ff; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton {"
+            " background: transparent; padding: 0px; min-width: 18px; max-width: 18px; min-height: 30px; max-height: 30px;"
+            " border: 1px solid transparent; border-left: 0px; border-top-left-radius: 0px; border-bottom-left-radius: 0px;"
+            " border-top-right-radius: 2px; border-bottom-right-radius: 2px; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton:hover { background: #ececec; border-color: #c8c8c8; }"
+            "QToolBar QToolButton#vertexNoteQtFamilyMenuButton:pressed,"
+            " QToolBar QToolButton#vertexNoteQtFamilyMenuButton:open { background: #e1e1e1; border-color: #bcbcbc; }"
             "QToolBar QToolButton#vertexNoteQtToolbarColorButton {"
             " margin: 0px 4px; padding: 0px; min-width: 20px; max-width: 20px; min-height: 20px; max-height: 20px;"
             " border-radius: 10px; }"
             "QToolBar QToolButton#vertexNoteQtToolbarColorSelectButton {"
             " margin: 0px 5px; padding: 0px; min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px;"
             " border-radius: 13px; }"
-            "#vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner, #vertexNoteQtFillOpacitySpinner,"
+            "#vertexNoteQtWorkspaceCombo, #vertexNoteQtFontFamilyCombo, #vertexNoteQtFontSizeSpinner, #vertexNoteQtFillOpacitySpinner,"
             " #vertexNoteQtFooterPageSpin, #vertexNoteQtFooterLayerCombo {"
             " min-height: 28px; margin: 0 1px; padding: 0px 4px; border: 1px solid #c9c9c9; background: #ffffff; }"
+            "#vertexNoteQtWorkspaceCombo { font-weight: 600; min-width: 112px; }"
             "#vertexNoteQtFooterZoomSlider { margin: 0 3px; }"
             "#vertexNoteQtFooterZoomSlider::groove:horizontal { height: 4px; background: #c8c8c8; border-radius: 2px; }"
             "#vertexNoteQtFooterZoomSlider::sub-page:horizontal { background: #4f8fff; border-radius: 2px; }"
@@ -99,6 +121,39 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
             " border: 1px solid transparent; border-radius: 2px; }"
             "#vertexNoteQtLayerPanel QToolButton:hover { background: #ececec; border-color: #c8c8c8; }"
             "#vertexNoteQtLayerPanel QToolButton:pressed { background: #e1e1e1; border-color: #bcbcbc; }"
+            "#vertexNoteQtGeometryPanel, #vertexNoteQtGeometryPanelScrollArea,"
+            " #vertexNoteQtGeometryPanelContent { background: #f7f7f7; }"
+            "#vertexNoteQtGeometryPanelScrollArea { border: none; }"
+            "#vertexNoteQtGeometryPanelSummary {"
+            " background: #ffffff; border: 1px solid #d8d8d8; border-radius: 4px; }"
+            "#vertexNoteQtGeometryPanelStatusChip {"
+            " color: #444444; background: #f3f6fb; border: 1px solid #dde7f6; border-radius: 3px;"
+            " padding: 2px 6px; }"
+            "#vertexNoteQtGeometryPanelSection {"
+            " background: #ffffff; border: 1px solid #d8d8d8; border-radius: 4px; }"
+            "#vertexNoteQtGeometryPanelSectionHeader {"
+            " background: #f6f6f6; color: #444444; border: none; border-bottom: 1px solid #e1e1e1;"
+            " min-height: 27px; padding: 3px 7px; text-align: left; font-weight: 600; }"
+            "#vertexNoteQtGeometryPanelSectionHeader:hover { background: #eef5ff; }"
+            "#vertexNoteQtGeometryPanelSectionContent { background: #ffffff; }"
+            "#vertexNoteQtGeometryPanel QToolButton#vertexNoteQtGeometryPanelButton {"
+            " background: #ffffff; text-align: left; padding: 4px 6px; min-height: 27px;"
+            " border: 1px solid #d8d8d8; border-radius: 3px; }"
+            "#vertexNoteQtGeometryPanel QToolButton#vertexNoteQtGeometryPanelButton:hover {"
+            " background: #eef5ff; border-color: #9dbdff; }"
+            "#vertexNoteQtGeometryPanel QToolButton#vertexNoteQtGeometryPanelButton:checked {"
+            " background: #dce8ff; border-color: #7fa7ff; }"
+            "#vertexNoteQtGeometryPanel QToolButton#vertexNoteQtGeometryPanelButton:disabled {"
+            " background: #f1f1f1; color: #9d9d9d; border-color: #e2e2e2; }"
+            "#vertexNoteQtGeometryPanelModelXSpin, #vertexNoteQtGeometryPanelModelYSpin,"
+            " #vertexNoteQtGeometryPanelModelZSpin {"
+            " background: #ffffff; border: 1px solid #d8d8d8; border-radius: 3px; min-height: 25px;"
+            " padding: 2px 4px; }"
+            "#vertexNoteQtGeometryPanelModelXSpin:disabled, #vertexNoteQtGeometryPanelModelYSpin:disabled,"
+            " #vertexNoteQtGeometryPanelModelZSpin:disabled {"
+            " background: #f1f1f1; color: #9d9d9d; border-color: #e2e2e2; }"
+            "QStatusBar QLabel#vertexNoteQtGeometryStatusLabel {"
+            " color: #555555; padding: 1px 8px; border-left: 1px solid #d8d8d8; }"
             "QStatusBar { background: #f7f7f7; border-top: 1px solid #d8d8d8; }")
                           .arg(menuCheckIconPath));
 
@@ -179,6 +234,10 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->pageSidebarWidget->raise();
     resizeDocks({this->pageSidebarWidget}, {90}, Qt::Horizontal);
 
+    this->geometryPanelWidget = new QtGeometryPanel(this);
+    addDockWidget(Qt::RightDockWidgetArea, this->geometryPanelWidget);
+    resizeDocks({this->geometryPanelWidget}, {220}, Qt::Horizontal);
+
     this->toolPaletteWidget = new QtToolPalette(this);
     this->toolPaletteWidget->setVisible(false);  // Hidden until a drawing tool is selected
 
@@ -202,12 +261,16 @@ QtMainWindow::QtMainWindow(): commandRegistry(this) {
     this->pageLabel = new QLabel(QStringLiteral("Page 1 of 1"), this);
     this->layerLabel = new QLabel(QStringLiteral("Layer: Layer 1"), this);
     this->zoomLabel = new QLabel(QStringLiteral("100%"), this);
+    this->geometryLabel = new QLabel(QStringLiteral("Geometry: Vertex | Snap: V | Sel: -"), this);
+    this->geometryLabel->setObjectName(QStringLiteral("vertexNoteQtGeometryStatusLabel"));
     this->pageLabel->hide();
     this->layerLabel->hide();
     this->zoomLabel->hide();
+    this->geometryLabel->setMinimumWidth(260);
     statusBar()->addPermanentWidget(this->pageLabel);
     statusBar()->addPermanentWidget(this->layerLabel);
     statusBar()->addPermanentWidget(this->zoomLabel);
+    statusBar()->addPermanentWidget(this->geometryLabel);
 
     statusBar()->showMessage(QStringLiteral("Ready"));
 }
@@ -238,6 +301,8 @@ auto QtMainWindow::layerPanel() -> QtLayerPanel* { return this->layerPanelWidget
 
 auto QtMainWindow::pageSidebar() -> QtPageSidebar* { return this->pageSidebarWidget; }
 
+auto QtMainWindow::geometryPanel() -> QtGeometryPanel* { return this->geometryPanelWidget; }
+
 auto QtMainWindow::toolPalette() -> QtToolPalette* { return this->toolPaletteWidget; }
 
 auto QtMainWindow::footerPageSpin() -> QSpinBox* { return this->footerPageSpinWidget; }
@@ -251,6 +316,8 @@ auto QtMainWindow::pageStatusLabel() -> QLabel* { return this->pageLabel; }
 auto QtMainWindow::layerStatusLabel() -> QLabel* { return this->layerLabel; }
 
 auto QtMainWindow::zoomStatusLabel() -> QLabel* { return this->zoomLabel; }
+
+auto QtMainWindow::geometryStatusLabel() -> QLabel* { return this->geometryLabel; }
 
 auto QtMainWindow::preferredSidebarArea() const -> Qt::DockWidgetArea {
     return this->sidebarRightSide ? Qt::RightDockWidgetArea : Qt::LeftDockWidgetArea;

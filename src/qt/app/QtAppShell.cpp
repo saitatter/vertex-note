@@ -109,8 +109,10 @@ QtAppShell::QtAppShell():
     sidebar->setCurrentPage(0U);
     this->window.layerPanel()->setWindowIcon(bundledQtIcon("xopp-sidebar-layerstack.svg"));
     this->window.layerPanel()->setCurrentPage(0U);
+    this->window.geometryPanel()->setWindowIcon(bundledQtIcon("xopp-geometry-tools.svg"));
 
     registerBootstrapCommands();
+    this->window.geometryPanel()->bindCommandHost(this->window.commandHost());
     this->luaPlugins.configureDocumentAccess(
             &this->documentController, [this]() { return this->window.canvas()->currentPageIndex(); },
             [this](std::size_t pageIndex) {
@@ -264,6 +266,7 @@ QtAppShell::QtAppShell():
     this->window.commandHost()->setCommandChecked("view.show-toolbar", this->persistedShowToolbar);
     this->window.commandHost()->setCommandChecked("view.show-menubar", this->persistedShowMenubar);
     this->window.commandHost()->setCommandChecked("view.show-sidebar", this->persistedShowSidebar);
+    this->window.commandHost()->setCommandChecked("view.show-geometry-panel", this->persistedShowGeometryPanel);
     this->window.commandHost()->setCommandChecked("view.paired-pages", this->persistedPairedPages);
     this->window.commandHost()->setCommandChecked("view.layout-horizontal", !this->persistedVerticalLayout);
     this->window.commandHost()->setCommandChecked("view.layout-vertical", this->persistedVerticalLayout);
@@ -281,6 +284,7 @@ QtAppShell::QtAppShell():
     this->window.canvas()->setRightToLeftLayout(this->persistedLayoutRtl);
     this->window.canvas()->setBottomToTopLayout(this->persistedLayoutBtt);
     syncLayoutSpanCommandStates();
+    syncWorkspaceCommandStates();
     wireWindowState();
     rebuildToolbar();
     rebuildRecentDocumentsMenu();
@@ -320,6 +324,7 @@ QtAppShell::QtAppShell():
     this->window.cascadeFloatingToolBars();
     this->window.menuBar()->setVisible(this->persistedShowMenubar);
     applySidebarVisibility(this->persistedShowSidebar);
+    applyGeometryPanelVisibility(this->persistedShowGeometryPanel);
     this->window.mainToolBar()->setVisible(this->persistedShowToolbar);
     this->window.toolsToolBar()->setVisible(this->persistedShowToolbar);
     this->window.footerToolBar()->setVisible(this->persistedShowToolbar);
@@ -333,7 +338,11 @@ QtAppShell::QtAppShell():
     }
 }
 
-QtAppShell::~QtAppShell() { savePersistentUiState(); }
+QtAppShell::~QtAppShell() {
+    if (this->persistentUiStateSavingEnabled) {
+        savePersistentUiState();
+    }
+}
 
 auto QtAppShell::commandHost() -> vn::ui::common::ICommandHost* { return this->window.commandHost(); }
 
@@ -353,6 +362,10 @@ auto QtAppShell::pluginUiBridge() -> vn::ui::common::IPluginUiBridge* { return &
 
 auto QtAppShell::nativeMainWindowHandle() const -> void* {
     return reinterpret_cast<void*>(const_cast<QtMainWindow*>(&this->window));
+}
+
+void QtAppShell::setPersistentUiStateSavingEnabled(bool enabled) {
+    this->persistentUiStateSavingEnabled = enabled;
 }
 
 void QtAppShell::showMainWindow() {

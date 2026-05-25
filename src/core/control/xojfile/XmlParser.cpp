@@ -299,6 +299,9 @@ void XmlParser::parseTimestampTag(const XmlParserHelper::AttributeMap& attribute
 }
 
 void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap) {
+    this->tempIgnoreStroke =
+            XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryFallbackPartAttr, attributeMap).has_value();
+
     // tool
     const auto tool =
             XmlParserHelper::getAttribMandatory<StrokeTool>(vn::xml_attrs::TOOL_STR, attributeMap, StrokeTool::PEN);
@@ -348,6 +351,13 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
                 XmlParserHelper::getAttribMandatory<size_t>(vn::xml_attrs::TIMESTAMP_STR, attributeMap, 0UL);
     }
 
+    if (this->tempIgnoreStroke) {
+        this->pressureBuffer.clear();
+        this->tempFilename.clear();
+        this->tempTimestamp = 0;
+        return;
+    }
+
     // forward data to builder
     this->builder.addStroke(tool, color, width, fill, capStyle, lineStyle, std::move(this->tempFilename),
                             this->tempTimestamp);
@@ -358,14 +368,16 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
     const auto geometryVertices =
             XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryVerticesAttr, attributeMap);
     const auto geometryEdges = XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryEdgesAttr, attributeMap);
+    const auto geometryFaces = XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryFacesAttr, attributeMap);
     const auto geometryConstraints =
             XmlParserHelper::getAttrib<std::string_view>(vn::io::GeometryConstraintsAttr, attributeMap);
 
-    if (geometryFormat || geometryObjectId || geometryVertices || geometryEdges || geometryConstraints) {
+    if (geometryFormat || geometryObjectId || geometryVertices || geometryEdges || geometryFaces ||
+        geometryConstraints) {
         this->builder.setStrokeGeometryMetadata(vn::io::GeometryStrokeMetadata{
                 std::string{geometryFormat.value_or("")}, std::string{geometryObjectId.value_or("")},
                 std::string{geometryVertices.value_or("")}, std::string{geometryEdges.value_or("")},
-                std::string{geometryConstraints.value_or("")}});
+                std::string{geometryFaces.value_or("")}, std::string{geometryConstraints.value_or("")}});
     } else {
         this->builder.setStrokeGeometryMetadata(std::nullopt);
     }
@@ -375,6 +387,12 @@ void XmlParser::parseStrokeTag(const XmlParserHelper::AttributeMap& attributeMap
 }
 
 void XmlParser::parseStrokeText(std::string_view text) {
+    if (this->tempIgnoreStroke) {
+        this->tempIgnoreStroke = false;
+        this->pressureBuffer.clear();
+        return;
+    }
+
     std::vector<Point> pointVector;
     pointVector.reserve(this->pressureBuffer.size() + 1);  // The last point has no pressure value
 

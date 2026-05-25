@@ -47,5 +47,7 @@ TEST(VertexNoteGeometryConstraintCatalog, exposesUiAndSolverMetadata) {
 
     const auto* equalLength = descriptorFor(ConstraintKind::EqualLength);
     ASSERT_NE(equalLength, nullptr);
-    EXPECT_FALSE(equalLength->solverSupported);
+    EXPECT_TRUE(equalLength->solverSupported);
+    EXPECT_TRUE(isSolverSupported(ConstraintKind::FixedAngle));
+    EXPECT_TRUE(isSolverSupported(ConstraintKind::OnEdge));
 }

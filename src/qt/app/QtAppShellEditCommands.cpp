@@ -102,6 +102,7 @@ void QtAppShell::registerEditCommands() {
                 const bool enabled = !this->window.canvas()->isRotationSnapEnabled();
                 this->window.canvas()->setRotationSnapEnabled(enabled);
                 this->window.commandHost()->setCommandChecked("view.toggle-rotation-snap", enabled);
+                updateStatusBarLabels();
                 this->window.statusBar()->showMessage(
                         enabled ? QStringLiteral("Rotation snapping enabled")
                                 : QStringLiteral("Rotation snapping disabled"),

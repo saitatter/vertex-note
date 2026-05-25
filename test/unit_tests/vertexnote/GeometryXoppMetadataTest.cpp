@@ -17,13 +17,18 @@ using vn::geom::ConstraintKind;
 using vn::geom::EdgeKind;
 using vn::geom::GeometryObject;
 using vn::geom::Vec2;
+using vn::geom::Vec3;
 using vn::geom::VertexFlags;
 
 TEST(VertexNoteGeometryXoppMetadata, roundTripsObjectGraph) {
     GeometryObject object(42);
     auto a = object.addVertexWithId(10, Vec2{1.25, 2.5}, VertexFlags::Explicit);
     auto b = object.addVertexWithId(20, Vec2{5.0, 2.5}, VertexFlags::Locked);
+    auto c = object.addVertexWithId(25, Vec2{5.0, 6.5}, VertexFlags::Explicit);
     auto edge = object.addEdgeWithId(30, EdgeKind::Line, a, b);
+    object.addEdgeWithId(31, EdgeKind::Line, b, c);
+    object.addEdgeWithId(32, EdgeKind::Line, c, a);
+    object.addFaceWithId(35, {a, b, c}, 88);
     object.addConstraintWithId(40, ConstraintKind::FixedLength, {a, b}, {edge}, 3.75);
 
     const auto metadata = vn::io::serializeGeometryStrokeMetadata(object);
@@ -35,11 +40,33 @@ TEST(VertexNoteGeometryXoppMetadata, roundTripsObjectGraph) {
     ASSERT_NE(restored->vertex(10), nullptr);
     ASSERT_NE(restored->vertex(20), nullptr);
     ASSERT_NE(restored->edge(30), nullptr);
+    ASSERT_NE(restored->face(35), nullptr);
     ASSERT_NE(restored->constraint(40), nullptr);
     EXPECT_DOUBLE_EQ(restored->vertex(10)->position.x, 1.25);
     EXPECT_EQ(restored->vertex(20)->flags, VertexFlags::Locked);
     EXPECT_EQ(restored->edge(30)->kind, EdgeKind::Line);
+    EXPECT_EQ(restored->face(35)->fill, 88);
+    EXPECT_EQ(restored->face(35)->vertices.size(), 3U);
     EXPECT_DOUBLE_EQ(restored->constraint(40)->value, 3.75);
+}
+
+TEST(VertexNoteGeometryXoppMetadata, roundTrips3DModelCoordinates) {
+    GeometryObject object(42);
+    const auto a = object.addVertex3DWithId(10, Vec3{1.0, 2.0, 3.0}, Vec2{20.0, 30.0}, VertexFlags::Explicit);
+    const auto b = object.addVertex3DWithId(20, Vec3{5.0, 7.0, 11.0}, Vec2{40.0, 50.0}, VertexFlags::Explicit);
+    object.addEdgeWithId(30, EdgeKind::Line, a, b);
+
+    const auto metadata = vn::io::serializeGeometryStrokeMetadata(object);
+    std::string error;
+    auto restored = vn::io::parseGeometryStrokeMetadata(metadata, &error);
+
+    ASSERT_TRUE(restored.has_value()) << error;
+    ASSERT_NE(restored->vertex(10), nullptr);
+    EXPECT_DOUBLE_EQ(restored->vertex(10)->position.x, 20.0);
+    EXPECT_DOUBLE_EQ(restored->vertex(10)->modelPosition.x, 1.0);
+    EXPECT_DOUBLE_EQ(restored->vertex(10)->modelPosition.y, 2.0);
+    EXPECT_DOUBLE_EQ(restored->vertex(10)->modelPosition.z, 3.0);
+    EXPECT_DOUBLE_EQ(restored->vertex(20)->modelPosition.z, 11.0);
 }
 
 TEST(VertexNoteGeometryXoppMetadata, roundTripsConstructionLineKind) {
@@ -90,7 +117,11 @@ TEST(VertexNoteGeometryXoppMetadata, savesAndLoadsGeometryElementThroughXoppStro
     auto object = GeometryObject(42);
     auto a = object.addVertexWithId(10, Vec2{1.0, 2.0});
     auto b = object.addVertexWithId(20, Vec2{5.0, 7.0});
+    auto c = object.addVertexWithId(30, Vec2{5.0, 2.0});
     object.addLine(a, b);
+    object.addLine(b, c);
+    object.addLine(c, a);
+    object.addFaceWithId(40, {a, b, c}, 112);
 
     auto geometry = std::make_unique<vn::geom::GeometryElement>(std::move(object));
     geometry->setStrokeWidth(2.5);
@@ -115,6 +146,8 @@ TEST(VertexNoteGeometryXoppMetadata, savesAndLoadsGeometryElementThroughXoppStro
     EXPECT_EQ(loadedGeometry->getColor(), Colors::red);
     EXPECT_EQ(loadedGeometry->geometry().objectId(), 42U);
     ASSERT_NE(loadedGeometry->geometry().vertex(10), nullptr);
+    ASSERT_NE(loadedGeometry->geometry().face(40), nullptr);
     EXPECT_DOUBLE_EQ(loadedGeometry->geometry().vertex(10)->position.x, 1.0);
     EXPECT_DOUBLE_EQ(loadedGeometry->geometry().vertex(20)->position.y, 7.0);
+    EXPECT_EQ(loadedGeometry->geometry().face(40)->fill, 112);
 }

@@ -117,6 +117,11 @@ void applyQtCommandIcons(QtMainWindow& window) {
             }
         }
     };
+    const auto showIconInMenu = [&](std::string_view id) {
+        if (auto* action = window.commandHost()->actionForCommand(id)) {
+            action->setIconVisibleInMenu(true);
+        }
+    };
 
     setNamedIcon("file.save", "document-save");
     setNamedIcon("app.save-as", "document-save");
@@ -178,30 +183,77 @@ void applyQtCommandIcons(QtMainWindow& window) {
     setNamedIcon("tool.draw-double-arrow", "draw-double-arrow");
     setNamedIcon("tool.draw-coordinate-system", "draw-coordinate-system");
     setNamedIcon("tool.draw-spline", "draw-spline");
-    setNamedIcon("tool.draw-edge", "draw-line");
+    setNamedIcon("tool.draw-edge", "vertex-edge");
     setNamedIcon("tool.draw-circle", "draw-ellipse");
     setNamedIcon("tool.draw-arc", "draw-ellipse");
-    setNamedIcon("tool.draw-construction-line", "draw-line");
-    setNamedIcon("tool.draw-construction-circle", "draw-ellipse");
-    setNamedIcon("tool.draw-polyline", "draw-line");
+    setNamedIcon("tool.draw-construction-line", "vertex-construction-line");
+    setNamedIcon("tool.draw-construction-circle", "vertex-construction-circle");
+    setNamedIcon("tool.draw-polyline", "vertex-polyline");
     setNamedIcon("tool.draw-shape-recognizer", "shape-recognizer");
-    setNamedIcon("view.toggle-geometry-snap", "snapping-vertex");
+    for (const auto* id: {
+                 "tool.draw-line",
+                 "tool.draw-rectangle",
+                 "tool.draw-ellipse",
+                 "tool.draw-arrow",
+                 "tool.draw-double-arrow",
+                 "tool.draw-coordinate-system",
+                 "tool.draw-spline",
+                 "tool.draw-shape-recognizer",
+                 "tool.draw-edge",
+                 "tool.draw-circle",
+                 "tool.draw-arc",
+                 "tool.draw-construction-line",
+                 "tool.draw-construction-circle",
+                 "tool.draw-polyline",
+         }) {
+        showIconInMenu(id);
+    }
+    setNamedIcon("view.toggle-geometry-snap", "vertex-snap");
     setNamedIcon("view.toggle-grid-snap", "snapping-grid");
-    setNamedIcon("constraint.coincident", "object-select");
+    setNamedIcon("geometry.selection-mode-vertex", "vertex-select");
+    setNamedIcon("geometry.selection-mode-edge", "edge-select");
+    setNamedIcon("geometry.selection-mode-face", "draw-rect");
+    setNamedIcon("geometry.selection-mode-object", "vertex-object-select");
+    setNamedIcon("view.geometry-wireframe", "draw-coordinate-system");
+    setNamedIcon("view.geometry-highlight-vertices", "vertex-select");
+    setNamedIcon("view.geometry-linked-markers", "geometry-weld");
+    setNamedIcon("view.geometry-face-fills", "fill");
+    setNamedIcon("constraint.coincident", "geometry-weld");
     setNamedIcon("constraint.horizontal", "draw-line");
     setNamedIcon("constraint.vertical", "draw-line");
     setNamedIcon("constraint.fixed-length", "draw-coordinate-system");
+    setNamedIcon("constraint.equal-length", "draw-coordinate-system");
     setNamedIcon("constraint.edit-length", "draw-coordinate-system");
+    setNamedIcon("constraint.fixed-angle", "snapping-rotation");
     setNamedIcon("constraint.radius", "draw-ellipse");
+    setNamedIcon("constraint.on-edge", "vertex-snap");
     setNamedIcon("constraint.parallel", "draw-line");
     setNamedIcon("constraint.perpendicular", "draw-coordinate-system");
     setNamedIcon("constraint.delete", "edit-delete");
+    setNamedIcon("geometry.translate-vertices", "geometry-translate");
+    setNamedIcon("geometry.rotate-selection", "geometry-rotate");
+    setNamedIcon("geometry.scale-selection", "geometry-scale");
+    setNamedIcon("geometry.detach-selection", "geometry-detach");
+    setNamedIcon("geometry.weld-selection", "geometry-weld");
+    setNamedIcon("geometry.fill-face", "draw-rect");
+    setNamedIcon("geometry.delete-face", "edit-delete");
+    setNamedIcon("geometry.split-face", "draw-line");
+    setNamedIcon("geometry.triangulate-face", "draw-coordinate-system");
+    setNamedIcon("geometry.create-3d-vertex", "vertex-select");
+    setNamedIcon("geometry.create-3d-edge", "vertex-edge");
+    setNamedIcon("geometry.create-3d-box", "draw-coordinate-system");
+    setNamedIcon("geometry.project-3d-isometric", "geometry-rotate");
+    setNamedIcon("geometry.project-3d-front", "vertex-object-select");
+    setNamedIcon("geometry.project-3d-top", "geometry-scale");
+    setNamedIcon("geometry.nudge-z-up", "geometry-translate");
+    setNamedIcon("geometry.nudge-z-down", "geometry-translate");
     setNamedIcon("edit.select-font", "combo-selection");
     setNamedIcon("edit.delete-geometry", "edit-delete");
     setNamedIcon("edit.insert-vertex", "go-to");
     setNamedIcon("nav.goto-page", "go-to");
     setNamedIcon("view.show-toolbar", "toolbars-manage");
     setNamedIcon("view.show-menubar", "toolbars-customize");
+    setNamedIcon("view.show-geometry-panel", "geometry-tools");
     setNamedIcon("view.layout-horizontal", "orientation-landscape");
     setNamedIcon("view.layout-vertical", "orientation-portrait");
     setNamedIcon("view.layout-ltr", "navigate-forward");

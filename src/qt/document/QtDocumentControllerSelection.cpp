@@ -7,6 +7,7 @@
 #include "QtDocumentController.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -18,6 +19,160 @@
 #include "model/Element.h"
 #include "model/Layer.h"
 #include "model/NotePage.h"
+
+namespace {
+
+constexpr double GeometrySelectionEpsilon = 1e-9;
+constexpr double Pi = 3.14159265358979323846;
+
+auto pointInRect(const Point& point, double left, double right, double top, double bottom) -> bool {
+    return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom;
+}
+
+auto cross(const Point& a, const Point& b, const Point& c) -> double {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+auto pointOnSegment(const Point& point, const Point& a, const Point& b) -> bool {
+    return std::abs(cross(a, b, point)) <= GeometrySelectionEpsilon &&
+           point.x >= std::min(a.x, b.x) - GeometrySelectionEpsilon &&
+           point.x <= std::max(a.x, b.x) + GeometrySelectionEpsilon &&
+           point.y >= std::min(a.y, b.y) - GeometrySelectionEpsilon &&
+           point.y <= std::max(a.y, b.y) + GeometrySelectionEpsilon;
+}
+
+auto segmentsIntersect(const Point& a, const Point& b, const Point& c, const Point& d) -> bool {
+    const double abC = cross(a, b, c);
+    const double abD = cross(a, b, d);
+    const double cdA = cross(c, d, a);
+    const double cdB = cross(c, d, b);
+
+    if (((abC > GeometrySelectionEpsilon && abD < -GeometrySelectionEpsilon) ||
+         (abC < -GeometrySelectionEpsilon && abD > GeometrySelectionEpsilon)) &&
+        ((cdA > GeometrySelectionEpsilon && cdB < -GeometrySelectionEpsilon) ||
+         (cdA < -GeometrySelectionEpsilon && cdB > GeometrySelectionEpsilon))) {
+        return true;
+    }
+
+    return pointOnSegment(c, a, b) || pointOnSegment(d, a, b) || pointOnSegment(a, c, d) ||
+           pointOnSegment(b, c, d);
+}
+
+auto rectEdges(double left, double right, double top, double bottom) -> std::array<std::pair<Point, Point>, 4> {
+    const Point topLeft(left, top);
+    const Point topRight(right, top);
+    const Point bottomRight(right, bottom);
+    const Point bottomLeft(left, bottom);
+    return {{{topLeft, topRight}, {topRight, bottomRight}, {bottomRight, bottomLeft}, {bottomLeft, topLeft}}};
+}
+
+auto segmentIntersectsRect(const Point& a, const Point& b, double left, double right, double top, double bottom)
+        -> bool {
+    if (pointInRect(a, left, right, top, bottom) || pointInRect(b, left, right, top, bottom)) {
+        return true;
+    }
+    for (const auto& [edgeStart, edgeEnd]: rectEdges(left, right, top, bottom)) {
+        if (segmentsIntersect(a, b, edgeStart, edgeEnd)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+auto infiniteLineIntersectsRect(const Point& a, const Point& b, double left, double right, double top, double bottom)
+        -> bool {
+    if (std::hypot(b.x - a.x, b.y - a.y) <= GeometrySelectionEpsilon) {
+        return pointInRect(a, left, right, top, bottom);
+    }
+
+    bool hasPositive = false;
+    bool hasNegative = false;
+    for (const auto& corner: {Point(left, top), Point(right, top), Point(right, bottom), Point(left, bottom)}) {
+        const double value = cross(a, b, corner);
+        hasPositive = hasPositive || value > GeometrySelectionEpsilon;
+        hasNegative = hasNegative || value < -GeometrySelectionEpsilon;
+        if (std::abs(value) <= GeometrySelectionEpsilon) {
+            return true;
+        }
+    }
+    return hasPositive && hasNegative;
+}
+
+auto normalizeAngle(double angle) -> double {
+    while (angle < 0.0) {
+        angle += 2.0 * Pi;
+    }
+    while (angle >= 2.0 * Pi) {
+        angle -= 2.0 * Pi;
+    }
+    return angle;
+}
+
+auto angleWithinSweep(double angle, double start, double end) -> bool {
+    angle = normalizeAngle(angle);
+    start = normalizeAngle(start);
+    end = normalizeAngle(end);
+    if (end < start) {
+        end += 2.0 * Pi;
+    }
+    if (angle < start) {
+        angle += 2.0 * Pi;
+    }
+    return angle >= start - GeometrySelectionEpsilon && angle <= end + GeometrySelectionEpsilon;
+}
+
+auto circleIntersectsRect(const Point& center, double radius, double left, double right, double top, double bottom)
+        -> bool {
+    const double closestX = std::clamp(center.x, left, right);
+    const double closestY = std::clamp(center.y, top, bottom);
+    const double minDistance = std::hypot(closestX - center.x, closestY - center.y);
+
+    double maxDistance = 0.0;
+    for (const auto& corner: {Point(left, top), Point(right, top), Point(right, bottom), Point(left, bottom)}) {
+        maxDistance = std::max(maxDistance, std::hypot(corner.x - center.x, corner.y - center.y));
+    }
+    return minDistance <= radius + GeometrySelectionEpsilon && maxDistance + GeometrySelectionEpsilon >= radius;
+}
+
+auto arcIntersectsRect(const vn::view::render::GeometryEdgeRenderModel& edge, const Point& center, double radius,
+                       double left, double right, double top, double bottom) -> bool {
+    if (!circleIntersectsRect(center, radius, left, right, top, bottom)) {
+        return false;
+    }
+    if (edge.closedLoop) {
+        return true;
+    }
+
+    const double startAngle = std::atan2(edge.start.y - center.y, edge.start.x - center.x);
+    const double endAngle = std::atan2(edge.end.y - center.y, edge.end.x - center.x);
+    for (const auto& [edgeStart, edgeEnd]: rectEdges(left, right, top, bottom)) {
+        const double dx = edgeEnd.x - edgeStart.x;
+        const double dy = edgeEnd.y - edgeStart.y;
+        const double fx = edgeStart.x - center.x;
+        const double fy = edgeStart.y - center.y;
+        const double a = dx * dx + dy * dy;
+        const double b = 2.0 * (fx * dx + fy * dy);
+        const double c = fx * fx + fy * fy - radius * radius;
+        const double discriminant = b * b - 4.0 * a * c;
+        if (discriminant < -GeometrySelectionEpsilon || a <= GeometrySelectionEpsilon) {
+            continue;
+        }
+        const double root = std::sqrt(std::max(0.0, discriminant));
+        for (const double t: {(-b - root) / (2.0 * a), (-b + root) / (2.0 * a)}) {
+            if (t < -GeometrySelectionEpsilon || t > 1.0 + GeometrySelectionEpsilon) {
+                continue;
+            }
+            const Point intersection(edgeStart.x + dx * t, edgeStart.y + dy * t);
+            const double angle = std::atan2(intersection.y - center.y, intersection.x - center.x);
+            if (angleWithinSweep(angle, startAngle, endAngle)) {
+                return true;
+            }
+        }
+    }
+    return pointInRect(edge.start, left, right, top, bottom) || pointInRect(edge.end, left, right, top, bottom);
+}
+
+}  // namespace
 
 auto QtDocumentController::hitTestElement(std::size_t pageIndex, double pageX, double pageY,
                                           double maxDistance) const -> const Element* {
@@ -107,6 +262,246 @@ void QtDocumentController::selectElementsInRect(std::size_t pageIndex, double x,
     } else {
         this->currentSelection = QtElementSelection{.pageIndex = pageIndex, .elements = std::move(hits)};
     }
+}
+
+auto QtDocumentController::selectGeometryVerticesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                        bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& vertex: geometry->vertices) {
+            if (vertex.position.x < left || vertex.position.x > right || vertex.position.y < top ||
+                vertex.position.y > bottom) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Vertex;
+            hit.objectId = geometry->objectId;
+            hit.vertexId = vertex.id;
+            hit.point = vertex.position;
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
+auto QtDocumentController::selectGeometryEdgesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                     bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+    const auto edgeTouchesRect = [&](const vn::view::render::GeometryEdgeRenderModel& edge) {
+        if (pointInRect(edge.start, left, right, top, bottom) ||
+            pointInRect(edge.end, left, right, top, bottom)) {
+            return true;
+        }
+        for (const auto& control: edge.controls) {
+            if (pointInRect(control, left, right, top, bottom)) {
+                return true;
+            }
+        }
+        if (edge.kind == vn::geom::EdgeKind::ConstructionLine) {
+            return infiniteLineIntersectsRect(edge.start, edge.end, left, right, top, bottom);
+        }
+        if ((edge.kind == vn::geom::EdgeKind::Arc || edge.kind == vn::geom::EdgeKind::ConstructionCircle) &&
+            !edge.controls.empty()) {
+            const auto& center = edge.controls.front();
+            const double radius = std::hypot(edge.start.x - center.x, edge.start.y - center.y);
+            return radius > GeometrySelectionEpsilon && arcIntersectsRect(edge, center, radius, left, right, top, bottom);
+        }
+        return segmentIntersectsRect(edge.start, edge.end, left, right, top, bottom);
+    };
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& edge: geometry->edges) {
+            if (!edgeTouchesRect(edge)) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Edge;
+            hit.objectId = geometry->objectId;
+            hit.edgeId = edge.id;
+            hit.point = Point((edge.start.x + edge.end.x) / 2.0, (edge.start.y + edge.end.y) / 2.0);
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
+auto QtDocumentController::selectGeometryFacesInRect(std::size_t pageIndex, double x, double y, double w, double h,
+                                                     bool additive) -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    std::vector<QtGeometryHit> hits;
+    std::optional<vn::geom::ObjectId> targetObjectId;
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry) {
+            continue;
+        }
+        for (const auto& face: geometry->faces) {
+            const bool touchesRect = std::ranges::any_of(face.vertices, [&](const Point& point) {
+                return pointInRect(point, left, right, top, bottom);
+            });
+            if (!touchesRect) {
+                continue;
+            }
+            if (!targetObjectId) {
+                targetObjectId = geometry->objectId;
+            }
+            if (*targetObjectId != geometry->objectId) {
+                continue;
+            }
+
+            vn::view::render::GeometryHitResult hit;
+            hit.type = vn::view::render::GeometryHitType::Face;
+            hit.objectId = geometry->objectId;
+            hit.faceId = face.id;
+            if (!face.vertices.empty()) {
+                hit.point = face.vertices.front();
+            }
+            hits.push_back(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        }
+    }
+
+    if (hits.empty()) {
+        if (!additive) {
+            setSelectedGeometry(std::nullopt);
+        }
+        return false;
+    }
+
+    bool append = additive;
+    for (auto& hit: hits) {
+        setSelectedGeometry(std::move(hit), append);
+        append = true;
+    }
+    clearElementSelection();
+    return true;
+}
+
+auto QtDocumentController::selectGeometryObjectInRect(std::size_t pageIndex, double x, double y, double w, double h)
+        -> bool {
+    if (pageIndex >= this->pageSnapshots.size()) {
+        setSelectedGeometryObject(std::nullopt);
+        return false;
+    }
+
+    const double left = std::min(x, x + w);
+    const double right = std::max(x, x + w);
+    const double top = std::min(y, y + h);
+    const double bottom = std::max(y, y + h);
+
+    for (const auto& drawable: this->pageSnapshots[pageIndex].drawables) {
+        const auto* geometry = std::get_if<vn::view::render::GeometryRenderModel>(&drawable);
+        if (!geometry || geometry->vertices.empty()) {
+            continue;
+        }
+        bool intersects = false;
+        for (const auto& vertex: geometry->vertices) {
+            if (vertex.position.x >= left && vertex.position.x <= right && vertex.position.y >= top &&
+                vertex.position.y <= bottom) {
+                intersects = true;
+                break;
+            }
+        }
+        if (!intersects) {
+            continue;
+        }
+
+        vn::view::render::GeometryHitResult hit;
+        hit.type = vn::view::render::GeometryHitType::Edge;
+        hit.objectId = geometry->objectId;
+        hit.point = geometry->vertices.front().position;
+        setSelectedGeometryObject(QtGeometryHit{.pageIndex = pageIndex, .hit = hit});
+        clearElementSelection();
+        return true;
+    }
+
+    setSelectedGeometryObject(std::nullopt);
+    return false;
 }
 
 void QtDocumentController::clearElementSelection() { this->currentSelection.reset(); }

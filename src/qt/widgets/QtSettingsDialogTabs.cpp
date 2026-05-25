@@ -295,6 +295,17 @@ void QtSettingsDialog::addToolsTab(QTabWidget* tabs, const QtSettings& current) 
     this->vertexSnapMarkerSizeSpin->setValue(current.vertexSnapMarkerSize);
     this->vertexSnapMarkerSizeSpin->setSuffix(QStringLiteral(" px"));
     vertexToolsLayout->addRow(QStringLiteral("Vertex snap marker size:"), this->vertexSnapMarkerSizeSpin);
+
+    this->geometrySelectionModeCombo = new QComboBox(vertexToolsGroup);
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Vertex"), static_cast<int>(QtGeometrySelectionMode::Vertex));
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Edge"), static_cast<int>(QtGeometrySelectionMode::Edge));
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Face"), static_cast<int>(QtGeometrySelectionMode::Face));
+    this->geometrySelectionModeCombo->addItem(QStringLiteral("Object"), static_cast<int>(QtGeometrySelectionMode::Object));
+    const int geometrySelectionModeIndex =
+            this->geometrySelectionModeCombo->findData(static_cast<int>(current.geometrySelectionModeDefault));
+    this->geometrySelectionModeCombo->setCurrentIndex(std::max(0, geometrySelectionModeIndex));
+    vertexToolsLayout->addRow(QStringLiteral("Default selection mode:"), this->geometrySelectionModeCombo);
+
     vertexToolsGroup->setLayout(vertexToolsLayout);
     toolsLayout->addRow(vertexToolsGroup);
 
@@ -623,6 +634,27 @@ void QtSettingsDialog::addAppearanceTab(QTabWidget* tabs, const QtSettings& curr
     this->showPageShadowCheck = new QCheckBox(appearancePage);
     this->showPageShadowCheck->setChecked(current.showPageShadow);
     appearanceLayout->addRow(QStringLiteral("Show page shadow:"), this->showPageShadowCheck);
+
+    auto* geometryViewGroup = new QGroupBox(QStringLiteral("Geometry View"), appearancePage);
+    auto* geometryViewLayout = new QFormLayout(geometryViewGroup);
+
+    this->geometryWireframeViewCheck = new QCheckBox(geometryViewGroup);
+    this->geometryWireframeViewCheck->setChecked(current.geometryWireframeView);
+    geometryViewLayout->addRow(QStringLiteral("Wireframe:"), this->geometryWireframeViewCheck);
+
+    this->geometryHighlightVerticesCheck = new QCheckBox(geometryViewGroup);
+    this->geometryHighlightVerticesCheck->setChecked(current.geometryHighlightVertices);
+    geometryViewLayout->addRow(QStringLiteral("Vertex handles:"), this->geometryHighlightVerticesCheck);
+
+    this->geometryHighlightLinkedVerticesCheck = new QCheckBox(geometryViewGroup);
+    this->geometryHighlightLinkedVerticesCheck->setChecked(current.geometryHighlightLinkedVertices);
+    geometryViewLayout->addRow(QStringLiteral("Linked markers:"), this->geometryHighlightLinkedVerticesCheck);
+
+    this->geometryShowFaceFillsCheck = new QCheckBox(geometryViewGroup);
+    this->geometryShowFaceFillsCheck->setChecked(current.geometryShowFaceFills);
+    geometryViewLayout->addRow(QStringLiteral("Face fills:"), this->geometryShowFaceFillsCheck);
+
+    appearanceLayout->addRow(geometryViewGroup);
 
     this->sidebarWidthSpin = new QSpinBox(appearancePage);
     this->sidebarWidthSpin->setRange(76, 600);

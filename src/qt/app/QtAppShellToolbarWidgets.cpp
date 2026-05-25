@@ -6,6 +6,7 @@
 
 #include "QtAppShell.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -13,10 +14,13 @@
 #include <QAction>
 #include <QColor>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFont>
 #include <QFontComboBox>
 #include <QIcon>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMenu>
 #include <QObject>
 #include <QSize>
@@ -46,6 +50,36 @@ void configureFamilyToolButton(QToolButton* button) {
     button->setAutoRaise(true);
 }
 
+void configureFamilyActionButton(QToolButton* button) {
+    button->setObjectName(QStringLiteral("vertexNoteQtFamilyActionButton"));
+    button->setPopupMode(QToolButton::DelayedPopup);
+    button->setArrowType(Qt::NoArrow);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setText(QString());
+    button->setAutoRaise(true);
+}
+
+void configureFamilyMenuButton(QToolButton* button) {
+    button->setObjectName(QStringLiteral("vertexNoteQtFamilyMenuButton"));
+    button->setPopupMode(QToolButton::InstantPopup);
+    button->setArrowType(Qt::DownArrow);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setText(QString());
+    button->setAutoRaise(true);
+    button->setFixedWidth(18);
+}
+
+auto createFamilySplitWidget(QWidget* parent, QToolButton* actionButton, QToolButton* menuButton) -> QWidget* {
+    auto* container = new QWidget(parent);
+    container->setObjectName(QStringLiteral("vertexNoteQtFamilySplitWidget"));
+    auto* layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(actionButton);
+    layout->addWidget(menuButton);
+    return container;
+}
+
 }  // namespace
 
 void QtAppShell::resetToolbarWidgetState() {
@@ -54,6 +88,7 @@ void QtAppShell::resetToolbarWidgetState() {
     this->vertexDrawingToolButtons.clear();
     this->laserToolButton = nullptr;
     this->pdfToolButton = nullptr;
+    this->workspaceCombo = nullptr;
     this->fontFamilyCombo = nullptr;
     this->fontSizeSpinner = nullptr;
     this->toolbarFillAction = nullptr;
@@ -106,6 +141,22 @@ void QtAppShell::addToolbarCommand(QToolBar* toolbar, std::string_view commandId
     }
 }
 
+void QtAppShell::addToolbarGroupLabel(QToolBar* toolbar, std::string_view text) {
+    auto* label = new QLabel(QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size())), toolbar);
+    label->setObjectName(QStringLiteral("vertexNoteQtToolbarGroupLabel"));
+    label->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    label->setAttribute(Qt::WA_TransparentForMouseEvents);
+    label->setContentsMargins(0, 0, 0, 0);
+    label->setMinimumHeight(toolbar->iconSize().height() + 10);
+    label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    QFont font = label->font();
+    const double pointSize = font.pointSizeF() > 0.0 ? font.pointSizeF() : 9.0;
+    font.setPointSizeF(std::max(8.0, pointSize - 1.5));
+    font.setBold(false);
+    label->setFont(font);
+    toolbar->addWidget(label);
+}
+
 void QtAppShell::addGenericSizeToolbarAction(QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex) {
     auto* action = new QAction(QString::fromUtf8(text), toolbar);
     action->setToolTip(QString::fromUtf8(text));
@@ -152,6 +203,27 @@ void QtAppShell::addStretchToolbarSpacer(QToolBar* toolbar) {
     toolbar->addWidget(spacer);
 }
 
+auto QtAppShell::ensureWorkspaceCombo() -> QComboBox* {
+    if (!this->workspaceCombo) {
+        this->workspaceCombo = new QComboBox(&this->window);
+        this->workspaceCombo->setObjectName(QStringLiteral("vertexNoteQtWorkspaceCombo"));
+        this->workspaceCombo->setToolTip(QStringLiteral("Workspace"));
+        this->workspaceCombo->setMinimumContentsLength(10);
+        this->workspaceCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+        this->workspaceCombo->addItem(QStringLiteral("Write"), QStringLiteral("notes"));
+        this->workspaceCombo->addItem(QStringLiteral("Geometry"), QStringLiteral("geometry"));
+        this->workspaceCombo->addItem(QStringLiteral("3D"), QStringLiteral("3d"));
+        QObject::connect(this->workspaceCombo, &QComboBox::currentIndexChanged, &this->window, [this](int index) {
+            if (this->suppressWorkspaceComboSync || !this->workspaceCombo || index < 0) {
+                return;
+            }
+            applyWorkspace(this->workspaceCombo->itemData(index).toString().toStdString());
+        });
+        syncWorkspaceCommandStates();
+    }
+    return this->workspaceCombo;
+}
+
 auto QtAppShell::ensureSelectionToolButton() -> QToolButton* {
     if (!this->selectionToolButton) {
         this->selectionToolButton = new QToolButton(&this->window);
@@ -168,12 +240,15 @@ auto QtAppShell::ensureSelectionToolButton() -> QToolButton* {
     return this->selectionToolButton;
 }
 
-auto QtAppShell::createStrokeDrawingToolButton() -> QToolButton* {
+auto QtAppShell::createStrokeDrawingToolButton() -> QWidget* {
     auto* button = new QToolButton(&this->window);
-    configureFamilyToolButton(button);
-    button->setIcon(bundledQtIcon("xopp-combo-drawing-type.svg"));
-    button->setToolTip(QStringLiteral("Stroke drawing tools"));
-    auto* drawingMenu = new QMenu(button);
+    auto* menuButton = new QToolButton(&this->window);
+    configureFamilyActionButton(button);
+    configureFamilyMenuButton(menuButton);
+    button->setToolTip(QStringLiteral("Stroke drawing tool"));
+    menuButton->setToolTip(QStringLiteral("Stroke drawing tools"));
+    auto* drawingMenu = new QMenu(menuButton);
+    drawingMenu->setObjectName(QStringLiteral("vertexNoteQtToolFamilyMenu"));
     for (const auto& spec: strokeDrawingToolSpecs()) {
         if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
             drawingMenu->addAction(action);
@@ -182,18 +257,20 @@ auto QtAppShell::createStrokeDrawingToolButton() -> QToolButton* {
     if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-line")) {
         button->setDefaultAction(action);
     }
-    button->setMenu(drawingMenu);
-    button->setToolTip(QStringLiteral("Stroke drawing tools"));
+    menuButton->setMenu(drawingMenu);
     this->strokeDrawingToolButtons.push_back(button);
-    return button;
+    return createFamilySplitWidget(&this->window, button, menuButton);
 }
 
-auto QtAppShell::createVertexDrawingToolButton() -> QToolButton* {
+auto QtAppShell::createVertexDrawingToolButton() -> QWidget* {
     auto* button = new QToolButton(&this->window);
-    configureFamilyToolButton(button);
-    button->setIcon(bundledQtIcon("xopp-draw-coordinate-system.svg"));
-    button->setToolTip(QStringLiteral("Vertex drawing tools"));
-    auto* drawingMenu = new QMenu(button);
+    auto* menuButton = new QToolButton(&this->window);
+    configureFamilyActionButton(button);
+    configureFamilyMenuButton(menuButton);
+    button->setToolTip(QStringLiteral("Vertex drawing tool"));
+    menuButton->setToolTip(QStringLiteral("Vertex drawing tools"));
+    auto* drawingMenu = new QMenu(menuButton);
+    drawingMenu->setObjectName(QStringLiteral("vertexNoteQtToolFamilyMenu"));
     for (const auto& spec: vertexDrawingToolSpecs()) {
         if (auto* action = this->window.commandHost()->actionForCommand(spec.commandId)) {
             drawingMenu->addAction(action);
@@ -202,10 +279,53 @@ auto QtAppShell::createVertexDrawingToolButton() -> QToolButton* {
     if (auto* action = this->window.commandHost()->actionForCommand("tool.draw-edge")) {
         button->setDefaultAction(action);
     }
-    button->setMenu(drawingMenu);
-    button->setToolTip(QStringLiteral("Vertex drawing tools"));
+    menuButton->setMenu(drawingMenu);
     this->vertexDrawingToolButtons.push_back(button);
-    return button;
+    return createFamilySplitWidget(&this->window, button, menuButton);
+}
+
+auto QtAppShell::createGeometryTransformToolButton() -> QWidget* {
+    auto* button = new QToolButton(&this->window);
+    auto* menuButton = new QToolButton(&this->window);
+    configureFamilyActionButton(button);
+    configureFamilyMenuButton(menuButton);
+    button->setToolTip(QStringLiteral("Translate selected geometry"));
+    menuButton->setToolTip(QStringLiteral("Geometry transforms"));
+
+    auto* transformMenu = new QMenu(menuButton);
+    transformMenu->setObjectName(QStringLiteral("vertexNoteQtToolFamilyMenu"));
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.translate-vertices")) {
+        button->setDefaultAction(action);
+        transformMenu->addAction(action);
+    } else {
+        button->setIcon(bundledQtIcon("xopp-geometry-translate.svg"));
+    }
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.rotate-selection")) {
+        transformMenu->addAction(action);
+    }
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.scale-selection")) {
+        transformMenu->addAction(action);
+    }
+    if (auto* action = this->window.commandHost()->actionForCommand("geometry.fill-face")) {
+        transformMenu->addAction(action);
+    }
+    transformMenu->addSeparator();
+    for (const auto* commandId: {"geometry.create-3d-vertex", "geometry.create-3d-edge", "geometry.create-3d-box",
+                                "geometry.project-3d-isometric",
+                                "geometry.project-3d-front", "geometry.project-3d-top",
+                                "geometry.nudge-z-up", "geometry.nudge-z-down"}) {
+        if (auto* action = this->window.commandHost()->actionForCommand(commandId)) {
+            transformMenu->addAction(action);
+        }
+    }
+    transformMenu->addSeparator();
+    for (const auto* commandId: {"geometry.delete-face", "geometry.split-face", "geometry.triangulate-face"}) {
+        if (auto* action = this->window.commandHost()->actionForCommand(commandId)) {
+            transformMenu->addAction(action);
+        }
+    }
+    menuButton->setMenu(transformMenu);
+    return createFamilySplitWidget(&this->window, button, menuButton);
 }
 
 auto QtAppShell::ensureLaserToolButton() -> QToolButton* {

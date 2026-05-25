@@ -160,6 +160,10 @@ auto GeometryElement::makeStrokeFallback() const -> std::unique_ptr<Stroke> {
     return this->object.makeStrokeFallback(this->strokeWidth, this->getColor());
 }
 
+auto GeometryElement::makeStrokeFallbacks() const -> std::vector<std::unique_ptr<Stroke>> {
+    return this->object.makeStrokeFallbacks(this->strokeWidth, this->getColor());
+}
+
 void GeometryElement::assignNewObjectId() { this->object.setObjectId(GeometryIdGenerator::nextObjectId()); }
 
 void GeometryElement::replaceGeometry(GeometryObject object) {
@@ -301,6 +305,7 @@ void GeometryElement::serialize(ObjectOutputStream& out) const {
     out.writeString(metadata.objectId);
     out.writeString(metadata.vertices);
     out.writeString(metadata.edges);
+    out.writeString(metadata.faces);
     out.writeString(metadata.constraints);
 
     out.endObject();
@@ -317,6 +322,7 @@ void GeometryElement::readSerialized(ObjectInputStream& in) {
     metadata.objectId = in.readString();
     metadata.vertices = in.readString();
     metadata.edges = in.readString();
+    metadata.faces = in.readString();
     metadata.constraints = in.readString();
 
     std::string error;

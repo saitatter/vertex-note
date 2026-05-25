@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 
 #include <QColor>
 #include <QPainter>
@@ -35,6 +36,7 @@ void QtCanvas::selectElementAtScreen(const QPointF& screenPoint, bool additive) 
     if (!pageIdx) {
         if (!additive) {
             this->documentController->clearElementSelection();
+            this->documentController->setSelectedGeometry(std::nullopt);
         }
         update();
         return;
@@ -44,6 +46,38 @@ void QtCanvas::selectElementAtScreen(const QPointF& screenPoint, bool additive) 
     const double pageX = scenePoint.x() - rects[*pageIdx].x();
     const double pageY = scenePoint.y() - rects[*pageIdx].y();
     const double hitRadius = 10.0 / this->zoomFactor;
+
+    const bool vertexMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Vertex;
+    const bool edgeMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Edge;
+    const bool faceMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Face;
+    const bool objectMode = this->currentToolState.geometrySelectionMode == QtGeometrySelectionMode::Object;
+    auto geometryHit = this->documentController->hitTestGeometry(
+            *pageIdx, pageX, pageY, this->zoomFactor, hitRadius, vertexMode || objectMode, edgeMode || objectMode,
+            faceMode || objectMode);
+    if (geometryHit) {
+        this->documentController->setHoveredGeometry(geometryHit);
+        if (objectMode) {
+            this->documentController->setSelectedGeometryObject(std::move(geometryHit));
+        } else {
+            this->documentController->setSelectedGeometry(std::move(geometryHit), additive);
+        }
+        this->documentController->clearElementSelection();
+        const auto& selected = *this->documentController->selectedGeometry();
+        updateDebugOverlay(QStringLiteral("selected page=%1 object=%2 vertices=%3 edges=%4 faces=%5")
+                                   .arg(static_cast<int>(selected.pageIndex + 1))
+                                   .arg(static_cast<qulonglong>(selected.hit.objectId))
+                                   .arg(static_cast<int>(this->documentController->selectedVertexIds().size()))
+                                   .arg(static_cast<int>(this->documentController->selectedEdgeIds().size()))
+                                   .arg(static_cast<int>(this->documentController->selectedFaceIds().size())));
+        update();
+        Q_EMIT selectionStateChanged();
+        return;
+    }
+
+    this->documentController->setHoveredGeometry(std::nullopt);
+    if (!additive) {
+        this->documentController->setSelectedGeometry(std::nullopt);
+    }
 
     this->documentController->selectElementAt(*pageIdx, pageX, pageY, hitRadius, additive);
     const auto& sel = this->documentController->elementSelection();
@@ -87,17 +121,44 @@ void QtCanvas::finalizeRubberBand() {
 
         const auto rects = pageRects();
         const QRectF bandRect(x, y, w, h);
+        bool selectedGeometry = false;
         for (std::size_t i = 0; i < rects.size(); ++i) {
             if (rects[i].intersects(bandRect)) {
                 const double pageX = x - rects[i].x();
                 const double pageY = y - rects[i].y();
-                this->documentController->selectElementsInRect(i, pageX, pageY, w, h);
+                switch (this->currentToolState.geometrySelectionMode) {
+                    case QtGeometrySelectionMode::Vertex:
+                        selectedGeometry =
+                                this->documentController->selectGeometryVerticesInRect(i, pageX, pageY, w, h, false);
+                        break;
+                    case QtGeometrySelectionMode::Edge:
+                        selectedGeometry =
+                                this->documentController->selectGeometryEdgesInRect(i, pageX, pageY, w, h, false);
+                        break;
+                    case QtGeometrySelectionMode::Face:
+                        selectedGeometry =
+                                this->documentController->selectGeometryFacesInRect(i, pageX, pageY, w, h, false);
+                        break;
+                    case QtGeometrySelectionMode::Object:
+                        selectedGeometry =
+                                this->documentController->selectGeometryObjectInRect(i, pageX, pageY, w, h);
+                        break;
+                }
+                if (!selectedGeometry) {
+                    this->documentController->selectElementsInRect(i, pageX, pageY, w, h);
+                }
                 break;
             }
         }
 
-        const auto& sel = this->documentController->elementSelection();
-        if (sel) {
+        if (selectedGeometry) {
+            const auto& selected = *this->documentController->selectedGeometry();
+            updateDebugOverlay(QStringLiteral("rect-selected geometry object=%1 vertices=%2 edges=%3 faces=%4")
+                                       .arg(static_cast<qulonglong>(selected.hit.objectId))
+                                       .arg(static_cast<int>(this->documentController->selectedVertexIds().size()))
+                                       .arg(static_cast<int>(this->documentController->selectedEdgeIds().size()))
+                                       .arg(static_cast<int>(this->documentController->selectedFaceIds().size())));
+        } else if (const auto& sel = this->documentController->elementSelection()) {
             updateDebugOverlay(
                     QStringLiteral("rect-selected %1 element(s)").arg(static_cast<int>(sel->elements.size())));
         } else {

@@ -21,6 +21,7 @@
 #include "QtToolState.h"
 #include "ui/common/ICanvasHost.h"
 #include "ui/input/UiInputEvents.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 #include "view/render/Renderers.h"
 
 class QTimer;
@@ -89,6 +90,10 @@ public:
     void setCursorHighlightOptions(bool enabled, Color fillColor, Color borderColor, int radiusPixels,
                                    int borderWidthPixels);
     void setRecolorOptions(bool recolorMainView, Color light, Color dark);
+    void setGeometryWireframeViewEnabled(bool enabled);
+    void setGeometryVertexOverlayEnabled(bool enabled);
+    void setGeometryLinkedVertexOverlayEnabled(bool enabled);
+    void setGeometryFaceFillVisible(bool visible);
     void setShapeRecognizerMinSize(double value);
     void setSnapRecognizedShapesEnabled(bool enabled);
     void setLaserPointerFadeOutMs(int value);
@@ -102,7 +107,33 @@ public:
     [[nodiscard]] auto isGridSnapEnabled() const -> bool;
     [[nodiscard]] auto isRotationSnapEnabled() const -> bool;
     [[nodiscard]] auto isTouchDrawingEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryWireframeViewEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryVertexOverlayEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryLinkedVertexOverlayEnabled() const -> bool;
+    [[nodiscard]] auto isGeometryFaceFillVisible() const -> bool;
     [[nodiscard]] auto deleteSelectedGeometry() -> bool;
+    [[nodiscard]] auto detachSelectedGeometry() -> bool;
+    [[nodiscard]] auto weldSelectedGeometry() -> bool;
+    [[nodiscard]] auto fillSelectedGeometryFace(int fillOpacity) -> bool;
+    [[nodiscard]] auto deleteSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto splitSelectedGeometryFace(std::size_t lhsIndex, std::size_t rhsIndex) -> bool;
+    void setGeometryFaceSplitPreview(std::optional<QtGeometryFaceDiagonal> diagonal);
+    void clearGeometryFaceSplitPreview();
+    [[nodiscard]] auto triangulateSelectedGeometryFace() -> bool;
+    [[nodiscard]] auto createVertex3D() -> bool;
+    [[nodiscard]] auto createEdge3D() -> bool;
+    [[nodiscard]] auto createWireframeBox3D() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DIsometric() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DFront() -> bool;
+    [[nodiscard]] auto projectSelectedGeometry3DTop() -> bool;
+    [[nodiscard]] auto nudgeSelectedGeometryZ(double delta) -> bool;
+    [[nodiscard]] auto setSelectedGeometryZ(double z) -> bool;
+    [[nodiscard]] auto setSelectedGeometryModelCenter(double x, double y, double z) -> bool;
+    [[nodiscard]] auto geometryProjectionViewName() const -> QString;
+    [[nodiscard]] auto isGeometryProjectionIsometric() const -> bool;
+    [[nodiscard]] auto isGeometryProjectionFront() const -> bool;
+    [[nodiscard]] auto isGeometryProjectionTop() const -> bool;
     [[nodiscard]] auto insertVertexOnSelectedEdge() -> bool;
     [[nodiscard]] auto canUndoGeometryEdit() const -> bool;
     [[nodiscard]] auto canRedoGeometryEdit() const -> bool;
@@ -156,6 +187,8 @@ Q_SIGNALS:
 private:
     enum class InstrumentToolKind { None, Setsquare, Compass };
     enum class InstrumentStrokeKind { None, SetsquareEdge, SetsquareRadial, CompassOutline, CompassRadius };
+    enum class GeometryTransformHandle { None, TranslateXY, TranslateX, TranslateY, RotateZ, ScaleUniform };
+    enum class GeometryProjectionView { Isometric, Front, Top };
 
     struct InstrumentOverlayState {
         bool visible = false;
@@ -178,6 +211,21 @@ private:
         std::vector<QPointF> previewPoints;
     };
 
+    struct GeometryTransformInteraction {
+        GeometryTransformHandle handle = GeometryTransformHandle::None;
+        std::size_t pageIndex = 0U;
+        QPointF startPagePoint;
+        QPointF centerPagePoint;
+        double startAngle = 0.0;
+        double startRadius = 1.0;
+    };
+
+    struct GeometrySelectionSceneBounds {
+        std::size_t pageIndex = 0U;
+        QRectF bounds;
+        QPointF center;
+    };
+
     void updateDebugOverlay(QString summary);
     void emitViewportUpdate(bool edited = true);
     void zoomAroundScreenPoint(double factor, const QPointF& screenPoint);
@@ -189,6 +237,7 @@ private:
     void drawGeometryInteractionOverlay(QPainter& painter, const QRectF& rect,
                                         const vn::view::render::PageRenderSnapshot& pageInfo,
                                         std::size_t pageIndex) const;
+    void drawGeometryTransformGizmo(QPainter& painter) const;
     void drawOverlayHud(QPainter& painter) const;
     void drawCursorHighlight(QPainter& painter) const;
     [[nodiscard]] auto screenToScene(const QPointF& screenPoint) const -> QPointF;
@@ -196,6 +245,22 @@ private:
     void updateGeometryHover(const QPointF& screenPoint);
     void clearGeometryHover();
     void selectHoveredGeometry(bool additive = false);
+    [[nodiscard]] auto beginSelectedGeometryMoveAtScreen(const QPointF& screenPoint) -> bool;
+    [[nodiscard]] auto selectedGeometrySceneBounds() const -> std::optional<GeometrySelectionSceneBounds>;
+    [[nodiscard]] auto geometryProjectionCameraAtPagePoint(vn::geom::Vec2 offset) const
+            -> vn::geom::ProjectionCamera;
+    [[nodiscard]] auto geometryProjectionCameraForSelection(double yaw, double pitch, double roll = 0.0) const
+            -> std::optional<vn::geom::ProjectionCamera>;
+    [[nodiscard]] auto geometryProjectionCameraForActiveView() const
+            -> std::optional<vn::geom::ProjectionCamera>;
+    [[nodiscard]] auto geometryTransformSupportsAdvancedHandles() const -> bool;
+    [[nodiscard]] auto geometryTransformHandleAtScreen(const QPointF& screenPoint) const -> GeometryTransformHandle;
+    [[nodiscard]] auto beginGeometryTransformAtScreen(GeometryTransformHandle handle, const QPointF& screenPoint)
+            -> bool;
+    void setGeometryTransformCursor(GeometryTransformHandle handle);
+    void updateGeometryTransformAtScreen(const QPointF& screenPoint);
+    void finalizeGeometryTransform();
+    void cancelGeometryTransform();
     void beginPan(const QPointF& position);
     void endPan();
     [[nodiscard]] auto pointerButtonMatrixForDevice(const QInputDevice* device) const -> const QtPointerButtonMatrix&;
@@ -210,7 +275,8 @@ private:
     void beginStrokeAtScreen(const QPointF& screenPoint, double pressure);
     void updateStrokeAtScreen(const QPointF& screenPoint, double pressure);
     [[nodiscard]] auto snapInputPagePoint(std::size_t pageIndex, const QPointF& pagePoint,
-                                          std::optional<vn::snap::SnapKind>* snapKind = nullptr) const -> QPointF;
+                                          std::optional<vn::snap::SnapKind>* snapKind = nullptr,
+                                          bool geometrySnapAllowed = true, bool gridSnapAllowed = true) const -> QPointF;
     [[nodiscard]] auto adjustedPressure(double pressure) const -> double;
     [[nodiscard]] auto stabilizedStrokePoint(const QPointF& pagePoint, double pressure) -> std::pair<QPointF, double>;
     void resetStrokeStabilizer(const QPointF& pagePoint, double pressure);
@@ -309,6 +375,10 @@ private:
     bool geometrySnapEnabled = true;
     bool gridSnapEnabled = false;
     bool rotationSnapEnabled = false;
+    bool geometryWireframeViewEnabled = false;
+    bool geometryVertexOverlayEnabled = false;
+    bool geometryLinkedVertexOverlayEnabled = true;
+    bool geometryFaceFillVisible = true;
     bool touchDrawingEnabled = false;
     double minimumPressure = 0.05;
     double pressureMultiplier = 1.0;
@@ -375,6 +445,10 @@ private:
     bool rubberBanding = false;
     bool movingSelection = false;
     bool scalingSelection = false;
+    std::optional<GeometryTransformInteraction> geometryTransformInteraction;
+    std::optional<QtGeometryFaceDiagonal> geometryFaceSplitPreview;
+    GeometryTransformHandle hoveredGeometryTransformHandle = GeometryTransformHandle::None;
+    GeometryProjectionView geometryProjectionView = GeometryProjectionView::Isometric;
     bool shapeDrawing = false;
     bool pdfTextSelecting = false;
     bool movingInstrumentOverlay = false;

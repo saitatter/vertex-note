@@ -105,6 +105,8 @@ set(vertexnote_qt_sources
         widgets/QtMainWindow.cpp
         widgets/QtBackgroundDialog.h
         widgets/QtBackgroundDialog.cpp
+        widgets/QtGeometryPanel.h
+        widgets/QtGeometryPanel.cpp
         widgets/QtLayerPanel.h
         widgets/QtLayerPanel.cpp
         widgets/QtPageSidebar.h

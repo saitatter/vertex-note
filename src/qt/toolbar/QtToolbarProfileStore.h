@@ -23,6 +23,8 @@ struct QtToolbarProfileOption {
 };
 
 inline constexpr std::string_view QT_GTK_PARITY_PROFILE_ID = "Portrait";
+inline constexpr std::string_view QT_GEOMETRY_PROFILE_ID = "Geometry";
+inline constexpr std::string_view QT_3D_PROFILE_ID = "3D Modeling";
 inline constexpr std::string_view QT_CUSTOM_PROFILE_ID = "Qt Custom";
 inline constexpr std::array<std::string_view, 9> QT_TOOLBAR_KEYS = {{
         "toolbartop1", "toolbartop2", "toolbarbottom1", "toolbarleft1", "toolbarleft2",

@@ -1,8 +1,7 @@
 #include "Document.h"
 
-#include <codecvt>  // for codecvt_utf8_utf16
 #include <cstddef>
-#include <ctime>  // for size_t, localtime, strf...
+#include <ctime>  // for size_t, strf...
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -113,7 +112,7 @@ static std::u8string preprocessFormatString(std::u8string formatStr) {
 
 auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultSaveName,
                                   std::u8string_view defaultPdfName) const -> fs::path {
-    constexpr static std::wstring_view forbiddenChars = {L"\\/:*?\"<>|"};
+    constexpr static std::string_view forbiddenChars = {"\\/:*?\"<>|"};
     std::u8string wildcardString;
     if (type != Document::PDF) {
         if (!filepath.empty()) {
@@ -135,15 +134,23 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
                                                                         this->filepath.filename());
     }
 
-    auto format_str = preprocessFormatString(wildcardString.empty() ? defaultSaveName.data() : wildcardString);
-
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    auto format = converter.from_bytes(char_cast(format_str).data());
+    auto formatStr = preprocessFormatString(wildcardString.empty() ? defaultSaveName.data() : wildcardString);
+    const std::string format(char_cast(formatStr));
 
     // Todo (cpp20): use <format>
-    std::wostringstream ss;
+    std::ostringstream ss;
     time_t curtime = time(nullptr);
-    ss << std::put_time(localtime(&curtime), format.c_str());
+    tm localTime{};
+#ifdef _WIN32
+    if (localtime_s(&localTime, &curtime) != 0) {
+        return {};
+    }
+#else
+    if (localtime_r(&curtime, &localTime) == nullptr) {
+        return {};
+    }
+#endif
+    ss << std::put_time(&localTime, format.c_str());
     auto filename = ss.str();
     // Todo (cpp20): use <ranges>
     for (auto& c: filename) {
@@ -152,8 +159,7 @@ auto Document::createSaveFilename(DocumentType type, std::u8string_view defaultS
         }
     }
 
-    auto fn2 = converter.to_bytes(filename);
-    auto p = fs::path(vn::util::utf8(fn2));
+    auto p = fs::path(vn::util::utf8(filename));
 
     Util::clearExtensions(p);
     return p;

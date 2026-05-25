@@ -60,8 +60,10 @@ if (NOT ENABLE_QT_SHELL)
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtCanvasLayoutTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtColorPaletteTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtDocumentControllerShapeToolTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtGeometryPanelSmokeTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtPreviewStrokeRendererTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtRecentFilesServiceTest\\.cpp$")
+  list(FILTER test-units-sources EXCLUDE REGEX ".*QtShellSmokeTest\\.cpp$")
   list(FILTER test-units-sources EXCLUDE REGEX ".*QtToolbarLayoutEngineTest\\.cpp$")
 endif ()
 
@@ -94,8 +96,14 @@ if (ENABLE_QT_SHELL)
     "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtColorPalette.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarLayoutEngine.cpp"
     "${PROJECT_SOURCE_DIR}/src/qt/toolbar/QtToolbarProfileStore.cpp"
+    "${PROJECT_SOURCE_DIR}/src/qt/widgets/QtGeometryPanel.cpp"
   )
   target_compile_definitions(test-units PRIVATE QT_NO_KEYWORDS)
+  if (TARGET vertexnote-qt-shell)
+    target_compile_definitions(test-units PRIVATE VERTEXNOTE_QT_SHELL_EXE="$<TARGET_FILE:vertexnote-qt-shell>")
+    add_dependencies(test-units vertexnote-qt-shell)
+  endif ()
+  set_target_properties(test-units PROPERTIES AUTOMOC ON)
   target_link_libraries(test-units Qt6::Widgets $<$<TARGET_EXISTS:Lua::lua>:Lua::lua>)
   target_include_directories(test-units PRIVATE
     "${PROJECT_SOURCE_DIR}/src"

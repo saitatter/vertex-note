@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
 
 namespace {
 
@@ -64,6 +65,27 @@ auto angleWithinSweep(double angle, double startAngle, double endAngle) -> bool 
     return angle >= startAngle && angle <= endAngle;
 }
 
+auto pointInPolygon(double px, double py, const std::vector<Point>& polygon) -> bool {
+    if (polygon.size() < 3U) {
+        return false;
+    }
+
+    bool inside = false;
+    for (std::size_t i = 0U, j = polygon.size() - 1U; i < polygon.size(); j = i++) {
+        const auto& lhs = polygon[i];
+        const auto& rhs = polygon[j];
+        const bool crosses = (lhs.y > py) != (rhs.y > py);
+        if (!crosses) {
+            continue;
+        }
+        const double x = (rhs.x - lhs.x) * (py - lhs.y) / (rhs.y - lhs.y) + lhs.x;
+        if (px < x) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
 }  // namespace
 
 namespace vn::view::render {
@@ -92,6 +114,19 @@ auto hitTestGeometry(const GeometryRenderModel& geometry, double pageX, double p
     }
     if (bestVertex) {
         return bestVertex;
+    }
+
+    for (const auto& face: geometry.faces) {
+        if (!pointInPolygon(pageX, pageY, face.vertices)) {
+            continue;
+        }
+
+        return GeometryHitResult{.type = GeometryHitType::Face,
+                                 .objectId = geometry.objectId,
+                                 .faceId = face.id,
+                                 .point = Point(pageX, pageY),
+                                 .snapKind = std::nullopt,
+                                 .screenDistance = 0.0};
     }
 
     std::optional<GeometryHitResult> bestEdge;

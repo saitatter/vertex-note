@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <vector>
 
@@ -60,4 +61,24 @@ TEST(VertexNoteQtToolbarProfileStore, splitsAndJoinsToolbarTokensWithCompatibili
     const std::vector<std::string> expected = {"SAVE", "DRAW_STROKE", "DRAW_VERTEX"};
     EXPECT_EQ(tokens, expected);
     EXPECT_EQ(joinToolbarTokens(tokens), QStringLiteral("SAVE,DRAW_STROKE,DRAW_VERTEX"));
+}
+
+TEST(VertexNoteQtToolbarProfileStore, exposesGeometryWorkspaceProfiles) {
+    const auto geometryProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), QT_GEOMETRY_PROFILE_ID);
+    ASSERT_TRUE(geometryProfile.has_value());
+    const auto* geometryTop = geometryProfile->itemsFor("toolbarTop1");
+    ASSERT_NE(geometryTop, nullptr);
+    EXPECT_NE(std::ranges::find(*geometryTop, "WORKSPACE"), geometryTop->end());
+    EXPECT_NE(std::ranges::find(*geometryTop, "GEOMETRY_FILL_FACE"), geometryTop->end());
+    EXPECT_NE(std::ranges::find(*geometryTop, "GEOMETRY_WELD"), geometryTop->end());
+
+    const auto modelingProfile = QtToolbarLayoutEngine::loadProfile(toolbarProfilePath(), QT_3D_PROFILE_ID);
+    ASSERT_TRUE(modelingProfile.has_value());
+    const auto* modelingTop = modelingProfile->itemsFor("toolbarTop1");
+    ASSERT_NE(modelingTop, nullptr);
+    EXPECT_NE(std::ranges::find(*modelingTop, "WORKSPACE"), modelingTop->end());
+    EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_3D_VERTEX"), modelingTop->end());
+    EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_3D_EDGE"), modelingTop->end());
+    EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_3D_BOX"), modelingTop->end());
+    EXPECT_NE(std::ranges::find(*modelingTop, "GEOMETRY_PROJECT_ISO"), modelingTop->end());
 }

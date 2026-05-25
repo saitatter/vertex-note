@@ -14,6 +14,7 @@
 #include <QPainter>
 #include <QPen>
 #include <QPointF>
+#include <QPolygonF>
 #include <QRectF>
 
 #include "view/render/QtPainterRenderContext.h"
@@ -58,7 +59,7 @@ auto drawExtendedLine(QPainter* painter, const QPointF& start, const QPointF& en
 namespace vn::view::render {
 
 void QtPreviewGeometryRenderer::draw(const GeometryRenderModel& geometry, RenderContext& context) const {
-    if (context.backend() != RenderBackend::QtPainter || geometry.edges.empty()) {
+    if (context.backend() != RenderBackend::QtPainter || (geometry.edges.empty() && geometry.faces.empty())) {
         return;
     }
 
@@ -70,6 +71,41 @@ void QtPreviewGeometryRenderer::draw(const GeometryRenderModel& geometry, Render
     painter->save();
     QPen pen(toQColor(geometry.color), geometry.strokeWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
     painter->setBrush(Qt::NoBrush);
+
+    if (!geometry.faces.empty() && this->faceFillVisible && !this->wireframeViewEnabled) {
+        QColor fillColor = toQColor(geometry.color);
+        for (const auto& face: geometry.faces) {
+            fillColor.setAlpha(std::clamp(face.fill, 0, 255));
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(fillColor);
+            for (const auto& triangle: face.triangles) {
+                QPolygonF polygon;
+                polygon.reserve(3);
+                polygon << QPointF(triangle.a.x, triangle.a.y) << QPointF(triangle.b.x, triangle.b.y)
+                        << QPointF(triangle.c.x, triangle.c.y);
+                painter->drawPolygon(polygon);
+            }
+        }
+        painter->setBrush(Qt::NoBrush);
+    }
+
+    if (!geometry.faces.empty() && this->wireframeViewEnabled) {
+        QColor wireColor = toQColor(geometry.color);
+        wireColor.setAlpha(165);
+        QPen wirePen(wireColor, std::max(0.75, geometry.strokeWidth * 0.65), Qt::DashLine, Qt::RoundCap,
+                     Qt::RoundJoin);
+        painter->setPen(wirePen);
+        painter->setBrush(Qt::NoBrush);
+        for (const auto& face: geometry.faces) {
+            for (const auto& triangle: face.triangles) {
+                QPolygonF polygon;
+                polygon.reserve(3);
+                polygon << QPointF(triangle.a.x, triangle.a.y) << QPointF(triangle.b.x, triangle.b.y)
+                        << QPointF(triangle.c.x, triangle.c.y);
+                painter->drawPolygon(polygon);
+            }
+        }
+    }
 
     for (const auto& edge: geometry.edges) {
         pen.setStyle(Qt::SolidLine);
@@ -127,5 +163,9 @@ void QtPreviewGeometryRenderer::draw(const GeometryRenderModel& geometry, Render
 
     painter->restore();
 }
+
+void QtPreviewGeometryRenderer::setWireframeViewEnabled(bool enabled) { this->wireframeViewEnabled = enabled; }
+
+void QtPreviewGeometryRenderer::setFaceFillVisible(bool visible) { this->faceFillVisible = visible; }
 
 }  // namespace vn::view::render

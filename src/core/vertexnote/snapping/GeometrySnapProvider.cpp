@@ -15,6 +15,13 @@ namespace vn::snap {
 
 namespace {
 constexpr double INTERSECTION_EPSILON = 0.000001;
+constexpr double EDGE_PROJECTION_ENDPOINT_MARGIN = 0.08;
+constexpr double EDGE_PROJECTION_DISTANCE_RATIO = 0.45;
+
+struct SegmentProjection {
+    geom::Vec2 point;
+    double parameter = 0.0;
+};
 
 [[nodiscard]] auto distance(geom::Vec2 lhs, geom::Vec2 rhs) -> double {
     return std::hypot(rhs.x - lhs.x, rhs.y - lhs.y);
@@ -28,7 +35,8 @@ constexpr double INTERSECTION_EPSILON = 0.000001;
     return {(lhs.x + rhs.x) * 0.5, (lhs.y + rhs.y) * 0.5};
 }
 
-[[nodiscard]] auto projectionOnSegment(geom::Vec2 point, geom::Vec2 start, geom::Vec2 end) -> std::optional<geom::Vec2> {
+[[nodiscard]] auto projectionOnSegment(geom::Vec2 point, geom::Vec2 start, geom::Vec2 end)
+        -> std::optional<SegmentProjection> {
     const double dx = end.x - start.x;
     const double dy = end.y - start.y;
     const double lengthSquared = dx * dx + dy * dy;
@@ -41,7 +49,7 @@ constexpr double INTERSECTION_EPSILON = 0.000001;
         return std::nullopt;
     }
 
-    return geom::Vec2{start.x + t * dx, start.y + t * dy};
+    return SegmentProjection{.point = geom::Vec2{start.x + t * dx, start.y + t * dy}, .parameter = t};
 }
 
 [[nodiscard]] auto segmentIntersection(const IndexedSegment& lhs, const IndexedSegment& rhs)
@@ -116,9 +124,14 @@ void GeometrySnapProvider::query(const SnapQuery& query, std::vector<SnapCandida
                      segment.edge);
 
         if (auto projection = projectionOnSegment(query.pagePoint, segment.start, segment.end)) {
-            addCandidate(candidates, query, SnapKind::EdgeProjection, *projection,
-                         query.priorities.priorityFor(SnapKind::EdgeProjection), segment.object, geom::InvalidVertexId,
-                         segment.edge);
+            const double screenDistance = distance(query.pagePoint, projection->point) * query.zoom;
+            if (projection->parameter >= EDGE_PROJECTION_ENDPOINT_MARGIN &&
+                projection->parameter <= 1.0 - EDGE_PROJECTION_ENDPOINT_MARGIN &&
+                screenDistance <= query.maxScreenDistance * EDGE_PROJECTION_DISTANCE_RATIO) {
+                addCandidate(candidates, query, SnapKind::EdgeProjection, projection->point,
+                             query.priorities.priorityFor(SnapKind::EdgeProjection), segment.object,
+                             geom::InvalidVertexId, segment.edge);
+            }
         }
     }
 

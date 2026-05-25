@@ -87,6 +87,7 @@ struct QtSettings {
     double snapGridTolerance = 0.50;
     double snapGridSize = 14.17;
     int vertexSnapMarkerSize = 15;
+    QtGeometrySelectionMode geometrySelectionModeDefault = QtGeometrySelectionMode::Vertex;
     double strokeRecognizerMinSize = 40.0;
     bool snapRecognizedShapesEnabled = false;
     int laserPointerFadeOutMs = 1500;
@@ -109,6 +110,10 @@ struct QtSettings {
     bool showFilePathInTitlebar = false;
     bool showPageNumberInTitlebar = false;
     bool showPageShadow = true;
+    bool geometryWireframeView = false;
+    bool geometryHighlightVertices = false;
+    bool geometryHighlightLinkedVertices = true;
+    bool geometryShowFaceFills = true;
     int sidebarWidth = 90;
     bool sidebarOnRight = false;
     bool scrollbarOnLeft = false;
@@ -166,6 +171,7 @@ struct QtSettings {
     double audioGain = 1.0;
     int defaultSeekTimeSeconds = 5;
     std::string toolbarProfileId = "Portrait";
+    std::string workspaceId = "notes";
 };
 
 class QtSettingsDialog: public QDialog {
@@ -248,6 +254,7 @@ private:
     QDoubleSpinBox* snapGridToleranceSpin = nullptr;
     QDoubleSpinBox* snapGridSizeSpin = nullptr;
     QSpinBox* vertexSnapMarkerSizeSpin = nullptr;
+    QComboBox* geometrySelectionModeCombo = nullptr;
     QDoubleSpinBox* strokeRecognizerMinSizeSpin = nullptr;
     QCheckBox* snapRecognizedShapesCheck = nullptr;
     QSpinBox* laserPointerFadeOutSpin = nullptr;
@@ -279,6 +286,10 @@ private:
     QCheckBox* showFilePathInTitlebarCheck = nullptr;
     QCheckBox* showPageNumberInTitlebarCheck = nullptr;
     QCheckBox* showPageShadowCheck = nullptr;
+    QCheckBox* geometryWireframeViewCheck = nullptr;
+    QCheckBox* geometryHighlightVerticesCheck = nullptr;
+    QCheckBox* geometryHighlightLinkedVerticesCheck = nullptr;
+    QCheckBox* geometryShowFaceFillsCheck = nullptr;
     QSpinBox* sidebarWidthSpin = nullptr;
     QCheckBox* sidebarOnRightCheck = nullptr;
     QCheckBox* scrollbarOnLeftCheck = nullptr;

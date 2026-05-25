@@ -43,6 +43,17 @@ void refreshFamilyToolButtonChrome(QToolButton* button) {
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
 }
 
+void refreshFamilyActionButtonChrome(QToolButton* button) {
+    if (!button) {
+        return;
+    }
+    button->setText(QString());
+    button->setMenu(nullptr);
+    button->setArrowType(Qt::NoArrow);
+    button->setPopupMode(QToolButton::DelayedPopup);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+}
+
 auto makeSwatchIcon(Color color, int diameter) -> QIcon {
     const int pixmapSize = diameter + 4;
     QPixmap pixmap(pixmapSize, pixmapSize);
@@ -74,18 +85,16 @@ void QtAppShell::syncToolbarWidgets() {
     if (auto* action = findActionForTool(this->window.commandHost(), strokeDrawingToolSpecs(), toolState.activeTool)) {
         for (auto* button: this->strokeDrawingToolButtons) {
             button->setDefaultAction(action);
-            button->setMenu(button->menu());
-            refreshFamilyToolButtonChrome(button);
-            button->setToolTip(QStringLiteral("Stroke drawing tools"));
+            refreshFamilyActionButtonChrome(button);
+            button->setToolTip(action->toolTip());
         }
     }
 
     if (auto* action = findActionForTool(this->window.commandHost(), vertexDrawingToolSpecs(), toolState.activeTool)) {
         for (auto* button: this->vertexDrawingToolButtons) {
             button->setDefaultAction(action);
-            button->setMenu(button->menu());
-            refreshFamilyToolButtonChrome(button);
-            button->setToolTip(QStringLiteral("Vertex drawing tools"));
+            refreshFamilyActionButtonChrome(button);
+            button->setToolTip(action->toolTip());
         }
     }
 

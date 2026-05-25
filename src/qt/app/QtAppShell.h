@@ -34,11 +34,13 @@
 
 class QDoubleSpinBox;
 class QFontComboBox;
+class QComboBox;
 class QSpinBox;
 class QAction;
 class QToolBar;
 class QToolButton;
 class QTimer;
+class QWidget;
 
 class QtAppShell: public vn::ui::common::IAppShell {
 public:
@@ -55,6 +57,7 @@ public:
     [[nodiscard]] auto pluginUiBridge() -> vn::ui::common::IPluginUiBridge* override;
     [[nodiscard]] auto nativeMainWindowHandle() const -> void* override;
 
+    void setPersistentUiStateSavingEnabled(bool enabled);
     void showMainWindow() override;
     void requestQuit() override;
     void setMainWindowTitle(std::string_view title) override;
@@ -77,12 +80,15 @@ private:
             -> std::vector<std::string>;
     void addToolbarToken(QToolBar* toolbar, std::string_view rawToken);
     void addToolbarCommand(QToolBar* toolbar, std::string_view commandId);
+    void addToolbarGroupLabel(QToolBar* toolbar, std::string_view text);
     void addGenericSizeToolbarAction(QToolBar* toolbar, const char* text, const char* iconFile, int sizeIndex);
     void addFillToolbarAction(QToolBar* toolbar);
     void addStretchToolbarSpacer(QToolBar* toolbar);
     [[nodiscard]] auto ensureSelectionToolButton() -> QToolButton*;
-    [[nodiscard]] auto createStrokeDrawingToolButton() -> QToolButton*;
-    [[nodiscard]] auto createVertexDrawingToolButton() -> QToolButton*;
+    [[nodiscard]] auto createStrokeDrawingToolButton() -> QWidget*;
+    [[nodiscard]] auto createVertexDrawingToolButton() -> QWidget*;
+    [[nodiscard]] auto createGeometryTransformToolButton() -> QWidget*;
+    [[nodiscard]] auto ensureWorkspaceCombo() -> QComboBox*;
     [[nodiscard]] auto ensureLaserToolButton() -> QToolButton*;
     [[nodiscard]] auto ensurePdfToolButton() -> QToolButton*;
     void ensureFontToolbarWidgets();
@@ -94,10 +100,11 @@ private:
     void applyToolbarColor(Color color);
     void rebuildRecentDocumentsMenu();
     void loadPersistentUiState();
-    void savePersistentUiState() const;
+    void savePersistentUiState();
     void syncFloatingToolBarsVisibility(bool showToolbars);
     void applyAuxiliaryToolBarVisibility(bool showToolbars);
     void applySidebarVisibility(bool visible);
+    void applyGeometryPanelVisibility(bool visible);
     void syncToolbarWidgets();
     void syncFooterWidgets();
     void updateWindowTitle();
@@ -118,7 +125,13 @@ private:
     void updateEditCommandStates();
     void setGeometrySnapEnabled(bool enabled);
     void setGridSnapEnabled(bool enabled);
+    void setGeometryWireframeViewEnabled(bool enabled);
+    void setGeometryVertexOverlayEnabled(bool enabled);
+    void setGeometryLinkedVertexOverlayEnabled(bool enabled);
+    void setGeometryFaceFillVisible(bool visible);
+    void setGeometrySelectionMode(QtGeometrySelectionMode mode);
     void selectTool(QtToolType tool);
+    void toggleDrawingTool(QtToolType tool);
     void updateToolCommandStates();
     void updateAudioCommandStates();
     void showBackgroundDialog();
@@ -141,6 +154,8 @@ private:
     void deleteConstraints();
     void editFixedLengthConstraint();
     void translateSelectedVertices();
+    void rotateSelectedGeometry();
+    void scaleSelectedGeometry();
     void toggleAudioRecording();
     void toggleAudioPausePlayback();
     void stopAudioPlayback();
@@ -216,6 +231,27 @@ private:
     void setLayoutRows(int rows);
     void setPairOffset(int offset);
     void syncLayoutSpanCommandStates();
+    void applyWorkspacePreset(std::string_view profileId, std::string_view displayName, bool showGeometryPanel,
+                              bool wireframeView, bool vertexHandles, bool linkedMarkers, bool faceFills,
+                              QtGeometrySelectionMode selectionMode);
+    struct QtWorkspaceViewState {
+        bool initialized = false;
+        bool showGeometryPanel = true;
+        bool wireframeView = false;
+        bool vertexHandles = false;
+        bool linkedMarkers = true;
+        bool faceFills = true;
+        QtGeometrySelectionMode selectionMode = QtGeometrySelectionMode::Vertex;
+    };
+    void applyWorkspacePreset(std::string_view profileId, std::string_view displayName,
+                              const QtWorkspaceViewState& state);
+    void applyWorkspace(std::string_view workspaceId);
+    void rememberCurrentWorkspaceViewState();
+    [[nodiscard]] auto defaultWorkspaceViewState(std::string_view workspaceId) const -> QtWorkspaceViewState;
+    [[nodiscard]] auto workspaceViewState(std::string_view workspaceId) -> QtWorkspaceViewState&;
+    [[nodiscard]] auto workspaceViewState(std::string_view workspaceId) const -> const QtWorkspaceViewState&;
+    void syncWorkspaceCommandStates();
+    [[nodiscard]] auto activeWorkspaceId() const -> std::string_view;
 
     // Journal extras
     void addPageAtEnd();
@@ -253,6 +289,7 @@ private:
     std::vector<QToolButton*> vertexDrawingToolButtons;
     QToolButton* laserToolButton = nullptr;
     QToolButton* pdfToolButton = nullptr;
+    QComboBox* workspaceCombo = nullptr;
     QFontComboBox* fontFamilyCombo = nullptr;
     QDoubleSpinBox* fontSizeSpinner = nullptr;
     QSpinBox* fillOpacitySpinner = nullptr;
@@ -261,6 +298,10 @@ private:
     std::vector<QToolButton*> toolbarColorButtons;
     std::optional<QtToolbarProfile> activeToolbarProfile;
     std::vector<QtToolbarProfileOption> availableToolbarProfiles;
+    bool suppressWorkspaceComboSync = false;
+    QtWorkspaceViewState notesWorkspaceState{};
+    QtWorkspaceViewState geometryWorkspaceState{};
+    QtWorkspaceViewState threeDWorkspaceState{};
 
     // Navigation history
     struct NavPoint {
@@ -275,9 +316,11 @@ private:
     QByteArray persistedWindowState;
     std::vector<QByteArray> persistedFloatingToolBarGeometries;
     std::vector<bool> persistedFloatingToolBarUserHidden;
+    bool persistentUiStateSavingEnabled = true;
     bool persistedShowToolbar = true;
     bool persistedShowMenubar = true;
     bool persistedShowSidebar = true;
+    bool persistedShowGeometryPanel = true;
     bool persistedPairedPages = false;
     int persistedPairOffset = 0;
     int persistedLayoutColumnsRows = 1;

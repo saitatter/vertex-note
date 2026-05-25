@@ -46,6 +46,7 @@ enum class QtToolType {
 };
 enum class QtEraserMode { Standard, Whiteout, DeleteStroke, Segment };
 enum class QtPointerButtonAction { None = 0, Pan = 1, Eraser = 2 };
+enum class QtGeometrySelectionMode { Vertex, Edge, Face, Object };
 
 struct QtPointerButtonMatrix {
     QtPointerButtonAction eraserTipAction = QtPointerButtonAction::Eraser;
@@ -83,6 +84,7 @@ struct QtToolState {
     int pdfTextMarkerOpacity = 60;
     std::string fontName = "Sans";
     double fontSize = 12.0;
+    QtGeometrySelectionMode geometrySelectionMode = QtGeometrySelectionMode::Vertex;
 
     [[nodiscard]] auto activeToolName() const -> std::string {
         switch (activeTool) {
@@ -132,6 +134,36 @@ struct QtToolState {
             case QtToolType::DrawCoordinateSystem:
             case QtToolType::DrawSpline:
             case QtToolType::ShapeRecognizer:
+            case QtToolType::DrawArc:
+            case QtToolType::DrawEdge:
+            case QtToolType::DrawPolyline:
+            case QtToolType::DrawConstructionLine:
+            case QtToolType::DrawConstructionCircle:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    [[nodiscard]] auto isStrokeDrawingTool() const -> bool {
+        switch (activeTool) {
+            case QtToolType::DrawLine:
+            case QtToolType::DrawRectangle:
+            case QtToolType::DrawEllipse:
+            case QtToolType::DrawArrow:
+            case QtToolType::DrawDoubleArrow:
+            case QtToolType::DrawCoordinateSystem:
+            case QtToolType::DrawSpline:
+            case QtToolType::ShapeRecognizer:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    [[nodiscard]] auto isVertexDrawingTool() const -> bool {
+        switch (activeTool) {
+            case QtToolType::DrawCircle:
             case QtToolType::DrawArc:
             case QtToolType::DrawEdge:
             case QtToolType::DrawPolyline:

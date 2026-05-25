@@ -54,7 +54,8 @@ void QtCanvas::beginStrokeAtScreen(const QPointF& screenPoint, double pressure) 
 
     const QRectF& pageRect = rects[*pageIdx];
     const QPointF snappedPagePoint =
-            snapInputPagePoint(*pageIdx, QPointF(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y()));
+            snapInputPagePoint(*pageIdx, QPointF(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y()),
+                               nullptr, false, true);
     const double pageX = snappedPagePoint.x();
     const double pageY = snappedPagePoint.y();
     const double inputPressure = adjustedPressure(pressure);
@@ -107,7 +108,7 @@ void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure)
     const QRectF& pageRect = rects[active->pageIndex];
     const QPointF pagePoint(scenePoint.x() - pageRect.x(), scenePoint.y() - pageRect.y());
     const auto [stablePagePoint, pressureForStroke] = stabilizedStrokePoint(pagePoint, adjustedPressure(pressure));
-    const QPointF pagePointForStroke = snapInputPagePoint(active->pageIndex, stablePagePoint);
+    const QPointF pagePointForStroke = snapInputPagePoint(active->pageIndex, stablePagePoint, nullptr, false, true);
 
     if (this->documentController->updateStroke(pagePointForStroke.x(), pagePointForStroke.y(), pressureForStroke)) {
         update();
@@ -115,18 +116,21 @@ void QtCanvas::updateStrokeAtScreen(const QPointF& screenPoint, double pressure)
 }
 
 auto QtCanvas::snapInputPagePoint(std::size_t pageIndex, const QPointF& pagePoint,
-                                  std::optional<vn::snap::SnapKind>* snapKind) const -> QPointF {
+                                  std::optional<vn::snap::SnapKind>* snapKind, bool geometrySnapAllowed,
+                                  bool gridSnapAllowed) const -> QPointF {
     if (snapKind) {
         snapKind->reset();
     }
-    if (!this->documentController || (!this->geometrySnapEnabled && !this->gridSnapEnabled)) {
+    const bool useGeometrySnap = geometrySnapAllowed && this->geometrySnapEnabled;
+    const bool useGridSnap = gridSnapAllowed && this->gridSnapEnabled;
+    if (!this->documentController || (!useGeometrySnap && !useGridSnap)) {
         return pagePoint;
     }
 
     const auto snapped = this->documentController->snapPagePoint(
             pageIndex, pagePoint.x(), pagePoint.y(), this->zoomFactor,
-            {.geometryEnabled = this->geometrySnapEnabled,
-             .gridEnabled = this->gridSnapEnabled,
+            {.geometryEnabled = useGeometrySnap,
+             .gridEnabled = useGridSnap,
              .gridSize = this->snapGridSize,
              .gridTolerance = this->snapGridTolerance,
              .screenTolerance = 22.0});

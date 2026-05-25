@@ -92,10 +92,24 @@ struct GeometryEdgeRenderModel {
     bool closedLoop = false;
 };
 
+struct GeometryTriangleRenderModel {
+    Point a;
+    Point b;
+    Point c;
+};
+
+struct GeometryFaceRenderModel {
+    vn::geom::FaceId id = vn::geom::InvalidFaceId;
+    std::vector<Point> vertices;
+    std::vector<GeometryTriangleRenderModel> triangles;
+    int fill = 64;
+};
+
 struct GeometryRenderModel {
     vn::geom::ObjectId objectId = vn::geom::InvalidObjectId;
     std::vector<GeometryVertexRenderModel> vertices;
     std::vector<GeometryEdgeRenderModel> edges;
+    std::vector<GeometryFaceRenderModel> faces;
     Color color{};
     double strokeWidth = 1.0;
 };

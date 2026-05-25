@@ -14,6 +14,11 @@ namespace vn::snap {
 
 namespace {
 constexpr double PRIORITY_EPSILON = 0.000001;
+constexpr double DISTANCE_PRIORITY_PENALTY = 3.5;
+
+[[nodiscard]] auto effectivePriority(const SnapCandidate& candidate) -> double {
+    return candidate.priority - candidate.screenDistance * DISTANCE_PRIORITY_PENALTY;
+}
 }
 
 void SnapEngine::addProvider(std::shared_ptr<const ISnapProvider> provider) {
@@ -50,8 +55,10 @@ auto SnapEngine::snap(const SnapQuery& query) const -> SnapResult {
 }
 
 auto SnapEngine::isBetterCandidate(const SnapCandidate& candidate, const SnapCandidate& current) -> bool {
-    if (std::abs(candidate.priority - current.priority) > PRIORITY_EPSILON) {
-        return candidate.priority > current.priority;
+    const double candidatePriority = effectivePriority(candidate);
+    const double currentPriority = effectivePriority(current);
+    if (std::abs(candidatePriority - currentPriority) > PRIORITY_EPSILON) {
+        return candidatePriority > currentPriority;
     }
     return candidate.screenDistance < current.screenDistance;
 }

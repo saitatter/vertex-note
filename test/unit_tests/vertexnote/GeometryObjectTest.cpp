@@ -9,11 +9,13 @@
 
 #include "model/Stroke.h"
 #include "vertexnote/geometry/GeometryObject.h"
+#include "vertexnote/geometry/GeometryProjection.h"
 
 using vn::geom::EdgeKind;
 using vn::geom::ConstraintKind;
 using vn::geom::GeometryObject;
 using vn::geom::Vec2;
+using vn::geom::Vec3;
 
 TEST(VertexNoteGeometryObject, createsVerticesAndEdges) {
     GeometryObject object(42);
@@ -30,6 +32,45 @@ TEST(VertexNoteGeometryObject, createsVerticesAndEdges) {
     EXPECT_EQ(object.edge(edge)->kind, EdgeKind::Line);
     EXPECT_EQ(object.edge(edge)->start, a);
     EXPECT_EQ(object.edge(edge)->end, b);
+}
+
+TEST(VertexNoteGeometryObject, preservesModelCoordinatesFor3DProjection) {
+    GeometryObject object(42);
+    const auto vertex = object.addVertex3D(Vec3{10.0, 20.0, 30.0}, Vec2{1.0, 2.0});
+
+    ASSERT_NE(object.vertex(vertex), nullptr);
+    EXPECT_DOUBLE_EQ(object.vertex(vertex)->modelPosition.z, 30.0);
+
+    EXPECT_TRUE(object.setVertexPosition(vertex, Vec2{4.0, 6.0}));
+    EXPECT_DOUBLE_EQ(object.vertex(vertex)->modelPosition.x, 13.0);
+    EXPECT_DOUBLE_EQ(object.vertex(vertex)->modelPosition.y, 24.0);
+
+    const vn::geom::ProjectionCamera camera{.offset = Vec2{100.0, 200.0}};
+    EXPECT_TRUE(object.applyProjection(camera));
+    EXPECT_DOUBLE_EQ(object.vertex(vertex)->position.x, 113.0);
+    EXPECT_DOUBLE_EQ(object.vertex(vertex)->position.y, 224.0);
+}
+
+TEST(VertexNoteGeometryObject, createsFacesAndStrokeFallbackFill) {
+    GeometryObject object(42);
+
+    const auto a = object.addVertex(Vec2{0.0, 0.0});
+    const auto b = object.addVertex(Vec2{10.0, 0.0});
+    const auto c = object.addVertex(Vec2{10.0, 10.0});
+    const auto d = object.addVertex(Vec2{0.0, 10.0});
+    object.addLine(a, b);
+    object.addLine(b, c);
+    object.addLine(c, d);
+    object.addLine(d, a);
+    const auto face = object.addFace({a, b, c, d}, 96);
+
+    ASSERT_NE(object.face(face), nullptr);
+    EXPECT_EQ(object.faces().size(), 1U);
+    EXPECT_EQ(object.face(face)->vertices.size(), 4U);
+
+    auto stroke = object.makeStrokeFallback(1.5, Colors::black);
+    ASSERT_NE(stroke, nullptr);
+    EXPECT_EQ(stroke->getFill(), 96);
 }
 
 TEST(VertexNoteGeometryObject, computesBoundsFromVertices) {
@@ -65,6 +106,28 @@ TEST(VertexNoteGeometryObject, createsStrokeFallbackForPolyline) {
     EXPECT_DOUBLE_EQ(stroke->getPoint(0).x, 1.0);
     EXPECT_DOUBLE_EQ(stroke->getPoint(1).x, 5.0);
     EXPECT_DOUBLE_EQ(stroke->getPoint(2).y, 7.0);
+}
+
+TEST(VertexNoteGeometryObject, createsSplitStrokeFallbacksForBranchedGeometry) {
+    GeometryObject object(42);
+
+    const auto center = object.addVertex(Vec2{0.0, 0.0});
+    const auto a = object.addVertex(Vec2{10.0, 0.0});
+    const auto b = object.addVertex(Vec2{0.0, 10.0});
+    const auto c = object.addVertex(Vec2{-10.0, 0.0});
+    object.addLine(center, a);
+    object.addLine(center, b);
+    object.addLine(center, c);
+
+    auto strokes = object.makeStrokeFallbacks(1.5, Colors::black);
+
+    ASSERT_EQ(strokes.size(), 3U);
+    for (const auto& stroke: strokes) {
+        ASSERT_NE(stroke, nullptr);
+        EXPECT_EQ(stroke->getPointCount(), 2U);
+        EXPECT_DOUBLE_EQ(stroke->getPoint(0).x, 0.0);
+        EXPECT_DOUBLE_EQ(stroke->getPoint(0).y, 0.0);
+    }
 }
 
 TEST(VertexNoteGeometryObject, createsStrokeFallbackAndBoundsForFullCircleArc) {
@@ -182,6 +245,26 @@ TEST(VertexNoteGeometryObject, insertsVertexOnLineEdge) {
     EXPECT_EQ(object.edge(edge)->end, *inserted);
 }
 
+TEST(VertexNoteGeometryObject, insertsVertexIntoAdjacentFaceBoundary) {
+    GeometryObject object(42);
+    auto a = object.addVertex({0.0, 0.0});
+    auto b = object.addVertex({10.0, 0.0});
+    auto c = object.addVertex({10.0, 10.0});
+    auto edge = object.addLine(a, b);
+    object.addLine(b, c);
+    object.addLine(c, a);
+    auto face = object.addFace({a, b, c}, 80);
+
+    auto inserted = object.insertVertexOnEdge(edge, {4.0, 0.0});
+
+    ASSERT_TRUE(inserted.has_value());
+    ASSERT_NE(object.face(face), nullptr);
+    ASSERT_EQ(object.face(face)->vertices.size(), 4U);
+    EXPECT_EQ(object.face(face)->vertices[0], a);
+    EXPECT_EQ(object.face(face)->vertices[1], *inserted);
+    EXPECT_EQ(object.face(face)->vertices[2], b);
+}
+
 TEST(VertexNoteGeometryObject, removesVertexWithDependentEdgesAndConstraints) {
     GeometryObject object(42);
     auto a = object.addVertex({0.0, 0.0});
@@ -196,6 +279,21 @@ TEST(VertexNoteGeometryObject, removesVertexWithDependentEdgesAndConstraints) {
     EXPECT_TRUE(object.constraints().empty());
 }
 
+TEST(VertexNoteGeometryObject, removesFacesWhenBoundaryEdgeIsRemoved) {
+    GeometryObject object(42);
+    const auto a = object.addVertex({0.0, 0.0});
+    const auto b = object.addVertex({10.0, 0.0});
+    const auto c = object.addVertex({10.0, 10.0});
+    const auto edge = object.addLine(a, b);
+    object.addLine(b, c);
+    object.addLine(c, a);
+    object.addFace({a, b, c}, 80);
+
+    EXPECT_TRUE(object.removeEdge(edge));
+
+    EXPECT_TRUE(object.faces().empty());
+}
+
 TEST(VertexNoteGeometryObject, removesEdgesAndCleansDanglingVertices) {
     GeometryObject object(42);
     const auto center = object.addVertex({0.0, 0.0});
@@ -207,6 +305,60 @@ TEST(VertexNoteGeometryObject, removesEdgesAndCleansDanglingVertices) {
     EXPECT_TRUE(object.edges().empty());
     EXPECT_TRUE(object.vertices().empty());
     EXPECT_TRUE(object.constraints().empty());
+}
+
+TEST(VertexNoteGeometryObject, mergeRemovesNewlyDegenerateArcEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto start = object.addVertex({5.0, 0.0});
+    const auto end = object.addVertex({0.0, 5.0});
+    object.addEdge(EdgeKind::Arc, start, end, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(start, end));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+}
+
+TEST(VertexNoteGeometryObject, mergeRemovesNewlyDegenerateBezierEdges) {
+    GeometryObject object(42);
+    const auto start = object.addVertex({0.0, 0.0});
+    const auto controlA = object.addVertex({2.0, 4.0});
+    const auto controlB = object.addVertex({4.0, 4.0});
+    const auto end = object.addVertex({6.0, 0.0});
+    object.addEdge(EdgeKind::CubicBezier, start, end, {controlA, controlB});
+
+    EXPECT_TRUE(object.mergeVertexInto(start, end));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
+}
+
+TEST(VertexNoteGeometryObject, mergePreservesExistingFullCircleArcEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    const auto spare = object.addVertex({10.0, 0.0});
+    object.addEdge(EdgeKind::Arc, radiusPoint, radiusPoint, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(spare, center));
+
+    ASSERT_EQ(object.edges().size(), 1U);
+    EXPECT_EQ(object.edge(object.edges().front().id)->kind, EdgeKind::Arc);
+    EXPECT_EQ(object.edge(object.edges().front().id)->start, radiusPoint);
+    EXPECT_EQ(object.edge(object.edges().front().id)->end, radiusPoint);
+}
+
+TEST(VertexNoteGeometryObject, mergeRemovesZeroRadiusFullCircleEdges) {
+    GeometryObject object(42);
+    const auto center = object.addVertex({0.0, 0.0});
+    const auto radiusPoint = object.addVertex({5.0, 0.0});
+    object.addEdge(EdgeKind::ConstructionCircle, radiusPoint, radiusPoint, {center});
+
+    EXPECT_TRUE(object.mergeVertexInto(center, radiusPoint));
+
+    EXPECT_TRUE(object.edges().empty());
+    EXPECT_TRUE(object.vertices().empty());
 }
 
 TEST(VertexNoteGeometryObject, replacesAndRemovesConstraints) {

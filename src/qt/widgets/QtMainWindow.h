@@ -12,6 +12,7 @@
 
 #include "QtCanvas.h"
 #include "QtCommandHost.h"
+#include "QtGeometryPanel.h"
 #include "QtLayerPanel.h"
 #include "QtPageSidebar.h"
 #include "QtToolPalette.h"
@@ -38,6 +39,7 @@ public:
     [[nodiscard]] auto floatingToolBars() const -> const std::vector<QToolBar*>&;
     [[nodiscard]] auto layerPanel() -> QtLayerPanel*;
     [[nodiscard]] auto pageSidebar() -> QtPageSidebar*;
+    [[nodiscard]] auto geometryPanel() -> QtGeometryPanel*;
     [[nodiscard]] auto toolPalette() -> QtToolPalette*;
     [[nodiscard]] auto footerPageSpin() -> QSpinBox*;
     [[nodiscard]] auto footerLayerCombo() -> QComboBox*;
@@ -45,6 +47,7 @@ public:
     [[nodiscard]] auto pageStatusLabel() -> QLabel*;
     [[nodiscard]] auto layerStatusLabel() -> QLabel*;
     [[nodiscard]] auto zoomStatusLabel() -> QLabel*;
+    [[nodiscard]] auto geometryStatusLabel() -> QLabel*;
     void cascadeFloatingToolBars();
     void setGtkParitySidebarMode(bool enabled);
     void setSidebarPreferences(int width, bool onRight, int numberingStyle, int scrollbarHideType, bool scrollbarOnLeft,
@@ -64,6 +67,7 @@ private:
     std::vector<QToolBar*> floatingToolBarWidgets;
     QtLayerPanel* layerPanelWidget = nullptr;
     QtPageSidebar* pageSidebarWidget = nullptr;
+    QtGeometryPanel* geometryPanelWidget = nullptr;
     QtToolPalette* toolPaletteWidget = nullptr;
     QtCommandHost commandRegistry;
     QSpinBox* footerPageSpinWidget = nullptr;
@@ -72,6 +76,7 @@ private:
     QLabel* pageLabel = nullptr;
     QLabel* layerLabel = nullptr;
     QLabel* zoomLabel = nullptr;
+    QLabel* geometryLabel = nullptr;
     int sidebarPreferredWidth = 90;
     bool sidebarRightSide = false;
     int sidebarNumberingStyle = 1;

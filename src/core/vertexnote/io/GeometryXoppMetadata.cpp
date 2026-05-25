@@ -220,7 +220,9 @@ auto serializeGeometryStrokeMetadata(const geom::GeometryObject& object) -> Geom
             vertices << ";";
         }
         vertices << vertex.id << "," << formatDouble(vertex.position.x) << "," << formatDouble(vertex.position.y)
-                 << "," << static_cast<std::uint32_t>(vertex.flags);
+                 << "," << formatDouble(vertex.modelPosition.x) << "," << formatDouble(vertex.modelPosition.y)
+                 << "," << formatDouble(vertex.modelPosition.z) << ","
+                 << static_cast<std::uint32_t>(vertex.flags);
     }
     metadata.vertices = vertices.str();
 
@@ -233,6 +235,15 @@ auto serializeGeometryStrokeMetadata(const geom::GeometryObject& object) -> Geom
               << joinIds(edge.controls);
     }
     metadata.edges = edges.str();
+
+    std::ostringstream faces;
+    for (const auto& face: object.faces()) {
+        if (faces.tellp() > 0) {
+            faces << ";";
+        }
+        faces << face.id << "," << joinIds(face.vertices) << "," << face.fill;
+    }
+    metadata.faces = faces.str();
 
     std::ostringstream constraints;
     for (const auto& constraint: object.constraints()) {
@@ -266,19 +277,24 @@ auto parseGeometryStrokeMetadata(const GeometryStrokeMetadata& metadata, std::st
     if (!metadata.vertices.empty()) {
         for (const auto record: split(metadata.vertices, ';')) {
             const auto fields = split(record, ',');
-            if (fields.size() != 4U) {
+            if (fields.size() != 4U && fields.size() != 7U) {
                 setError(error, "Invalid VertexNote geometry vertex record");
                 return std::nullopt;
             }
             const auto vertexId = parseInteger<geom::VertexId>(fields[0]);
             const auto x = parseDouble(fields[1]);
             const auto y = parseDouble(fields[2]);
-            const auto flags = parseInteger<std::uint32_t>(fields[3]);
-            if (!vertexId || !x || !y || !flags || *vertexId == geom::InvalidVertexId) {
+            const auto modelX = fields.size() == 7U ? parseDouble(fields[3]) : x;
+            const auto modelY = fields.size() == 7U ? parseDouble(fields[4]) : y;
+            const auto modelZ = fields.size() == 7U ? parseDouble(fields[5]) : std::optional<double>(0.0);
+            const auto flags = parseInteger<std::uint32_t>(fields[fields.size() == 7U ? 6U : 3U]);
+            if (!vertexId || !x || !y || !modelX || !modelY || !modelZ || !flags ||
+                *vertexId == geom::InvalidVertexId) {
                 setError(error, "Invalid VertexNote geometry vertex value");
                 return std::nullopt;
             }
-            object.addVertexWithId(*vertexId, geom::Vec2{*x, *y}, static_cast<geom::VertexFlags>(*flags));
+            object.addVertex3DWithId(*vertexId, geom::Vec3{*modelX, *modelY, *modelZ}, geom::Vec2{*x, *y},
+                                     static_cast<geom::VertexFlags>(*flags));
         }
     }
 
@@ -299,6 +315,24 @@ auto parseGeometryStrokeMetadata(const GeometryStrokeMetadata& metadata, std::st
                 return std::nullopt;
             }
             object.addEdgeWithId(*edgeId, *kind, *start, *end, *controls);
+        }
+    }
+
+    if (!metadata.faces.empty()) {
+        for (const auto record: split(metadata.faces, ';')) {
+            const auto fields = split(record, ',');
+            if (fields.size() != 3U) {
+                setError(error, "Invalid VertexNote geometry face record");
+                return std::nullopt;
+            }
+            const auto faceId = parseInteger<geom::FaceId>(fields[0]);
+            const auto vertices = parseIds<geom::VertexId>(fields[1]);
+            const auto fill = parseInteger<int>(fields[2]);
+            if (!faceId || !vertices || !fill || *faceId == geom::InvalidFaceId) {
+                setError(error, "Invalid VertexNote geometry face value");
+                return std::nullopt;
+            }
+            object.addFaceWithId(*faceId, *vertices, *fill);
         }
     }
 

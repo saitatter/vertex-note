@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <QByteArray>
@@ -27,6 +28,33 @@ constexpr int QT_SHELL_LAYOUT_VERSION = 6;
 auto settingsPointerAction(QSettings& settings, const QString& key, QtPointerButtonAction fallback)
         -> QtPointerButtonAction {
     return static_cast<QtPointerButtonAction>(settings.value(key, static_cast<int>(fallback)).toInt());
+}
+
+auto settingsGeometrySelectionMode(QSettings& settings, const QString& key,
+                                   QtGeometrySelectionMode fallback) -> QtGeometrySelectionMode {
+    const int value = settings.value(key, static_cast<int>(fallback)).toInt();
+    if (value < static_cast<int>(QtGeometrySelectionMode::Vertex) ||
+        value > static_cast<int>(QtGeometrySelectionMode::Object)) {
+        return fallback;
+    }
+    return static_cast<QtGeometrySelectionMode>(value);
+}
+
+auto workspaceIdForToolbarProfile(std::string_view profileId) -> std::string {
+    if (profileId == QT_GEOMETRY_PROFILE_ID) {
+        return "geometry";
+    }
+    if (profileId == QT_3D_PROFILE_ID) {
+        return "3d";
+    }
+    return "notes";
+}
+
+auto normalizeWorkspaceId(std::string workspaceId, std::string_view toolbarProfileId) -> std::string {
+    if (workspaceId == "notes" || workspaceId == "geometry" || workspaceId == "3d") {
+        return workspaceId;
+    }
+    return workspaceIdForToolbarProfile(toolbarProfileId);
 }
 
 void applyQtPreferredLocale(const std::string& preferredLocale) {
@@ -211,6 +239,9 @@ void QtAppShell::loadPersistentUiState() {
                                       this->currentSettings.vertexSnapMarkerSize)
                                .toInt(),
                        8, 48);
+    this->currentSettings.geometrySelectionModeDefault =
+            settingsGeometrySelectionMode(settings, QStringLiteral("tools/geometrySelectionMode"),
+                                          this->currentSettings.geometrySelectionModeDefault);
     this->currentSettings.strokeRecognizerMinSize =
             settings.value(QStringLiteral("general/strokeRecognizerMinSize"), this->currentSettings.strokeRecognizerMinSize)
                     .toDouble();
@@ -363,6 +394,22 @@ void QtAppShell::loadPersistentUiState() {
                     .toBool();
     this->currentSettings.showPageShadow =
             settings.value(QStringLiteral("appearance/showPageShadow"), this->currentSettings.showPageShadow).toBool();
+    this->currentSettings.geometryWireframeView =
+            settings.value(QStringLiteral("appearance/geometryWireframeView"),
+                           this->currentSettings.geometryWireframeView)
+                    .toBool();
+    this->currentSettings.geometryHighlightVertices =
+            settings.value(QStringLiteral("appearance/geometryHighlightVertices"),
+                           this->currentSettings.geometryHighlightVertices)
+                    .toBool();
+    this->currentSettings.geometryHighlightLinkedVertices =
+            settings.value(QStringLiteral("appearance/geometryHighlightLinkedVertices"),
+                           this->currentSettings.geometryHighlightLinkedVertices)
+                    .toBool();
+    this->currentSettings.geometryShowFaceFills =
+            settings.value(QStringLiteral("appearance/geometryShowFaceFills"),
+                           this->currentSettings.geometryShowFaceFills)
+                    .toBool();
     this->currentSettings.sidebarWidth =
             std::clamp(settings.value(QStringLiteral("appearance/sidebarWidth"), this->currentSettings.sidebarWidth)
                                .toInt(),
@@ -568,9 +615,13 @@ void QtAppShell::loadPersistentUiState() {
     if (this->currentSettings.toolbarProfileId.empty()) {
         this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
     }
+    this->currentSettings.workspaceId =
+            normalizeWorkspaceId(settings.value(QStringLiteral("general/workspaceId")).toString().toStdString(),
+                                 this->currentSettings.toolbarProfileId);
     this->persistedShowToolbar = settings.value(QStringLiteral("view/showToolbar"), true).toBool();
     this->persistedShowMenubar = settings.value(QStringLiteral("view/showMenubar"), true).toBool();
     this->persistedShowSidebar = settings.value(QStringLiteral("view/showSidebar"), true).toBool();
+    this->persistedShowGeometryPanel = settings.value(QStringLiteral("view/showGeometryPanel"), true).toBool();
     this->persistedPairedPages = settings.value(QStringLiteral("view/pairedPages"), false).toBool();
     this->persistedPairOffset = settings.value(QStringLiteral("view/pairOffset"), 0).toInt();
     if (this->persistedPairOffset < 0 || this->persistedPairOffset > 1) {
@@ -584,6 +635,35 @@ void QtAppShell::loadPersistentUiState() {
     this->persistedVerticalLayout = settings.value(QStringLiteral("view/verticalLayout"), true).toBool();
     this->persistedLayoutRtl = settings.value(QStringLiteral("view/layoutRtl"), false).toBool();
     this->persistedLayoutBtt = settings.value(QStringLiteral("view/layoutBtt"), false).toBool();
+    const auto loadWorkspaceState = [this, &settings](const QString& id,
+                                                       std::string_view workspaceId) -> QtWorkspaceViewState {
+        auto state = defaultWorkspaceViewState(workspaceId);
+        const QString prefix = QStringLiteral("workspace/%1/").arg(id);
+        state.showGeometryPanel =
+                settings.value(prefix + QStringLiteral("showGeometryPanel"), state.showGeometryPanel).toBool();
+        state.wireframeView =
+                settings.value(prefix + QStringLiteral("wireframeView"), state.wireframeView).toBool();
+        state.vertexHandles =
+                settings.value(prefix + QStringLiteral("vertexHandles"), state.vertexHandles).toBool();
+        state.linkedMarkers =
+                settings.value(prefix + QStringLiteral("linkedMarkers"), state.linkedMarkers).toBool();
+        state.faceFills =
+                settings.value(prefix + QStringLiteral("faceFills"), state.faceFills).toBool();
+        state.selectionMode =
+                settingsGeometrySelectionMode(settings, prefix + QStringLiteral("selectionMode"), state.selectionMode);
+        state.initialized = true;
+        return state;
+    };
+    this->notesWorkspaceState = loadWorkspaceState(QStringLiteral("notes"), "notes");
+    this->geometryWorkspaceState = loadWorkspaceState(QStringLiteral("geometry"), "geometry");
+    this->threeDWorkspaceState = loadWorkspaceState(QStringLiteral("3d"), "3d");
+    const auto& activeWorkspaceState = workspaceViewState(this->currentSettings.workspaceId);
+    this->currentSettings.geometryWireframeView = activeWorkspaceState.wireframeView;
+    this->currentSettings.geometryHighlightVertices = activeWorkspaceState.vertexHandles;
+    this->currentSettings.geometryHighlightLinkedVertices = activeWorkspaceState.linkedMarkers;
+    this->currentSettings.geometryShowFaceFills = activeWorkspaceState.faceFills;
+    this->currentSettings.geometrySelectionModeDefault = activeWorkspaceState.selectionMode;
+    this->persistedShowGeometryPanel = activeWorkspaceState.showGeometryPanel;
 
     std::vector<std::filesystem::path> recentPaths;
     const auto recentEntries = settings.value(QStringLiteral("recentDocuments/files")).toStringList();
@@ -610,12 +690,14 @@ void QtAppShell::loadPersistentUiState() {
         // This clears old left/right/floating toolbar state that made startup diverge
         // from the target shell composition.
         this->currentSettings.toolbarProfileId = QT_GTK_PARITY_PROFILE_ID;
+        this->currentSettings.workspaceId = "notes";
         this->persistedWindowState.clear();
         this->persistedFloatingToolBarGeometries.clear();
         this->persistedFloatingToolBarUserHidden.clear();
         this->persistedShowToolbar = true;
         this->persistedShowMenubar = true;
         this->persistedShowSidebar = true;
+        this->persistedShowGeometryPanel = true;
         this->persistedPairedPages = false;
         this->persistedPairOffset = 0;
         this->persistedLayoutColumnsRows = 1;

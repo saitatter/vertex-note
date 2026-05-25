@@ -23,6 +23,7 @@ constexpr double ROTATION_SNAP_STEP_RADIANS = M_PI / 12.0;
 constexpr double CM_TO_PT = 28.3464566929;
 constexpr double INSTRUMENT_EDGE_HIT_BAND = 14.0;
 constexpr double INSTRUMENT_INNER_BAND = 12.0;
+constexpr double SHAPE_POINT_EPSILON = 1e-6;
 
 auto qColorFromColor(Color color, int alphaOverride = -1) -> QColor {
     return QColor(color.red, color.green, color.blue, alphaOverride >= 0 ? alphaOverride : color.alpha);
@@ -56,15 +57,50 @@ auto isVertexSnapKind(std::optional<vn::snap::SnapKind> kind) -> bool {
     return kind == vn::snap::SnapKind::ExplicitVertex || kind == vn::snap::SnapKind::EdgeEndpoint;
 }
 
+auto snapHint(std::optional<vn::snap::SnapKind> kind) -> QString {
+    if (!kind) {
+        return QStringLiteral("hit");
+    }
+
+    switch (*kind) {
+        case vn::snap::SnapKind::Grid:
+            return QStringLiteral("grid");
+        case vn::snap::SnapKind::ExplicitVertex:
+        case vn::snap::SnapKind::EdgeEndpoint:
+            return QStringLiteral("vertex");
+        case vn::snap::SnapKind::Midpoint:
+            return QStringLiteral("midpoint");
+        case vn::snap::SnapKind::EdgeProjection:
+            return QStringLiteral("edge projection");
+        case vn::snap::SnapKind::Intersection:
+            return QStringLiteral("intersection");
+        case vn::snap::SnapKind::ConstraintGuide:
+            return QStringLiteral("constraint guide");
+    }
+
+    return QStringLiteral("hit");
+}
+
+auto sameShapePoint(const QPointF& lhs, const QPointF& rhs) -> bool {
+    return std::hypot(lhs.x() - rhs.x(), lhs.y() - rhs.y()) <= SHAPE_POINT_EPSILON;
+}
+
 void drawSnapMarker(QPainter& painter, const QPointF& center, std::optional<vn::snap::SnapKind> kind,
                     int vertexMarkerSizePixels) {
     const double scale = std::max(0.1, painter.transform().m11());
     const QColor color = snapColor(kind);
     if (isVertexSnapKind(kind)) {
-        const double halfSize = std::clamp(vertexMarkerSizePixels, 8, 48) * 0.5 / scale;
-        painter.setPen(QPen(QColor(0, 100, 255), 1.7 / scale));
-        painter.setBrush(QColor(0, 115, 255, 36));
-        painter.drawRect(QRectF(center.x() - halfSize, center.y() - halfSize, halfSize * 2.0, halfSize * 2.0));
+        const double halfSize = std::clamp(vertexMarkerSizePixels + 6, 12, 56) * 0.5 / scale;
+        const QRectF rect(center.x() - halfSize, center.y() - halfSize, halfSize * 2.0, halfSize * 2.0);
+        painter.setBrush(QColor(0, 115, 255, 44));
+        painter.setPen(QPen(QColor(255, 255, 255, 245), 3.8 / scale));
+        painter.drawRect(rect);
+        painter.setPen(QPen(QColor(0, 92, 255), 2.4 / scale));
+        painter.drawRect(rect.adjusted(0.7 / scale, 0.7 / scale, -0.7 / scale, -0.7 / scale));
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(0, 92, 255, 235));
+        const double dotSize = 3.4 / scale;
+        painter.drawRect(QRectF(center.x() - dotSize / 2.0, center.y() - dotSize / 2.0, dotSize, dotSize));
         return;
     }
 
@@ -290,7 +326,14 @@ void QtCanvas::updateShapeAtScreen(const QPointF& screenPoint) {
 }
 
 auto QtCanvas::snapShapePoint(std::size_t pageIndex, const QPointF& pagePoint) -> QPointF {
-    this->shapeSnapPoint = snapInputPagePoint(pageIndex, pagePoint, &this->shapeSnapKind);
+    const bool vertexWorkflow = this->currentToolState.isVertexDrawingTool();
+    const bool strokeWorkflow = this->currentToolState.isStrokeDrawingTool();
+    this->shapeSnapPoint =
+            snapInputPagePoint(pageIndex, pagePoint, &this->shapeSnapKind, vertexWorkflow,
+                               vertexWorkflow || strokeWorkflow);
+    if (this->shapeSnapKind) {
+        Q_EMIT statusHintChanged(QStringLiteral("Snap: %1").arg(snapHint(this->shapeSnapKind)));
+    }
     return this->shapeSnapPoint;
 }
 
@@ -341,7 +384,9 @@ void QtCanvas::addShapeClickAtScreen(const QPointF& screenPoint) {
             pagePoint = applyRotationSnap(this->shapeClickPoints.back(), pagePoint);
         }
         pagePoint = snapShapePoint(this->shapePageIndex, pagePoint);
-        this->shapeClickPoints.push_back(pagePoint);
+        if (this->shapeClickPoints.empty() || !sameShapePoint(this->shapeClickPoints.back(), pagePoint)) {
+            this->shapeClickPoints.push_back(pagePoint);
+        }
         this->shapeCurrentScene = pagePoint;
     }
 
@@ -384,7 +429,7 @@ void QtCanvas::finalizeShape() {
             const QPointF start = this->shapeEffectiveControlModifier ? centeredStart() : this->shapeStartScene;
             created = this->documentController->createRectangle(this->shapePageIndex, start.x(), start.y(),
                                                                 this->shapeCurrentScene.x(), this->shapeCurrentScene.y(),
-                                                                color, width);
+                                                                color, width, fill);
             break;
         }
         case QtToolType::DrawCircle:
@@ -428,7 +473,7 @@ void QtCanvas::finalizeShape() {
             for (const auto& pt: this->shapeClickPoints) {
                 points.emplace_back(pt.x(), pt.y());
             }
-            created = this->documentController->createPolyline(this->shapePageIndex, points, color, width);
+            created = this->documentController->createPolyline(this->shapePageIndex, points, color, width, fill);
             break;
         }
         case QtToolType::DrawSpline: {
