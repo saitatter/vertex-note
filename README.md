@@ -221,3 +221,9 @@ GPL-2.0-or-later, inherited from Xournal++.
 
 - VertexNote is based on **Xournal++** by the Xournal++ team and contributors
 - VertexNote itself builds on ideas and code from the original Xournal project
+
+---
+
+## Support
+
+If VertexNote is useful to you, you can support ongoing development on [Ko-fi](https://ko-fi.com/saitatter).
