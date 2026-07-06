@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:  # Get the build targets **from the master branch**
           sparse-checkout: '${{ env.build-targets-json }}'
           sparse-checkout-cone-mode: false
@@ -35,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.run.runner }}
     steps:
       - name: 'Checkout repository'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: 'Build dependencies'
         uses: ./.github/actions/install_deps_mac
         with:

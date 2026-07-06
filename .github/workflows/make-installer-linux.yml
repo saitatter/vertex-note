@@ -53,7 +53,7 @@ jobs:
       image: ${{ inputs.container_image }}
     steps:
       - name: 'Checkout repository'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.head_sha }}
       - name: 'Install dependencies (for AppImage)'

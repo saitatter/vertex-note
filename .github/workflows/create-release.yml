@@ -31,7 +31,7 @@ jobs:
       release_name: ${{ steps.parse.outputs.release-name }}
       tag: ${{ steps.parse.outputs.tag }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:  # Get the build targets
           sparse-checkout: '${{ env.build-targets-json }}'
           sparse-checkout-cone-mode: false
@@ -132,7 +132,7 @@ jobs:
             }
             core.exportVariable('body', body)
       - name: Pull changelog
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         if: ${{ needs.prepare.outputs.tag != 'nightly' }}
         with:  # Get the changelog
           sparse-checkout: 'debian/changelog'
