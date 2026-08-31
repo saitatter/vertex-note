@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install dependencies'
         shell: bash
         run: |
@@ -39,7 +39,7 @@ jobs:
           fi
       - name: 'Push translation file to Crowdin'
         if: steps.check-diff.outputs.update-translation-sources == 'true'
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3
         with:
           upload_sources: true
           upload_translations: false

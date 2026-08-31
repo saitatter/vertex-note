@@ -23,7 +23,7 @@ jobs:
       macos_builds: ${{ steps.parse.outputs.macos_builds }}
       windows_builds: ${{ steps.parse.outputs.windows_builds }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:  # Get the build targets
           sparse-checkout: '${{ env.build-targets-json }}'
           sparse-checkout-cone-mode: false
@@ -67,7 +67,7 @@ jobs:
       image: ${{ matrix.run.container_image }}
     name: 'Test VertexNote on ${{ matrix.run.displayed_name }}'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install dependencies'
         uses: ./.github/actions/install_deps_ubuntu
         with:
@@ -130,7 +130,7 @@ jobs:
     runs-on: ${{ matrix.run.runner }}
     name: 'Test VertexNote on ${{ matrix.run.displayed_name }}'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install dependencies'
         uses: ./.github/actions/install_deps_windows
         with:
@@ -160,7 +160,7 @@ jobs:
     runs-on: ${{ matrix.run.runner }}
     name: 'Test VertexNote on ${{ matrix.run.displayed_name }}'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install dependencies'
         uses: ./.github/actions/install_deps_mac
         with:
